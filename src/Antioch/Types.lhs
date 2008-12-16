@@ -62,7 +62,10 @@
 >     , thesis         :: Bool
 >     , timeLeft       :: Minutes
 >     , timeTotal      :: Minutes
->   } deriving Show
+>   } 
+
+> instance Show Project where
+>     show p = pName p
 
 > data Period  = Period  {
 >       session       :: Session
