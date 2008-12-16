@@ -1,4 +1,4 @@
-> module Antioch.SLALib (gmst) where
+> module Antioch.SLALib (gmst, gmst') where
 
 > import Data.Fixed  (mod')
 > import Data.List   (foldl1')
@@ -24,6 +24,9 @@ and the fractional part of the UT is added separately.  Note that the
 factor 1.0027379... does not appear in the IAU 1982 expression
 explicitly but in the form of the coefficient 8640184.812866, which is
 86400x36525x0.0027379...
+
+> gmst' :: Float -> Float
+> gmst' = realToFrac . gmst . realToFrac
 
 > -- Conversion from universal time to Greenwich mean sidereal time.
 > -- ut1 is modified julian date (jd - 2400000.5)
