@@ -2,6 +2,7 @@
 
 > import Antioch.Types
 > import Control.Monad.Identity
+> import Control.Monad.Reader
 > import Data.List
 > import Data.Time.Clock
 
@@ -12,16 +13,26 @@ Ranking System from Memo 5.2, Section 3
 
 3.1 Observing Efficiency
 
+> zenithOpticalDepth :: DateTime -> Session -> Scoring Float
+> zenithOpticalDepth dt s = do
+>     w <- weather
+>     return $ opacity w dt (frequency s)
+
 3.2 Stringency
+
+> -- stringency                    :: ScoreFunc
 
 3.3 Pressure Feedback
 
 > -- frequencyPressure             :: ScoreFunc
+> -- rightAscensionPressure        :: ScoreFunc
 
 3.4 Performance Limits
 
 > -- observingEfficiencyLimit      :: ScoreFunc
 > -- hourAngleLimit                :: ScoreFunc
+> -- zenithAngleLimit              :: ScoreFunc
+> -- trackingErrorLimit            :: ScoreFunc
 
 > atmosphericStabilityLimit     :: ScoreFunc
 > atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
@@ -51,26 +62,34 @@ Ranking System from Memo 5.2, Section 3
 >                      GradeB -> 0.9
 >                      GradeC -> 0.1
 
+> -- receiver                      :: ScoreFunc
 
 
 > data Weather = Weather {
->     opacity :: DateTime -> Float
->   , tsys    :: DateTime -> Float
+>     opacity :: DateTime -> Float -> Float
+>   , tsys    :: DateTime -> Float -> Float
 >   , wind    :: DateTime -> Float  -- m/s
 >   }
 
 > getWeather :: IO Weather
 > getWeather = do
 >     return Weather {
->         opacity = const   0.2
->       , tsys    = const 255.0
+>         opacity = \_ _ -> 0.2
+>       , tsys    = \_ _ -> 255.0
 >       , wind    = const   2.0
 >       }
 
-> type Scoring = Identity
+> data ScoringEnv = ScoringEnv {
+>     envWeather :: Weather
+>   }
 
-> runScoring :: Scoring t -> t
-> runScoring = runIdentity
+> weather :: Scoring Weather
+> weather = asks envWeather
+
+> type Scoring = ReaderT ScoringEnv Identity
+
+> runScoring     :: Weather -> Scoring t -> t
+> runScoring w f = runIdentity . runReaderT f $ ScoringEnv w
 
 > factor          :: String -> Score -> Scoring Factors
 > factor name val = return [(name, val)]
