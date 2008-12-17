@@ -1,32 +1,65 @@
 > module Antioch.DateTime where
 
-> import Data.Time.Calendar hiding (fromGregorian)
-> import Data.Time.Clock
+> import Data.Fixed (div')
+> import Data.Time.Calendar hiding (fromGregorian, toGregorian)
+> import Data.Time.Clock hiding (getCurrentTime)
 > import Data.Time.Format
 > import Data.Time.LocalTime
 > import Database.HDBC
+> import Numeric (fromRat)
 > import System.Locale
 > import System.Time hiding (toClockTime)
 
 > import qualified Data.Time.Calendar as Calendar
+> import qualified Data.Time.Clock as Clock
+
+Define a local synonym for UTCTime just to get some insulation from
+the craziness of the Haskell standard library date and time functions.
 
 > type DateTime = UTCTime
+
+So that we can use our DateTime class with HDBC.
 
 > instance SqlType UTCTime where
 >     toSql   = toSql . toClockTime
 >     fromSql = fromClockTime . fromSql
 
+Defined here so that users don't need to know about Data.Time.Clock.
+
+> getCurrentTime :: IO DateTime
+> getCurrentTime = Clock.getCurrentTime
+
+Conversion back and forth between DateTime and MJD.
+
 > toMJD :: DateTime -> Rational
 > toMJD = getModJulianDate . toUniversalTime
 
+> toMJD' :: RealFloat a => DateTime -> a
+> toMJD' = fromRat . toMJD
+
 > fromMJD :: Rational -> DateTime
 > fromMJD = fromUniversalTime . ModJulianDate
+
+> fromMJD' :: RealFloat a => a -> DateTime
+> fromMJD' = fromMJD . realToFrac
 
 > toUniversalTime :: DateTime -> UniversalTime
 > toUniversalTime = localTimeToUT1 0 . utcToLocalTime utc
 
 > fromUniversalTime :: UniversalTime -> DateTime
 > fromUniversalTime = localTimeToUTC utc . ut1ToLocalTime 0
+
+> toGregorian'    :: DateTime -> (Integer, Int, Int)
+> toGregorian' dt = (y, m, d)
+>   where
+>     (y, m, d, _, _, _) = toGregorian dt
+
+> toGregorian    :: DateTime -> (Integer, Int, Int, Int, Int, Int)
+> toGregorian dt = (year, month, day', hours, minutes, seconds `div'` 1)
+>   where
+>     LocalTime day tod   = utcToLocalTime utc dt
+>     (year, month, day') = Calendar.toGregorian day
+>     TimeOfDay hours minutes seconds = tod
 
 > fromGregorian'       :: Integer -> Int -> Int -> DateTime
 > fromGregorian' y m d = fromGregorian y m d 0 0 0
