@@ -193,7 +193,11 @@ Ranking System from Memo 5.2, Section 3
 > factor          :: String -> Score -> Scoring Factors
 > factor name val = return [(name, val)]
 
-> type ScoreFunc = DateTime -> Session -> Scoring Factors
+> type ScoreFunc = DateTime -> Session -> Scoring Factors 
+
+> instance Show (a -> b) where
+>     show _ = "ScoreFunc"
+
 
 > concatMapM      :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
 > concatMapM f xs = fmap concat . mapM f $ xs
