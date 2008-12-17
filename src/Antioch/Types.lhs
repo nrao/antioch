@@ -9,6 +9,7 @@
 
 > type Minutes = Int
 > type Score   = Float
+> type Radians = Float
 
 > data Receiver = NoiseSource
 >               | Rcvr_RRI
@@ -42,8 +43,8 @@
 >     , maxDuration    :: Minutes
 >     , timeBetween    :: Minutes
 >     , frequency      :: Float
->     , ra             :: Float
->     , dec            :: Float
+>     , ra             :: Radians
+>     , dec            :: Radians
 >     , backup         :: Bool
 >     , receivers      :: [Receiver]
 >     , enabled        :: Bool

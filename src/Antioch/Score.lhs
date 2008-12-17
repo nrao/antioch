@@ -1,10 +1,11 @@
 > module Antioch.Score where
 
+> import Antioch.DateTime
 > import Antioch.Types
+> import Antioch.Utilities
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.List
-> import Data.Time.Clock
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -13,26 +14,31 @@ Ranking System from Memo 5.2, Section 3
 
 3.1 Observing Efficiency
 
-> efficiency      :: DateTime -> Session -> Scoring Float
-> efficiency dt s = do
+> efficiency, efficiencyHA :: DateTime -> Session -> Scoring Float
+> efficiency   dt = fmap fst . calcEfficiency dt
+> efficiencyHA dt = fmap snd . calcEfficiency dt
+
+> calcEfficiency      :: DateTime -> Session -> Scoring (Float, Float)
+> calcEfficiency dt s = do
 >     trx <- receiverTemperature dt s
 >     tk  <- kineticTemperature dt s
->     let tsys = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >     minTsys' <- minTsys
 >     zod <- zenithOpticalDepth dt s
->     let eff          = calcEff tsys minTsys' zod za
->     let effAtTransit = calcEff tsys minTsys' zod zat
->     return $ eff / effAtTransit
+>     let [eff, effTransit] = map (calcEff trx tk minTsys' zod) [za, zat]
+>     return $ (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
->     zat = zenithAngleAtTransit dt s
+>     zat = zenithAngleAtTransit s
 >            
 >     minTsys = return za
 >            
->     calcEff tsys minTsys' zod za = let
->         opticalDepth = zod / (cos . min 1.5 . deg2rad $ za)
+>     calcEff trx tk minTsys' zod za = (minTsys' / tsys') ^2
+>       where
+>         -- Equation (4) & (6)
+>         opticalDepth = zod / (cos . min 1.5 $ za)
+>         -- Equation (7)
+>         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >         tsys' = (exp opticalDepth) * tsys
->         in (minTsys' / tsys') ^2
 
 > receiverTemperature      :: DateTime -> Session -> Scoring Float
 > receiverTemperature dt s = return 1.0
@@ -45,17 +51,18 @@ Ranking System from Memo 5.2, Section 3
 >     w <- weather
 >     return $ opacity w dt (frequency s)
 
-> zenithAngle      :: DateTime -> Session -> Float
+> zenithAngle      :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
 >   where
->     lst = hr2rad . utc2lstHours $ dt
+>     lst = hrs2rad . utc2lstHours $ dt
 
-> zenithAngleAtTransit   :: Session -> Float
+> zenithAngleAtTransit   :: Session -> Radians
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
 
-> zenithAngleHA                           :: Session -> Float -> Float
-> zenithAngleHA Session { dec = dec' } ha = rad2deg . acos $
->     sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
+> zenithAngleHA                           :: Session -> Radians -> Radians
+> zenithAngleHA Session { dec = dec' } ha =
+>     -- Equation (5)
+>     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
 
 3.2 Stringency
 
@@ -68,17 +75,35 @@ Ranking System from Memo 5.2, Section 3
 
 3.4 Performance Limits
 
+> minObservingEff :: Session -> Float
+> minObservingEff Session { frequency = freq } =
+>    -- Equation (23)
+>    avgEff - 0.02 - 0.1*(1 - avgEff)
+>    where nu0 = 12.8
+>          r = (max 50 freq) / nu0
+>          -- Equation (22)
+>          avgEff = 0.74 + 0.155 * cos r + 0.12 * cos (2*r)
+>                   - 0.03 * cos (3*r) - 0.01 * cos (4*r)
+
+> hourAngleLimit, atmosphericStabilityLimit :: ScoreFunc
+
 > -- observingEfficiencyLimit      :: ScoreFunc
-> -- hourAngleLimit                :: ScoreFunc
+
+> hourAngleLimit dt s = do
+>     effHA <- efficiencyHA dt s
+>     boolean "hourAngleLimit" $ effHA >= criterion
+>   where
+>     criterion = sqrt . (* 0.5) . minObservingEff $ s
+
 > -- zenithAngleLimit              :: ScoreFunc
 > -- trackingErrorLimit            :: ScoreFunc
 
-> atmosphericStabilityLimit     :: ScoreFunc
 > atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
 
 3.5 Other factors
 
-> projectCompletion     :: ScoreFunc
+> projectCompletion, thesisProject, scienceGrade :: ScoreFunc
+
 > projectCompletion _ s = let weight = 1000.0
 >                             total = fromIntegral (timeTotal . project $ s)
 >                             left  = fromIntegral (timeLeft  . project $ s)
@@ -90,11 +115,9 @@ Ranking System from Memo 5.2, Section 3
 >                            then 1.0
 >                            else 1.0 + percent/weight
 
-> thesisProject     :: ScoreFunc
 > thesisProject _ s = factor "thesisProject" $
 >                     if (thesis . project $ s) then 1.05 else 1.0
 
-> scienceGrade      :: ScoreFunc
 > scienceGrade _ s = factor "scienceGrade" $
 >                    case (grade s) of
 >                      GradeA -> 1.0
