@@ -33,6 +33,8 @@
 >               deriving Show
 
 > data Grade = GradeA | GradeB | GradeC deriving Show
+> data Band = L | S | C | X | U | K | A | Q
+>           deriving (Read, Show)
 
 > data Session = Session {
 >       sName          :: String
@@ -50,6 +52,7 @@
 >     , enabled        :: Bool
 >     , authorized     :: Bool
 >     , grade          :: Grade
+>     , band           :: Band
 >   } deriving Show
 
 > data Project = Project {
@@ -87,6 +90,7 @@
 >     , enabled        = False
 >     , authorized     = False
 >     , grade          = GradeA
+>     , band           = L
 >   }
 
 > defaultProject = Project {
