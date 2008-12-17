@@ -6,6 +6,7 @@
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.List
+> import Weather
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -125,21 +126,6 @@ Ranking System from Memo 5.2, Section 3
 >                      GradeC -> 0.1
 
 > -- receiver                      :: ScoreFunc
-
-
-> data Weather = Weather {
->     opacity :: DateTime -> Float -> Float
->   , tsys    :: DateTime -> Float -> Float
->   , wind    :: DateTime -> Float  -- m/s
->   }
-
-> getWeather :: IO Weather
-> getWeather = do
->     return Weather {
->         opacity = \_ _ -> 0.2
->       , tsys    = \_ _ -> 255.0
->       , wind    = const   2.0
->       }
 
 > data ScoringEnv = ScoringEnv {
 >     envWeather :: Weather
