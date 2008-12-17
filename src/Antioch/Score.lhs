@@ -13,10 +13,49 @@ Ranking System from Memo 5.2, Section 3
 
 3.1 Observing Efficiency
 
-> zenithOpticalDepth :: DateTime -> Session -> Scoring Float
+> efficiency      :: DateTime -> Session -> Scoring Float
+> efficiency dt s = do
+>     trx <- receiverTemperature dt s
+>     tk  <- kineticTemperature dt s
+>     let tsys = trx + 5.7 + tk * (1 - exp (-opticalDepth))
+>     minTsys' <- minTsys
+>     zod <- zenithOpticalDepth dt s
+>     let eff          = calcEff tsys minTsys' zod za
+>     let effAtTransit = calcEff tsys minTsys' zod zat
+>     return $ eff / effAtTransit
+>   where
+>     za  = zenithAngle dt s
+>     zat = zenithAngleAtTransit dt s
+>            
+>     minTsys = return za
+>            
+>     calcEff tsys minTsys' zod za = let
+>         opticalDepth = zod / (cos . min 1.5 . deg2rad $ za)
+>         tsys' = (exp opticalDepth) * tsys
+>         in (minTsys' / tsys') ^2
+
+> receiverTemperature      :: DateTime -> Session -> Scoring Float
+> receiverTemperature dt s = return 1.0
+
+> kineticTemperature      :: DateTime -> Session -> Scoring Float
+> kineticTemperature dt s = return 1.0
+
+> zenithOpticalDepth      :: DateTime -> Session -> Scoring Float
 > zenithOpticalDepth dt s = do
 >     w <- weather
 >     return $ opacity w dt (frequency s)
+
+> zenithAngle      :: DateTime -> Session -> Float
+> zenithAngle dt s = zenithAngleHA s $ lst - ra s
+>   where
+>     lst = hr2rad . utc2lstHours $ dt
+
+> zenithAngleAtTransit   :: Session -> Float
+> zenithAngleAtTransit s = zenithAngleHA s 0.0
+
+> zenithAngleHA                           :: Session -> Float -> Float
+> zenithAngleHA Session { dec = dec' } ha = rad2deg . acos $
+>     sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
 
 3.2 Stringency
 
