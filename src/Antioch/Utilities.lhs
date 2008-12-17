@@ -14,7 +14,7 @@
 
 > rad2deg :: Float -> Float
 > rad2deg rad = rad * 180.0 / pi
-
+> rad2hr x = 12 * x / pi
 > deg2hrs :: Float -> Float
 > deg2hrs d = d/15.0
 
