@@ -72,7 +72,7 @@ Ranking System from Memo 5.2, Section 3
 > atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
 
 > surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" $
->     if True -- TBD day or night?
+>     if isDayTime dt
 >     then
 >         -- Equation 9
 >         exp (-(k * (frequency s) ^ 2 * epsilonFactor))
@@ -93,7 +93,7 @@ Ranking System from Memo 5.2, Section 3
 >    where
 >        sigma_day = 3.3
 >        sigma_night = 2.8
->        rmsTE = if True then sigma_day else sigma_night
+>        rmsTE = if isDayTime dt then sigma_day else sigma_night
 >        theta = 740.0 / (frequency s)
 
 3.2 Stringency

@@ -142,3 +142,16 @@ ODBC and MySQL.
 > parseDateTime fmt = parseTime defaultTimeLocale fmt
 
 > sqlFormat = iso8601DateFormat (Just "%T")
+
+> getRise    :: DateTime -> DateTime
+> getRise dt = fromGregorian y m d 12 30 0
+>     where
+>        (y, m, d) = toGregorian' dt
+
+> getSet    :: DateTime -> DateTime
+> getSet dt = fromGregorian y m d 22 0 0
+>     where
+>        (y, m, d) = toGregorian' dt
+
+> isDayTime    :: DateTime -> Bool
+> isDayTime dt = getRise dt <= dt && dt <= getSet dt
