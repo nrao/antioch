@@ -63,6 +63,10 @@ a - all sky or a large region of the sky
 >                , totalTime      = totalHours
 >                }
 
+> prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
+> prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
+> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
+
 > genProject :: Gen Project
 > genProject = return $ defaultProject
 
@@ -73,6 +77,8 @@ a - all sky or a large region of the sky
   
 > genSemester :: Gen Semester
 > genSemester = fmap (read . str) . elements $ "0111122223333"
+
+> prop_Semester = forAll genSemester $ \s -> s `elem` [0..3]
 
 > str :: a -> [a]
 > str = (: [])
