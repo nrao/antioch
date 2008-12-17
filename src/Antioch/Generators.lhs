@@ -1,19 +1,23 @@
 > module Antioch.Generators where
 
 > import Antioch.Types
+> import Antioch.SLALib (slaGaleq)
+> import Antioch.Utilities
 > import Data.Char
-> import System.Random (randomR)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
 
 > instance Arbitrary Project where
->     arbitrary = genProject
+>     arbitrary       = genProject
+>     coarbitrary _ b = b
 
 > instance Arbitrary Session where
->     arbitrary = genSession
+>     arbitrary       = genSession
+>     coarbitrary _ b = b
 
 > instance Arbitrary Period where
->     arbitrary = genPeriod
+>     arbitrary       = genPeriod
+>     coarbitrary _ b = b
 
 
 choose LST range and declination
@@ -21,15 +25,6 @@ s - single sources or few sources in one area of the sky
     g - galactic plane (some near GC)
     e - extra galactic
 a - all sky or a large region of the sky
-
-> deg2rad :: Float -> Float
-> deg2rad x = x * 3.14 / 180
-
-> rad2deg :: Float -> Float
-> rad2deg x = x * 180 / 3.14
-
-> rad2hr :: Float -> Float
-> rad2hr x = 12 * x / 3.14
 
 > skyType = elements "geegeegeeaaa"  -- sssa, s <- gee
 
@@ -40,49 +35,48 @@ a - all sky or a large region of the sky
 >         return (18.0, dec)
 >     galactic = do
 >         longitude <- choose (0.0, 250.0)
->         let (rar, decr) = sla_galeq (deg2rad longitude) 0.0
+>         let (rar, decr) = slaGaleq (deg2rad longitude) 0.0
 >         return (rad2hr rar, rad2deg decr)
 > genRaDec _   = do
->     ra  <- randomR (0.0, 23.999)
+>     ra  <- choose (0.0, 23.999)
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (ra, dec)
 
--- > genAllocation :: Gen Allocation
--- > genAllocation = do
--- >     s <- semester
--- >     b <- band s
--- >     f <- freq b
--- >     (ra, dec) <- genRaDec
--- >     totalHours <- choose (2, 30)
--- >     minDuration <- choose (2, 4)
--- >     maxDuration <- choose (6, 8)
--- >     return $ defaultAllocation {
--- >                  semester = s
--- >                , band     = b
--- >                , freq     = f
--- >                , rightAscension = ra
--- >                , declination    = dec
--- >                }
+> genSession :: Gen Session
+> genSession = do
+>     p <- genProject
+>     b <- genBand 0
+>     f <- genFreq b
+>     s <- skyType
+>     (ra, dec)  <- genRaDec s
+>     totalHours <- choose (2, 30)
+>     minD       <- choose (2, 4)
+>     maxD       <- choose (6, 8)
+>     return $ defaultSession {
+>                  project        = p
+>                , band           = b
+>                , frequency      = f
+>                , ra             = ra
+>                , dec            = dec
+>                , minDuration    = minD
+>                , maxDuration    = maxD
+>                , totalTime      = totalHours
+>                }
 
 > genProject :: Gen Project
 > genProject = return $ defaultProject
 
-> genSession :: Gen Session
-> genSession = return $ defaultSession
-
 > genPeriod :: Gen Period
 > genPeriod = return $ defaultPeriod
 
--- > type Semester = Int
+> type Semester = Int
   
--- > semester :: Gen Semester
--- > semester = fmap (read . str) . elements $ "0111122223333"
+> genSemester :: Gen Semester
+> genSemester = fmap (read . str) . elements $ "0111122223333"
 
--- > str :: a -> [a]
--- > str = (: [])
+> str :: a -> [a]
+> str = (: [])
 
--- > data Band = L | S | C | X | U | K | A | Q
--- >           deriving (Read, Show)
 
 choose observing band distribution
 average up to trimester 7C
@@ -97,22 +91,23 @@ K     230    15.1%     9.1   6
 A      60     3.9%     2.3   6
 Q      80     5.3%     3.2   6
 
--- > band     :: Int -> Gen Band
--- > band sem = fmap (read . str) . elements $ bands !! sem
--- >   where
--- >     bands = [ "KKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
--- >             , "KKKQQQAXUCCSSLLLLLLL"  -- 1
--- >             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
--- >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
--- >             ]
+> genBand     :: Int -> Gen Band
+> genBand sem = fmap (read . str) . elements $ bands !! sem
+>   where
+>     bands = [ "KKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
+>             , "KKKQQQAXUCCSSLLLLLLL"  -- 1
+>             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
+>             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
+>             ]
 
--- > freq   :: Band -> Gen Float
--- > -- Assume we are observing the water line 40% of the time.
--- > freq K = frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
--- > freq L = return 2.0
--- > freq S = choose ( 2.0,  3.95)
--- > freq C = choose ( 3.95, 5.85)
--- > freq X = choose ( 8.0, 10.0)
--- > freq U = choose (12.0, 15.4)
--- > freq A = choose (26.0, 40.0)
--- > freq Q = choose (40.0, 50.0)
+Assume we are observing the water line 40% of the time.
+
+> genFreq   :: Band -> Gen Float
+> genFreq K = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq L = return 2.0
+> genFreq S = choose ( 2.0,  3.95)
+> genFreq C = choose ( 3.95, 5.85)
+> genFreq X = choose ( 8.0, 10.0)
+> genFreq U = choose (12.0, 15.4)
+> genFreq A = choose (26.0, 40.0)
+> genFreq Q = choose (40.0, 50.0)

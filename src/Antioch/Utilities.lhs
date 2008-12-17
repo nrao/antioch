@@ -11,3 +11,5 @@
 
 > deg2rad deg = deg * pi / 180.0
 > rad2deg rad = rad * 180.0 / pi
+> rad2hr x = 12 * x / pi
+
