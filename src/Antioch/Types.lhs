@@ -1,12 +1,8 @@
 > module Antioch.Types where
 
+> import Antioch.DateTime
 > import Data.Time.Calendar  (fromGregorian)
 > import Data.Time.Clock     (UTCTime(..), secondsToDiffTime)
-
-> type DateTime = UTCTime
-
-> instance Show UTCTime where
->     show _ = "datetime"
 
 > gimmeTime :: Integer -> Int -> Int -> Integer -> DateTime
 > gimmeTime year month day secs = UTCTime (fromGregorian year month day) (secondsToDiffTime secs)
