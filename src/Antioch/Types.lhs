@@ -1,11 +1,6 @@
 > module Antioch.Types where
 
 > import Antioch.DateTime
-> import Data.Time.Calendar  (fromGregorian)
-> import Data.Time.Clock     (UTCTime(..), secondsToDiffTime)
-
-> gimmeTime :: Integer -> Int -> Int -> Integer -> DateTime
-> gimmeTime year month day secs = UTCTime (fromGregorian year month day) (secondsToDiffTime secs)
 
 > type Minutes = Int
 > type Score   = Float
@@ -69,7 +64,7 @@
 
 > data Period  = Period  {
 >       session       :: Session
->     , startTime     :: UTCTime
+>     , startTime     :: DateTime
 >     , duration      :: Minutes
 >     , score         :: Score
 >   } deriving Show
@@ -104,7 +99,7 @@
 
 > defaultPeriod = Period {
 >       session       = defaultSession
->     , startTime     = UTCTime (fromGregorian 2008 1 1) (secondsToDiffTime 0)
+>     , startTime     = fromGregorian' 2008 1 1
 >     , duration      = 0
 >     , score         = 0.0
 >   }

@@ -5,6 +5,9 @@
 > import Antioch.Utilities
 > import Control.Monad.Identity
 > import Control.Monad.Reader
+> import Data.Array
+> import Data.Array.IArray (amap)
+> import Data.Array.ST
 > import Data.List
 
 > type Factor   = (String, Score)
@@ -218,35 +221,34 @@ Ranking System from Memo 5.2, Section 3
 -- > receiver dt Session { receivers = rcvrs } = do
 -- >     scheduled <- asks $ getReceivers dt . receiverSchedule
 -- >     boolean "receiver" $ all (`elem` scheduled) rcvrs
-          
+
 > boolean name True  = factor name 1.0
 > boolean name False = factor name 0.0
 
--- > initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
--- > initBins n f as = runSTArray (initBins' n f allocs)
+> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
+> initBins n f xs = runSTArray (initBins' n f xs)
 
--- > initBins' n f as = do
--- >     arr <- newArray (0, n-1) (0, 0)
--- >     for as $ \a -> do
--- >         let bin = f a
--- >         (t, c) <- readArray arr bin
--- >         -- total should be max of total and completed?
--- >         writeArray arr bin $! (t + totalTime a, c + timeCompleted a)
--- >     return arr
--- >   where
--- >     for []     f = return ()
--- >     for (x:xs) f = f x >> for xs f
+> initBins' n f xs = do
+>     arr <- newArray (0, n-1) (0, 0)
+>     for xs $ \x -> do
+>         let bin = f x
+>         (t, c) <- readArray arr bin
+>         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
+>     return arr
+>   where
+>     for []     f = return ()
+>     for (x:xs) f = f x >> for xs f
 
--- > binsToFactors :: Array Int (Int, Int) -> Array Int [Float]
--- > binsToFactors = amap toFactor
--- >   where
--- >     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
--- >     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
+> binsToFactors :: Array Int (Int, Int) -> Array Int Float
+> binsToFactors = amap toFactor
+>   where
+>     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
+>     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
 
--- > frequencyPressure          :: Array Int [Float] -> (Session -> Int) -> ScoreFunc
--- > frequencyPressure fs f _ a =
--- >     factor "frequencyPressure" $ (fs ! f a) `pow` 0.5
+> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
+> frequencyPressure fs f _ a =
+>     factor "frequencyPressure" $ (fs ! f a) ** 0.5
 
--- > rightAscensionPressure          :: Array Int [Float] -> (Session -> Int) -> ScoreFunc
--- > rightAscensionPressure fs f _ a =
--- >     factor "rightAscensionPressure" $ (fs ! f a) `pow` 0.3
+> rightAscensionPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
+> rightAscensionPressure fs f _ a =
+>     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
