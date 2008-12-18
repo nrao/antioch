@@ -20,6 +20,9 @@
 >     coarbitrary _ b = b
 
 
+> genProject :: Gen Project
+> genProject = return $ defaultProject
+
 choose LST range and declination
 s - single sources or few sources in one area of the sky
     g - galactic plane (some near GC)
@@ -32,15 +35,15 @@ a - all sky or a large region of the sky
 >   where
 >     galacticCenter = do
 >         dec <- choose (-27.0, -29.0)
->         return (18.0, dec)
+>         return (deg2rad 18.0, dec)
 >     galactic = do
 >         longitude <- choose (0.0, 250.0)
 >         let (rar, decr) = slaGaleq (deg2rad longitude) 0.0
->         return (rad2hr rar, rad2deg decr)
+>         return (rar, rad2deg decr)
 > genRaDec _   = do
 >     ra  <- choose (0.0, 23.999)
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
->     return (ra, dec)
+>     return (hrs2rad ra, dec)
 
 > genSession :: Gen Session
 > genSession = do
@@ -63,12 +66,17 @@ a - all sky or a large region of the sky
 >                , totalTime      = totalHours
 >                }
 
-> prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
-> prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
-> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
+Done: quickCheck prop_Ra passes
 
-> genProject :: Gen Project
-> genProject = return $ defaultProject
+> prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
+
+TBF: this doesn't pass because Dec should be in rads
+
+> prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
+
+TBF: thing is, this is in degrees, and it doesn't pass either!
+
+> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
 
 > genPeriod :: Gen Period
 > genPeriod = return $ defaultPeriod
