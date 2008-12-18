@@ -3,13 +3,14 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.Weather
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.Array
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
-> import Weather
+> import Data.Maybe (fromJust)
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -53,7 +54,7 @@ Ranking System from Memo 5.2, Section 3
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring Float
 > zenithOpticalDepth dt s = do
 >     w <- weather
->     return $ opacity w dt (frequency s)
+>     return $ fromJust $ opacity w dt (frequency s)
 
 > zenithAngle      :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
