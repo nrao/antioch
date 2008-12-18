@@ -10,6 +10,7 @@
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
+> import Data.Maybe (fromJust)
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -53,7 +54,7 @@ Ranking System from Memo 5.2, Section 3
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring Float
 > zenithOpticalDepth dt s = do
 >     w <- weather
->     return $ opacity w dt (frequency s)
+>     return . fromJust $ opacity w dt (frequency s)
 
 > zenithAngle      :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
@@ -93,13 +94,17 @@ Ranking System from Memo 5.2, Section 3
 > theta :: Float -> Float
 > theta f = 740.0 / f
 
+> rmsTE :: DateTime -> Float
+> rmsTE dt = if isDayTime dt then sigmaDay else sigmaNight
+>     where
+>        sigmaDay = 3.3
+>        sigmaNight = 2.8
+
 > trackingEfficiency dt s = factor "trackingEfficiency" $
 >    -- Equation 12
->    (1.0 + 4.0 * log 2.0 * (rmsTE / theta') ^ 2) ^ (-2)
+>    (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^ (-2)
 >    where
->        sigma_day = 3.3
->        sigma_night = 2.8
->        rmsTE = if isDayTime dt then sigma_day else sigma_night
+>        rmsTE' = rmsTE dt
 >        theta' = theta . frequency $ s
 
 3.2 Stringency
@@ -108,8 +113,34 @@ Ranking System from Memo 5.2, Section 3
 
 3.3 Pressure Feedback
 
-> -- frequencyPressure             :: ScoreFunc
-> -- rightAscensionPressure        :: ScoreFunc
+> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
+> initBins n f xs = runSTArray (initBins' n f xs)
+
+> initBins' n f xs = do
+>     arr <- newArray (0, n-1) (0, 0)
+>     for xs $ \x -> do
+>         let bin = f x
+>         (t, c) <- readArray arr bin
+>         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
+>     return arr
+>   where
+>     for []     f = return ()
+>     for (x:xs) f = f x >> for xs f
+
+> binsToFactors :: Array Int (Int, Int) -> Array Int Float
+> binsToFactors = amap toFactor
+>   where
+>     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
+>     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
+
+> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
+> rightAscensionPressure     :: Array Int Float -> (Session -> Int) -> ScoreFunc
+
+> frequencyPressure fs f _ a =
+>     factor "frequencyPressure" $ (fs ! f a) ** 0.5
+
+> rightAscensionPressure fs f _ a =
+>     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
 
 3.4 Performance Limits
 
@@ -149,13 +180,15 @@ Ranking System from Memo 5.2, Section 3
 >    boolean "zenithAngleLimit" $ zenithAngle dt s < deg2rad 85.0
 
 > trackingErrorLimit dt s = do
->     effHA <- efficiencyHA dt s
->     -- wind <- wind w dt (frequency s)
+>     w <- weather
+>     let wind' = fromJust $ wind w dt
+>     -- Equation 26
+>     let fv = rmsTrackingError wind' / (theta . frequency $ s)
 >     boolean "trackingErrorLimit" $ fv <= maxErr
 >   where
 >     maxErr = 0.2 
->     -- Equation 26
->     fv = 0.4 -- / theta . frequency $ s
+>     -- Equation 11
+>     rmsTrackingError w = sqrt ((rmsTE dt) ^ 2 + (abs w / 2.1) ^ 4)
 
 > atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
 
@@ -228,31 +261,3 @@ Ranking System from Memo 5.2, Section 3
 
 > boolean name True  = factor name 1.0
 > boolean name False = factor name 0.0
-
-> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
-> initBins n f xs = runSTArray (initBins' n f xs)
-
-> initBins' n f xs = do
->     arr <- newArray (0, n-1) (0, 0)
->     for xs $ \x -> do
->         let bin = f x
->         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
->     return arr
->   where
->     for []     f = return ()
->     for (x:xs) f = f x >> for xs f
-
-> binsToFactors :: Array Int (Int, Int) -> Array Int Float
-> binsToFactors = amap toFactor
->   where
->     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
->     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
-
-> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
-> frequencyPressure fs f _ a =
->     factor "frequencyPressure" $ (fs ! f a) ** 0.5
-
-> rightAscensionPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
-> rightAscensionPressure fs f _ a =
->     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
