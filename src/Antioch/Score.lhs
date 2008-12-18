@@ -3,13 +3,13 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.Weather
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.Array
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
-> import Weather
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -68,7 +68,9 @@ Ranking System from Memo 5.2, Section 3
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
 
-> atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency :: ScoreFunc
+> atmosphericOpacity         :: ScoreFunc
+> surfaceObservingEfficiency :: ScoreFunc
+> trackingEfficiency         :: ScoreFunc
 
 > atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
 
@@ -88,14 +90,17 @@ Ranking System from Memo 5.2, Section 3
 >         epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
 >         k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
 
+> theta :: Float -> Float
+> theta f = 740.0 / f
+
 > trackingEfficiency dt s = factor "trackingEfficiency" $
 >    -- Equation 12
->    (1.0 + 4.0 * log 2.0 * (rmsTE / theta) ^ 2) ^ (-2)
+>    (1.0 + 4.0 * log 2.0 * (rmsTE / theta') ^ 2) ^ (-2)
 >    where
 >        sigma_day = 3.3
 >        sigma_night = 2.8
 >        rmsTE = if isDayTime dt then sigma_day else sigma_night
->        theta = 740.0 / (frequency s)
+>        theta' = theta . frequency $ s
 
 3.2 Stringency
 
@@ -115,10 +120,14 @@ Ranking System from Memo 5.2, Section 3
 >    where nu0 = 12.8
 >          r = (max 50 freq) / nu0
 >          -- Equation 22
->          avgEff = 0.74 + 0.155 * cos r + 0.12 * cos (2*r)
->                   - 0.03 * cos (3*r) - 0.01 * cos (4*r)
+>          avgEff = sum [x * cos (y*r) |
+>                        (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
 
-> observingEfficiencyLimit, hourAngleLimit, atmosphericStabilityLimit :: ScoreFunc
+> observingEfficiencyLimit  :: ScoreFunc
+> hourAngleLimit            :: ScoreFunc
+> zenithAngleLimit          :: ScoreFunc
+> trackingErrorLimit        :: ScoreFunc
+> atmosphericStabilityLimit :: ScoreFunc
 
 > observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" $
 >     if obsEff < minObsEff
@@ -136,8 +145,17 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff $ s
 
-> -- zenithAngleLimit              :: ScoreFunc
-> -- trackingErrorLimit            :: ScoreFunc
+> zenithAngleLimit dt s =
+>    boolean "zenithAngleLimit" $ zenithAngle dt s < deg2rad 85.0
+
+> trackingErrorLimit dt s = do
+>     effHA <- efficiencyHA dt s
+>     -- wind <- wind w dt (frequency s)
+>     boolean "trackingErrorLimit" $ fv <= maxErr
+>   where
+>     maxErr = 0.2 
+>     -- Equation 26
+>     fv = 0.4 -- / theta . frequency $ s
 
 > atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
 
