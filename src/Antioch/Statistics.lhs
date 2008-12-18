@@ -1,5 +1,6 @@
 > module Antioch.Statistics where
 
+> import Antioch.DateTime (fromGregorian)
 > import Antioch.Types
 > import Data.List
 > import Data.Time.Clock
@@ -30,13 +31,13 @@
 
 > exPeriods :: [Period]
 > exPeriods = [defaultPeriod { session = exSession2
->                          , startTime = gimmeTime 2008 1 1 0 
+>                          , startTime = fromGregorian 2008 1 1 0 0 0 
 >                          , duration  = 2 }
 >            , defaultPeriod { session = exSession
->                          , startTime = gimmeTime 2008 1 1 (3600*5)
+>                          , startTime = fromGregorian 2008 1 1 5 0 0
 >                          , duration  = 4 }
 >            , defaultPeriod { session = exSession
->                          , startTime = gimmeTime 2008 1 2 0
+>                          , startTime = fromGregorian 2008 1 2 0 0 0
 >                          , duration  = 3 }]
 
 Would like to do this, but with 'time + diffTime'.  How to?

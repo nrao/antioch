@@ -5,7 +5,11 @@
 > import Antioch.Utilities
 > import Control.Monad.Identity
 > import Control.Monad.Reader
+> import Data.Array
+> import Data.Array.IArray (amap)
+> import Data.Array.ST
 > import Data.List
+> import Weather
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -34,9 +38,9 @@ Ranking System from Memo 5.2, Section 3
 >            
 >     calcEff trx tk minTsys' zod za = (minTsys' / tsys') ^2
 >       where
->         -- Equation (4) & (6)
+>         -- Equation 4 & 6
 >         opticalDepth = zod / (cos . min 1.5 $ za)
->         -- Equation (7)
+>         -- Equation 7
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >         tsys' = (exp opticalDepth) * tsys
 
@@ -61,8 +65,37 @@ Ranking System from Memo 5.2, Section 3
 
 > zenithAngleHA                           :: Session -> Radians -> Radians
 > zenithAngleHA Session { dec = dec' } ha =
->     -- Equation (5)
+>     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
+
+> atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency :: ScoreFunc
+
+> atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
+
+> surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" $
+>     if isDayTime dt
+>     then
+>         -- Equation 9
+>         exp (-(k * (frequency s) ^ 2 * epsilonFactor))
+>         -- Equation 10
+>         -- exp (-((fromIntegral . round . frequency $ s)/69.2) ^ 2)
+>     else
+>         1.0
+>     where
+>         c = 299792485.0
+>         epsilonDay   = 0.46
+>         epsilonNight = 0.39
+>         epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
+>         k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
+
+> trackingEfficiency dt s = factor "trackingEfficiency" $
+>    -- Equation 12
+>    (1.0 + 4.0 * log 2.0 * (rmsTE / theta) ^ 2) ^ (-2)
+>    where
+>        sigma_day = 3.3
+>        sigma_night = 2.8
+>        rmsTE = if isDayTime dt then sigma_day else sigma_night
+>        theta = 740.0 / (frequency s)
 
 3.2 Stringency
 
@@ -77,17 +110,25 @@ Ranking System from Memo 5.2, Section 3
 
 > minObservingEff :: Session -> Float
 > minObservingEff Session { frequency = freq } =
->    -- Equation (23)
+>    -- Equation 23
 >    avgEff - 0.02 - 0.1*(1 - avgEff)
 >    where nu0 = 12.8
 >          r = (max 50 freq) / nu0
->          -- Equation (22)
+>          -- Equation 22
 >          avgEff = 0.74 + 0.155 * cos r + 0.12 * cos (2*r)
 >                   - 0.03 * cos (3*r) - 0.01 * cos (4*r)
 
-> hourAngleLimit, atmosphericStabilityLimit :: ScoreFunc
+> observingEfficiencyLimit, hourAngleLimit, atmosphericStabilityLimit :: ScoreFunc
 
-> -- observingEfficiencyLimit      :: ScoreFunc
+> observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" $
+>     if obsEff < minObsEff
+>     -- Equation 24
+>     then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
+>     else 1.0
+>   where
+>     sigma = 0.02
+>     obsEff = 1.0  -- TBF
+>     minObsEff = minObservingEff s
 
 > hourAngleLimit dt s = do
 >     effHA <- efficiencyHA dt s
@@ -126,21 +167,6 @@ Ranking System from Memo 5.2, Section 3
 
 > -- receiver                      :: ScoreFunc
 
-
-> data Weather = Weather {
->     opacity :: DateTime -> Float -> Float
->   , tsys    :: DateTime -> Float -> Float
->   , wind    :: DateTime -> Float  -- m/s
->   }
-
-> getWeather :: IO Weather
-> getWeather = do
->     return Weather {
->         opacity = \_ _ -> 0.2
->       , tsys    = \_ _ -> 255.0
->       , wind    = const   2.0
->       }
-
 > data ScoringEnv = ScoringEnv {
 >     envWeather :: Weather
 >   }
@@ -158,7 +184,7 @@ Ranking System from Memo 5.2, Section 3
 
 > type ScoreFunc = DateTime -> Session -> Scoring Factors 
 
-> instance Show ScoreFunc where
+> instance Show (a -> b) where
 >     show _ = "ScoreFunc"
 
 
@@ -181,35 +207,34 @@ Ranking System from Memo 5.2, Section 3
 -- > receiver dt Session { receivers = rcvrs } = do
 -- >     scheduled <- asks $ getReceivers dt . receiverSchedule
 -- >     boolean "receiver" $ all (`elem` scheduled) rcvrs
-          
+
 > boolean name True  = factor name 1.0
 > boolean name False = factor name 0.0
 
--- > initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
--- > initBins n f as = runSTArray (initBins' n f allocs)
+> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
+> initBins n f xs = runSTArray (initBins' n f xs)
 
--- > initBins' n f as = do
--- >     arr <- newArray (0, n-1) (0, 0)
--- >     for as $ \a -> do
--- >         let bin = f a
--- >         (t, c) <- readArray arr bin
--- >         -- total should be max of total and completed?
--- >         writeArray arr bin $! (t + totalTime a, c + timeCompleted a)
--- >     return arr
--- >   where
--- >     for []     f = return ()
--- >     for (x:xs) f = f x >> for xs f
+> initBins' n f xs = do
+>     arr <- newArray (0, n-1) (0, 0)
+>     for xs $ \x -> do
+>         let bin = f x
+>         (t, c) <- readArray arr bin
+>         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
+>     return arr
+>   where
+>     for []     f = return ()
+>     for (x:xs) f = f x >> for xs f
 
--- > binsToFactors :: Array Int (Int, Int) -> Array Int [Float]
--- > binsToFactors = amap toFactor
--- >   where
--- >     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
--- >     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
+> binsToFactors :: Array Int (Int, Int) -> Array Int Float
+> binsToFactors = amap toFactor
+>   where
+>     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
+>     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
 
--- > frequencyPressure          :: Array Int [Float] -> (Session -> Int) -> ScoreFunc
--- > frequencyPressure fs f _ a =
--- >     factor "frequencyPressure" $ (fs ! f a) `pow` 0.5
+> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
+> frequencyPressure fs f _ a =
+>     factor "frequencyPressure" $ (fs ! f a) ** 0.5
 
--- > rightAscensionPressure          :: Array Int [Float] -> (Session -> Int) -> ScoreFunc
--- > rightAscensionPressure fs f _ a =
--- >     factor "rightAscensionPressure" $ (fs ! f a) `pow` 0.3
+> rightAscensionPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
+> rightAscensionPressure fs f _ a =
+>     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
