@@ -3,13 +3,13 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.Weather
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.Array
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
-> import Weather
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -115,8 +115,8 @@ Ranking System from Memo 5.2, Section 3
 >    where nu0 = 12.8
 >          r = (max 50 freq) / nu0
 >          -- Equation 22
->          avgEff = 0.74 + 0.155 * cos r + 0.12 * cos (2*r)
->                   - 0.03 * cos (3*r) - 0.01 * cos (4*r)
+>          avgEff = sum [x * cos (y*r) |
+>                        (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
 
 > observingEfficiencyLimit, hourAngleLimit, atmosphericStabilityLimit :: ScoreFunc
 

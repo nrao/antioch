@@ -1,8 +1,9 @@
 > module Antioch.Weather where
 
+> import Antioch.DateTime
+> import Antioch.Types
 > import Database.HDBC
 > import Database.HDBC.ODBC
-> import Antioch.Types
 
 > instance SqlType Float where
 >     toSql x   = SqlDouble ((realToFrac x) :: Double)
