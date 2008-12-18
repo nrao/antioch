@@ -3,6 +3,7 @@
 > import Antioch.Types
 > import Antioch.SLALib (slaGaleq)
 > import Antioch.Utilities
+> import Antioch.DateTime
 > import Data.Char
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
@@ -19,9 +20,39 @@
 >     arbitrary       = genPeriod
 >     coarbitrary _ b = b
 
+Generate a random project name: 'A' .. 'Z'
+
+> genProjectName :: Gen Char 
+> genProjectName = elements (map chr [65 .. 90])
+
+TBF: Currently, the idea of semester is very limited.
+
+> genSemesterName :: Gen String
+> genSemesterName = elements ["07C", "08A", "08B", "08C"]
+
+> genThesis :: Gen Bool
+> genThesis = choose (False, True) -- T.frequency [(20, True), (80, False)]
+
+TBF: how to line to Sessions that have already been generated?  and then use
+those to calculate timeLeft and timeTotal?
 
 > genProject :: Gen Project
-> genProject = return $ defaultProject
+> genProject = do
+>     name     <- genProjectName
+>     semester <- genSemesterName
+>     thesis   <- genThesis
+>     return $ defaultProject {
+>           pName = str name
+>         , semester = semester
+>         , thesis = thesis
+>         }
+
+Now lets make sure we are properly generating Projects: test each attribute
+at a time:
+
+> prop_pName p = "A" <= pName p && pName p <= "Z"
+> prop_semester p = any (==(semester p)) ["07C", "08A", "08B", "08C"]
+> prop_thesis p = thesis p == True || thesis p == False
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
@@ -45,10 +76,13 @@ a - all sky or a large region of the sky
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (hrs2rad ra, dec)
 
+TBF: how to link these to generated Projects?
+
 > genSession :: Gen Session
 > genSession = do
 >     p <- genProject
->     b <- genBand 0
+>     t <- genSemester
+>     b <- genBand t 
 >     f <- genFreq b
 >     s <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -78,8 +112,41 @@ TBF: thing is, this is in degrees, and it doesn't pass either!
 
 > prop_DecDegree s = (-180) <= dec s && dec s <= 180 
 
+TBF: start on 15 min. boundraies in a given time range. But how to make them
+mutually exclusive?
+
+> genStartTime :: Gen DateTime
+> genStartTime = elements [fromGregorian' 2008 1 1, fromGregorian' 2008 1 2]
+
+Durations for Periods come in 15 minute intervals, and probably aren't smaller
+then an hour.  TBD: use T.frequency
+
+> genDuration :: Gen Minutes
+> genDuration = do
+>     quarters <- choose (1*4, 10*4)
+>     return $ quarters * 15
+
+TBD:
+
+> genScore :: Gen Score
+> genScore = choose (0, 10)
+
 > genPeriod :: Gen Period
-> genPeriod = return $ defaultPeriod
+> genPeriod = do
+>      session   <- genSession  
+>      startTime <- genStartTime
+>      duration  <- genDuration
+>      score     <- genScore
+>      return $ Period {
+>          session   = session
+>        , startTime = startTime
+>        , duration  = duration
+>        , score     = score
+>        }
+
+Make sure Durations are made of 15-minute intervals
+
+> prop_duration p = (duration p) `mod` 15 == 0
 
 > type Semester = Int
   
