@@ -9,19 +9,25 @@
 > import Data.Time.Clock (getCurrentTime)
 
 > data Weather = Weather {
->     wind    :: DateTime -> (Maybe DateTime) -> (Maybe Float) -- m/s
->   , tatm    :: DateTime -> (Maybe DateTime) -> (Maybe Float) -- Kelvin
->   , opacity :: DateTime -> (Maybe DateTime) -> Float -> (Maybe Float)
->   , tsys    :: DateTime -> (Maybe DateTime) -> Float -> (Maybe Float)
+>     wind    :: DateTime -> (Maybe Float) -- m/s
+>   , tatm    :: DateTime -> (Maybe Float) -- Kelvin
+>   , opacity :: DateTime -> Float -> (Maybe Float)
+>   , tsys    :: DateTime -> Float -> (Maybe Float)
 >   }
 
-> getWeather :: IO Weather
-> getWeather = do
+> getWeather     :: Maybe DateTime -> IO Weather
+> getWeather Nothing = do
 >     return Weather {
->         wind    = getWind
->       , tatm    = getTAtm
->       , opacity = getOpacity
->       , tsys    = getTSys
+>       }
+> getWeather (Just now) = do
+
+> getWeather now = do
+>     conn   <- connect
+>     return Weather {
+>         wind    = getWind conn now
+>       , tatm    = getTAtm conn now
+>       , opacity = getOpacity conn now
+>       , tsys    = getTSys conn now
 >       }
 
 > instance SqlType Float where
@@ -31,7 +37,7 @@
 Both wind speed and atmospheric temperature are values forecast independently
 of frequency.
 
-> getWind            :: DateTime -> (Maybe DateTime) -> (Maybe Float)
+> getWind            :: Connection -> Maybe DateTime -> DateTime -> (Maybe Float)
 > getWind target now = getWind' target (determineFType target now)
 
 > getWind'          :: DateTime -> Int -> (Maybe Float)
@@ -101,6 +107,9 @@ Helper function to determine the desired forecast type given two DateTimes.
 >         forecast_types = [12, 24, 36, 48, 60]
 
 Helper function to get singular Float values out of the database.
+
+> getFloat :: Connection -> String -> [SqlValue] -> Maybe Float
+> getFloat :: IORef Connection -> String -> [SqlValue] -> Maybe Float
 
 > getFloat          :: String -> [SqlValue] -> (Maybe Float)
 > getFloat query xs = unsafePerformIO . handleSqlError $ do
