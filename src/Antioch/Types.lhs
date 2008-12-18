@@ -32,22 +32,22 @@
 >           deriving (Eq, Read, Show)
 
 > data Session = Session {
->       sName          :: String
->     , project        :: Project
->     , totalTime      :: Minutes
->     , totalUsed      :: Minutes
->     , minDuration    :: Minutes
->     , maxDuration    :: Minutes
->     , timeBetween    :: Minutes
->     , frequency      :: Float
->     , ra             :: Radians
->     , dec            :: Radians
->     , backup         :: Bool
->     , receivers      :: [Receiver]
->     , enabled        :: Bool
->     , authorized     :: Bool
->     , grade          :: Grade
->     , band           :: Band
+>     sName       :: String
+>   , project     :: Project
+>   , totalTime   :: Minutes
+>   , totalUsed   :: Minutes
+>   , minDuration :: Minutes
+>   , maxDuration :: Minutes
+>   , timeBetween :: Minutes
+>   , frequency   :: Float
+>   , ra          :: Radians
+>   , dec         :: Radians
+>   , backup      :: Bool
+>   , receivers   :: [Receiver]
+>   , enabled     :: Bool
+>   , authorized  :: Bool
+>   , grade       :: Grade
+>   , band        :: Band
 >   } deriving (Eq, Show)
 
 > data Project = Project {
@@ -73,22 +73,22 @@
 >     p1 < p2 = startTime p1 < startTime p2
 
 > defaultSession = Session {
->       sName   = ""
->     , project        = defaultProject 
->     , totalTime      = 0
->     , totalUsed      = 0
->     , minDuration    = 0
->     , maxDuration    = 0
->     , timeBetween    = 0
->     , frequency      = 0.0
->     , ra             = 0.0
->     , dec            = 0.0
->     , backup         = False
->     , receivers      = [Rcvr12_18]
->     , enabled        = False
->     , authorized     = False
->     , grade          = GradeA
->     , band           = L
+>     sName       = ""
+>   , project     = defaultProject 
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
 >   }
 
 > defaultProject = Project {

@@ -84,28 +84,28 @@ Ranking System from Memo 5.2, Section 3
 >         -- exp (-((fromIntegral . round . frequency $ s)/69.2) ^ 2)
 >     else
 >         1.0
->     where
->         c = 299792485.0
->         epsilonDay   = 0.46
->         epsilonNight = 0.39
->         epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
->         k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
+>   where
+>     c = 299792485.0
+>     epsilonDay   = 0.46
+>     epsilonNight = 0.39
+>     epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
+>     k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
 
 > theta :: Float -> Float
 > theta f = 740.0 / f
 
 > rmsTE :: DateTime -> Float
 > rmsTE dt = if isDayTime dt then sigmaDay else sigmaNight
->     where
->        sigmaDay = 3.3
->        sigmaNight = 2.8
+>   where
+>     sigmaDay = 3.3
+>     sigmaNight = 2.8
 
 > trackingEfficiency dt s = factor "trackingEfficiency" $
->    -- Equation 12
->    (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^ (-2)
->    where
->        rmsTE' = rmsTE dt
->        theta' = theta . frequency $ s
+>     -- Equation 12
+>     (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^ (-2)
+>   where
+>     rmsTE' = rmsTE dt
+>     theta' = theta . frequency $ s
 
 3.2 Stringency
 
@@ -196,25 +196,22 @@ Ranking System from Memo 5.2, Section 3
 
 > projectCompletion, thesisProject, scienceGrade :: ScoreFunc
 
-> projectCompletion _ s = let weight = 1000.0
->                             total = fromIntegral (timeTotal . project $ s)
->                             left  = fromIntegral (timeLeft  . project $ s)
->                             percent = if total <= 0.0
->                                       then 0.0
->                                       else 100.0*(total - left)/total
->                         in factor "projectCompletion" $
->                            if percent <= 0.0
->                            then 1.0
->                            else 1.0 + percent/weight
+> projectCompletion _ s = let
+>     weight = 1000.0
+>     total = fromIntegral (timeTotal . project $ s)
+>     left  = fromIntegral (timeLeft  . project $ s)
+>     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
+>     in factor "projectCompletion" $
+>     if percent <= 0.0 then 1.0 else 1.0 + percent/weight
 
 > thesisProject _ s = factor "thesisProject" $
->                     if (thesis . project $ s) then 1.05 else 1.0
+>     if (thesis . project $ s) then 1.05 else 1.0
 
 > scienceGrade _ s = factor "scienceGrade" $
->                    case (grade s) of
->                      GradeA -> 1.0
->                      GradeB -> 0.9
->                      GradeC -> 0.1
+>     case (grade s) of
+>         GradeA -> 1.0
+>         GradeB -> 0.9
+>         GradeC -> 0.1
 
 > -- receiver                      :: ScoreFunc
 

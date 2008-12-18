@@ -21,9 +21,9 @@ reading barfs.
 
 > getWeather     :: Maybe DateTime -> IO Weather
 > getWeather now = do
->     let now' = if isNothing now
->                then unsafePerformIO getCurrentTime
->                else fromJust now
+>     now' <- case now of
+>         Nothing -> getCurrentTime
+>         Just n  -> return n
 >     conn' <- connect
 >     conn  <- newIORef conn'
 >     return Weather {

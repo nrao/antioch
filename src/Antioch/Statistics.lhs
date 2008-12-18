@@ -7,25 +7,29 @@
 > import Graphics.Gnuplot.Simple
 
 > exProject = defaultProject {
->    pName = "testProject"
->  , semester = "08B"
->  }
+>     pName    = "testProject"
+>   , semester = "08B"
+>   }
 
-> exSession = defaultSession { sName = "test"
->                            , project = exProject
->                            , frequency = 1.2
->                            , ra        = 3.0
->                            , dec       = 2.5
->                            , totalTime = 12
->                            , totalUsed = 9 }
+> exSession = defaultSession {
+>     sName     = "test"
+>   , project   = exProject
+>   , frequency = 1.2
+>   , ra        = 3.0
+>   , dec       = 2.5
+>   , totalTime = 12
+>   , totalUsed = 9
+>   }
 
-> exSession2 = defaultSession { sName = "test2"
->                             , project = exProject
->                             , frequency = 4.2
->                             , ra        = 4.0
->                             , dec       = 2.0
->                             , totalTime = 24
->                             , totalUsed = 0 }
+> exSession2 = defaultSession {
+>     sName     = "test2"
+>   , project   = exProject
+>   , frequency = 4.2
+>   , ra        = 4.0
+>   , dec       = 2.0
+>   , totalTime = 24
+>   , totalUsed = 0
+>   }
 
 > exSessions = [exSession, exSession2]
 
