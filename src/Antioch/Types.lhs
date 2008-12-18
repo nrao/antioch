@@ -25,11 +25,11 @@
 >               | Rcvr_PAR
 >               | Zpectrometer
 >               | Holography
->               deriving Show
+>               deriving (Eq, Show)
 
-> data Grade = GradeA | GradeB | GradeC deriving Show
+> data Grade = GradeA | GradeB | GradeC deriving (Eq, Show)
 > data Band = L | S | C | X | U | K | A | Q
->           deriving (Read, Show)
+>           deriving (Eq, Read, Show)
 
 > data Session = Session {
 >       sName          :: String
@@ -48,26 +48,29 @@
 >     , authorized     :: Bool
 >     , grade          :: Grade
 >     , band           :: Band
->   } deriving Show
+>   } deriving (Eq, Show)
 
 > data Project = Project {
->       pName          :: String
->     , semester       :: String
->     , sessions       :: [Session]
->     , thesis         :: Bool
->     , timeLeft       :: Minutes
->     , timeTotal      :: Minutes
->   } 
+>     pName     :: String
+>   , semester  :: String
+>   , sessions  :: [Session]
+>   , thesis    :: Bool
+>   , timeLeft  :: Minutes
+>   , timeTotal :: Minutes
+>   } deriving Eq
 
 > instance Show Project where
 >     show p = pName p
 
 > data Period  = Period  {
->       session       :: Session
->     , startTime     :: DateTime
->     , duration      :: Minutes
->     , score         :: Score
->   } deriving Show
+>     session   :: Session
+>   , startTime :: DateTime
+>   , duration  :: Minutes
+>   , pScore    :: Score
+>   } deriving (Eq, Show)
+
+> instance Ord Period where
+>     p1 < p2 = startTime p1 < startTime p2
 
 > defaultSession = Session {
 >       sName   = ""
@@ -89,17 +92,17 @@
 >   }
 
 > defaultProject = Project {
->       pName          = ""
->     , semester       = ""
->     , sessions       = [defaultSession]
->     , thesis         = False
->     , timeLeft       = 0
->     , timeTotal      = 0
+>     pName     = ""
+>   , semester  = ""
+>   , sessions  = [defaultSession]
+>   , thesis    = False
+>   , timeLeft  = 0
+>   , timeTotal = 0
 >   }
 
 > defaultPeriod = Period {
->       session       = defaultSession
->     , startTime     = fromGregorian' 2008 1 1
->     , duration      = 0
->     , score         = 0.0
+>     session   = defaultSession
+>   , startTime = fromGregorian' 2008 1 1
+>   , duration  = 0
+>   , pScore    = 0.0
 >   }
