@@ -61,7 +61,7 @@
 >   } deriving Eq
 
 > instance Show Project where
->     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") " 
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
 
 > data Period  = Period  {
 >     session   :: Session
