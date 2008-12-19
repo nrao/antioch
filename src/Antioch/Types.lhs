@@ -34,6 +34,7 @@
 > data Session = Session {
 >     sName       :: String
 >   , project     :: Project
+>   , periods     :: [Period]
 >   , totalTime   :: Minutes
 >   , totalUsed   :: Minutes
 >   , minDuration :: Minutes
@@ -60,7 +61,7 @@
 >   } deriving Eq
 
 > instance Show Project where
->     show p = pName p
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") " 
 
 > data Period  = Period  {
 >     session   :: Session
@@ -75,6 +76,7 @@
 > defaultSession = Session {
 >     sName       = ""
 >   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
 >   , totalTime   = 0
 >   , totalUsed   = 0
 >   , minDuration = 0
