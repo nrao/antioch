@@ -2,6 +2,7 @@
 
 > import Data.Fixed  (mod')
 > import Data.List   (foldl1')
+> import Test.QuickCheck 
 
 > d2pi :: Double
 > d2pi = 2.0 * pi
@@ -11,8 +12,19 @@
 
 > -- Normalize angle into the range 0..2*pi.
 > dranrm a
->     | a <  0    = a +      d2pi
+>     | a <  0    = dranrm $ a + d2pi
 >     | otherwise = a `mod'` d2pi
+
+Even though this one is fairly obvious, lets start unit testing;
+Generate a wide range of angles:
+
+> genAngleRad :: Gen Double
+> genAngleRad = choose (10*(-d2pi), 10*d2pi)
+
+Now make sure that 'dranrm' always normalizes them:
+
+> prop_dranrm = forAll genAngleRad $
+>     \a -> let b = dranrm a in 0.0 <= b && b <= d2pi
 
 > floatConv f = realToFrac . f . realToFrac
 
@@ -39,6 +51,16 @@ explicitly but in the form of the coefficient 8640184.812866, which is
 
 > poly x = foldl1' $ \a b -> a*x + b
 
+Let's test the 'ut1' function: first, generate UT inputs:
+(TBD: what are the bounds?):
+
+> --genUTTime :: Gen Double
+> --genUTTime = choose (0.0, 2400000.5)
+
+Now make sure that the gmst time makes sense (TBD: what are the bounds?):
+
+> -- prop_gmst' = forAll genUTTime $ \a -> let b = gmst' a in 0.0 <= b && b <= 2400000.5
+
 Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordinates.
 
  Copyright P.T.Wallace.  All rights reserved.
@@ -46,6 +68,12 @@ Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordina
 > slaDcs2c :: Double -> Double -> [Double]
 > slaDcs2c a b = [(cos a) * cosb, (sin a) * cosb, sin b]
 >                where cosb = cos b
+
+To test slaDcs2c provide a wide range of radian inputs, and make sure that
+the results are always normalized (0..1)
+TBF: multiple args?
+
+> -- prop_slaDcs2c =  forAll genAngleRad $ \a b let x, y = slaDcs2c
 
 > rmat = [[-0.054875539726,  0.494109453312, -0.867666135858]
 >       , [-0.873437108010, -0.444829589425, -0.198076386122]
