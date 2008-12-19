@@ -31,7 +31,7 @@ TBF: Currently, the idea of semester is very limited.
 > genSemesterName = elements ["07C", "08A", "08B", "08C"]
 
 > genThesis :: Gen Bool
-> genThesis = choose (False, True) -- T.frequency [(20, True), (80, False)]
+> genThesis = T.frequency [(20, return True), (80, return False)]
 
 TBF: how to line to Sessions that have already been generated?  and then use
 those to calculate timeLeft and timeTotal?
@@ -41,11 +41,16 @@ those to calculate timeLeft and timeTotal?
 >     name     <- genProjectName
 >     semester <- genSemesterName
 >     thesis   <- genThesis
+>     sessions <- genSessions
+>     let timeTotal = sum [ totalTime s | s <- sessions ]
 >     return $ defaultProject {
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
+>         , sessions = sessions
+>         , timeTotal = timeTotal
 >         }
+
 
 Now lets make sure we are properly generating Projects: test each attribute
 at a time:
@@ -53,6 +58,11 @@ at a time:
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["07C", "08A", "08B", "08C"]
 > prop_thesis p = thesis p == True || thesis p == False
+
+Each Project's Sessions can have a totalTime between 2 & 30 hrs.  Currently
+a project has between 1 and 5 Sessions.
+
+> prop_timeTotal p = (1 * 2) <= timeTotal p && timeTotal p <= 5 * 30
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
@@ -76,7 +86,7 @@ a - all sky or a large region of the sky
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (hrs2rad ra, dec)
 
-TBF: how to link these to generated Projects?
+TBF: how to link these to generated Projects? And we aren't linking to Periods!
 
 > genSession :: Gen Session
 > genSession = do
@@ -99,6 +109,22 @@ TBF: how to link these to generated Projects?
 >                , maxDuration    = maxD
 >                , totalTime      = totalHours
 >                }
+
+TBF: fix this hack!
+
+> genSessions :: Gen [Session]
+> genSessions = do
+>     n <- T.frequency [(25, return 1), (25, return 2), (20, return 3), (20, return 4), (10, return 5)]
+>     --rnd <- newStdGen
+>     --return $ generate 3 rnd $ vector n :: [Session] 
+>     -- return $ vector n :: [Session]
+>     s <- genSession
+>     s2 <- genSession
+>     s3 <- genSession
+>     s4 <- genSession
+>     s5 <- genSession
+>     s6 <- genSession
+>     return $ take n [s, s2, s3, s4, s5, s6]
 
 Done: quickCheck prop_Ra passes
 
