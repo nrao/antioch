@@ -110,21 +110,10 @@ TBF: how to link these to generated Projects? And we aren't linking to Periods!
 >                , totalTime      = totalHours
 >                }
 
-TBF: fix this hack!
 
 > genSessions :: Gen [Session]
-> genSessions = do
->     n <- T.frequency [(25, return 1), (25, return 2), (20, return 3), (20, return 4), (10, return 5)]
->     --rnd <- newStdGen
->     --return $ generate 3 rnd $ vector n :: [Session] 
->     -- return $ vector n :: [Session]
->     s <- genSession
->     s2 <- genSession
->     s3 <- genSession
->     s4 <- genSession
->     s5 <- genSession
->     s6 <- genSession
->     return $ take n [s, s2, s3, s4, s5, s6]
+> genSessions = 
+>     T.frequency [(25, return 1), (25, return 2), (20, return 3), (20, return 4), (10, return 5)] >>= vector
 
 Done: quickCheck prop_Ra passes
 
