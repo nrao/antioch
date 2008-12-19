@@ -1,12 +1,13 @@
 > module Antioch.Weather where
 
 > import Antioch.DateTime
-> import Control.Exception (bracketOnError)
+> import Control.Exception (IOException, bracketOnError, catch)
 > import Data.IORef
 > import Data.List (elemIndex)
 > import Data.Maybe (fromJust, isNothing)
 > import Database.HDBC
 > import Database.HDBC.ODBC
+> import Prelude hiding (catch)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Test.QuickCheck
 
@@ -18,7 +19,7 @@
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
-> getWeather now = do
+> getWeather now = bracketOnError connect disconnect $ \conn' -> do
 >     now' <- case now of
 >         Nothing -> getCurrentTime
 >         Just n  -> return n
@@ -110,11 +111,7 @@ Helper function to get singular Float values out of the database.
 
 > getFloat :: IORef Connection -> String -> [SqlValue] -> Maybe Float
 > getFloat conn query xs = unsafePerformIO . handleSqlError $ do
->     conn'  <- readIORef conn
->     result <- bracketOnError
->         (quickQuery' conn' query xs)
->         (\_ -> reestablishConnection conn)
->         (\r -> do {return r})
+>     result <- tryQuery conn query xs
 >     case result of
 >         [[SqlNull]] -> return Nothing
 >         [[x]] -> return $ Just (fromSql x)
@@ -124,6 +121,15 @@ Helper function to get singular Float values out of the database.
 >   where reestablishConnection c = do
 >             c' <- connect
 >             return $ modifyIORef conn (\_ -> c')
+
+> tryQuery :: IORef Connection -> String -> [SqlValue] -> IO [[SqlValue]]
+> tryQuery conn query xs = do
+>     conn' <- readIORef conn
+>     quickQuery' conn' query xs `catch` \e -> do
+>         print (e :: IOException)
+>         c' <- connect
+>         writeIORef conn c'
+>         quickQuery' c' query xs
 
 Just some test functions to make sure things are working.
 
