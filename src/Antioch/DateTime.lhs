@@ -37,6 +37,15 @@ Defined here so that users don't need to know about Data.Time.Clock.
 > getCurrentTime :: IO DateTime
 > getCurrentTime = Clock.getCurrentTime
 
+> addMinutes' :: Int -> DateTime -> DateTime
+> addMinutes' = addMinutes . fromIntegral
+  
+> addMinutes   :: Integer -> DateTime -> DateTime
+> addMinutes m = addSeconds (60 * m)
+  
+> addSeconds      :: Integer -> DateTime -> DateTime
+> addSeconds s dt = fromSeconds $ toSeconds dt + s
+
 Conversion back and forth between DateTime and MJD.
 
 > toMJD :: DateTime -> Rational

@@ -14,7 +14,9 @@
 
 > rad2deg :: Float -> Float
 > rad2deg rad = rad * 180.0 / pi
+
 > rad2hr x = 12 * x / pi
+
 > deg2hrs :: Float -> Float
 > deg2hrs d = d/15.0
 
@@ -22,9 +24,8 @@
 
 > hrs2rad = deg2rad . hrs2deg
 
-> utc2lstHours :: DateTime -> Float
-> utc2lstHours dt = let gmst = rad2deg . SLA.gmst . toMJD' $ dt
->                       gbls = deg2hrs $ gmst + gbtLong
->                   in if gbls < 0.0
->                      then gbls + 24.0
->                      else gbls
+> utc2lstHours    :: DateTime -> Float
+> utc2lstHours dt = let
+>     gmst = rad2deg . SLA.gmst . toMJD' $ dt
+>     gbls = deg2hrs $ gmst + gbtLong
+>     in if gbls < 0.0 then gbls + 24.0 else gbls

@@ -167,7 +167,7 @@ TBD:
 >          session   = session
 >        , startTime = startTime
 >        , duration  = duration
->        , score     = score
+>        , pScore    = score
 >        }
 
 Make sure Durations are made of 15-minute intervals

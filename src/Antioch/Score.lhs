@@ -3,13 +3,14 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.Weather
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.Array
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
-> import Weather
+> import Data.Maybe (fromJust)
 
 > type Factor   = (String, Score)
 > type Factors  = [Factor]
@@ -53,7 +54,7 @@ Ranking System from Memo 5.2, Section 3
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring Float
 > zenithOpticalDepth dt s = do
 >     w <- weather
->     return $ opacity w dt (frequency s)
+>     return . fromJust $ opacity w dt (frequency s)
 
 > zenithAngle      :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
@@ -68,7 +69,9 @@ Ranking System from Memo 5.2, Section 3
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
 
-> atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency :: ScoreFunc
+> atmosphericOpacity         :: ScoreFunc
+> surfaceObservingEfficiency :: ScoreFunc
+> trackingEfficiency         :: ScoreFunc
 
 > atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
 
@@ -81,21 +84,28 @@ Ranking System from Memo 5.2, Section 3
 >         -- exp (-((fromIntegral . round . frequency $ s)/69.2) ^ 2)
 >     else
 >         1.0
->     where
->         c = 299792485.0
->         epsilonDay   = 0.46
->         epsilonNight = 0.39
->         epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
->         k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
+>   where
+>     c = 299792485.0
+>     epsilonDay   = 0.46
+>     epsilonNight = 0.39
+>     epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
+>     k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
+
+> theta :: Float -> Float
+> theta f = 740.0 / f
+
+> rmsTE :: DateTime -> Float
+> rmsTE dt = if isDayTime dt then sigmaDay else sigmaNight
+>   where
+>     sigmaDay = 3.3
+>     sigmaNight = 2.8
 
 > trackingEfficiency dt s = factor "trackingEfficiency" $
->    -- Equation 12
->    (1.0 + 4.0 * log 2.0 * (rmsTE / theta) ^ 2) ^ (-2)
->    where
->        sigma_day = 3.3
->        sigma_night = 2.8
->        rmsTE = if isDayTime dt then sigma_day else sigma_night
->        theta = 740.0 / (frequency s)
+>     -- Equation 12
+>     (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^ (-2)
+>   where
+>     rmsTE' = rmsTE dt
+>     theta' = theta . frequency $ s
 
 3.2 Stringency
 
@@ -103,8 +113,34 @@ Ranking System from Memo 5.2, Section 3
 
 3.3 Pressure Feedback
 
-> -- frequencyPressure             :: ScoreFunc
-> -- rightAscensionPressure        :: ScoreFunc
+> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
+> initBins n f xs = runSTArray (initBins' n f xs)
+
+> initBins' n f xs = do
+>     arr <- newArray (0, n-1) (0, 0)
+>     for xs $ \x -> do
+>         let bin = f x
+>         (t, c) <- readArray arr bin
+>         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
+>     return arr
+>   where
+>     for []     f = return ()
+>     for (x:xs) f = f x >> for xs f
+
+> binsToFactors :: Array Int (Int, Int) -> Array Int Float
+> binsToFactors = amap toFactor
+>   where
+>     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
+>     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
+
+> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
+> rightAscensionPressure     :: Array Int Float -> (Session -> Int) -> ScoreFunc
+
+> frequencyPressure fs f _ a =
+>     factor "frequencyPressure" $ (fs ! f a) ** 0.5
+
+> rightAscensionPressure fs f _ a =
+>     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
 
 3.4 Performance Limits
 
@@ -115,10 +151,14 @@ Ranking System from Memo 5.2, Section 3
 >    where nu0 = 12.8
 >          r = (max 50 freq) / nu0
 >          -- Equation 22
->          avgEff = 0.74 + 0.155 * cos r + 0.12 * cos (2*r)
->                   - 0.03 * cos (3*r) - 0.01 * cos (4*r)
+>          avgEff = sum [x * cos (y*r) |
+>                        (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
 
-> observingEfficiencyLimit, hourAngleLimit, atmosphericStabilityLimit :: ScoreFunc
+> observingEfficiencyLimit  :: ScoreFunc
+> hourAngleLimit            :: ScoreFunc
+> zenithAngleLimit          :: ScoreFunc
+> trackingErrorLimit        :: ScoreFunc
+> atmosphericStabilityLimit :: ScoreFunc
 
 > observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" $
 >     if obsEff < minObsEff
@@ -136,8 +176,19 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff $ s
 
-> -- zenithAngleLimit              :: ScoreFunc
-> -- trackingErrorLimit            :: ScoreFunc
+> zenithAngleLimit dt s =
+>    boolean "zenithAngleLimit" $ zenithAngle dt s < deg2rad 85.0
+
+> trackingErrorLimit dt s = do
+>     w <- weather
+>     let wind' = fromJust $ wind w dt
+>     -- Equation 26
+>     let fv = rmsTrackingError wind' / (theta . frequency $ s)
+>     boolean "trackingErrorLimit" $ fv <= maxErr
+>   where
+>     maxErr = 0.2 
+>     -- Equation 11
+>     rmsTrackingError w = sqrt ((rmsTE dt) ^ 2 + (abs w / 2.1) ^ 4)
 
 > atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
 
@@ -145,25 +196,22 @@ Ranking System from Memo 5.2, Section 3
 
 > projectCompletion, thesisProject, scienceGrade :: ScoreFunc
 
-> projectCompletion _ s = let weight = 1000.0
->                             total = fromIntegral (timeTotal . project $ s)
->                             left  = fromIntegral (timeLeft  . project $ s)
->                             percent = if total <= 0.0
->                                       then 0.0
->                                       else 100.0*(total - left)/total
->                         in factor "projectCompletion" $
->                            if percent <= 0.0
->                            then 1.0
->                            else 1.0 + percent/weight
+> projectCompletion _ s = let
+>     weight = 1000.0
+>     total = fromIntegral (timeTotal . project $ s)
+>     left  = fromIntegral (timeLeft  . project $ s)
+>     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
+>     in factor "projectCompletion" $
+>     if percent <= 0.0 then 1.0 else 1.0 + percent/weight
 
 > thesisProject _ s = factor "thesisProject" $
->                     if (thesis . project $ s) then 1.05 else 1.0
+>     if (thesis . project $ s) then 1.05 else 1.0
 
 > scienceGrade _ s = factor "scienceGrade" $
->                    case (grade s) of
->                      GradeA -> 1.0
->                      GradeB -> 0.9
->                      GradeC -> 0.1
+>     case (grade s) of
+>         GradeA -> 1.0
+>         GradeB -> 0.9
+>         GradeC -> 0.1
 
 > -- receiver                      :: ScoreFunc
 
@@ -210,31 +258,3 @@ Ranking System from Memo 5.2, Section 3
 
 > boolean name True  = factor name 1.0
 > boolean name False = factor name 0.0
-
-> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
-> initBins n f xs = runSTArray (initBins' n f xs)
-
-> initBins' n f xs = do
->     arr <- newArray (0, n-1) (0, 0)
->     for xs $ \x -> do
->         let bin = f x
->         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
->     return arr
->   where
->     for []     f = return ()
->     for (x:xs) f = f x >> for xs f
-
-> binsToFactors :: Array Int (Int, Int) -> Array Int Float
-> binsToFactors = amap toFactor
->   where
->     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
->     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
-
-> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
-> frequencyPressure fs f _ a =
->     factor "frequencyPressure" $ (fs ! f a) ** 0.5
-
-> rightAscensionPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
-> rightAscensionPressure fs f _ a =
->     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
