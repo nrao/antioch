@@ -126,6 +126,14 @@ TBF: fix this hack!
 >     s6 <- genSession
 >     return $ take n [s, s2, s3, s4, s5, s6]
 
+
+> genSessions'         :: Int -> Gen [Session]
+> genSessions' 0       = do {return $ []}
+> genSessions' (n + 1) = do
+>     s  <- genSession
+>     ss <- genSessions' n
+>     return $ [s] ++ ss
+
 Done: quickCheck prop_Ra passes
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
@@ -169,6 +177,13 @@ TBD:
 >        , duration  = duration
 >        , pScore    = score
 >        }
+
+> genPeriods'         :: Int -> Gen [Period]
+> genPeriods' 0       = do {return $ []}
+> genPeriods' (n + 1) = do
+>     p  <- genPeriod
+>     ps <- genPeriods' n
+>     return $ [p] ++ ps
 
 Make sure Durations are made of 15-minute intervals
 
