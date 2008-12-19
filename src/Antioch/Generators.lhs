@@ -41,7 +41,7 @@ those to calculate timeLeft and timeTotal?
 >     name     <- genProjectName
 >     semester <- genSemesterName
 >     thesis   <- genThesis
->     sessions <- genSessions
+>     sessions <- genProjectSessions
 >     let timeTotal = sum [ totalTime s | s <- sessions ]
 >     return $ defaultProject {
 >           pName = str name
@@ -111,9 +111,17 @@ TBF: how to link these to generated Projects? And we aren't linking to Periods!
 >                }
 
 
-> genSessions :: Gen [Session]
-> genSessions = 
+> genProjectSessions :: Gen [Session]
+> genProjectSessions = 
 >     T.frequency [(25, return 1), (25, return 2), (20, return 3), (20, return 4), (10, return 5)] >>= vector
+
+
+> genSessions         :: Int -> Gen [Session]
+> genSessions 0       = do {return $ []}
+> genSessions (n + 1) = do
+>     s  <- genSession
+>     ss <- genSessions n
+>     return $ [s] ++ ss
 
 Done: quickCheck prop_Ra passes
 
@@ -158,6 +166,13 @@ TBD:
 >        , duration  = duration
 >        , pScore    = score
 >        }
+
+> genPeriods         :: Int -> Gen [Period]
+> genPeriods 0       = do {return $ []}
+> genPeriods (n + 1) = do
+>     p  <- genPeriod
+>     ps <- genPeriods n
+>     return $ [p] ++ ps
 
 Make sure Durations are made of 15-minute intervals
 
