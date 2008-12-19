@@ -13,7 +13,10 @@
 >   , test_Madd1
 >   , test_Madd2
 >   , test_PackWorker'1
+>   , test_PackWorker'3
 >   , test_PackWorker1
+>   , test_PackWorker2
+>   , test_PackWorker3
 >   ]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
@@ -30,7 +33,7 @@
 
 > test_Candidates1 = TestCase . assertEqual "test_Candidates1" xs . candidates $ ys
 >   where
->     xs = [Nothing, Nothing, Just (Candidate 1 3 3.0), Just (Candidate 1 4 4.0)]
+>     xs = [Nothing, Just (Candidate 1 2 2.0), Just (Candidate 1 3 3.0), Just (Candidate 1 4 4.0)]
 >     ys = Item 1 2 4 [] (replicate 6 1.0)
 
 > test_Candidates2 = TestCase . assertEqual "test_Candidates2" xs . candidates $ ys
@@ -57,8 +60,15 @@
 
 > test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 1 4 4.0), Just (Candidate 1 3 3.0), Nothing, Nothing, Nothing]
+>     xs = [Just (Candidate 1 4 4.0), Just (Candidate 1 3 3.0), Just (Candidate 1 2 2.0), Nothing, Nothing]
 >     ys = replicate 4 Nothing
+>     zs = [Nothing]
+>     ws = map step [Item 1 2 4 (replicate 6 1.0) []]
+
+> test_PackWorker'3 = TestCase . assertEqual "test_PackWorker'3" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 1 1.0), Just (Candidate 1 2 3.1), Nothing, Just (Candidate 3 1 1.1), Nothing]
+>     ys = [Just (Candidate 3 1 1.1), Nothing, Nothing, Just (Candidate 2 1 1.0)]
 >     zs = [Nothing]
 >     ws = map step [Item 1 2 4 (replicate 6 1.0) []]
 
@@ -66,4 +76,16 @@
 >   where
 >     xs = [Candidate 1 4 4.0]
 >     ys = replicate 4 Nothing
+>     ws = [Item 1 2 4 (replicate 6 1.0) []]
+
+> test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker ys $ ws
+>   where
+>     xs = [Candidate 1 3 3.0, Candidate 2 1 1.0]
+>     ys = replicate 3 Nothing ++ [Just (Candidate 2 1 1.0)]
+>     ws = [Item 1 2 4 (replicate 6 1.0) []]
+
+> test_PackWorker3 = TestCase . assertEqual "test_PackWorker3" xs . packWorker ys $ ws
+>   where
+>     xs = [Candidate 3 1 1.1, Candidate 1 2 3.1, Candidate 2 1 1.0]
+>     ys = [Just (Candidate 3 1 1.1), Nothing, Nothing, Just (Candidate 2 1 1.0)]
 >     ws = [Item 1 2 4 (replicate 6 1.0) []]

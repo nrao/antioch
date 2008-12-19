@@ -80,7 +80,7 @@
 > candidates               :: Item a -> [Maybe (Candidate a)]
 > candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }
 >     | length past' < min = []
->     | otherwise          = toCandidate id $ replicate min Nothing ++ (map Just . drop min $ past')
+>     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ past')
 >   where
 >     past' = acc . takeWhile (>= epsilon) . take max $ past
 >     acc   = scanl1 (+)
