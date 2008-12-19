@@ -1,6 +1,7 @@
 > module Antioch.Score where
 
 > import Antioch.DateTime
+> import Antioch.Generators
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Weather
