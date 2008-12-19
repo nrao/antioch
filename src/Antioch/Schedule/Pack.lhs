@@ -19,30 +19,28 @@
 >     items <- mapM (toItem sf mask) sessions
 >     return . map toPeriod . packWorker (toSchedule dts periods) $ items
 >   where
->     dts   = scanl (flip addMinutes) dt [fromIntegral (stepSize * m) | m <- [0 .. numSteps dur]]
->     sched = toSchedule dts periods
+>     dts   = scanl (flip addMinutes') dt [stepSize * m | m <- [0 .. numSteps dur]]
+>     sched = toSchedule dts . sort $ periods
 >     mask  = zipWith (\dt s -> fmap (const dt) s) dts sched
 
-> toSchedule        :: [DateTime] -> [Period] -> [Maybe (Candidate Session)]
-> toSchedule dts ps = toSchedule' dts . sort $ ps
+> toSchedule         :: [DateTime] -> [Period] -> [Maybe (Candidate Session)]
+> toSchedule []  _   = []
+> toSchedule dts []  = map (const Nothing) dts
+> toSchedule dts@(dt:dts') ps@(p:ps')
+>     | dt  <  begin = Nothing : toSchedule dts' ps
+>     | end <= dt    = toSchedule dts ps'
+>     | otherwise    = Just (Candidate (session p) (numSteps . duration $ p) (pScore p)) : toSchedule dts' ps
 >   where
->     toSchedule' []  _  = []
->     toSchedule' dts [] = map (const Nothing) dts
->     toSchedule' dts@(dt:dts') ps@(p:ps')
->         | dt  <  begin = Nothing : toSchedule' dts' ps
->         | end <= dt    = toSchedule' dts ps'
->         | otherwise    = Just (Candidate (session p) (numSteps . duration $ p) (pScore p)) : toSchedule' dts' ps
->       where
->         begin = startTime p
->         end   = addMinutes (fromIntegral . duration $ p) begin
+>     begin = startTime p
+>     end   = addMinutes' (duration p) begin
 
 > toItem          :: ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
 > toItem sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
 >     return $ Item {
 >         iId      = s
->       , iMinDur  = minDuration s `div` stepSize
->       , iMaxDur  = maxDuration s `div` stepSize
+>       , iMinDur  = numSteps . minDuration $ s
+>       , iMaxDur  = numSteps . maxDuration $ s
 >       , iFuture  = scores
 >       , iPast    = []
 >       }
@@ -56,7 +54,7 @@
 >     cId       :: a
 >   , cDuration :: Int
 >   , cScore    :: Score
->   }
+>   } deriving (Eq, Show)
 
 > defaultCandidate = Candidate {
 >     cId       = 1
@@ -65,7 +63,11 @@
 >   }
 
 > unwind :: [Maybe (Candidate a)] -> [Candidate a]
-> unwind = const []
+> unwind = unwind' []
+>   where
+>     unwind' acc []             = acc
+>     unwind' acc (Nothing : xs) = unwind' acc xs
+>     unwind' acc (Just x  : xs) = unwind' (x:acc) . drop (cDuration x - 1) $ xs
 
 > data Item a = Item {
 >     iId      :: a
