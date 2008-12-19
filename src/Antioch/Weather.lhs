@@ -1,6 +1,7 @@
 > module Antioch.Weather where
 
 > import Antioch.DateTime
+> import Control.Exception (bracketOnError)
 > import Data.IORef
 > import Data.List (elemIndex)
 > import Data.Maybe (fromJust, isNothing)
@@ -8,9 +9,6 @@
 > import Database.HDBC.ODBC
 > import System.IO.Unsafe (unsafePerformIO)
 > import Test.QuickCheck
-
-TBF: Need to use Control.Exception (bracketOnError) in case the database
-reading barfs.
 
 > data Weather = Weather {
 >     wind    :: DateTime -> (Maybe Float) -- m/s
@@ -113,13 +111,19 @@ Helper function to get singular Float values out of the database.
 > getFloat :: IORef Connection -> String -> [SqlValue] -> Maybe Float
 > getFloat conn query xs = unsafePerformIO . handleSqlError $ do
 >     conn'  <- readIORef conn
->     result <- quickQuery' conn' query xs
+>     result <- bracketOnError
+>         (quickQuery' conn' query xs)
+>         (\_ -> reestablishConnection conn)
+>         (\r -> do {return r})
 >     case result of
 >         [[SqlNull]] -> return Nothing
 >         [[x]] -> return $ Just (fromSql x)
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
 >         x     -> fail "There is more than one forecast with that time stamp."
+>   where reestablishConnection c = do
+>             c' <- connect
+>             return $ modifyIORef conn (\_ -> c')
 
 Just some test functions to make sure things are working.
 
