@@ -37,6 +37,9 @@ Defined here so that users don't need to know about Data.Time.Clock.
 > getCurrentTime :: IO DateTime
 > getCurrentTime = Clock.getCurrentTime
 
+> addMinutes' :: Int -> DateTime -> DateTime
+> addMinutes' = addMinutes . fromIntegral
+  
 > addMinutes   :: Integer -> DateTime -> DateTime
 > addMinutes m = addSeconds (60 * m)
   
