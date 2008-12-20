@@ -62,9 +62,12 @@
 >   , cScore    = 0.0
 >   }
 
-> unwind :: [Maybe (Candidate a)] -> [Candidate a]
-> unwind = unwind' []
+> unwind    :: [Maybe (Candidate a)] -> [Candidate a]
+> unwind xs = [ x { cScore = y } | x <- xs' | y <- ys' ]
 >   where
+>     xs' = unwind' [] xs
+>     ys  = map cScore xs'
+>     ys' = [ y' - y | y <- 0 : ys | y' <- ys ]
 >     unwind' acc []             = acc
 >     unwind' acc (Nothing : xs) = unwind' acc xs
 >     unwind' acc (Just x  : xs) = unwind' (x:acc) . drop (cDuration x - 1) $ xs

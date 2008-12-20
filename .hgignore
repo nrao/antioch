@@ -1,4 +1,7 @@
 syntax: glob
+
 #*
 *~
 *.swp
+
+dist/
