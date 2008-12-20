@@ -1,6 +1,7 @@
 > module Antioch.DateTime where
 
 > import Data.Fixed (div')
+> import Data.Function (on)
 > import Data.Maybe (fromJust)
 > import Data.Time.Calendar hiding (fromGregorian, toGregorian)
 > import Data.Time.Clock hiding (getCurrentTime)
@@ -36,15 +37,6 @@ Defined here so that users don't need to know about Data.Time.Clock.
 
 > getCurrentTime :: IO DateTime
 > getCurrentTime = Clock.getCurrentTime
-
-> addMinutes' :: Int -> DateTime -> DateTime
-> addMinutes' = addMinutes . fromIntegral
-  
-> addMinutes   :: Integer -> DateTime -> DateTime
-> addMinutes m = addSeconds (60 * m)
-  
-> addSeconds      :: Integer -> DateTime -> DateTime
-> addSeconds s dt = fromSeconds $ toSeconds dt + s
 
 Conversion back and forth between DateTime and MJD.
 
@@ -151,6 +143,26 @@ ODBC and MySQL.
 > parseDateTime = parseTime defaultTimeLocale
 
 > sqlFormat = iso8601DateFormat (Just "%T")
+
+Simple arithmetic.
+
+> addMinutes' :: Int -> DateTime -> DateTime
+> addMinutes' = addMinutes . fromIntegral
+  
+> addMinutes   :: Integer -> DateTime -> DateTime
+> addMinutes m = addSeconds (60 * m)
+
+> diffMinutes'   :: DateTime -> DateTime -> Int
+> diffMinutes' x = fromIntegral . diffMinutes x
+
+> diffMinutes   :: DateTime -> DateTime -> Integer
+> diffMinutes x = (`div` 60) . diffSeconds x
+  
+> addSeconds      :: Integer -> DateTime -> DateTime
+> addSeconds s dt = fromSeconds $ toSeconds dt + s
+
+> diffSeconds :: DateTime -> DateTime -> Integer
+> diffSeconds = (-) `on` toSeconds
 
 > getRise    :: DateTime -> DateTime
 > getRise dt = fromGregorian y m d 12 30 0
