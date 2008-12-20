@@ -61,8 +61,8 @@ However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
 
 > getOpacity :: IORef Connection -> DateTime -> DateTime -> Float -> Maybe Float
-> getOpacity conn now target frequency = 
->     getOpacity' conn target (determineFType target now) frequency
+> getOpacity conn now target = 
+>     getOpacity' conn target (determineFType target now)
 
 > getOpacity' :: IORef Connection -> DateTime -> Int -> Float -> Maybe Float
 > getOpacity' conn dt ftype frequency = 
@@ -75,8 +75,8 @@ on frequency.
 >                  \forecasts.id = forecast_by_frequency.forecast_id"
 
 > getTSys :: IORef Connection -> DateTime -> DateTime -> Float -> Maybe Float
-> getTSys conn now target frequency = 
->     getTSys' conn target (determineFType target now) frequency
+> getTSys conn now target = 
+>     getTSys' conn target (determineFType target now)
 
 > getTSys' :: IORef Connection -> DateTime -> Int -> Float -> Maybe Float
 > getTSys' conn dt ftype frequency = 
@@ -120,7 +120,7 @@ Helper function to get singular Float values out of the database.
 >         x     -> fail "There is more than one forecast with that time stamp."
 >   where reestablishConnection c = do
 >             c' <- connect
->             return $ modifyIORef conn (\_ -> c')
+>             return $ modifyIORef conn (const c')
 
 > tryQuery :: IORef Connection -> String -> [SqlValue] -> IO [[SqlValue]]
 > tryQuery conn query xs = do

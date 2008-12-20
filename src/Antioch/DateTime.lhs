@@ -144,11 +144,11 @@ ODBC and MySQL.
 
 > prop_SqlStartOfTime _ = toSqlString startOfTime == "1970-01-01 00:00:00"
 
-> formatDateTime     :: String -> DateTime -> String
-> formatDateTime fmt = formatTime defaultTimeLocale fmt
+> formatDateTime :: String -> DateTime -> String
+> formatDateTime = formatTime defaultTimeLocale
 
-> parseDateTime     :: String -> String -> Maybe DateTime
-> parseDateTime fmt = parseTime defaultTimeLocale fmt
+> parseDateTime :: String -> String -> Maybe DateTime
+> parseDateTime = parseTime defaultTimeLocale
 
 > sqlFormat = iso8601DateFormat (Just "%T")
 
