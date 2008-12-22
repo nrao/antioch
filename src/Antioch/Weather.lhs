@@ -118,9 +118,6 @@ Helper function to get singular Float values out of the database.
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
 >         x     -> fail "There is more than one forecast with that time stamp."
->   where reestablishConnection c = do
->             c' <- connect
->             return $ modifyIORef conn (const c')
 
 > tryQuery :: IORef Connection -> String -> [SqlValue] -> IO [[SqlValue]]
 > tryQuery conn query xs = do

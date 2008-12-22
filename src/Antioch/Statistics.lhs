@@ -1,56 +1,22 @@
 > module Antioch.Statistics where
 
 > import Antioch.DateTime (fromGregorian)
+> import Antioch.Generators
 > import Antioch.Types
 > import Data.List
 > import Data.Time.Clock
 > import Graphics.Gnuplot.Simple
+> import System.Random (getStdGen)
+> import System.IO.Unsafe (unsafePerformIO)
+> import Test.QuickCheck (generate)
 
-> exProject = defaultProject {
->     pName    = "testProject"
->   , semester = "08B"
->   }
+> exSessions = unsafePerformIO $ do
+>     g <- getStdGen
+>     return $ generate 0 g $ genSessions 100
 
-> exSession = defaultSession {
->     sName     = "test"
->   , project   = exProject
->   , frequency = 1.2
->   , ra        = 3.0
->   , dec       = 2.5
->   , totalTime = 12
->   , totalUsed = 9
->   }
-
-> exSession2 = defaultSession {
->     sName     = "test2"
->   , project   = exProject
->   , frequency = 4.2
->   , ra        = 4.0
->   , dec       = 2.0
->   , totalTime = 24
->   , totalUsed = 0
->   }
-
-> exSessions = [exSession, exSession2]
-
-> exPeriods :: [Period]
-> exPeriods = [defaultPeriod { session   = exSession2
->                            , startTime = fromGregorian 2008 1 1 0 0 0 
->                            , duration  = 2 }
->            , defaultPeriod { session   = exSession
->                            , startTime = fromGregorian 2008 1 1 5 0 0
->                            , duration  = 4 }
->            , defaultPeriod { session   = exSession
->                            , startTime = fromGregorian 2008 1 2 0 0 0
->                            , duration  = 3 }]
-
-Would like to do this, but with 'time + diffTime'.  How to?
- exPeriods :: IO [Period]
- exPeriods = do
-     time <- getCurrentTime
-     return [defaultPeriod { session = exSession, startTime = time }
-       , defaultPeriod { session = exSession, startTime = time }
-       , defaultPeriod { session = exSession, startTime = time }]
+> exPeriods = unsafePerformIO $ do
+>     g <- getStdGen
+>     return $ generate 0 g $ genPeriods 100
 
 dec vs frequency
 

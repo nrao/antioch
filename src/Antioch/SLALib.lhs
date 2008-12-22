@@ -74,7 +74,21 @@ To test slaDcs2c provide a wide range of radian inputs, and make sure that
 the results are always normalized (0..1)
 TBF: multiple args?
 
-> -- prop_slaDcs2c =  forAll genAngleRad $ \a b let x, y = slaDcs2c
+> genAngleRads :: Gen (Double, Double)
+> genAngleRads = do 
+>     r1 <- choose (10*(-d2pi), 10*d2pi)
+>     r2 <- choose (10*(-d2pi), 10*d2pi)
+>     return (r1, r2)
+
+> inRadianRng :: Double -> Bool
+> inRadianRng x = -1.0 <= x && x <= 1.0
+
+> prop_slaDcs2c =
+>     forAll genAngleRad $ \a ->
+>     forAll genAngleRad $ \b ->
+>     let [x, y ,z] = slaDcs2c a b in inRadianRng x && inRadianRng y && inRadianRng z && z == sin b
+
+>  -- prop_slaDcs2c =  forAll genAngleRads $ \a -> let x = slaDcs2c (fst a) (snd a) in -1.0 <= head x && head x <= 1.0 -- && 0 <= y && y <= 1
 
 > rmat = [[-0.054875539726,  0.494109453312, -0.867666135858]
 >       , [-0.873437108010, -0.444829589425, -0.198076386122]
