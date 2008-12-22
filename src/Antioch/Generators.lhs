@@ -176,7 +176,7 @@ TBD:
 
 Make sure Durations are made of 15-minute intervals
 
-> prop_duration p = (duration p) `mod` 15 == 0
+> prop_duration p = duration p `mod` 15 == 0
 
 > type Semester = Int
   
