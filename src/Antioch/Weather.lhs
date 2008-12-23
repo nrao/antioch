@@ -43,7 +43,7 @@
 >       }
 
 > pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
-> pin now f target = f (determineFType target now) target
+> pin now f target = f (forecastType target now) target
 
 Both wind speed and atmospheric temperature are values forecast independently
 of frequency.
@@ -116,15 +116,15 @@ Creates a connection to the weather forecast database.
 
 Helper function to determine the desired forecast type given two DateTimes.
 
-> determineFType :: DateTime -> DateTime -> Int
-> determineFType target now = 
+> forecastType :: DateTime -> DateTime -> Int
+> forecastType target now = 
 >     case dropWhile (< difference) $ forecast_types of
 >         []     -> length forecast_types
 >         (x:xs) -> fromJust (elemIndex x forecast_types) + 1
 >   where difference = (toSeconds target - toSeconds now) `div` 3600
 >         forecast_types = [12, 24, 36, 48, 60]
 
-> prop_constrained target now = determineFType target now `elem` forecast_types
+> prop_constrained target now = forecastType target now `elem` forecast_types
 >   where forecast_types = [1..5]
 
 Helper function to get singular Float values out of the database.
