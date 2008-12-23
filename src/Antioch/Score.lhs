@@ -28,17 +28,17 @@ Ranking System from Memo 5.2, Section 3
 > calcEfficiency dt s = do
 >     trx <- receiverTemperature dt s
 >     tk  <- kineticTemperature dt s
->     minTsys' <- minTsys
+>     w   <- weather
+>     let minTsysPrime' = fromJust $ minTSysPrime w (frequency s) elevation
 >     zod <- zenithOpticalDepth dt s
->     let [eff, effTransit] = map (calcEff trx tk minTsys' zod) [za, zat]
+>     let [eff, effTransit] = map (calcEff trx tk minTsysPrime' zod) [za, zat]
 >     return $ (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
+>     elevation = pi/2 - zenithAngleAtTransit s
 >            
->     minTsys = return za
->            
->     calcEff trx tk minTsys' zod za = (minTsys' / tsys') ^2
+>     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
 >         -- Equation 4 & 6
 >         opticalDepth = zod / (cos . min 1.5 $ za)
@@ -110,7 +110,15 @@ Ranking System from Memo 5.2, Section 3
 
 3.2 Stringency
 
-> -- stringency                    :: ScoreFunc
+> stringency                 :: ScoreFunc
+
+> stringency _ s = do
+>     w <- weather
+>     let stringency = fromJust $ totalStringency w (frequency s) elevation'
+>     factor "stringency" stringency
+>   where
+>     elevation' = pi/2 - zenithAngleAtTransit s
+
 
 3.3 Pressure Feedback
 

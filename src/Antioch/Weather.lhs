@@ -20,7 +20,7 @@
 >   , tsys            :: DateTime -> Float -> (Maybe Float)
 >   , totalStringency :: Float -> Radians -> (Maybe Float)
 >   , minOpacity      :: Float -> Radians -> (Maybe Float)
->   , minTSys'        :: Float -> Radians -> (Maybe Float)
+>   , minTSysPrime    :: Float -> Radians -> (Maybe Float)
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
@@ -37,7 +37,7 @@
 >       , tsys            = getTSys conn now'
 >       , totalStringency = getTotalStringency conn
 >       , minOpacity      = getMinOpacity conn
->       , minTSys'        = getMinTSys' conn
+>       , minTSysPrime    = getMinTSysPrime conn
 >       }
 
 > instance SqlType Float where
@@ -113,8 +113,8 @@ on frequency.
 >   where query = "SELECT opacity FROM min_weather\n\
 >                  \WHERE frequency = ? AND elevation = ?"
 
-> getMinTSys' :: IORef Connection -> Float -> Radians -> Maybe Float
-> getMinTSys' conn f e = 
+> getMinTSysPrime :: IORef Connection -> Float -> Radians -> Maybe Float
+> getMinTSysPrime conn f e = 
 >     getFloat conn query [toSql (round f :: Int)
 >                        , toSql (round . rad2deg $ e :: Int)]
 >   where query = "SELECT prime FROM t_sys\n\
@@ -171,7 +171,7 @@ Just some test functions to make sure things are working.
 >             , tsys w target frequency
 >             , totalStringency w frequency elevation
 >             , minOpacity w frequency elevation
->             , minTSys' w frequency elevation)
+>             , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
 >     elevation = pi / 4.0 :: Radians
