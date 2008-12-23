@@ -1,6 +1,7 @@
 > module Antioch.Types where
 
 > import Antioch.DateTime
+> import Data.Function (on)
 
 > type Minutes = Int
 > type Score   = Float
@@ -71,7 +72,7 @@
 >   } deriving (Eq, Show)
 
 > instance Ord Period where
->     p1 < p2 = startTime p1 < startTime p2
+>     (<) = (<) `on` startTime
 
 > defaultSession = Session {
 >     sName       = ""

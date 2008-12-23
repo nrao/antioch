@@ -18,53 +18,56 @@
 >     g <- getStdGen
 >     return $ generate 0 g $ genPeriods 100
 
-Would like to do this, but with 'time + diffTime'.  How to?
- exPeriods :: IO [Period]
- exPeriods = do
-     time <- getCurrentTime
-     return [defaultPeriod { session = exSession, startTime = time }
-       , defaultPeriod { session = exSession, startTime = time }
-       , defaultPeriod { session = exSession, startTime = time }]
-
 dec vs frequency
 
-> sessDecFreq    :: [Session] -> [(Float, Float)]
-> sessDecFreq xs = [(dec x, frequency x) | x <- xs]
-> perDecFreq    :: [Period] -> [(Float, Float)]
-> perDecFreq xs = [(dec $ session x, frequency $ session x) | x <- xs]
+> sessDecFreq :: [Session] -> [(Float, Float)]
+> sessDecFreq = dec `vs` frequency
+
+> vs       :: (a -> b) -> (a -> c) -> [a] -> [(b, c)]
+> f `vs` g = map $ \x -> (f x, g x)
+
+> perDecFreq :: [Period] -> [(Float, Float)]
+> perDecFreq = promote sessDecFreq
+
+> promote   :: ([Session] -> t) -> [Period] -> t
+> promote f = f . map session
 
 dec vs ra
 
-> sessDecRA    :: [Session] -> [(Float, Float)]
-> sessDecRA xs = [(dec x, ra x) | x <- xs]
-> perDecRA    :: [Period] -> [(Float, Float)]
-> perDecRA xs = [(dec $ session x, ra $ session x) | x <- xs]
+> sessDecRA :: [Session] -> [(Float, Float)]
+> sessDecRA = dec `vs` ra
 
-       
+> perDecRA :: [Period] -> [(Float, Float)]
+> perDecRA = promote sessDecRA
+
 Example of scatter plot data w/ datetime:
 
 > freqTime :: [Period] -> [(UTCTime, Float)]
-> freqTime xs = [ (startTime x, frequency . session $ x) | x <- xs]
+> freqTime = startTime `vs` (frequency . session)
 
 Example of log histogram data:
 Compare allocated hours by frequency to observed hours by frequency.
 
-> sessFreq    :: [Session] -> [(Float, Minutes)]
-> sessFreq xs = histogram [1.0 .. 50.0] [(frequency x, totalTime x) | x <- xs]
-> periodFreq    :: [Period] -> [(Float, Minutes)]
-> periodFreq xs = histogram [1.0 .. 50.0]
->     [(frequency . session $ x, duration x) | x <- xs]
+> sessFreq :: [Session] -> [(Float, Minutes)]
+> sessFreq = histogram [1.0..50.0] . (frequency `vs` totalTime)
+
+> periodFreq :: [Period] -> [(Float, Minutes)]
+> periodFreq = histogram [1.0..50.0] . ((frequency . session) `vs` duration)
 
 > sessTP :: [Period] -> [(Minutes, Int)]
-> sessTP xs = histogram [1 .. 17] [(duration x, 1) | x <- xs]
-> sessDec         :: [Float] -> [Session] -> [(Float, Float)]
-> sessDec decs xs = histogram decs [(dec x, 1.0) | x <- xs]
+> sessTP = count duration [1..17]
 
-> periodDec         :: [Float] -> [Period] -> [(Float, Float)]
-> periodDec decs xs = histogram decs [(dec $ session x, 1.0) | x <- xs]
+> sessDec :: [Float] -> [Session] -> [(Float, Float)]
+> sessDec = count dec
 
-> histogram :: (Ord a, Ord b, Num b) => [a] -> [(a, b)] -> [(a, b)]
-> histogram buckets values = allocate buckets . sort $ values
+> periodDec      :: [Float] -> [Period] -> [(Float, Float)]
+> periodDec decs = promote (sessDec decs)
+
+> count           :: (Ord a, Ord b, Num b) => (t -> a) -> [a] -> [t] -> [(a, b)]
+> count f buckets = histogram buckets . (f `vs` const 1)
+
+> histogram         :: (Ord a, Ord b, Num b) => [a] -> [(a, b)] -> [(a, b)]
+> histogram buckets = allocate buckets . sort
 >   where
 >     allocate []     _   = []
 >     allocate (b:bs) xys = (b, sum . map snd $ within) : allocate bs without

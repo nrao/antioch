@@ -6,7 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Data.List  (foldl', sort)
-> import Data.Maybe (fromMaybe)
+> import Data.Maybe (fromMaybe, isNothing)
 
 > stepSize = 15      :: Minutes
 > epsilon  =  1.0e-6 :: Score
@@ -14,25 +14,44 @@
 > numSteps :: Minutes -> Int
 > numSteps = (`div` stepSize)
 
+`Pack` is the top-level driver function.  It is primarily concerned
+with converting between our internal data structures and the external
+representation of sessions and telescope periods.  Given a start time
+`dt` and duration `dur` in minutes, `pack` first constructs a regular
+grid `dts` of datetime values `stepSize` minutes apart.  It then uses
+the list of fixed and pre-scheduled `periods` to construct a partial
+schedule and `mask` out datetime values that can't be scheduled.  Then
+all of the open `sessions` are scored at the unmasked datetime values
+to generate `items` for input to the `packWorker` function.
+
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > pack sf dt dur periods sessions = do
 >     items <- mapM (toItem sf mask) sessions
->     return . map toPeriod . packWorker (toSchedule dts periods) $ items
+>     return . map (toPeriod dt) . packWorker sched $ items
 >   where
 >     dts   = scanl (flip addMinutes') dt [stepSize * m | m <- [0 .. numSteps dur]]
 >     sched = toSchedule dts . sort $ periods
->     mask  = zipWith (\dt s -> fmap (const dt) s) dts sched
+>     mask  = zipWith (\dt s -> if isNothing s then Just dt else Nothing) dts sched
+
+A schedule is a list of time slots.  A given slot is either `Nothing`
+if it is free and available to be scheduled, or `Just x` where x is a
+fixed or pre-scheduled session that needs to be respected.  This
+function assumes its inputs are sorted.
 
 > toSchedule         :: [DateTime] -> [Period] -> [Maybe (Candidate Session)]
 > toSchedule []  _   = []
 > toSchedule dts []  = map (const Nothing) dts
 > toSchedule dts@(dt:dts') ps@(p:ps')
->     | dt  <  begin = Nothing : toSchedule dts' ps
+>     | dt  <= begin = Nothing : toSchedule dts' ps
 >     | end <= dt    = toSchedule dts ps'
->     | otherwise    = Just (Candidate (session p) (numSteps . duration $ p) (pScore p)) : toSchedule dts' ps
+>     | otherwise    =
+>         Just (Candidate (session p) 0 (numSteps $ dt `diffMinutes'` begin) (pScore p)) : toSchedule dts' ps
 >   where
 >     begin = startTime p
 >     end   = addMinutes' (duration p) begin
+
+Convert an open session `s` into a schedulable item by scoring it with
+`sf` at each of the open time slots in a mask `dts`.
 
 > toItem          :: ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
 > toItem sf dts s = do
@@ -45,29 +64,49 @@
 >       , iPast    = []
 >       }
 
-> toPeriod           :: Candidate Session -> Period
-> toPeriod candidate = defaultPeriod {
->     session = cId candidate
+Convert candidates to telescope periods relative to a given startime.
+
+> toPeriod              :: DateTime -> Candidate Session -> Period
+> toPeriod dt candidate = defaultPeriod {
+>     session   = cId candidate
+>   , startTime = cStart candidate `addMinutes'` dt
+>   , duration  = stepSize * cDuration candidate
+>   , pScore    = cScore candidate
 >   }
+
+Candidates, importantly, don't care what unit of time we're working
+with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
 >     cId       :: a
+>   , cStart    :: Int
 >   , cDuration :: Int
 >   , cScore    :: Score
 >   } deriving (Eq, Show)
 
 > defaultCandidate = Candidate {
->     cId       = 1
->   , cDuration = 1
+>     cId       = 0
+>   , cStart    = 0
+>   , cDuration = 0
 >   , cScore    = 0.0
 >   }
 
-> unwind :: [Maybe (Candidate a)] -> [Candidate a]
-> unwind = unwind' []
+Given a filled list representing all partial solutions of size 1..N,
+return a list of only those solutions contributing to the solution of
+size N.  Assumes the existence of a sentinel at the end of the input
+list.
+
+> unwind    :: [Maybe (Candidate a)] -> [Candidate a]
+> unwind xs = [ x { cScore = y } | x <- xs' | y <- ys' ]
 >   where
+>     xs' = unwind' [] xs
+>     ys  = map cScore xs'
+>     ys' = [ y' - y | y <- 0 : ys | y' <- ys ]
 >     unwind' acc []             = acc
 >     unwind' acc (Nothing : xs) = unwind' acc xs
->     unwind' acc (Just x  : xs) = unwind' (x:acc) . drop (cDuration x - 1) $ xs
+>     unwind' acc (Just x  : xs) = unwind' (x { cStart = length rest - 1} : acc) rest
+>       where
+>         rest = drop (cDuration x - 1) xs
 
 > data Item a = Item {
 >     iId      :: a
@@ -86,7 +125,7 @@
 >     acc   = scanl1 (+)
 
 > toCandidate           :: a -> [Maybe Score] -> [Maybe (Candidate a)]
-> toCandidate id scores = [fmap (Candidate id d) s | s <- scores | d <- [1..]]
+> toCandidate id scores = [fmap (Candidate id 0 d) s | s <- scores | d <- [1..]]
 
 Move a score from the future to the past, so that it can now be
 scheduled.

@@ -43,7 +43,7 @@ Ranking System from Memo 5.2, Section 3
 >         opticalDepth = zod / (cos . min 1.5 $ za)
 >         -- Equation 7
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
->         tsys' = (exp opticalDepth) * tsys
+>         tsys' = exp opticalDepth * tsys
 
 > receiverTemperature      :: DateTime -> Session -> Scoring Float
 > receiverTemperature dt s = return 1.0
@@ -79,7 +79,7 @@ Ranking System from Memo 5.2, Section 3
 >     if isDayTime dt
 >     then
 >         -- Equation 9
->         exp (-(k * (frequency s) ^ 2 * epsilonFactor))
+>         exp (-(k * frequency s ^ 2 * epsilonFactor))
 >         -- Equation 10
 >         -- exp (-((fromIntegral . round . frequency $ s)/69.2) ^ 2)
 >     else
@@ -130,7 +130,7 @@ Ranking System from Memo 5.2, Section 3
 > binsToFactors :: Array Int (Int, Int) -> Array Int Float
 > binsToFactors = amap toFactor
 >   where
->     toFactor (n, d) = 1.0 + (asFactor n) - (asFactor d)
+>     toFactor (n, d) = 1.0 + asFactor n - asFactor d
 >     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
 
 > frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
@@ -146,13 +146,14 @@ Ranking System from Memo 5.2, Section 3
 
 > minObservingEff :: Session -> Float
 > minObservingEff Session { frequency = freq } =
->    -- Equation 23
->    avgEff - 0.02 - 0.1*(1 - avgEff)
->    where nu0 = 12.8
->          r = (max 50 freq) / nu0
->          -- Equation 22
->          avgEff = sum [x * cos (y*r) |
->                        (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
+>     -- Equation 23
+>     avgEff - 0.02 - 0.1*(1 - avgEff)
+>   where
+>     nu0 = 12.8
+>     r = max 50 freq / nu0
+>     -- Equation 22
+>     avgEff = sum [x * cos (y*r) |
+>                  (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
 
 > observingEfficiencyLimit  :: ScoreFunc
 > hourAngleLimit            :: ScoreFunc
@@ -188,7 +189,7 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     maxErr = 0.2 
 >     -- Equation 11
->     rmsTrackingError w = sqrt ((rmsTE dt) ^ 2 + (abs w / 2.1) ^ 4)
+>     rmsTrackingError w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
 
 > atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
 
@@ -205,10 +206,10 @@ Ranking System from Memo 5.2, Section 3
 >     if percent <= 0.0 then 1.0 else 1.0 + percent/weight
 
 > thesisProject _ s = factor "thesisProject" $
->     if (thesis . project $ s) then 1.05 else 1.0
+>     if thesis . project $ s then 1.05 else 1.0
 
 > scienceGrade _ s = factor "scienceGrade" $
->     case (grade s) of
+>     case grade s of
 >         GradeA -> 1.0
 >         GradeB -> 0.9
 >         GradeC -> 0.1
@@ -235,9 +236,8 @@ Ranking System from Memo 5.2, Section 3
 > instance Show (a -> b) where
 >     show _ = "ScoreFunc"
 
-
-> concatMapM      :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
-> concatMapM f xs = fmap concat . mapM f $ xs
+> concatMapM   :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
+> concatMapM f = fmap concat . mapM f
 
 > score         :: [ScoreFunc] -> ScoreFunc
 > score fs dt a = concatMapM (\f -> f dt a) fs
