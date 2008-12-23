@@ -1,6 +1,8 @@
 > module Antioch.Weather where
 
 > import Antioch.DateTime
+> import Antioch.Types
+> import Antioch.Utilities
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Data.IORef
 > import Data.List (elemIndex)
@@ -12,10 +14,13 @@
 > import Test.QuickCheck
 
 > data Weather = Weather {
->     wind    :: DateTime -> (Maybe Float) -- m/s
->   , tatm    :: DateTime -> (Maybe Float) -- Kelvin
->   , opacity :: DateTime -> Float -> (Maybe Float)
->   , tsys    :: DateTime -> Float -> (Maybe Float)
+>     wind            :: DateTime -> (Maybe Float) -- m/s
+>   , tatm            :: DateTime -> (Maybe Float) -- Kelvin
+>   , opacity         :: DateTime -> Float -> (Maybe Float)
+>   , tsys            :: DateTime -> Float -> (Maybe Float)
+>   , totalStringency :: Float -> Radians -> (Maybe Float)
+>   , minOpacity      :: Float -> Radians -> (Maybe Float)
+>   , minTSysPrime    :: Float -> Radians -> (Maybe Float)
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
@@ -26,10 +31,13 @@
 >     conn' <- connect
 >     conn  <- newIORef conn'
 >     return Weather {
->         wind    = getWind conn now'
->       , tatm    = getTAtm conn now'
->       , opacity = getOpacity conn now'
->       , tsys    = getTSys conn now'
+>         wind            = getWind conn now'
+>       , tatm            = getTAtm conn now'
+>       , opacity         = getOpacity conn now'
+>       , tsys            = getTSys conn now'
+>       , totalStringency = getTotalStringency conn
+>       , minOpacity      = getMinOpacity conn
+>       , minTSysPrime    = getMinTSysPrime conn
 >       }
 
 > instance SqlType Float where
@@ -66,7 +74,9 @@ on frequency.
 
 > getOpacity' :: IORef Connection -> DateTime -> Int -> Float -> Maybe Float
 > getOpacity' conn dt ftype frequency = 
->     getFloat conn query [toSql . toSqlString $ dt, toSql frequency, toSql ftype]
+>     getFloat conn query [toSql . toSqlString $ dt
+>                        , toSql (round frequency :: Int)
+>                        , toSql ftype]
 >   where query = "SELECT opacity\n\
 >                  \FROM forecasts, forecast_by_frequency\n\
 >                  \WHERE date = ? AND\n\
@@ -80,12 +90,35 @@ on frequency.
 
 > getTSys' :: IORef Connection -> DateTime -> Int -> Float -> Maybe Float
 > getTSys' conn dt ftype frequency = 
->     getFloat conn query [toSql . toSqlString $ dt, toSql frequency, toSql ftype]
+>     getFloat conn query [toSql . toSqlString $ dt
+>                        , toSql (round frequency :: Int)
+>                        , toSql ftype]
 >   where query = "SELECT tsys\n\
 >                  \FROM forecasts, forecast_by_frequency\n\
 >                  \WHERE date = ? AND frequency = ? AND\n\
 >                  \forecast_type_id = ? AND\n\
 >                  \forecasts.id = forecast_by_frequency.forecast_id"
+
+> getTotalStringency :: IORef Connection -> Float -> Radians -> Maybe Float
+> getTotalStringency conn f e = 
+>     getFloat conn query [toSql (round f :: Int)
+>                        , toSql (round . rad2deg $ e :: Int)]
+>   where query = "SELECT total FROM stringency\n\
+>                  \WHERE frequency = ? AND elevation = ?"
+
+> getMinOpacity :: IORef Connection -> Float -> Radians -> Maybe Float
+> getMinOpacity conn f e = 
+>     getFloat conn query [toSql (round f :: Int)
+>                        , toSql (round . rad2deg $ e :: Int)]
+>   where query = "SELECT opacity FROM min_weather\n\
+>                  \WHERE frequency = ? AND elevation = ?"
+
+> getMinTSysPrime :: IORef Connection -> Float -> Radians -> Maybe Float
+> getMinTSysPrime conn f e = 
+>     getFloat conn query [toSql (round f :: Int)
+>                        , toSql (round . rad2deg $ e :: Int)]
+>   where query = "SELECT prime FROM t_sys\n\
+>                  \WHERE frequency = ? AND elevation = ?"
 
 Creates a connection to the weather forecast database.
 
@@ -135,8 +168,12 @@ Just some test functions to make sure things are working.
 >     return $ (wind w target
 >             , tatm w target
 >             , opacity w target frequency
->             , tsys w target frequency)
+>             , tsys w target frequency
+>             , totalStringency w frequency elevation
+>             , minOpacity w frequency elevation
+>             , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
+>     elevation = pi / 4.0 :: Radians
 >     now       = Just (fromGregorian 2004 05 03 12 00 00)
 >     target    = fromGregorian 2004 05 03 12 00 00
