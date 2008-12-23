@@ -87,7 +87,8 @@ TBF: multiple args?
 > prop_slaDcs2c =
 >     forAll genAngleRad $ \a ->
 >     forAll genAngleRad $ \b ->
->     let [x, y ,z] = slaDcs2c a b in inRadianRng x && inRadianRng y && inRadianRng z && z == sin b
+>     let xs@([_, _ , z]) = slaDcs2c a b
+>     in all inRadianRng xs && z == sin b
 
 >  -- prop_slaDcs2c =  forAll genAngleRads $ \a -> let x = slaDcs2c (fst a) (snd a) in -1.0 <= head x && head x <= 1.0 -- && 0 <= y && y <= 1
 
