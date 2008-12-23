@@ -1,7 +1,8 @@
 > module Antioch.SLALib (gmst, slaGaleq) where
 
-> import Data.Fixed  (mod')
-> import Data.List   (foldl1')
+> import Data.Fixed    (mod')
+> import Data.Function (on)
+> import Data.List     (foldl1')
 > import Test.QuickCheck 
 
 > d2pi :: Double
@@ -63,7 +64,7 @@ Now make sure that the gmst time makes sense (TBD: what are the bounds?):
 
 Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordinates.
 
- Copyright P.T.Wallace.  All rights reserved.
+Copyright P.T.Wallace.  All rights reserved.
 
 > slaDcs2c :: Double -> Double -> [Double]
 > slaDcs2c a b = [cos a * cosb, sin a * cosb, sin b]
@@ -90,19 +91,17 @@ TBF: multiple args?
 
 >  -- prop_slaDcs2c =  forAll genAngleRads $ \a -> let x = slaDcs2c (fst a) (snd a) in -1.0 <= head x && head x <= 1.0 -- && 0 <= y && y <= 1
 
-> rmat = [[-0.054875539726,  0.494109453312, -0.867666135858]
->       , [-0.873437108010, -0.444829589425, -0.198076386122]
->       , [-0.483834985808,  0.746982251810,  0.455983795705]]
-
 > slaDimxv :: [Double] -> [Double]
 > slaDimxv va = [sum [r * a | r <- rs,  a <- va] | rs <- rmat]
+>   where
+>     rmat = [ [-0.054875539726,  0.494109453312, -0.867666135858]
+>            , [-0.873437108010, -0.444829589425, -0.198076386122]
+>            , [-0.483834985808,  0.746982251810,  0.455983795705] ]
 
 > slaDcc2s           :: [Double] -> (Double, Double)
 > slaDcc2s [x, y, z] = ((if r /= 0.0 then atan2 y x else 0.0)
 >                     , (if z /= 0.0 then atan2 z r else 0.0))
->          where r = sqrt(x^2 + y^2)
-
-> deg2rad deg = deg * pi / 180.0
+>   where r = sqrt $ x^2 + y^2
 
 > dsign :: Double -> Double -> Double
 > dsign a b | b < 0.0   = (-a)
@@ -113,10 +112,10 @@ TBF: multiple args?
 >             | otherwise  = w - dsign d2pi a
 >             where w = mod' a d2pi
 
-> slaGaleq dl db = (realToFrac dr, realToFrac dd)
+> slaGaleq dl db = ((,) `on` realToFrac) dr dd
 >   where
->     (dr, dd) = slaGaleq' (realToFrac dl) (realToFrac db)
+>     (dr, dd) = (slaGaleq' `on` realToFrac) dl db
               
 > slaGaleq' :: Double -> Double -> (Double, Double)
 > slaGaleq' dl db = (dranrm dr, slaDrange dd)
->     where (dr, dd) = slaDcc2s (slaDimxv (slaDcs2c dl db))
+>     where (dr, dd) = slaDcc2s . slaDimxv . slaDcs2c dl $ db

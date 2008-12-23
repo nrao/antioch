@@ -11,28 +11,29 @@
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
-> import Data.Maybe (fromJust)
 
-> type Factor   = (String, Score)
+> type Factor   = (String, Maybe Score)
 > type Factors  = [Factor]
 
 Ranking System from Memo 5.2, Section 3
 
 3.1 Observing Efficiency
 
-> efficiency, efficiencyHA :: DateTime -> Session -> Scoring Float
-> efficiency   dt = fmap fst . calcEfficiency dt
-> efficiencyHA dt = fmap snd . calcEfficiency dt
+> efficiency, efficiencyHA :: DateTime -> Session -> Scoring (Maybe Float)
+> efficiency   dt = fmap (fmap fst) . calcEfficiency dt
+> efficiencyHA dt = fmap (fmap snd) . calcEfficiency dt
 
-> calcEfficiency      :: DateTime -> Session -> Scoring (Float, Float)
+> calcEfficiency      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
 >     trx <- receiverTemperature dt s
 >     tk  <- kineticTemperature dt s
 >     w   <- weather
->     let minTsysPrime' = fromJust $ minTSysPrime w (frequency s) elevation
 >     zod <- zenithOpticalDepth dt s
->     let [eff, effTransit] = map (calcEff trx tk minTsysPrime' zod) [za, zat]
->     return $ (eff, eff / effTransit)
+>     return $ do
+>         zod' <- zod
+>         minTsysPrime' <- minTSysPrime w (frequency s) elevation
+>         let [eff, effTransit] = map (calcEff trx tk minTsysPrime' zod') [za, zat]
+>         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
@@ -52,10 +53,10 @@ Ranking System from Memo 5.2, Section 3
 > kineticTemperature      :: DateTime -> Session -> Scoring Float
 > kineticTemperature dt s = return 1.0
 
-> zenithOpticalDepth      :: DateTime -> Session -> Scoring Float
+> zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
 > zenithOpticalDepth dt s = do
 >     w <- weather
->     return . fromJust $ opacity w dt (frequency s)
+>     return $ opacity w dt (frequency s)
 
 > zenithAngle      :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
@@ -76,7 +77,7 @@ Ranking System from Memo 5.2, Section 3
 
 > atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
 
-> surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" $
+> surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" . Just $
 >     if isDayTime dt
 >     then
 >         -- Equation 9
@@ -101,7 +102,7 @@ Ranking System from Memo 5.2, Section 3
 >     sigmaDay = 3.3
 >     sigmaNight = 2.8
 
-> trackingEfficiency dt s = factor "trackingEfficiency" $
+> trackingEfficiency dt s = factor "trackingEfficiency" . Just $
 >     -- Equation 12
 >     (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^ (-2)
 >   where
@@ -114,8 +115,7 @@ Ranking System from Memo 5.2, Section 3
 
 > stringency _ s = do
 >     w <- weather
->     let stringency = fromJust $ totalStringency w (frequency s) elevation'
->     factor "stringency" stringency
+>     factor "stringency" $ totalStringency w (frequency s) elevation'
 >   where
 >     elevation' = pi/2 - zenithAngleAtTransit s
 
@@ -146,10 +146,10 @@ Ranking System from Memo 5.2, Section 3
 > rightAscensionPressure     :: Array Int Float -> (Session -> Int) -> ScoreFunc
 
 > frequencyPressure fs f _ a =
->     factor "frequencyPressure" $ (fs ! f a) ** 0.5
+>     factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
 
 > rightAscensionPressure fs f _ a =
->     factor "rightAscensionPressure" $ (fs ! f a) ** 0.3
+>     factor "rightAscensionPressure" . Just $ (fs ! f a) ** 0.3
 
 3.4 Performance Limits
 
@@ -170,7 +170,7 @@ Ranking System from Memo 5.2, Section 3
 > trackingErrorLimit        :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
-> observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" $
+> observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" . Just $
 >     if obsEff < minObsEff
 >     -- Equation 24
 >     then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
@@ -182,25 +182,26 @@ Ranking System from Memo 5.2, Section 3
 
 > hourAngleLimit dt s = do
 >     effHA <- efficiencyHA dt s
->     boolean "hourAngleLimit" $ effHA >= criterion
+>     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff $ s
 
 > zenithAngleLimit dt s =
->    boolean "zenithAngleLimit" $ zenithAngle dt s < deg2rad 85.0
+>    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
 
 > trackingErrorLimit dt s = do
 >     w <- weather
->     let wind' = fromJust $ wind w dt
->     -- Equation 26
->     let fv = rmsTrackingError wind' / (theta . frequency $ s)
->     boolean "trackingErrorLimit" $ fv <= maxErr
+>     boolean "trackingErrorLimit" $ do
+>         wind' <- wind w dt
+>         -- Equation 26
+>         let fv = rmsTrackingError wind' / (theta . frequency $ s)
+>         return $ fv <= maxErr
 >   where
 >     maxErr = 0.2 
 >     -- Equation 11
 >     rmsTrackingError w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
 
-> atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" 1.0
+> atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" . Just $ 1.0
 
 3.5 Other factors
 
@@ -211,13 +212,13 @@ Ranking System from Memo 5.2, Section 3
 >     total = fromIntegral (timeTotal . project $ s)
 >     left  = fromIntegral (timeLeft  . project $ s)
 >     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
->     in factor "projectCompletion" $
+>     in factor "projectCompletion" . Just $
 >     if percent <= 0.0 then 1.0 else 1.0 + percent/weight
 
-> thesisProject _ s = factor "thesisProject" $
+> thesisProject _ s = factor "thesisProject" . Just $
 >     if thesis . project $ s then 1.05 else 1.0
 
-> scienceGrade _ s = factor "scienceGrade" $
+> scienceGrade _ s = factor "scienceGrade" . Just $
 >     case grade s of
 >         GradeA -> 1.0
 >         GradeB -> 0.9
@@ -237,7 +238,7 @@ Ranking System from Memo 5.2, Section 3
 > runScoring     :: Weather -> Scoring t -> t
 > runScoring w f = runIdentity . runReaderT f $ ScoringEnv w
 
-> factor          :: String -> Score -> Scoring Factors
+> factor          :: String -> Maybe Score -> Scoring Factors
 > factor name val = return [(name, val)]
 
 > type ScoreFunc = DateTime -> Session -> Scoring Factors 
@@ -257,13 +258,13 @@ Ranking System from Memo 5.2, Section 3
 > eval :: Factors -> Score
 > eval = foldr step 1.0
 >   where
->     step (_, f) s
->         | s < 1.0e-6 = 0.0
->         | otherwise  = s * f
+>     step (_, Nothing) s = 0.0
+>     step (_, Just f)  s
+>         | s < 1.0e-6    = 0.0
+>         | otherwise     = s * f
 
 -- > receiver dt Session { receivers = rcvrs } = do
 -- >     scheduled <- asks $ getReceivers dt . receiverSchedule
 -- >     boolean "receiver" $ all (`elem` scheduled) rcvrs
 
-> boolean name True  = factor name 1.0
-> boolean name False = factor name 0.0
+> boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
