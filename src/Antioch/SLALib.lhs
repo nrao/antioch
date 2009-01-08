@@ -74,8 +74,9 @@ Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordina
 Spherical coordinates to direction cosines
 
 > slaDcs2c :: Double -> Double -> [Double]
-> slaDcs2c a b = [(cos a) * cosb, (sin a) * cosb, sin b]
->                where cosb = cos b
+> slaDcs2c a b = [cos a * cosb, sin a * cosb, sin b]
+>   where
+>     cosb = cos b
 
 To test slaDcs2c provide a wide range of radian inputs, and make sure that
 the results are always normalized (0..1)

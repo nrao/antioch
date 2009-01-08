@@ -61,8 +61,8 @@ However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
 
 > getOpacity :: IORef Connection -> DateTime -> DateTime -> Float -> Maybe Float
-> getOpacity conn now target frequency = 
->     getOpacity' conn target (determineFType target now) frequency
+> getOpacity conn now target = 
+>     getOpacity' conn target (determineFType target now)
 
 > getOpacity' :: IORef Connection -> DateTime -> Int -> Float -> Maybe Float
 > getOpacity' conn dt ftype frequency = 
@@ -75,8 +75,8 @@ on frequency.
 >                  \forecasts.id = forecast_by_frequency.forecast_id"
 
 > getTSys :: IORef Connection -> DateTime -> DateTime -> Float -> Maybe Float
-> getTSys conn now target frequency = 
->     getTSys' conn target (determineFType target now) frequency
+> getTSys conn now target = 
+>     getTSys' conn target (determineFType target now)
 
 > getTSys' :: IORef Connection -> DateTime -> Int -> Float -> Maybe Float
 > getTSys' conn dt ftype frequency = 

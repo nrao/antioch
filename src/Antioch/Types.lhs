@@ -1,6 +1,7 @@
 > module Antioch.Types where
 
 > import Antioch.DateTime
+> import Data.Function (on)
 
 > type Minutes = Int
 > type Score   = Float
@@ -61,7 +62,11 @@
 >   } deriving Eq
 
 > instance Show Project where
+<<<<<<< local
 >     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
+=======
+>     show = pName
+>>>>>>> other
 
 > data Period  = Period  {
 >     session   :: Session
@@ -71,7 +76,7 @@
 >   } deriving (Eq, Show)
 
 > instance Ord Period where
->     p1 < p2 = startTime p1 < startTime p2
+>     (<) = (<) `on` startTime
 
 > defaultSession = Session {
 >     sName       = ""
