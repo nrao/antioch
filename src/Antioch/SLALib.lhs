@@ -21,6 +21,12 @@ Generate a wide range of angles:
 > genAngleRad :: Gen Double
 > genAngleRad = choose (10*(-d2pi), 10*d2pi)
 
+> genAngleRadPi :: Gen Double
+> genAngleRadPi = choose ((-pi), pi)
+
+> genAngleRadPiDiv2 :: Gen Double
+> genAngleRadPiDiv2 = choose (((-pi)/2.0), (pi/2.0))
+
 Now make sure that 'dranrm' always normalizes them:
 
 > prop_dranrm = forAll genAngleRad $
@@ -65,57 +71,123 @@ Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordina
 
  Copyright P.T.Wallace.  All rights reserved.
 
+Spherical coordinates to direction cosines
+
 > slaDcs2c :: Double -> Double -> [Double]
 > slaDcs2c a b = [(cos a) * cosb, (sin a) * cosb, sin b]
 >                where cosb = cos b
 
 To test slaDcs2c provide a wide range of radian inputs, and make sure that
 the results are always normalized (0..1)
-TBF: multiple args?
-
-> genAngleRads :: Gen (Double, Double)
-> genAngleRads = do 
->     r1 <- choose (10*(-d2pi), 10*d2pi)
->     r2 <- choose (10*(-d2pi), 10*d2pi)
->     return (r1, r2)
 
 > inRadianRng :: Double -> Bool
 > inRadianRng x = -1.0 <= x && x <= 1.0
+
+> inPiRng :: Double -> Bool
+> inPiRng x = -pi <= x && x <= pi
+
+> almostEqual :: Double -> Double -> Bool
+> almostEqual x y = if (abs (x - y)) <= 1.0e-6 then True else False
 
 > prop_slaDcs2c =
 >     forAll genAngleRad $ \a ->
 >     forAll genAngleRad $ \b ->
 >     let [x, y ,z] = slaDcs2c a b in inRadianRng x && inRadianRng y && inRadianRng z && z == sin b
 
->  -- prop_slaDcs2c =  forAll genAngleRads $ \a -> let x = slaDcs2c (fst a) (snd a) in -1.0 <= head x && head x <= 1.0 -- && 0 <= y && y <= 1
+Equatorial to galactic rotation matrix (J2000.0), obtained by
+applying the standard FK4 to FK5 transformation, for zero proper
+motion in FK5, to the columns of the B1950 equatorial to
+galactic rotation matrix:
 
 > rmat = [[-0.054875539726,  0.494109453312, -0.867666135858]
 >       , [-0.873437108010, -0.444829589425, -0.198076386122]
 >       , [-0.483834985808,  0.746982251810,  0.455983795705]]
 
-> slaDimxv :: [Double] -> [Double]
-> slaDimxv va = [sum [r * a | r <- rs,  a <- va] | rs <- rmat]
+For testing:
+
+> rmatInv = [[-0.054875539726, -0.873437108010, -0.483834985808]
+>      , [0.494109453312, -0.444829589425, 0.746982251810]
+>      , [-0.867666135858, -0.198076386122, 0.455983795705]]
+
+Performs the 3-D backward unitary transformation:
+
+> slaDimxv :: [Double] -> [[Double]] -> [Double]
+> slaDimxv va matrix = [sum [r * a | (r, a) <- zip rs va] | rs <- matrix]
+
+> prop_slaDimxv = forAll (choose (0, 10.0)) $ \a ->
+>                 forAll (choose (0, 10.0)) $ \b ->
+>                 forAll (choose (0, 10.0)) $ \c ->
+>                     let [x, y, z] = slaDimxv (slaDimxv [a,b,c] rmat) rmatInv in almostEqual x a && almostEqual y b && almostEqual z c
+
+Direction cosines to spherical coordinates (rads)
 
 > slaDcc2s           :: [Double] -> (Double, Double)
 > slaDcc2s [x, y, z] = ((if r /= 0.0 then atan2 y x else 0.0)
 >                     , (if z /= 0.0 then atan2 z r else 0.0))
 >          where r = sqrt(x^2 + y^2)
 
+> prop_atan2 =
+>     forAll genAngleRad $ \a ->
+>     forAll genAngleRad $ \b ->
+>     let x = atan2 a b in inPiRng x 
+
+> prop_slaDcc2s =
+>     forAll genAngleRadPi $ \a ->
+>     forAll genAngleRadPiDiv2 $ \b ->
+>     let (x, y) = slaDcc2s (slaDcs2c a b) in inPiRng x && inPiRng y && almostEqual x a && almostEqual y b 
+
 > deg2rad deg = deg * pi / 180.0
 
 > dsign :: Double -> Double -> Double
-> dsign a b | b < 0.0   = (-a)
->           | otherwise = a
-      
+> dsign a b | b < 0.0   = (-(abs a))
+>           | otherwise = abs a
+
+Normalize angle into range +/- pi       
+TBF: why did we have to make the above change for this to work?
+
 > slaDrange :: Double -> Double
 > slaDrange a | abs w < pi = w
->             | otherwise  = w - dsign d2pi a
->             where w = mod' a d2pi
+>             | otherwise = w - d2pi -- dsign d2pi x
+>              where w = mod' a d2pi
+
+> prop_slaDrange = 
+>     forAll genAngleRad $ \a ->
+>     let x = slaDrange a in inPiRng x 
 
 > slaGaleq dl db = (realToFrac dr, realToFrac dd)
 >   where
 >     (dr, dd) = slaGaleq' (realToFrac dl) (realToFrac db)
               
+
+Transformation from IAU 1958 galactic coordinates to
+  J2000.0 equatorial coordinates (double precision)
+  Given:
+     DL,DB       galactic longitude and latitude L2,B2
+  Returned:
+     DR,DD       J2000.0 RA,Dec
+  (all arguments are radians)              
+
 > slaGaleq' :: Double -> Double -> (Double, Double)
 > slaGaleq' dl db = (dranrm dr, slaDrange dd)
->     where (dr, dd) = slaDcc2s (slaDimxv (slaDcs2c dl db))
+>     where (dr, dd) = slaDcc2s (slaDimxv (slaDcs2c dl db) rmat)
+
+> prop_slaGaleq = 
+>     forAll genGalacticLongitude $ \a ->
+>     forAll genGalacticLatitude $ \b ->
+>     let (x, y) = slaGaleq a b in validRA x && validDec y  
+
+Galactic coords are Longitude 0-360 degrees, and Lat. -90 - 90 degrees.
+
+> genGalacticLongitude :: Gen Double
+> genGalacticLongitude = choose (0.0, d2pi)
+
+> genGalacticLatitude :: Gen Double
+> genGalacticLatitude = choose ((-pi/2.0), pi/2.0)
+
+RA & Dec: 0-24 hrs, -90 - 90 degrees
+
+> validRA :: Double -> Bool
+> validRA x = 0.0 <= x && x <= d2pi --24.0
+
+> validDec :: Double -> Bool
+> validDec x = (-pi/2.0) <= x && x <= pi/2.0 
