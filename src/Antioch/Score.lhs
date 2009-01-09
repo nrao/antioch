@@ -25,8 +25,7 @@ Ranking System from Memo 5.2, Section 3
 
 > calcEfficiency      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
->     trx <- receiverTemperature dt s
->     tk  <- kineticTemperature dt s
+>     [trx, tk] <- mapM (\f -> f dt s) [receiverTemperature, kineticTemperature]
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s
 >     return $ do
@@ -37,7 +36,7 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
->     elevation = pi/2 - zenithAngleAtTransit s
+>     elevation = pi/2 - zat
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
@@ -115,9 +114,9 @@ Ranking System from Memo 5.2, Section 3
 
 > stringency _ s = do
 >     w <- weather
->     factor "stringency" $ totalStringency w (frequency s) elevation'
+>     factor "stringency" $ totalStringency w (frequency s) elevation
 >   where
->     elevation' = pi/2 - zenithAngleAtTransit s
+>     elevation = pi/2 - zenithAngleAtTransit s
 
 
 3.3 Pressure Feedback
