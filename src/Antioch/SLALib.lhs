@@ -1,7 +1,8 @@
 > module Antioch.SLALib (gmst, slaGaleq) where
 
-> import Data.Fixed  (mod')
-> import Data.List   (foldl1')
+> import Data.Fixed    (mod')
+> import Data.Function (on)
+> import Data.List     (foldl1')
 > import Test.QuickCheck 
 
 > d2pi :: Double
@@ -69,7 +70,7 @@ Now make sure that the gmst time makes sense (TBD: what are the bounds?):
 
 Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordinates.
 
- Copyright P.T.Wallace.  All rights reserved.
+Copyright P.T.Wallace.  All rights reserved.
 
 Spherical coordinates to direction cosines
 
@@ -93,7 +94,8 @@ the results are always normalized (0..1)
 > prop_slaDcs2c =
 >     forAll genAngleRad $ \a ->
 >     forAll genAngleRad $ \b ->
->     let [x, y ,z] = slaDcs2c a b in inRadianRng x && inRadianRng y && inRadianRng z && z == sin b
+>     let xs@([_, _ , z]) = slaDcs2c a b
+>     in all inRadianRng xs && z == sin b
 
 Equatorial to galactic rotation matrix (J2000.0), obtained by
 applying the standard FK4 to FK5 transformation, for zero proper
@@ -155,9 +157,9 @@ TBF: why did we have to make the above change for this to work?
 >     forAll genAngleRad $ \a ->
 >     let x = slaDrange a in inPiRng x 
 
-> slaGaleq dl db = (realToFrac dr, realToFrac dd)
+> slaGaleq dl db = ((,) `on` realToFrac) dr dd
 >   where
->     (dr, dd) = slaGaleq' (realToFrac dl) (realToFrac db)
+>     (dr, dd) = (slaGaleq' `on` realToFrac) dl db
               
 
 Transformation from IAU 1958 galactic coordinates to
@@ -192,3 +194,4 @@ RA & Dec: 0-24 hrs, -90 - 90 degrees
 
 > validDec :: Double -> Bool
 > validDec x = (-pi/2.0) <= x && x <= pi/2.0 
+

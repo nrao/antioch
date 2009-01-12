@@ -105,8 +105,6 @@ Generates RA and Dec based on skyType:
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (hrs2rad ra, dec)
 
->         -- let (rar, decr) = slaGaleq ((deg2rad longitude) - pi) 0.0
-
 TBF: how to link these to generated Projects? 
 
 > genSession :: Gen Session
@@ -154,7 +152,6 @@ TBF: how to link these to generated Projects?
 Make sure that the total time used up by the periods is correct:
 
 > prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
-
 
 TBF: start on 15 min. boundraies in a given time range. But how to make them
 mutually exclusive?
