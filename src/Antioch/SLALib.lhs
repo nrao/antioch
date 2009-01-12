@@ -172,7 +172,7 @@ Transformation from IAU 1958 galactic coordinates to
 
 > slaGaleq' :: Double -> Double -> (Double, Double)
 > slaGaleq' dl db = (dranrm dr, slaDrange dd)
->     where (dr, dd) = slaDcc2s . slaDimxv . slaDcs2c dl $ db
+>     where (dr, dd) = slaDcc2s (slaDimxv (slaDcs2c dl db) rmat)
 
 > prop_slaGaleq = 
 >     forAll genGalacticLongitude $ \a ->

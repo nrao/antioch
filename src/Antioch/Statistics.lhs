@@ -18,13 +18,14 @@
 >     g <- getStdGen
 >     return . generate 0 g . genPeriods $ 100
 
-dec vs frequency
+> sessFreqDec :: [Session] -> [(Float, Float)]
+> sessFreqDec = frequency `vs` dec
 
-> sessDecFreq :: [Session] -> [(Float, Float)]
-> sessDecFreq = dec `vs` frequency
+Read Y versus X as you would expect with normal plotting nomenclature.
+Produces list of (x, y) coordinate pairs.
 
 > vs       :: (a -> b) -> (a -> c) -> [a] -> [(b, c)]
-> f `vs` g = map $ \x -> (f x, g x)
+> y `vs` x = map $ \a -> (x a, y a)
 
 > perDecFreq :: [Period] -> [(Float, Float)]
 > perDecFreq = promote sessDecFreq
@@ -32,21 +33,48 @@ dec vs frequency
 > promote   :: ([Session] -> t) -> [Period] -> t
 > promote f = f . map session
 
-dec vs ra
+> sessRADec :: [Session] -> [(Float, Float)]
+> sessRADec= ra `vs` dec
 
-> sessDecRA :: [Session] -> [(Float, Float)]
-> sessDecRA = dec `vs` ra
-
-> perDecRA :: [Period] -> [(Float, Float)]
-> perDecRA = promote sessDecRA
+> perRADec :: [Period] -> [(Float, Float)]
+> perRADec = promote sessRADec
 
 Example of scatter plot data w/ datetime:
 
 > freqTime :: [Period] -> [(UTCTime, Float)]
-> freqTime = startTime `vs` (frequency . session)
+> freqTime = (frequency . session) `vs` startTime
 
 Example of log histogram data:
 Compare allocated hours by frequency to observed hours by frequency.
+
+> sessBand :: [Session] -> [(Band, Minutes)]
+> sessBand = histogram [L..Q] . (duration `vs` band)
+
+> sessEfficiencyByBand :: [Session] -> [Float] -> [(Band, Float)]
+> sessEfficiencyByBand ss es = histogram [L..Q] . (snd `vs` duration . fst) $ zip ss es
+
+> efficiencyVsFrequency :: [Session] -> [Float] -> [(Float, Float)]
+> efficiencyVsFrequency sessions efficiencies =
+>     snd `vs` frequency . fst $ zip sessions efficiencies
+
+> frequencyBins =
+>     [0.0, 2.0, 3.95, 5.85, 10.0, 15.4, 20.0, 24.0, 26.0, 30.0, 35.0, 40.0, 45.0, 50.0]
+
+> meanFreqsByBin       :: [Float] -> [Float]
+> meanFreqsByBin freqs = mean frequencyBins $ [(x, x) | x <- freqs]
+
+> meanObsEffByBin :: [(Float, Float)] -> [Float]
+> meanObsEffByBin = mean frequencyBins
+
+> mean buckets xys = zipWith (/) `on` map snd $ totals counts
+>   where
+>     totals = histogram buckets xys
+>     counts = histogram buckets [(x, 1) | x <- xys]
+
+One should probably use promote in this function. :/
+
+> historicalFreq :: [Periods] -> [Floats]
+> historicalFreq pp = [frequency . allocation . p | p <- pp]
 
 > sessFreq :: [Session] -> [(Float, Minutes)]
 > sessFreq = histogram [1.0..50.0] . (frequency `vs` totalTime)
@@ -54,11 +82,28 @@ Compare allocated hours by frequency to observed hours by frequency.
 > periodFreq :: [Period] -> [(Float, Minutes)]
 > periodFreq = histogram [1.0..50.0] . ((frequency . session) `vs` duration)
 
-> sessTP :: [Period] -> [(Minutes, Int)]
-> sessTP = count duration [1..17]
+Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
-> sessDec :: [Float] -> [Session] -> [(Float, Float)]
-> sessDec = count dec
+> satisfactionRatio :: [Session] -> [Period] -> [(Float, Float)]
+> satisfactionRatio ss ps = zip sRatios sigmas
+>   where 
+>     pMinutes   = map snd periodFreq ps 
+>     sMinutes   = map snd sessFreq ss
+>     totalRatio = ratio pMinutes sMinutes
+>     sRatios    = [x / y / totalRatio | (x, y) <- zip pMinutes sMinutes]
+>     sigmas     = [x / y ^ (0.5) | (x, y) <- zip sRatios sMinutes]
+
+> ratio :: [(Minutes, Floats)] -> [(Minutes, Floats)] -> Float
+> ratio = (/) `on` (sum . map snd) 
+
+> sessTP :: [Period] -> [(Minutes, Int)]
+> sessTP = count ((`div` 60) . duration) [1..7]
+
+> sessRA :: [Session] -> [(Float, Float)]
+> sessRA = count (rad2h . ra) [0..24]
+
+> sessDec :: [Session] -> [(Float, Float)]
+> sessDec = count (rad2deg . dec) [-40..90]
 
 > periodDec      :: [Float] -> [Period] -> [(Float, Float)]
 > periodDec decs = promote (sessDec decs)

@@ -31,7 +31,7 @@
 
 > data Grade = GradeA | GradeB | GradeC deriving (Eq, Show)
 > data Band = L | S | C | X | U | K | A | Q
->           deriving (Eq, Read, Show)
+>           deriving (Enum, Eq, Read, Show)
 
 > data Session = Session {
 >     sName       :: String

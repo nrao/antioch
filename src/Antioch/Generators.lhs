@@ -50,12 +50,10 @@ those to calculate timeLeft and timeTotal?
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
->         , sessions = projectSessions
+>         , sessions = sessions
 >         , timeTotal = timeTotal
 >         , timeLeft = timeTotal - timeUsed
 >         }
->     return project
-
 
 Now lets make sure we are properly generating Projects: test each attribute
 at a time:
@@ -147,7 +145,6 @@ TBF: how to link these to generated Projects?
 >     return $ [s] ++ ss
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
-> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
 
 Make sure that the total time used up by the periods is correct:
 
@@ -158,10 +155,6 @@ Make sure that the total time used up by the periods is correct:
 TBF: thing is, this is in degrees, and it doesn't pass either!
 
 > prop_DecDegree s = (-180) <= dec s && dec s <= 180 
-
-Make sure that the total time used up by the periods is correct:
-
-> prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 
 TBF: start on 15 min. boundraies in a given time range. But how to make them
 mutually exclusive?
