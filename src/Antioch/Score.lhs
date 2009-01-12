@@ -26,7 +26,7 @@ Ranking System from Memo 5.2, Section 3
 
 > calcEfficiency      :: DateTime -> Session -> Scoring (Float, Float)
 > calcEfficiency dt s = do
->     trx <- receiverTemperature dt s
+>     let trx = receiverTemperature dt s
 >     tk  <- kineticTemperature dt s
 >     w   <- weather
 >     let minTsysPrime' = fromJust $ minTSysPrime w (frequency s) elevation
@@ -46,11 +46,28 @@ Ranking System from Memo 5.2, Section 3
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >         tsys' = exp opticalDepth * tsys
 
-> receiverTemperature      :: DateTime -> Session -> Scoring Float
-> receiverTemperature dt s = return 1.0
+> receiverTemperature      :: DateTime -> Session -> Float
+> receiverTemperature dt s =
+>     case dropWhile (\(x, _) -> x < freq) freqBand of
+>         (x : _) -> snd x
+>         []      -> 60.0
+>   where 
+>         freq = fromIntegral . round . frequency $ s
+>         freqBand =  [ (1.73, 10.0)
+>                     , (3.95, 10.0)
+>                     , (5.85, 5.0)
+>                     , (10.0, 13.0)
+>                     , (15.4, 14.0)
+>                     , (26.5, 21.0)
+>                     , (40.0, 35.0)
+>                     , (50.0, 60.0)
+>                      ]
+
 
 > kineticTemperature      :: DateTime -> Session -> Scoring Float
-> kineticTemperature dt s = return 1.0
+> kineticTemperature dt s = do
+>     w <- weather
+>     return . fromJust $ tatm w dt
 
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring Float
 > zenithOpticalDepth dt s = do
