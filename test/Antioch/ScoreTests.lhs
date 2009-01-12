@@ -15,16 +15,16 @@
 
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00799 $
->       runScoring w (zenithOpticalDepth dtLP sessLP)
+>     let Just result = runScoring w (zenithOpticalDepth dtLP sessLP)
+>     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00799 result
 
 > test_receiverTemperature = TestCase $ do
 >     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sessLP
 
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     assertAlmostEqual "test_kineticTemperature" 1 257.49832 $
->       runScoring w (kineticTemperature dtLP sessLP)
+>     let Just result = runScoring w (kineticTemperature dtLP sessLP)
+>     assertAlmostEqual "test_kineticTemperature" 1 257.49832 result
 
 Test utilities
 

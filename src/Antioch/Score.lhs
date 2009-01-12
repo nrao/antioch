@@ -30,9 +30,10 @@ Ranking System from Memo 5.2, Section 3
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s
 >     return $ do
+>         tk' <- tk
 >         zod' <- zod
 >         minTsysPrime' <- minTSysPrime w (frequency s) elevation
->         let [eff, effTransit] = map (calcEff trx tk minTsysPrime' zod') [za, zat]
+>         let [eff, effTransit] = map (calcEff trx tk' minTsysPrime' zod') [za, zat]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -65,10 +66,10 @@ Ranking System from Memo 5.2, Section 3
 >                      ]
 
 
-> kineticTemperature      :: DateTime -> Session -> Scoring Float
+> kineticTemperature      :: DateTime -> Session -> Scoring (Maybe Float)
 > kineticTemperature dt s = do
 >     w <- weather
->     return . fromJust $ tatm w dt
+>     return $ tatm w dt
 
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
 > zenithOpticalDepth dt s = do
