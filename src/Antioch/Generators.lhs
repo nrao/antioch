@@ -33,7 +33,7 @@ TBF: Currently, the idea of semester is very limited.
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
 
-TBF: how to line to Sessions that have already been generated?  and then use
+TBF: how to link to Sessions that have already been generated?  and then use
 those to calculate timeLeft and timeTotal?
 
 > genProject :: Gen Project
@@ -43,12 +43,14 @@ those to calculate timeLeft and timeTotal?
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
 >     let timeTotal = sum [ totalTime s | s <- sessions ]
+>     let timeUsed  = sum [ totalUsed s | s <- sessions ]
 >     return $ defaultProject {
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
 >         , sessions = sessions
 >         , timeTotal = timeTotal
+>         , timeLeft = timeTotal - timeUsed
 >         }
 
 
@@ -62,7 +64,17 @@ at a time:
 Each Project's Sessions can have a totalTime between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
 
-> prop_timeTotal p = (1 * 2) <= timeTotal p && timeTotal p <= 5 * 30
+> prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
+> prop_timeTotal p = (1*2*60) <= timeTotal p && timeTotal p <= (5*30*60)
+
+Each Session can have 0-3 Periods, each with a max of 10 hours:
+
+> prop_projectPeriods p = let n = sum [ (length . periods $ s) | s <- sessions p] in 0 <= n && n <= 5*3
+
+TBF: this does not pass because generated periods aren't limited by their
+sessions' totalTime.
+
+> prop_timeLeft p = 0 <= timeLeft p && timeLeft p <= timeTotal p
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
@@ -86,28 +98,32 @@ a - all sky or a large region of the sky
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (hrs2rad ra, dec)
 
-TBF: how to link these to generated Projects? And we aren't linking to Periods!
+TBF: how to link these to generated Projects? 
 
 > genSession :: Gen Session
 > genSession = do
->     p <- genProject
->     t <- genSemester
->     b <- genBand t 
->     f <- genFreq b
->     s <- skyType
+>     project    <- genProject
+>     periods    <- genSessionPeriods 
+>     t          <- genSemester
+>     b          <- genBand t 
+>     f          <- genFreq b
+>     s          <- skyType
 >     (ra, dec)  <- genRaDec s
->     totalHours <- choose (2, 30)
->     minD       <- choose (2, 4)
->     maxD       <- choose (6, 8)
+>     totalTime  <- choose (2*60, 30*60)
+>     minD       <- choose (2*60, 4*60)
+>     maxD       <- choose (6*60, 8*60)
+>     let totalUsed  = sum [ duration p | p <- periods] 
 >     return $ defaultSession {
->                  project        = p
+>                  project        = project
+>                , periods        = periods
 >                , band           = b
 >                , frequency      = f
 >                , ra             = ra
 >                , dec            = dec
 >                , minDuration    = minD
 >                , maxDuration    = maxD
->                , totalTime      = totalHours
+>                , totalTime      = totalTime
+>                , totalUsed      = totalUsed
 >                }
 
 
@@ -134,6 +150,11 @@ TBF: this doesn't pass because Dec should be in rads
 TBF: thing is, this is in degrees, and it doesn't pass either!
 
 > prop_DecDegree s = (-180) <= dec s && dec s <= 180 
+
+Make sure that the total time used up by the periods is correct:
+
+> prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
+
 
 TBF: start on 15 min. boundraies in a given time range. But how to make them
 mutually exclusive?
@@ -166,6 +187,10 @@ TBD:
 >        , duration  = duration
 >        , pScore    = score
 >        }
+
+> genSessionPeriods :: Gen [Period]
+> genSessionPeriods = 
+>     T.frequency [(50, return 0), (25, return 1), (20, return 2), (5, return 3)] >>= vector
 
 > genPeriods         :: Int -> Gen [Period]
 > genPeriods 0       = do {return $ []}

@@ -3,9 +3,10 @@
 > import Antioch.DateTime
 > import Data.Function (on)
 
-> type Minutes = Int
-> type Score   = Float
-> type Radians = Float
+> type Frequency = Float
+> type Minutes   = Int
+> type Score     = Float
+> type Radians   = Float
 
 > data Receiver = NoiseSource
 >               | Rcvr_RRI
@@ -35,6 +36,7 @@
 > data Session = Session {
 >     sName       :: String
 >   , project     :: Project
+>   , periods     :: [Period]
 >   , totalTime   :: Minutes
 >   , totalUsed   :: Minutes
 >   , minDuration :: Minutes
@@ -61,7 +63,7 @@
 >   } deriving Eq
 
 > instance Show Project where
->     show = pName
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
 
 > data Period  = Period  {
 >     session   :: Session
@@ -76,6 +78,7 @@
 > defaultSession = Session {
 >     sName       = ""
 >   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
 >   , totalTime   = 0
 >   , totalUsed   = 0
 >   , minDuration = 0

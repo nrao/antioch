@@ -31,7 +31,7 @@ to generate `items` for input to the `packWorker` function.
 >   where
 >     dts   = scanl (flip addMinutes') dt [stepSize * m | m <- [0 .. numSteps dur]]
 >     sched = toSchedule dts . sort $ periods
->     mask  = zipWith (\dt s -> if isNothing s then Just dt else Nothing) dts sched
+>     mask  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
 
 A schedule is a list of time slots.  A given slot is either `Nothing`
 if it is free and available to be scheduled, or `Just x` where x is a
