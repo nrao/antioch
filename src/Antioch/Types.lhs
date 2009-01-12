@@ -3,9 +3,10 @@
 > import Antioch.DateTime
 > import Data.Function (on)
 
-> type Minutes = Int
-> type Score   = Float
-> type Radians = Float
+> type Frequency = Float
+> type Minutes   = Int
+> type Score     = Float
+> type Radians   = Float
 
 > data Receiver = NoiseSource
 >               | Rcvr_RRI

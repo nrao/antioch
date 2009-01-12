@@ -10,13 +10,13 @@
 > import System.IO.Unsafe (unsafePerformIO)
 > import Test.QuickCheck (generate)
 
-> exSessions = unsafePerformIO $ do
+> exSessions = do
 >     g <- getStdGen
->     return $ generate 0 g $ genSessions 100
+>     return . generate 0 g . genSessions $ 100
 
-> exPeriods = unsafePerformIO $ do
+> exPeriods = do
 >     g <- getStdGen
->     return $ generate 0 g $ genPeriods 100
+>     return . generate 0 g . genPeriods $ 100
 
 dec vs frequency
 

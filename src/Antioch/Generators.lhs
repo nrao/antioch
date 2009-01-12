@@ -43,10 +43,10 @@ those to calculate timeLeft and timeTotal?
 >     name     <- genProjectName
 >     semester <- genSemesterName
 >     thesis   <- genThesis
->     projectSessions <- genProjectSessions
->     let timeTotal = sum [ totalTime s | s <- projectSessions ]
->     let timeUsed  = sum [ totalUsed s | s <- projectSessions ]
->     let project = defaultProject {
+>     sessions <- genProjectSessions
+>     let timeTotal = sum [ totalTime s | s <- sessions ]
+>     let timeUsed  = sum [ totalUsed s | s <- sessions ]
+>     return $ defaultProject {
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
@@ -105,8 +105,6 @@ Generates RA and Dec based on skyType:
 >     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (hrs2rad ra, dec)
 
->         -- let (rar, decr) = slaGaleq ((deg2rad longitude) - pi) 0.0
-
 TBF: how to link these to generated Projects? 
 
 > genSession :: Gen Session
@@ -155,6 +153,15 @@ Make sure that the total time used up by the periods is correct:
 
 > prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 
+> prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
+
+TBF: thing is, this is in degrees, and it doesn't pass either!
+
+> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
+
+Make sure that the total time used up by the periods is correct:
+
+> prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 
 TBF: start on 15 min. boundraies in a given time range. But how to make them
 mutually exclusive?
