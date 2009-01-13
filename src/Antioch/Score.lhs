@@ -38,14 +38,16 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
->     elevation = pi/2 - zenithAngleAtTransit s
+>     elevation = pi/2 - zenithAngle dt s
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
 >         -- Equation 4 & 6
 >         opticalDepth = zod / (cos . min 1.5 $ za)
+>
 >         -- Equation 7
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
+>
 >         tsys' = exp opticalDepth * tsys
 
 > receiverTemperature      :: DateTime -> Session -> Float
@@ -76,7 +78,7 @@ Ranking System from Memo 5.2, Section 3
 >     w <- weather
 >     return $ opacity w dt (frequency s)
 
-> zenithAngle      :: DateTime -> Session -> Radians
+> zenithAngle            :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
 >   where
 >     lst = hrs2rad . utc2lstHours $ dt
@@ -84,7 +86,7 @@ Ranking System from Memo 5.2, Section 3
 > zenithAngleAtTransit   :: Session -> Radians
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
 
-> zenithAngleHA                           :: Session -> Radians -> Radians
+> zenithAngleHA          :: Session -> Radians -> Radians
 > zenithAngleHA Session { dec = dec' } ha =
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha

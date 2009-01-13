@@ -8,10 +8,18 @@
 > import Test.HUnit
 
 > tests = TestList [
->     test_zenithOpticalDepth
+>     test_efficiency
+>   , test_zenithOpticalDepth
 >   , test_receiverTemperature
 >   , test_kineticTemperature
 >   ]
+
+> test_efficiency = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
+>     let Just result = runScoring w (efficiency dtLP sessLP)
+>     assertAlmostEqual "test_efficiency" 5 0.98872 result
+>     let Just result = runScoring w (efficiencyHA dtLP sessLP)
+>     assertAlmostEqual "test_efficiencyHA" 5 0.72526 result
 
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
