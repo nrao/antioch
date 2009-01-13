@@ -25,13 +25,15 @@ Ranking System from Memo 5.2, Section 3
 
 > calcEfficiency      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
->     [trx, tk] <- mapM (\f -> f dt s) [receiverTemperature, kineticTemperature]
+>     let trx = receiverTemperature dt s
+>     tk  <- kineticTemperature dt s
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s
 >     return $ do
+>         tk' <- tk
 >         zod' <- zod
 >         minTsysPrime' <- minTSysPrime w (frequency s) elevation
->         let [eff, effTransit] = map (calcEff trx tk minTsysPrime' zod') [za, zat]
+>         let [eff, effTransit] = map (calcEff trx tk' minTsysPrime' zod') [za, zat]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -42,22 +44,41 @@ Ranking System from Memo 5.2, Section 3
 >       where
 >         -- Equation 4 & 6
 >         opticalDepth = zod / (cos . min 1.5 $ za)
+>
 >         -- Equation 7
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
+>
 >         tsys' = exp opticalDepth * tsys
 
-> receiverTemperature      :: DateTime -> Session -> Scoring Float
-> receiverTemperature dt s = return 1.0
+> receiverTemperature      :: DateTime -> Session -> Float
+> receiverTemperature dt s =
+>     case dropWhile (\(x, _) -> x < freq) freqBand of
+>         (x : _) -> snd x
+>         []      -> 60.0
+>   where 
+>         freq = fromIntegral . round . frequency $ s
+>         freqBand =  [ (1.73, 10.0)
+>                     , (3.95, 10.0)
+>                     , (5.85, 5.0)
+>                     , (10.0, 13.0)
+>                     , (15.4, 14.0)
+>                     , (26.5, 21.0)
+>                     , (40.0, 35.0)
+>                     , (50.0, 60.0)
+>                      ]
 
-> kineticTemperature      :: DateTime -> Session -> Scoring Float
-> kineticTemperature dt s = return 1.0
+
+> kineticTemperature      :: DateTime -> Session -> Scoring (Maybe Float)
+> kineticTemperature dt s = do
+>     w <- weather
+>     return $ tatm w dt
 
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
 > zenithOpticalDepth dt s = do
 >     w <- weather
 >     return $ opacity w dt (frequency s)
 
-> zenithAngle      :: DateTime -> Session -> Radians
+> zenithAngle            :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
 >   where
 >     lst = hrs2rad . utc2lstHours $ dt
@@ -65,7 +86,7 @@ Ranking System from Memo 5.2, Section 3
 > zenithAngleAtTransit   :: Session -> Radians
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
 
-> zenithAngleHA                           :: Session -> Radians -> Radians
+> zenithAngleHA          :: Session -> Radians -> Radians
 > zenithAngleHA Session { dec = dec' } ha =
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
