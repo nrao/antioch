@@ -45,7 +45,45 @@
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     let Just result = runScoring w (kineticTemperature dtLP sessLP)
->     assertAlmostEqual "test_kineticTemperature" 1 257.49832 result
+>     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
+
+TBF: unit test not passing - inputs (sessLP's project) are probably different.
+
+> test_politicalFactors = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+>     let dt = fromGregorian 2007 10 15 12 0 0
+>     -- missing window, transit, observerOnSite, and ObserverAvailable
+>     let politicalFactors = score [scienceGrade
+>                           , thesisProject
+>                           , projectCompletion]
+>     let fs = runScoring w (politicalFactors dt sessLP)
+>     -- TBF: check individual results as well
+>     -- let expFs = [("scienceGrade", Just 1.0)
+>     --           , ("thesisProject", Just 1.0)
+>     --           , ("projectCompletion", Just 1.0)]
+>     let result = eval fs
+>     assertAlmostEqual "test_politicalFactors" 1.015 result
+
+> test_trackingEfficiency = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+>     let dt = fromGregorian 2007 10 15 12 0 0
+>     let [(name, Just result)] = runScoring w (trackingEfficiency dt sessLP)
+>     assertAlmostEqual "test_trackingEfficiency" 4 0.99764 result
+
+TBF: this unit test fails because 'wind w dt' fails
+
+> test_trackingErrorLimit = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+>     let dt = fromGregorian 2007 10 15 12 0 0
+>     let [(name, Just result)] = runScoring w (trackingErrorLimit dt sessLP)
+>     assertEqual "test_trackingErrorLimit" 1.0 result
+> 
+
+> test_zenithAngleLimit = TestCase $ do
+>     let dt = fromGregorian 2007 10 15 0 0 0
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
+>     let [(name, Just result)] = runScoring w (zenithAngleLimit dt sessLP)
+>     assertEqual "test_zenithAngleLimit" 0.0 result
 
 Test utilities
 
