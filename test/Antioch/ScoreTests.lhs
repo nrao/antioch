@@ -52,13 +52,15 @@
 >     let Just result = runScoring w (kineticTemperature dtLP sessLP)
 >     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
 
+TBF: second assert is failing
+
 > test_stringency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
 >     let dt = fromGregorian 2007 10 15 18 0 0
 >     let [(name, Just result)] = runScoring w (stringency dt sessLP)
 >     assertAlmostEqual "test_stringency" 3 1.400855 result
->     let [(name, Just result)] = runScoring w (stringency dt sessGB)
->     assertAlmostEqual "test_stringency" 3 0.85375 result
+>     let [(name, Just result)] = runScoring w (stringency dt sessAS)
+>     assertAlmostEqual "test_stringency" 3 5.600565 result
 
 
 TBF: unit test not passing - inputs (sessLP's project) are probably different.
@@ -108,12 +110,12 @@ Test utilities
 
 Test data generation
 
-> sessGB = defaultSession {
->     sName     = "GB"
->   , ra        = hrs2rad 6.4 
->   , dec       = deg2rad 10.4
->   , frequency = 27.5
->   , receivers = [Rcvr26_40]
+> sessAS = defaultSession {
+>     sName     = "AS"
+>   , ra        = hrs2rad 14.3 
+>   , dec       = deg2rad 18.4
+>   , frequency = 0.5
+>   , receivers = [Rcvr_450]
 >   }
 
 > sessLP = defaultSession {
