@@ -14,6 +14,11 @@
 >   , test_zenithOpticalDepth
 >   , test_receiverTemperature
 >   , test_kineticTemperature
+>   , test_stringency
+>   , test_politicalFactors
+>   , test_trackingEfficiency
+>   , test_trackingErrorLimit
+>   , test_zenithAngleLimit
 >   ]
 
 > test_hourAngleLimit = TestCase $ do
@@ -47,6 +52,15 @@
 >     let Just result = runScoring w (kineticTemperature dtLP sessLP)
 >     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
 
+> test_stringency = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+>     let dt = fromGregorian 2007 10 15 18 0 0
+>     let [(name, Just result)] = runScoring w (stringency dt sessLP)
+>     assertAlmostEqual "test_stringency" 3 1.400855 result
+>     let [(name, Just result)] = runScoring w (stringency dt sessGB)
+>     assertAlmostEqual "test_stringency" 3 0.85375 result
+
+
 TBF: unit test not passing - inputs (sessLP's project) are probably different.
 
 > test_politicalFactors = TestCase $ do
@@ -62,7 +76,7 @@ TBF: unit test not passing - inputs (sessLP's project) are probably different.
 >     --           , ("thesisProject", Just 1.0)
 >     --           , ("projectCompletion", Just 1.0)]
 >     let result = eval fs
->     assertAlmostEqual "test_politicalFactors" 1.015 result
+>     assertEqual "test_politicalFactors" 1.015 result
 
 > test_trackingEfficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
@@ -93,6 +107,14 @@ Test utilities
 >     epsilon = 1.0 / 10.0 ** places
 
 Test data generation
+
+> sessGB = defaultSession {
+>     sName     = "GB"
+>   , ra        = hrs2rad 6.4 
+>   , dec       = deg2rad 10.4
+>   , frequency = 27.5
+>   , receivers = [Rcvr26_40]
+>   }
 
 > sessLP = defaultSession {
 >     sName     = "LP"
