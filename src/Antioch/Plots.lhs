@@ -1,5 +1,6 @@
 > module Antioch.Plots where
 
+> import Antioch.DateTime (DateTime)
 > import Graphics.Gnuplot.Simple
 
 > histStyle :: PlotStyle
@@ -21,3 +22,6 @@
 > scatterPlots       :: [[(Float, Float)]] -> IO ()
 > scatterPlots plots =
 >     plotPathsStyle [] [(scatterStyle, xys) | xys <- plots]
+
+> errorBarPlot :: [(Float, Float, Float)] -> IO ()
+> errorBarPlot = plotErrorBars []

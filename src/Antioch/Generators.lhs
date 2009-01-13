@@ -157,7 +157,7 @@ TBF: thing is, this is in degrees, and it doesn't pass either!
 > prop_DecDegree s = (-180) <= dec s && dec s <= 180 
 
 TBF: start on 15 min. boundraies in a given time range. But how to make them
-mutually exclusive?
+mutually exclusive?  Need for varied and interesting start times!!!! :|
 
 > genStartTime :: Gen DateTime
 > genStartTime = elements [fromGregorian' 2008 1 1, fromGregorian' 2008 1 2]

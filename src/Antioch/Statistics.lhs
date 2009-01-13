@@ -1,18 +1,31 @@
 > module Antioch.Statistics where
 
-> import Antioch.DateTime (fromGregorian)
+> import Antioch.DateTime (fromGregorian, DateTime, addMinutes', diffMinutes')
 > import Antioch.Generators
 > import Antioch.Types
-> import Antioch.DateTime (addMinutes')
 > import Antioch.Score (zenithAngle)
-> import Antioch.Utilities (rad2hr, rad2deg)
+> import Antioch.Utilities (rad2hr, rad2deg, utc2lstHours)
 > import Data.Function (on)
 > import Data.List
 > import Data.Time.Clock
 > import Graphics.Gnuplot.Simple
 > import System.Random (getStdGen)
-> import Test.QuickCheck (generate)
+> import Test.QuickCheck (generate, choose)
 
+To Do List (port from Statistics.py):
+
+Need Dana:
+   * all of histEffHr
+   * true historical obs eff (used in plotDecElevHiEff, plotEffElev, and plotLstAtmEff)
+   * etaFn (from Reports) (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
+   * used in error bars (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
+       * frequency mean
+       * obs eff mean and standard deviation
+       * first obs eff (assume mean?) and std dev
+   * historical bad fixed frequency and obs eff true (plotMeanObsEffVsFreq)
+   * historical bad window frequency and obs eff true (plotMeanObsEffVsFreq)
+   * true historical observing scores
+  
 > exSessions = do
 >     g <- getStdGen
 >     return . generate 0 g . genSessions $ 100
@@ -94,19 +107,38 @@ We may want to move this function to a different file.
 > historicalFreq :: [Period] -> [Float]
 > historicalFreq = map (frequency . session)
 
-> sessFreq :: [Session] -> [(Float, Minutes)]
-> sessFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
+> historicalDec :: [Period] -> [Float]
+> historicalDec = map (dec . session)
 
-> periodFreq :: [Period] -> [(Float, Minutes)]
-> periodFreq = histogram [1.0..50.0] . (duration `vs` (frequency . session))
+> historicalRA :: [Period] -> [Float]
+> historicalRA = map (ra . session)
+
+> historicalTime :: [Period] -> [DateTime]
+> historicalTime = map startTime
+>
+> historicalTime' :: [Period] -> [Float]
+> historicalTime' ps = map (fromIntegral . flip diffMinutes' tzero) times
+>   where
+>     times = sort $ map startTime ps
+>     tzero = head times
+
+> historicalLST :: [Period] -> [Float]
+> historicalLST ps = [utc2lstHours $ addMinutes' (duration p `div` 2) $ startTime p | p <- ps]
+
+> sessFreq :: [Session] -> [(Float, Float)]
+> sessFreq = histogram [1.0..50.0] . ((fromIntegral . totalTime) `vs` frequency)
+
+> periodFreq :: [Period] -> [(Float, Float)]
+> periodFreq =
+>     histogram [1.0..50.0] . ((fromIntegral . duration) `vs` (frequency . session))
 
 Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
-> satisfactionRatio :: [Session] -> [Period] -> [(Float, Float)]
-> satisfactionRatio ss ps = zip sRatios sigmas
+> satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
+> satisfactionRatio ss ps = zip3 [frequency $ session p | p <- ps] sRatios sigmas
 >   where 
->     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
->     sMinutes   = map (fromIntegral . snd) (sessFreq ss)
+>     pMinutes   = map snd (periodFreq ps) 
+>     sMinutes   = map snd (sessFreq ss)
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [(x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
 >     sigmas     = [(x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
