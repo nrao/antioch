@@ -124,7 +124,7 @@ Ranking System from Memo 5.2, Section 3
 
 > trackingEfficiency dt s = factor "trackingEfficiency" . Just $
 >     -- Equation 12
->     (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^ (-2)
+>     (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^^ (-2)
 >   where
 >     rmsTE' = rmsTE dt
 >     theta' = theta . frequency $ s
