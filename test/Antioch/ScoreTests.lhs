@@ -52,7 +52,8 @@
 >     let Just result = runScoring w (kineticTemperature dtLP sessLP)
 >     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
 
-TBF: second assert is failing
+TBF: second assert is failing becuase the stringency table only has 
+frequencies above 2 GHz, and 'sessAS' has a freq of 0.5 GHz (bug!).
 
 > test_stringency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
