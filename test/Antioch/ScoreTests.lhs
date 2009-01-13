@@ -6,7 +6,7 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Test.HUnit
-> import Data.Time.Clock (secondsToDiffTime)
+> import Data.List (zipWith4)
 
 > tests = TestList [
 >     test_hourAngleLimit -- won't work until database is complete
@@ -125,3 +125,12 @@ Test data generation
 >   }
 
 > dtLP = fromGregorian 2006 10 15 12 0 0
+
+> pSessions = zipWith4 genPSess tots useds ras bands 
+>   where tots  = [12*60, 18*60, 10*60, 20*60]
+>         useds = [ 2*60,  8*60,  5*60, 12*60]
+>         ras   = [  5.4,  10.1,   4.9,  18.1]
+>         bands = [    L,     C,     X,     L]
+>         genPSess t u ra b = defaultSession {
+>             totalTime = t, totalUsed = u, ra = ra, band = b
+>         }
