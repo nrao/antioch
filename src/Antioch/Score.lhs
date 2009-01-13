@@ -265,7 +265,17 @@ Translates the total/used times pairs into pressure factors.
 >         GradeB -> 0.9
 >         GradeC -> 0.1
 
-> -- receiver                      :: ScoreFunc
+> receiver                                  :: ScoreFunc
+> receiver dt Session { receivers = rcvrs } = do
+>     scheduled <- fmap (getReceivers dt) receiverSchedule
+>     boolean "receiver" . Just $ all (`elem` scheduled) rcvrs
+
+> getReceivers :: DateTime -> ReceiverSchedule -> [Receiver]
+> getReceivers dt rsched =
+>     case dropWhile (\(x, _) -> x < dt) rsched of
+>         (x : _) -> snd x
+>         []      -> []
+
 
 Scoring utilities
 
@@ -276,8 +286,11 @@ This is the environment that the Scoring Monad is carrying around
 to avoid long lists of repetitive parameters.
 Currently just the weather, but the list will grow, e.g., receiver schedules.
 
+> type ReceiverSchedule = [(DateTime, [Receiver])]
+
 > data ScoringEnv = ScoringEnv {
->     envWeather :: Weather
+>     envWeather    :: Weather
+>   , envReceivers  :: ReceiverSchedule
 >   }
 
 Just an easy way to pull the weather out of ScoringEnv
@@ -286,6 +299,9 @@ as in the action "w <- weather".
 
 > weather :: Scoring Weather
 > weather = asks envWeather
+
+> receiverSchedule :: Scoring ReceiverSchedule
+> receiverSchedule = asks envReceivers
 
 The Scoring monad encapsulates the concept of a scoring action,
 so all the scoring functions live in the monad so they can
@@ -297,8 +313,10 @@ A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
 
-> runScoring     :: Weather -> Scoring t -> t
-> runScoring w f = runIdentity . runReaderT f $ ScoringEnv w
+Here!
+
+> runScoring     :: Weather -> ReceiverSchedule -> Scoring t -> t
+> runScoring w rs f = runIdentity . runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows
 us to easily return a list.
@@ -332,10 +350,6 @@ Composite pattern on scoring functions, e.g., political factors.
 >     step (_, Just f)  s
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
-
--- > receiver dt Session { receivers = rcvrs } = do
--- >     scheduled <- asks $ getReceivers dt . receiverSchedule
--- >     boolean "receiver" $ all (`elem` scheduled) rcvrs
 
 Convenience function for translating truth into a factor.
 
