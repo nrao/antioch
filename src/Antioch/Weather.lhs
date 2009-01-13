@@ -63,7 +63,7 @@ of frequency.
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
 
-> getOpacity :: IORef Connection -> Int -> DateTime -> Float -> Maybe Float
+> getOpacity :: IORef Connection -> Int -> DateTime -> Frequency -> Maybe Float
 > getOpacity conn ftype dt frequency = 
 >     getFloat conn query [toSql . toSqlString $ dt
 >                        , toSql (round frequency :: Int)
@@ -75,7 +75,7 @@ on frequency.
 >                  \forecast_type_id = ? AND\n\
 >                  \forecasts.id = forecast_by_frequency.forecast_id"
 
-> getTSys :: IORef Connection -> Int -> DateTime -> Float -> Maybe Float
+> getTSys :: IORef Connection -> Int -> DateTime -> Frequency -> Maybe Float
 > getTSys conn ftype dt frequency = 
 >     getFloat conn query [toSql . toSqlString $ dt
 >                        , toSql (round frequency :: Int)
@@ -110,9 +110,7 @@ on frequency.
 Creates a connection to the weather forecast database.
 
 > connect :: IO Connection
-> connect = handleSqlError $ do
->     conn <- connectODBC "dsn=DSS;password=asdf5!"
->     return conn
+> connect = handleSqlError $ connectODBC "dsn=DSS;password=asdf5!"
 
 Helper function to determine the desired forecast type given two DateTimes.
 
