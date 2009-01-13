@@ -16,6 +16,7 @@
 >   , test_zenithOpticalDepth
 >   , test_receiverTemperature
 >   , test_kineticTemperature
+>   , test_projectCompletion
 >   , test_stringency
 >   , test_politicalFactors
 >   , test_trackingEfficiency
@@ -70,6 +71,15 @@
 >     let Just result = runScoring w (kineticTemperature dtLP sessLP)
 >     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
 
+> test_projectCompletion = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0 -- don't need!
+>     let dt = fromGregorian 2007 10 15 18 0 0 -- don't need!
+>     -- adjust the project's times to get desired results
+>     let p = defaultProject {timeLeft=28740, timeTotal=33812}
+>     let s = sessLP {project = p}
+>     let [(name, Just result)] = runScoring w (projectCompletion dt s)
+>     assertAlmostEqual "test_projectCompletion" 3 1.015 result
+
 TBF: second assert is failing becuase the stringency table only has 
 frequencies above 2 GHz, and 'sessAS' has a freq of 0.5 GHz (bug!).
 
@@ -82,22 +92,23 @@ frequencies above 2 GHz, and 'sessAS' has a freq of 0.5 GHz (bug!).
 >     assertAlmostEqual "test_stringency" 3 5.600565 result
 
 
-TBF: unit test not passing - inputs (sessLP's project) are probably different.
-
 > test_politicalFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
 >     let dt = fromGregorian 2007 10 15 12 0 0
+>     -- adjust the project's times to get desired results
+>     let p = defaultProject {timeLeft=28740, timeTotal=33812}
+>     let s = sessLP {project = p}
 >     -- missing window, transit, observerOnSite, and ObserverAvailable
 >     let politicalFactors = score [scienceGrade
 >                           , thesisProject
 >                           , projectCompletion]
->     let fs = runScoring w (politicalFactors dt sessLP)
+>     let fs = runScoring w (politicalFactors dt s)
 >     -- TBF: check individual results as well
 >     -- let expFs = [("scienceGrade", Just 1.0)
 >     --           , ("thesisProject", Just 1.0)
 >     --           , ("projectCompletion", Just 1.0)]
 >     let result = eval fs
->     assertEqual "test_politicalFactors" 1.015 result
+>     assertAlmostEqual "test_politicalFactors" 3 1.015 result
 
 > test_trackingEfficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
