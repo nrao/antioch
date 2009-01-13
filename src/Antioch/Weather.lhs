@@ -10,6 +10,7 @@
 > import Database.HDBC
 > import Database.HDBC.ODBC
 > import Prelude hiding (catch)
+> import System.IO.Unsafe (unsafePerformIO)
 > import Test.QuickCheck
 
 > instance SqlType Float where

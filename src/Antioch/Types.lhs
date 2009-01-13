@@ -53,6 +53,17 @@
 >   , band        :: Band
 >   } deriving (Eq, Show)
 
+Tying the knot.
+
+> makeSession      :: Session -> [Period] -> Session
+> makeSession s ps = s'
+>   where
+>     s' = s { totalUsed = t, periods = map (\p -> p { session = s' }) ps }
+>     t  = sum . map duration $ ps
+
+> updateSession      :: Session -> [Period] -> Session
+> updateSession s ps = makeSession s $ periods s ++ ps
+
 > data Project = Project {
 >     pName     :: String
 >   , semester  :: String

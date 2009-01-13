@@ -283,6 +283,22 @@ Ranking System from Memo 5.2, Section 3
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
+> genScore   :: [Session] -> ScoreFunc
+> genScore _ = score [
+>     atmosphericOpacity
+>   , atmosphericStabilityLimit
+>   , hourAngleLimit
+>   , observingEfficiencyLimit
+>   , projectCompletion
+>   , scienceGrade
+>   , stringency
+>   , surfaceObservingEfficiency
+>   , thesisProject
+>   , trackingEfficiency
+>   , trackingErrorLimit
+>   , zenithAngleLimit
+>   ]
+
 -- > receiver dt Session { receivers = rcvrs } = do
 -- >     scheduled <- asks $ getReceivers dt . receiverSchedule
 -- >     boolean "receiver" $ all (`elem` scheduled) rcvrs
