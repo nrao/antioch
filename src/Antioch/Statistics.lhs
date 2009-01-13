@@ -3,6 +3,8 @@
 > import Antioch.DateTime (fromGregorian)
 > import Antioch.Generators
 > import Antioch.Types
+> import Antioch.DateTime (addMinutes')
+> import Antioch.Score (zenithAngle)
 > import Antioch.Utilities (rad2hr, rad2deg)
 > import Data.Function (on)
 > import Data.List
@@ -57,16 +59,23 @@ Compare allocated hours by frequency to observed hours by frequency.
 >   where bands = [L::Band .. Q::Band]
 
 > decVsElevation :: [Period] -> [Float] -> [(Float, Float)]
-> decVsElevation ps es = dec `vs` zenith $ highEffPeriods
+> decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods
 >   where
->     zenith = map $
->         \Period { startTime = st, duration = dur } -> 90.0 - (st + dur / 2.0)
->     highEffPeriods = fst . (filter ((> 0.85) . snd)) $ zip ps es
+>     highEffPeriods = [p | (p, e) <- zip ps es, e > 0.85]
+
+We may want to move this function to a different file.
+
+> elevationFromZenith :: Period -> Float
+> elevationFromZenith p =
+>     90 - rad2deg (zenithAngle dt (session p))
+>   where
+>     dt = addMinutes' (duration p `div` 2) $ startTime p
 
 > efficiencyVsFrequency :: [Session] -> [Float] -> [(Float, Float)]
 > efficiencyVsFrequency sessions efficiencies =
 >     snd `vs` (frequency . fst) $ zip sessions efficiencies
 
+> frequencyBins :: [Float]
 > frequencyBins =
 >     [0.0, 2.0, 3.95, 5.85, 10.0, 15.4, 20.0, 24.0, 26.0, 30.0, 35.0, 40.0, 45.0, 50.0]
 
@@ -76,33 +85,34 @@ Compare allocated hours by frequency to observed hours by frequency.
 > meanObsEffByBin :: [(Float, Float)] -> [Float]
 > meanObsEffByBin = mean frequencyBins
 
-> mean buckets xys = zipWith (/) `on` (map snd) $ totals counts
+> mean             :: [Float] -> [(Float, Float)] -> [Float]
+> mean buckets xys = (zipWith (/) `on` (map snd)) totals counts
 >   where
 >     totals = histogram buckets xys
->     counts = histogram buckets [(x, 1) | x <- xys]
+>     counts = histogram buckets [(x, 1) | (x, _) <- xys]
 
 > historicalFreq :: [Period] -> [Float]
 > historicalFreq = map (frequency . session)
 
-> sessFreq :: [Session] -> [(Minutes, Float)]
-> sessFreq = histogram [1.0..50.0] . (frequency `vs` totalTime)
+> sessFreq :: [Session] -> [(Float, Minutes)]
+> sessFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
 
-> periodFreq :: [Period] -> [(Minutes, Float)]
-> periodFreq = histogram [1.0..50.0] . ((frequency . session) `vs` duration)
+> periodFreq :: [Period] -> [(Float, Minutes)]
+> periodFreq = histogram [1.0..50.0] . (duration `vs` (frequency . session))
 
 Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float)]
 > satisfactionRatio ss ps = zip sRatios sigmas
 >   where 
->     pMinutes   = map snd (periodFreq ps) 
->     sMinutes   = map snd (sessFreq ss)
+>     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
+>     sMinutes   = map (fromIntegral . snd) (sessFreq ss)
 >     totalRatio = ratio pMinutes sMinutes
->     sRatios    = [x / y / totalRatio | (x, y) <- zip pMinutes sMinutes]
->     sigmas     = [x / y ^ (0.5) | (x, y) <- zip sRatios sMinutes]
+>     sRatios    = [(x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
+>     sigmas     = [(x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
 
-> ratio :: [(Minutes, Float)] -> [(Minutes, Float)] -> Float
-> ratio = (/) `on` (sum . map snd) 
+> ratio       :: [Float] -> [Float] -> Float
+> ratio xs ys = sum xs / sum ys
 
 > sessTP :: [Period] -> [(Minutes, Int)]
 > sessTP = count ((`div` 60) . duration) [1..7]
@@ -116,8 +126,8 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > periodDec :: [Period] -> [(Float, Float)]
 > periodDec = promote sessDec
 
-> count           :: (Ord a, Ord b, Num b) => (t -> a) -> [a] -> [t] -> [(a, b)]
-> count f buckets = histogram buckets . (f `vs` const 1)
+> count :: (Ord a, Ord b, Num b) => (t -> a) -> [a] -> [t] -> [(a, b)]
+> count f buckets = histogram buckets . (const 1 `vs` f)
 
 > histogram         :: (Ord a, Ord b, Num b) => [a] -> [(a, b)] -> [(a, b)]
 > histogram buckets = allocate buckets . sort
