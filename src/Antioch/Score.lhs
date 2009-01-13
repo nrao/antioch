@@ -139,11 +139,41 @@ Ranking System from Memo 5.2, Section 3
 
 3.3 Pressure Feedback
 
-> initBins        :: Int -> (Session -> Int) -> [Session] -> Array Int (Int, Int)
-> initBins n f xs = runSTArray (initBins' n f xs)
+Generate a scoring function having the pressure factors.
 
-> initBins' n f xs = do
->     arr <- newArray (0, n-1) (0, 0)
+> genFrequencyPressure :: [Session] -> ScoreFunc
+> genFrequencyPressure sessions =
+>     frequencyPressure factors band
+>   where
+>     bins    = initBins (L, Q) band sessions
+>     factors = binsToFactors bins
+
+> genRightAscensionPressure :: [Session] -> ScoreFunc
+> genRightAscensionPressure sessions =
+>     rightAscensionPressure factors accessor
+>   where
+>     accessor s = (round . ra $ s) `mod` 24
+>     bins    = initBins (0, 23) accessor sessions
+>     factors = binsToFactors bins
+
+Select the appropriate pressure factor from the array of pressures.
+
+> frequencyPressure          :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
+> frequencyPressure fs f _ a =
+>     factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
+
+> rightAscensionPressure     :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
+> rightAscensionPressure fs f _ a =
+>     factor "rightAscensionPressure" . Just $ (fs ! f a) ** 0.3
+
+Creates an array indexed by band or hour angle with the hours total and used
+for each slice for computing pressures.
+
+> initBins        :: Ix a => (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
+> initBins bounds f xs = runSTArray (initBins' bounds f xs)
+
+> initBins' bounds f xs = do
+>     arr <- newArray bounds (0, 0)
 >     for xs $ \x -> do
 >         let bin = f x
 >         (t, c) <- readArray arr bin
@@ -153,20 +183,14 @@ Ranking System from Memo 5.2, Section 3
 >     for []     f = return ()
 >     for (x:xs) f = f x >> for xs f
 
-> binsToFactors :: Array Int (Int, Int) -> Array Int Float
+Translates the total/used times pairs into pressure factors.
+
+> binsToFactors :: Ix a => Array a (Int, Int) -> Array a Float
 > binsToFactors = amap toFactor
 >   where
+>     -- Equations 19 and 21
 >     toFactor (n, d) = 1.0 + asFactor n - asFactor d
 >     asFactor i      = if i > 0 then log (fromIntegral i / 60.0) else 0.0
-
-> frequencyPressure          :: Array Int Float -> (Session -> Int) -> ScoreFunc
-> rightAscensionPressure     :: Array Int Float -> (Session -> Int) -> ScoreFunc
-
-> frequencyPressure fs f _ a =
->     factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
-
-> rightAscensionPressure fs f _ a =
->     factor "rightAscensionPressure" . Just $ (fs ! f a) ** 0.3
 
 3.4 Performance Limits
 
