@@ -12,9 +12,6 @@
 > import Data.Array.ST
 > import Data.List
 
-> type Factor   = (String, Maybe Score)
-> type Factors  = [Factor]
-
 Ranking System from Memo 5.2, Section 3
 
 3.1 Observing Efficiency
@@ -246,20 +243,47 @@ Ranking System from Memo 5.2, Section 3
 
 > -- receiver                      :: ScoreFunc
 
+Scoring utilities
+
+> type Factor   = (String, Maybe Score)
+> type Factors  = [Factor]
+
+This is the environment that the Scoring Monad is carrying around
+to avoid long lists of repetitive parameters.
+Currently just the weather, but the list will grow, e.g., receiver schedules.
+
 > data ScoringEnv = ScoringEnv {
 >     envWeather :: Weather
 >   }
 
+Just an easy way to pull the weather out of ScoringEnv
+This function returns the weather in the Scoring Monad,
+as in the action "w <- weather".
+
 > weather :: Scoring Weather
 > weather = asks envWeather
 
+The Scoring monad encapsulates the concept of a scoring action,
+so all the scoring functions live in the monad so they can
+execute scoring actions.
+
 > type Scoring = ReaderT ScoringEnv Identity
+
+A scoring action returns its results inside the Scoring monad,
+runScoring allows one to extract those results from the monad
+resulting in simple types rather than monadic types.
 
 > runScoring     :: Weather -> Scoring t -> t
 > runScoring w f = runIdentity . runReaderT f $ ScoringEnv w
 
+Because ScoreFunc returns lists of factors, this function allows
+us to easily return a list.
+
 > factor          :: String -> Maybe Score -> Scoring Factors
 > factor name val = return [(name, val)]
+
+Sub-class of scoring actions that return a list of factors
+which are the factors listed in Memo 5.2.
 
 > type ScoreFunc = DateTime -> Session -> Scoring Factors 
 
@@ -269,8 +293,10 @@ Ranking System from Memo 5.2, Section 3
 > concatMapM   :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
 > concatMapM f = fmap concat . mapM f
 
+Composite pattern on scoring functions, e.g., political factors.
+
 > score         :: [ScoreFunc] -> ScoreFunc
-> score fs dt a = concatMapM (\f -> f dt a) fs
+> score fs dt s = concatMapM (\f -> f dt s) fs
 
 > ignore       :: [String] -> Factors -> Factors
 > ignore names = filter $ \(n, _) -> not (n `elem` names)
@@ -286,5 +312,7 @@ Ranking System from Memo 5.2, Section 3
 -- > receiver dt Session { receivers = rcvrs } = do
 -- >     scheduled <- asks $ getReceivers dt . receiverSchedule
 -- >     boolean "receiver" $ all (`elem` scheduled) rcvrs
+
+Convenience function for translating truth into a factor.
 
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)

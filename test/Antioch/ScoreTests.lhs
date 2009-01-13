@@ -6,13 +6,26 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Test.HUnit
+> import Data.Time.Clock (secondsToDiffTime)
 
 > tests = TestList [
->     test_efficiency
+>     test_hourAngleLimit -- won't work until database is complete
+>   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_receiverTemperature
 >   , test_kineticTemperature
 >   ]
+
+> test_hourAngleLimit = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
+>     let scores = map (score' w) times
+>     assertEqual "test_hourAngleLimit" expected scores
+>   where
+>     score' w dt =
+>         let [(_, Just s)] = runScoring w (hourAngleLimit dt sessLP) in s
+>     times = [(60*h) `addMinutes'` dtLP | h <- [0..23]]
+>     expected = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+>                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
 
 > test_efficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
