@@ -10,6 +10,8 @@
 
 > tests = TestList [
 >     test_hourAngleLimit -- won't work until database is complete
+>   , test_rightAscensionPressure
+>   , test_frequencyPressure
 >   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_receiverTemperature
@@ -31,6 +33,22 @@
 >     times = [(60*h) `addMinutes'` dtLP | h <- [0..23]]
 >     expected = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+
+> test_frequencyPressure = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+>     let dt = fromGregorian 2007 10 15 12 0 0
+>     let [(name, Just result)] = runScoring w (freqPressure dt . head $ pSessions)
+>     assertAlmostEqual "test_frequencyPressure" 5 1.35155 result
+>   where
+>     freqPressure = genFrequencyPressure pSessions
+
+> test_rightAscensionPressure = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+>     let dt = fromGregorian 2007 10 15 12 0 0
+>     let [(name, Just result)] = runScoring w (raPressure dt . head $ pSessions)
+>     assertAlmostEqual "test_rightAscensionPressure" 5 1.25729 result
+>   where
+>     raPressure = genRightAscensionPressure pSessions
 
 > test_efficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0

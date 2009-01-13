@@ -2,6 +2,7 @@
 
 > import Antioch.DateTime
 > import Data.Function (on)
+> import Data.Ix
 
 > type Frequency = Float
 > type Minutes   = Int
@@ -31,7 +32,7 @@
 
 > data Grade = GradeA | GradeB | GradeC deriving (Eq, Show)
 > data Band = L | S | C | X | U | K | A | Q
->           deriving (Eq, Read, Show)
+>           deriving (Enum, Eq, Ix, Ord, Read, Show)
 
 > data Session = Session {
 >     sName       :: String
