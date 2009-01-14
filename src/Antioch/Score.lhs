@@ -35,7 +35,7 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
->     elevation = pi/2 - zenithAngle dt s
+>     elevation = pi/2 - zat
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
@@ -140,9 +140,9 @@ Ranking System from Memo 5.2, Section 3
 
 > stringency _ s = do
 >     w <- weather
->     factor "stringency" $ totalStringency w (frequency s) elevation'
+>     factor "stringency" $ totalStringency w (frequency s) elevation
 >   where
->     elevation' = pi/2 - zenithAngleAtTransit s
+>     elevation = pi/2 - zenithAngleAtTransit s
 
 
 3.3 Pressure Feedback
@@ -361,6 +361,24 @@ Need to translate a session's factors into the final product score.
 >     step (_, Just f)  s
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
+
+> genScore          :: [Session] -> ScoreFunc
+> genScore sessions = score [
+>     genFrequencyPressure sessions
+>   , genRightAscensionPressure sessions
+>   , atmosphericOpacity
+>   , atmosphericStabilityLimit
+>   , hourAngleLimit
+>   , observingEfficiencyLimit
+>   , projectCompletion
+>   , scienceGrade
+>   , stringency
+>   , surfaceObservingEfficiency
+>   , thesisProject
+>   , trackingEfficiency
+>   , trackingErrorLimit
+>   , zenithAngleLimit
+>   ]
 
 Convenience function for translating go/no-go into a factor.
 

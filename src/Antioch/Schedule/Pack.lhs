@@ -5,6 +5,7 @@
 > import Antioch.DateTime
 > import Antioch.Score
 > import Antioch.Types
+> import Antioch.Weather
 > import Data.List  (foldl', sort)
 > import Data.Maybe (fromMaybe, isNothing)
 
