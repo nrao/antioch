@@ -16,6 +16,7 @@
 >   , test_zenithOpticalDepth
 >   , test_receiverTemperature
 >   , test_kineticTemperature
+>   , test_projectCompletion
 >   , test_stringency
 >   , test_politicalFactors
 >   , test_trackingEfficiency
@@ -83,12 +84,24 @@
 >     assertScoringResult "test_stringency" 5 1.40086 (stringency dt sessLP)
 >     assertScoringResult "test_stringency" 5 1.03437 (stringency dt sessAS)
 
+> test_projectCompletion = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0 -- don't need!
+>     let dt = fromGregorian 2007 10 15 18 0 0 -- don't need!
+>     -- adjust the project's times to get desired results
+>     let p = defaultProject {timeLeft=28740, timeTotal=33812}
+>     let s = sessLP {project = p}
+>     let [(name, Just result)] = runScoring w [] (projectCompletion dt s)
+>     assertAlmostEqual "test_projectCompletion" 3 1.015 result
+
 TBF: unit test not passing - inputs (sessLP's project) are probably different
 TBF are these partitions stil useful?
 
 > test_politicalFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
 >     let dt = fromGregorian 2007 10 15 12 0 0
+>     -- adjust the project's times to get desired results
+>     let p = defaultProject {timeLeft=28740, timeTotal=33812}
+>     let s = sessLP {project = p}
 >     -- missing window, transit, observerOnSite, and ObserverAvailable
 >     let politicalFactors = score [scienceGrade
 >                           , thesisProject
@@ -99,7 +112,7 @@ TBF are these partitions stil useful?
 >     --           , ("thesisProject", Just 1.0)
 >     --           , ("projectCompletion", Just 1.0)]
 >     let result = eval fs
->     assertEqual "test_politicalFactors" 1.015 result
+>     assertAlmostEqual "test_politicalFactors" 3 1.015 result
 
 > test_trackingEfficiency = TestCase $ do
 >     let dt = fromGregorian 2007 10 15 12 0 0
