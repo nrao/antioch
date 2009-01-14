@@ -194,4 +194,3 @@ RA & Dec: 0-24 hrs, -90 - 90 degrees
 
 > validDec :: Double -> Bool
 > validDec x = (-pi/2.0) <= x && x <= pi/2.0 
-

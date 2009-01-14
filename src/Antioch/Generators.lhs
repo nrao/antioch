@@ -44,9 +44,9 @@ those to calculate timeLeft and timeTotal?
 >     name     <- genProjectName
 >     semester <- genSemesterName
 >     thesis   <- genThesis
->     projectSessions <- genProjectSessions
->     let timeTotal = sum [ totalTime s | s <- projectSessions ]
->     let timeUsed  = sum [ totalUsed s | s <- projectSessions ]
+>     sessions <- genProjectSessions
+>     let timeTotal = sum [ totalTime s | s <- sessions ]
+>     let timeUsed  = sum [ totalUsed s | s <- sessions ]
 >     let project = defaultProject {
 >           pName = str name
 >         , semester = semester
@@ -54,8 +54,7 @@ those to calculate timeLeft and timeTotal?
 >         , timeTotal = timeTotal
 >         , timeLeft = timeTotal - timeUsed
 >         }
->     return $ makeProject project projectSessions
-
+>     return $ makeProject project sessions
 
 Now lets make sure we are properly generating Projects: test each attribute
 at a time:
@@ -144,14 +143,19 @@ TBF: how to link these to generated Projects?
 >     return $ [s] ++ ss
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
-> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
 
 Make sure that the total time used up by the periods is correct:
 
 > prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 
+> prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
+
+TBF: thing is, this is in degrees, and it doesn't pass either!
+
+> prop_DecDegree s = (-180) <= dec s && dec s <= 180 
+
 TBF: start on 15 min. boundraies in a given time range. But how to make them
-mutually exclusive?
+mutually exclusive?  Need for varied and interesting start times!!!! :|
 
 > genStartTime :: Gen DateTime
 > genStartTime = elements [fromGregorian' 2008 1 1, fromGregorian' 2008 1 2]
@@ -188,7 +192,7 @@ TBD:
 >     T.frequency [(50, return 0), (25, return 1), (20, return 2), (5, return 3)] >>= vector
 
 > genPeriods         :: Int -> Gen [Period]
-> genPeriods 0       = do {return $ []}
+> genPeriods 0       = return []
 > genPeriods (n + 1) = do
 >     p  <- genPeriod
 >     ps <- genPeriods n

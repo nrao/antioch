@@ -1,46 +1,133 @@
 > module Antioch.Reports where
 
+> import Antioch.Types
 > import Antioch.Statistics
 > import Antioch.Plots
+> import Antioch.Generators (genSessions, genPeriods)
+> import System.Random
+> import Test.QuickCheck
 
-scatter plots
+> testPlot      :: ([Session] -> [Period] -> IO ()) -> IO ()
+> testPlot plot = do
+>     g <- getStdGen
+>     let sessions = generate 0 g $ genSessions 100
+>     let periods  = generate 0 g $ genPeriods 100
+> --    putStrLn . show $ map startTime periods
+>     plot sessions periods
+
+scatter plots ********************************************
 simDecFreq (stars, crosses)
+
+> plotDecFreq ss ps = scatterPlots $ [sessDecFreq ss, perDecFreq ps]
+
 simDecRA (stars, crosses)
-simEffFreq (error bars, crosses, line plot)
-simMeanEffFreq (error bars, crosses, line plot)
+
+> plotDecVsRA ss ps = scatterPlots $ [sessRADec ss, perRADec ps]
+
+simEffFreq (error bars, crosses, line plot) - Need stats from Dana
+simMeanEffFreq (error bars, crosses, line plot) - Need stats from Dana
+
 simFreqTime (circles, dt on x-axis)
+
+> plotFreqVsTime _ ps = scatterPlot $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
+
 simSatisfyFreq (error bars)
 
-scatter plots (crosses)
+> plotSatRatioVsFreq ss ps = errorBarPlot $ satisfactionRatio ss ps
+
+scatter plots (crosses) ***********************************
 simEffElev
+
+> historicalObsEff ps = sequence [randomRIO (0.0, 1.0) | _ <- ps]
+
+> plotEffElev' _ ps = do
+>   effs <- historicalObsEff ps
+>   plotEffElev effs ps
+
+> plotEffElev effs ps = scatterPlot $ zip (map elevationFromZenith ps) effs
+
 simEffLST
+
+> plotEffLst' _ ps = do
+>   effs <- historicalObsEff ps
+>   plotEffLst effs ps
+
+> plotEffLst effs ps = scatterPlot $ zip (historicalLST ps) effs
+
 simElevDec
-simPFLST
+
+> plotElevDec' _ ps = do
+>   effs <- historicalObsEff ps
+>   plotElevDec effs ps
+>
+> plotElevDec effs ps = scatterPlot $ decVsElevation ps effs
+
+simPFLST - need pressure history
+
 simScoreElev
+
+> historicalObsScore ps = sequence [randomRIO (0.0, 10.0) | _ <- ps]
+>
+> plotScoreElev' _ ps = do
+>   scores <- historicalObsScore ps
+>   plotScoreElev scores ps
+
+> plotScoreElev scores ps = scatterPlot $ zip (map elevationFromZenith ps) scores
+
 simScoreLST
 
-> plotDecRA ss ps = scatterPlots $ [sessDecRA ss, perDecRA ps]
+> plotLstScore' _ ps = do
+>   scores <- historicalObsScore ps
+>   plotLstScore scores ps
+>
+> plotLstScore scores ps = scatterPlot $ zip (historicalLST ps) scores
 
-line plots (functions)
-simBandPFTime
-simLSTPFTime1
-simLSTPFTime2
-simLSTPFTime3
+???
 
-histograms 2x 
-simHistDec
-simHistEffHr
-simHistFreq
+> plotRaDec ss ps = scatterPlots $ [sessRADec ss, perRADec ps]
+
+line plots (functions) *************************************
+simBandPFTime - need pressure history
+simLSTPFTime1 - need pressure history
+simLSTPFTime2 - need pressure history
+simLSTPFTime3 - need pressure history
+
+histograms 2x **********************************************
+
 simHistRA
 
-> histSessDec ss ps =
->     histogramPlots $ [sessDec [(-40), (-38)..92] ss
->                     , periodDec [(-40), (-38)..92] ps]
+> histSessRA ss ps =
+>     histogramPlots $ [sessRA ss, periodRA ps]
 
-histograms
-simHistPFHours
-simHistPF
+simHistEffHr
+
+> histEffHrBand' _ ps = do
+>   effs <- historicalObsEff ps
+>   histEffHrBand effs ps
+        
+> histEffHrBand effs ps =
+>     histogramPlots $ [pBand, effByBand]
+>       where
+>         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- perBand ps]
+>         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- perEfficiencyByBand ps effs]
+
+simHistFreq
+
+> histSessFreq ss ps =
+>     histogramPlots $ [[(f, fromIntegral t) | (f, t) <- sessFreq ss]
+>                     , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
+
+simHistDec
+
+> histSessDec ss ps =
+>     histogramPlots $ [sessDec ss, periodDec ps]
+
+histograms *************************************************
+simHistPFHours - need pressure history
+
+simHistPF - need pressure history
+
 simHistTP
 
-> histSessTP ps =
+> histSessTP _ ps =
 >     histogramPlot $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessTP ps]
