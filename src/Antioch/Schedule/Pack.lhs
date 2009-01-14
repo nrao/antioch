@@ -6,8 +6,8 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
-> import Data.List  (foldl', sort)
-> import Data.Maybe (fromMaybe, isNothing)
+> import Data.List   (foldl', sort)
+> import Data.Maybe  (fromMaybe, isNothing)
 
 > stepSize = 15      :: Minutes
 > epsilon  =  1.0e-6 :: Score
@@ -102,7 +102,7 @@ list.
 >   where
 >     xs' = unwind' [] xs
 >     ys  = map cScore xs'
->     ys' = [ y' - y | y <- 0 : ys | y' <- ys ]
+>     ys' = [ y' - y | y' <- ys | y <- 0 : ys]
 >     unwind' acc []             = acc
 >     unwind' acc (Nothing : xs) = unwind' acc xs
 >     unwind' acc (Just x  : xs) = unwind' (x { cStart = length rest - 1} : acc) rest
@@ -116,6 +116,10 @@ list.
 >   , iFuture  :: [Score]
 >   , iPast    :: [Score]
 >   }
+
+Generate a series of candidates representing the possibilities for
+scheduling an item at each of a sequence of durations: 15 minutes, 30
+minutes, etc.
 
 > candidates               :: Item a -> [Maybe (Candidate a)]
 > candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }

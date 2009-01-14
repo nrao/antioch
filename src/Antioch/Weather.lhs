@@ -10,7 +10,6 @@
 > import Database.HDBC
 > import Database.HDBC.ODBC
 > import Prelude hiding (catch)
-> import System.IO.Unsafe (unsafePerformIO)
 > import Test.QuickCheck
 
 > instance SqlType Float where
@@ -18,13 +17,13 @@
 >     fromSql x = realToFrac ((fromSql x) :: Double) :: Float
 
 > data Weather = Weather {
->     wind            :: DateTime -> Maybe Float  -- m/s
->   , tatm            :: DateTime -> Maybe Float  -- Kelvin
->   , opacity         :: DateTime -> Frequency -> Maybe Float
->   , tsys            :: DateTime -> Frequency -> Maybe Float
->   , totalStringency :: Frequency -> Radians -> Maybe Float
->   , minOpacity      :: Frequency -> Radians -> Maybe Float
->   , minTSysPrime    :: Frequency -> Radians -> Maybe Float
+>     wind            :: DateTime -> IO (Maybe Float)  -- m/s
+>   , tatm            :: DateTime -> IO (Maybe Float)  -- Kelvin
+>   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
+>   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
+>   , totalStringency :: Frequency -> Radians -> IO (Maybe Float)
+>   , minOpacity      :: Frequency -> Radians -> IO (Maybe Float)
+>   , minTSysPrime    :: Frequency -> Radians -> IO (Maybe Float)
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
@@ -51,24 +50,26 @@
 Both wind speed and atmospheric temperature are values forecast independently
 of frequency.
 
-> getWind               :: IORef Connection -> Int -> DateTime -> Maybe Float
+> getWind               :: IORef Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWind conn ftype dt =
->     getFloat conn query [toSql . toSqlString $ dt, toSql ftype]
+>     getFloat conn query [toSql' dt, toSql ftype]
 >   where query = "SELECT wind_speed FROM forecasts\n\
 >                  \WHERE date = ? AND forecast_type_id = ?"
 
-> getTAtm               :: IORef Connection -> Int -> DateTime -> Maybe Float
+> toSql' = toSql . toSqlString . roundToHour
+
+> getTAtm               :: IORef Connection -> Int -> DateTime -> IO (Maybe Float)
 > getTAtm conn ftype dt =
->     getFloat conn query [toSql . toSqlString $ dt, toSql ftype]
+>     getFloat conn query [toSql' dt, toSql ftype]
 >   where query = "SELECT tatm FROM forecasts\n\
 >                  \WHERE date = ? AND forecast_type_id = ?"
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
 
-> getOpacity :: IORef Connection -> Int -> DateTime -> Frequency -> Maybe Float
+> getOpacity :: IORef Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getOpacity conn ftype dt frequency = 
->     getFloat conn query [toSql . toSqlString $ dt
+>     getFloat conn query [toSql' dt
 >                        , toSql (freq2Index frequency :: Int)
 >                        , toSql ftype]
 >   where query = "SELECT opacity\n\
@@ -78,9 +79,9 @@ on frequency.
 >                  \forecast_type_id = ? AND\n\
 >                  \forecasts.id = forecast_by_frequency.forecast_id"
 
-> getTSys :: IORef Connection -> Int -> DateTime -> Frequency -> Maybe Float
+> getTSys :: IORef Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getTSys conn ftype dt frequency = 
->     getFloat conn query [toSql . toSqlString $ dt
+>     getFloat conn query [toSql' dt
 >                        , toSql (freq2Index frequency :: Int)
 >                        , toSql ftype]
 >   where query = "SELECT tsys\n\
@@ -89,21 +90,21 @@ on frequency.
 >                  \forecast_type_id = ? AND\n\
 >                  \forecasts.id = forecast_by_frequency.forecast_id"
 
-> getTotalStringency :: IORef Connection -> Frequency -> Radians -> Maybe Float
+> getTotalStringency :: IORef Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getTotalStringency conn frequency elevation = 
 >     getFloat conn query [toSql (freq2Index frequency :: Int)
 >                        , toSql (round . rad2deg $ elevation :: Int)]
 >   where query = "SELECT total FROM stringency\n\
 >                  \WHERE frequency = ? AND elevation = ?"
 
-> getMinOpacity :: IORef Connection -> Frequency -> Radians -> Maybe Float
+> getMinOpacity :: IORef Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getMinOpacity conn frequency elevation = 
 >     getFloat conn query [toSql (freq2Index frequency :: Int)
 >                        , toSql (round . rad2deg $ elevation :: Int)]
 >   where query = "SELECT opacity FROM min_weather\n\
 >                  \WHERE frequency = ? AND elevation = ?"
 
-> getMinTSysPrime :: IORef Connection -> Frequency -> Radians -> Maybe Float
+> getMinTSysPrime :: IORef Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getMinTSysPrime conn frequency elevation = 
 >     getFloat conn query [toSql (freq2Index frequency :: Int)
 >                        , toSql (round . rad2deg $ elevation :: Int)]
@@ -123,15 +124,15 @@ Helper function to determine the desired forecast type given two DateTimes.
 >         []     -> length forecast_types
 >         (x:xs) -> fromJust (elemIndex x forecast_types) + 1
 >   where difference = (toSeconds target - toSeconds now) `div` 3600
->         forecast_types = [12, 36]  -- [12, 24, 36, 48, 60]
+>         forecast_types = [12, 24, 36, 48, 60]
 
 > prop_constrained target now = forecastType target now `elem` forecast_types
 >   where forecast_types = [1..5]
 
 Helper function to get singular Float values out of the database.
 
-> getFloat :: IORef Connection -> String -> [SqlValue] -> Maybe Float
-> getFloat conn query xs = unsafePerformIO . handleSqlError $ do
+> getFloat :: IORef Connection -> String -> [SqlValue] -> IO (Maybe Float)
+> getFloat conn query xs = handleSqlError $ do
 >     result <- tryQuery conn query xs
 >     case result of
 >         [[SqlNull]] -> return Nothing

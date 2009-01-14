@@ -95,6 +95,13 @@ Combine pieces and parts to produce a DateTime.
 >     day'     = Calendar.fromGregorian year month day
 >     seconds' = 3600 * hours + 60 * minutes + seconds
 
+> roundToHour dt
+>     | minutes <= 30 = truncated
+>     | otherwise     = 60 `addMinutes'` truncated
+>   where
+>     (year, month, day, hours, minutes, _) = toGregorian dt
+>     truncated = fromGregorian year month day hours 0 0
+
 Getting closer to the machine: Not all the functionality of
 System.Time is available in Data.Time, and the only way we can convert
 back and forth is to go through seconds.

@@ -45,7 +45,7 @@ Always schedules a session at a given fixed duration.
 >     | [] <- candidates = return []
 >     | otherwise        = do
 >         (s, score) <- best (totalScore sf dt len) sessions
->         if score > 0
+>         if score > 0.0
 >           then do
 >             let p = Period s dt len score
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
