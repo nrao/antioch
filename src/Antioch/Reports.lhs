@@ -17,13 +17,19 @@
 
 scatter plots ********************************************
 simDecFreq (stars, crosses)
+
+> plotDecFreq ss ps = scatterPlots $ [sessDecFreq ss, perDecFreq ps]
+
 simDecRA (stars, crosses)
-simEffFreq (error bars, crosses, line plot)
-simMeanEffFreq (error bars, crosses, line plot)
+
+> plotDecVsRA ss ps = scatterPlots $ [sessRADec ss, perRADec ps]
+
+simEffFreq (error bars, crosses, line plot) - Need stats from Dana
+simMeanEffFreq (error bars, crosses, line plot) - Need stats from Dana
 
 simFreqTime (circles, dt on x-axis)
 
-> plotFreqVsTime _ ps = scatterPlot $ zip (historicalTime' ps) (historicalFreq ps)
+> plotFreqVsTime _ ps = scatterPlot $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
 
 simSatisfyFreq (error bars)
 
@@ -56,17 +62,35 @@ simElevDec
 >
 > plotElevDec effs ps = scatterPlot $ decVsElevation ps effs
 
-simPFLST
+simPFLST - need pressure history
+
 simScoreElev
+
+> historicalObsScore ps = sequence [randomRIO (0.0, 10.0) | _ <- ps]
+>
+> plotScoreElev' _ ps = do
+>   scores <- historicalObsScore ps
+>   plotScoreElev scores ps
+
+> plotScoreElev scores ps = scatterPlot $ zip (map elevationFromZenith ps) scores
+
 simScoreLST
+
+> plotLstScore' _ ps = do
+>   scores <- historicalObsScore ps
+>   plotLstScore scores ps
+>
+> plotLstScore scores ps = scatterPlot $ zip (historicalLST ps) scores
+
+???
 
 > plotRaDec ss ps = scatterPlots $ [sessRADec ss, perRADec ps]
 
 line plots (functions) *************************************
-simBandPFTime
-simLSTPFTime1
-simLSTPFTime2
-simLSTPFTime3
+simBandPFTime - need pressure history
+simLSTPFTime1 - need pressure history
+simLSTPFTime2 - need pressure history
+simLSTPFTime3 - need pressure history
 
 histograms 2x **********************************************
 
@@ -77,10 +101,21 @@ simHistRA
 
 simHistEffHr
 
+> histEffHrBand' _ ps = do
+>   effs <- historicalObsEff ps
+>   histEffHrBand effs ps
+        
+> histEffHrBand effs ps =
+>     histogramPlots $ [pBand, effByBand]
+>       where
+>         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- perBand ps]
+>         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- perEfficiencyByBand ps effs]
+
 simHistFreq
 
 > histSessFreq ss ps =
->     histogramPlots $ [sessFreq ss, periodFreq ps]
+>     histogramPlots $ [[(f, fromIntegral t) | (f, t) <- sessFreq ss]
+>                     , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
 
 simHistDec
 
@@ -88,9 +123,9 @@ simHistDec
 >     histogramPlots $ [sessDec ss, periodDec ps]
 
 histograms *************************************************
-simHistPFHours
+simHistPFHours - need pressure history
 
-simHistPF
+simHistPF - need pressure history
 
 simHistTP
 

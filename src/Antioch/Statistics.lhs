@@ -15,7 +15,6 @@
 To Do List (port from Statistics.py):
 
 Need Dana:
-   * all of histEffHr
    * true historical obs eff (used in plotDecElevHiEff, plotEffElev, and plotLstAtmEff)
    * etaFn (from Reports) (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
    * used in error bars (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
@@ -25,6 +24,7 @@ Need Dana:
    * historical bad fixed frequency and obs eff true (plotMeanObsEffVsFreq)
    * historical bad window frequency and obs eff true (plotMeanObsEffVsFreq)
    * true historical observing scores
+   * historical pressure vs lst
   
 > exSessions = do
 >     g <- getStdGen
@@ -34,8 +34,8 @@ Need Dana:
 >     g <- getStdGen
 >     return . generate 0 g . genPeriods $ 100
 
-> sessFreqDec :: [Session] -> [(Float, Float)]
-> sessFreqDec = frequency `vs` dec
+> sessDecFreq :: [Session] -> [(Float, Radians)]
+> sessDecFreq = dec `vs` frequency
 
 Read Y versus X as you would expect with normal plotting nomenclature.
 Produces list of (x, y) coordinate pairs.
@@ -43,21 +43,21 @@ Produces list of (x, y) coordinate pairs.
 > vs       :: (a -> b) -> (a -> c) -> [a] -> [(c, b)]
 > y `vs` x = map $ \a -> (x a, y a)
 
-> perDecFreq :: [Period] -> [(Float, Float)]
-> perDecFreq = promote sessFreqDec
+> perDecFreq :: [Period] -> [(Float, Radians)]
+> perDecFreq = promote sessDecFreq
 
 > promote   :: ([Session] -> t) -> [Period] -> t
 > promote f = f . map session
 
-> sessRADec :: [Session] -> [(Float, Float)]
+> sessRADec :: [Session] -> [(Radians, Radians)]
 > sessRADec= ra `vs` dec
 
-> perRADec :: [Period] -> [(Float, Float)]
+> perRADec :: [Period] -> [(Radians, Radians)]
 > perRADec = promote sessRADec
 
 Example of scatter plot data w/ datetime:
 
-> freqTime :: [Period] -> [(UTCTime, Float)]
+> freqTime :: [Period] -> [(DateTime, Float)]
 > freqTime = (frequency . session) `vs` startTime
 
 Example of log histogram data:
@@ -71,7 +71,7 @@ Compare allocated hours by frequency to observed hours by frequency.
 >     histogram bands . (snd `vs` (band . session . fst)) $ zip ps es
 >   where bands = [L::Band .. Q::Band]
 
-> decVsElevation :: [Period] -> [Float] -> [(Float, Float)]
+> decVsElevation :: [Period] -> [Float] -> [(Float, Radians)]
 > decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods
 >   where
 >     highEffPeriods = [p | (p, e) <- zip ps es, e > 0.85]
@@ -107,17 +107,17 @@ We may want to move this function to a different file.
 > historicalFreq :: [Period] -> [Float]
 > historicalFreq = map (frequency . session)
 
-> historicalDec :: [Period] -> [Float]
+> historicalDec :: [Period] -> [Radians]
 > historicalDec = map (dec . session)
 
-> historicalRA :: [Period] -> [Float]
+> historicalRA :: [Period] -> [Radians]
 > historicalRA = map (ra . session)
 
 > historicalTime :: [Period] -> [DateTime]
 > historicalTime = map startTime
 >
-> historicalTime' :: [Period] -> [Float]
-> historicalTime' ps = map (fromIntegral . flip diffMinutes' tzero) times
+> historicalTime' :: [Period] -> [Minutes]
+> historicalTime' ps = map (flip diffMinutes' tzero) times
 >   where
 >     times = sort $ map startTime ps
 >     tzero = head times
@@ -125,20 +125,20 @@ We may want to move this function to a different file.
 > historicalLST :: [Period] -> [Float]
 > historicalLST ps = [utc2lstHours $ addMinutes' (duration p `div` 2) $ startTime p | p <- ps]
 
-> sessFreq :: [Session] -> [(Float, Float)]
-> sessFreq = histogram [1.0..50.0] . ((fromIntegral . totalTime) `vs` frequency)
+> sessFreq :: [Session] -> [(Float, Minutes)]
+> sessFreq = histogram [1.0..50.0] . ((totalTime) `vs` frequency)
 
-> periodFreq :: [Period] -> [(Float, Float)]
+> periodFreq :: [Period] -> [(Float, Minutes)]
 > periodFreq =
->     histogram [1.0..50.0] . ((fromIntegral . duration) `vs` (frequency . session))
+>     histogram [1.0..50.0] . (duration `vs` (frequency . session))
 
 Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
 > satisfactionRatio ss ps = zip3 [frequency $ session p | p <- ps] sRatios sigmas
 >   where 
->     pMinutes   = map snd (periodFreq ps) 
->     sMinutes   = map snd (sessFreq ss)
+>     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
+>     sMinutes   = map (fromIntegral . snd) (sessFreq ss)
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [(x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
 >     sigmas     = [(x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
@@ -149,16 +149,16 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > sessTP :: [Period] -> [(Minutes, Int)]
 > sessTP = count ((`div` 60) . duration) [1..7]
 
-> sessRA :: [Session] -> [(Float, Float)]
+> sessRA :: [Session] -> [(Radians, Float)]
 > sessRA = count (rad2hr . ra) [0..24]
 
-> periodRA :: [Period] -> [(Float, Float)]
+> periodRA :: [Period] -> [(Radians, Float)]
 > periodRA = promote sessRA
 
-> sessDec :: [Session] -> [(Float, Float)]
+> sessDec :: [Session] -> [(Radians, Float)]
 > sessDec = count (rad2deg . dec) [-40..90]
 
-> periodDec :: [Period] -> [(Float, Float)]
+> periodDec :: [Period] -> [(Radians, Float)]
 > periodDec = promote sessDec
 
 > count :: (Ord a, Ord b, Num b) => (t -> a) -> [a] -> [t] -> [(a, b)]

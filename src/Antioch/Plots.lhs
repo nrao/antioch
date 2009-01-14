@@ -7,11 +7,11 @@
 > histStyle = PlotStyle Boxes (CustomStyle []) Nothing
 
 > histogramPlot :: [(Float, Float)] -> IO ()
-> histogramPlot = plotPathStyle [] histStyle
+> histogramPlot = plotPathStyle [LogScale "y"] histStyle
 
 > histogramPlots       :: [[(Float, Float)]] -> IO ()
 > histogramPlots plots =
->     plotPathsStyle [] [(histStyle, xys) | xys <- plots]
+>     plotPathsStyle [LogScale "y"] [(histStyle, xys) | xys <- plots]
 
 > scatterStyle :: PlotStyle
 > scatterStyle = PlotStyle Points (CustomStyle []) Nothing
