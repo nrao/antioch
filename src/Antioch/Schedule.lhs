@@ -15,21 +15,25 @@
 > import Data.List         (foldl')
 > import Data.Maybe        (maybe)
 
-> stepSize = 15
+> stepSize = 15 :: Minutes
 
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
-Always schedules a session at its minimum duration.
+  Always schedules a session at its minimum duration.
 
 > scheduleMinDuration :: Strategy
 > scheduleMinDuration sf dt dur history sessions
 >     | [] <- candidates = return []
 >     | otherwise        = do
->         s <- best (averageScore sf dt) candidates
->         let d = minDuration s
->         p <- liftM (Period s dt d) $ totalScore sf dt d s
->         rest <- scheduleMinDuration sf (d `addMinutes'` dt) (dur - d) (p : history) sessions
->         return $ p : rest
+>         (s, score) <- best (averageScore sf dt) candidates
+>         if score > 0.0
+>           then do
+>             let d = minDuration s
+>             let p = Period s dt d score
+>             rest <- scheduleMinDuration sf (d `addMinutes'` dt) (dur - d) (p : history) sessions
+>             return $ p : rest
+>           else do
+>             scheduleMinDuration sf (stepSize `addMinutes'` dt) (dur - stepSize) history sessions
 >   where
 >     candidates = constrain history . filter (\s -> minDuration s <= dur) $ sessions
 
@@ -40,10 +44,14 @@ Always schedules a session at a given fixed duration.
 >     | dur < len        = return []
 >     | [] <- candidates = return []
 >     | otherwise        = do
->         s <- best (totalScore sf dt len) sessions
->         p <- liftM (Period s dt len) $ totalScore sf dt len s
->         rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
->         return $ p : rest
+>         (s, score) <- best (totalScore sf dt len) sessions
+>         if score > 0
+>           then do
+>             let p = Period s dt len score
+>             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
+>             return $ p : rest
+>           else do
+>             scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) history sessions
 >   where
 >     candidates = constrain history sessions
 
@@ -80,10 +88,10 @@ individual score is zero then the end result must also be zero.
 
 Select the highest scoring element of a list.
 
-> best          :: (Monad m, Ord b) => (a -> m b) -> [a] -> m a
+> best          :: (Monad m, Ord b) => (a -> m b) -> [a] -> m (a, b)
 > best f (x:xs) = do
 >     s <- f x
->     liftM fst . foldlM f' (x, s) $ xs
+>     foldlM f' (x, s) $ xs
 >   where
 >     f' (x, s) y = do
 >         s' <- f y
