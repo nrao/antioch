@@ -26,11 +26,12 @@ Ranking System from Memo 5.2, Section 3
 >     tk  <- kineticTemperature dt s
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s
+>     minTsysPrime' <- liftIO $ minTSysPrime w (frequency s) elevation
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
->         minTsysPrime' <- minTSysPrime w (frequency s) elevation
->         let [eff, effTransit] = map (calcEff trx tk' minTsysPrime' zod') [za, zat]
+>         minTsysPrime'' <- minTsysPrime'
+>         let [eff, effTransit] = map (calcEff trx tk' minTsysPrime'' zod') [za, zat]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -68,12 +69,12 @@ Ranking System from Memo 5.2, Section 3
 > kineticTemperature      :: DateTime -> Session -> Scoring (Maybe Float)
 > kineticTemperature dt s = do
 >     w <- weather
->     return $ tsys w dt (frequency s)
+>     liftIO $ tsys w dt (frequency s)
 
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
 > zenithOpticalDepth dt s = do
 >     w <- weather
->     return $ opacity w dt (frequency s)
+>     liftIO $ opacity w dt (frequency s)
 
 > zenithAngle            :: DateTime -> Session -> Radians
 > zenithAngle dt s = zenithAngleHA s $ lst - ra s
@@ -140,7 +141,8 @@ Ranking System from Memo 5.2, Section 3
 
 > stringency _ s = do
 >     w <- weather
->     factor "stringency" $ totalStringency w (frequency s) elevation
+>     stringency' <- liftIO $ totalStringency w (frequency s) elevation
+>     factor "stringency" stringency'
 >   where
 >     elevation = pi/2 - zenithAngleAtTransit s
 
@@ -240,10 +242,11 @@ Translates the total/used times pairs into pressure factors.
 
 > trackingErrorLimit dt s = do
 >     w <- weather
+>     wind' <- liftIO $ wind w dt
 >     boolean "trackingErrorLimit" $ do
->         wind' <- wind w dt
+>         wind'' <- wind'
 >         -- Equation 26
->         let fv = rmsTrackingError wind' / (theta . frequency $ s)
+>         let fv = rmsTrackingError wind'' / (theta . frequency $ s)
 >         return $ fv <= maxErr
 >   where
 >     maxErr = 0.2 
@@ -316,14 +319,14 @@ The Scoring monad encapsulates the concept of a scoring action,
 all the scoring functions live in the monad so they can
 execute scoring actions.
 
-> type Scoring = ReaderT ScoringEnv Identity
+> type Scoring = ReaderT ScoringEnv IO
 
 A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
 
-> runScoring     :: Weather -> ReceiverSchedule -> Scoring t -> t
-> runScoring w rs f = runIdentity . runReaderT f $ ScoringEnv w rs
+> runScoring     :: Weather -> ReceiverSchedule -> Scoring t -> IO t
+> runScoring w rs f = runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows
 us to easily return a list.

@@ -26,11 +26,12 @@
 
 > test_hourAngleLimit = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     let scores = map (score' w) times
+>     scores <- mapM (score' w) times
 >     assertEqual "test_hourAngleLimit" expected scores
 >   where
->     score' w dt =
->         let [(_, Just s)] = runScoring w [] (hourAngleLimit dt sessLP) in s
+>     score' w dt = do
+>         [(_, Just s)] <- runScoring w [] (hourAngleLimit dt sessLP)
+>         return s
 >     times = [(60*h) `addMinutes'` dtLP | h <- [0..23]]
 >     expected = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0,
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -61,14 +62,14 @@
 
 > test_efficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     let Just result = runScoring w [] (efficiency dtLP sessLP)
+>     Just result <- runScoring w [] (efficiency dtLP sessLP)
 >     assertAlmostEqual "test_efficiency" 5 0.71758 result
->     let Just result = runScoring w [] (efficiencyHA dtLP sessLP)
+>     Just result <- runScoring w [] (efficiencyHA dtLP sessLP)
 >     assertAlmostEqual "test_efficiencyHA" 5 0.72540 result
 
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     let Just result = runScoring w [] (zenithOpticalDepth dtLP sessLP)
+>     Just result <- runScoring w [] (zenithOpticalDepth dtLP sessLP)
 >     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00798 result
 
 > test_receiverTemperature = TestCase $ do
@@ -76,7 +77,7 @@
 
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     let Just result = runScoring w [] (kineticTemperature dtLP sessLP)
+>     Just result <- runScoring w [] (kineticTemperature dtLP sessLP)
 >     assertAlmostEqual "test_kineticTemperature" 3 257.546 result
 
 > test_stringency = TestCase $ do
@@ -90,7 +91,7 @@
 >     -- adjust the project's times to get desired results
 >     let p = defaultProject {timeLeft=28740, timeTotal=33812}
 >     let s = sessLP {project = p}
->     let [(name, Just result)] = runScoring w [] (projectCompletion dt s)
+>     [(_, Just result)] <- runScoring w [] (projectCompletion dt s)
 >     assertAlmostEqual "test_projectCompletion" 3 1.015 result
 
 TBF are these partitions stil useful?
@@ -105,7 +106,7 @@ TBF are these partitions stil useful?
 >     let politicalFactors = score [scienceGrade
 >                           , thesisProject
 >                           , projectCompletion]
->     let fs = runScoring w [] (politicalFactors dt s)
+>     fs <- runScoring w [] (politicalFactors dt s)
 >     -- TBF: check individual results as well
 >     -- let expFs = [("scienceGrade", Just 1.0)
 >     --           , ("thesisProject", Just 1.0)
@@ -138,13 +139,13 @@ Test utilities
 > assertScoringResult :: String -> Int -> Float -> Scoring Factors -> IO ()
 > assertScoringResult name digits expected scoref = do
 >     w <- getTestWeather
->     let [(name, Just result)] = runScoring w rSched scoref
+>     [(_, Just result)] <- runScoring w rSched scoref
 >     assertAlmostEqual name digits expected result
 
 > assertScoringResult' :: String -> Float -> Scoring Factors -> IO ()
 > assertScoringResult' name expected scoref = do
 >     w <- getTestWeather
->     let [(name, Just result)] = runScoring w rSched scoref
+>     [(_, Just result)] <- runScoring w rSched scoref
 >     assertEqual name expected result
 
 > getTestWeather :: IO Weather

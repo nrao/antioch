@@ -1,7 +1,7 @@
 > module Antioch.Simulate where
 
 > import Antioch.DateTime
-> import Antioch.Generators hiding (genScore)
+> import Antioch.Generators
 > import Antioch.Schedule
 > import Antioch.Score     (ReceiverSchedule, genScore, runScoring)
 > import Antioch.Types
@@ -25,7 +25,7 @@
 >     | dur < int  = return []
 >     | otherwise  = do
 >         w <- getWeather $ Just (negate hint `addMinutes'` dt)
->         let periods   = runScoring w rs $ sched sf start int' history sessions
+>         periods <- runScoring w rs $ sched sf start int' history sessions
 >         let sessions' = updateSessions sessions periods
 >         result <- simulate sched rs (hint `addMinutes'` dt) (dur - hint) int (reverse periods ++ history) sessions'
 >         return $ periods ++ result
