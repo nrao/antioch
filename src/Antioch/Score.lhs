@@ -351,9 +351,11 @@ Composite pattern on scoring functions, e.g., political factors.
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
-> genScore   :: [Session] -> ScoreFunc
-> genScore _ = score [
->     atmosphericOpacity
+> genScore          :: [Session] -> ScoreFunc
+> genScore sessions = score [
+>     genFrequencyPressure sessions
+>   , genRightAscensionPressure sessions
+>   , atmosphericOpacity
 >   , atmosphericStabilityLimit
 >   , hourAngleLimit
 >   , observingEfficiencyLimit
