@@ -168,22 +168,16 @@ then an hour.  TBD: use T.frequency
 >     quarters <- choose (1*4, 10*4)
 >     return $ quarters * 15
 
-TBD:
-
-> genScore :: Gen Score
-> genScore = choose (0, 10)
-
 > genPeriod :: Gen Period
 > genPeriod = do
 >      session   <- genSession  
 >      startTime <- genStartTime
 >      duration  <- genDuration
->      score     <- genScore
 >      let period = Period {
 >          session   = session
 >        , startTime = startTime
 >        , duration  = duration
->        , pScore    = score
+>        , pScore    = 0.0
 >        }
 >      return period
 
