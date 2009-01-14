@@ -24,6 +24,12 @@
 >   , test_zenithAngleLimit
 >   ]
 
+> benchMark = do
+>     start <- getCurrentTime
+>     runTestTT tests
+>     stop <- getCurrentTime
+>     putStrLn $ "Test Execution Speed: " ++ show (diffSeconds stop start) ++ " seconds"
+
 > test_hourAngleLimit = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     let scores = map (score' w) times
