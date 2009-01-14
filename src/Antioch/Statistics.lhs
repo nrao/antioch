@@ -152,6 +152,9 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > sessRA :: [Session] -> [(Float, Float)]
 > sessRA = count (rad2hr . ra) [0..24]
 
+> periodRA :: [Period] -> [(Float, Float)]
+> periodRA = promote sessRA
+
 > sessDec :: [Session] -> [(Float, Float)]
 > sessDec = count (rad2deg . dec) [-40..90]
 

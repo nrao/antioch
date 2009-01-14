@@ -69,21 +69,29 @@ simLSTPFTime2
 simLSTPFTime3
 
 histograms 2x **********************************************
-simHistDec
+
+simHistRA
+
+> histSessRA ss ps =
+>     histogramPlots $ [sessRA ss, periodRA ps]
+
 simHistEffHr
+
 simHistFreq
 
 > histSessFreq ss ps =
 >     histogramPlots $ [sessFreq ss, periodFreq ps]
 
-simHistRA
+simHistDec
 
 > histSessDec ss ps =
 >     histogramPlots $ [sessDec ss, periodDec ps]
 
 histograms *************************************************
 simHistPFHours
+
 simHistPF
+
 simHistTP
 
 > histSessTP _ ps =
