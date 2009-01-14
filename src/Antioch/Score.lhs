@@ -126,6 +126,14 @@ Ranking System from Memo 5.2, Section 3
 >     rmsTE' = rmsTE dt
 >     theta' = theta . frequency $ s
 
+> {-
+> minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
+> minimumObservingConditions dt s = undefined
+>   where
+>       observingEfficiencyOK = efficiency dt s > observingEfficiencyLimit dt s
+>       trackingErrorLimitOK = trackingErrorLimit dt s >= 1
+> -}
+
 3.2 Stringency
 
 > stringency                 :: ScoreFunc
@@ -152,15 +160,15 @@ Generate a scoring function having the pressure factors.
 > genRightAscensionPressure sessions =
 >     rightAscensionPressure factors accessor
 >   where
->     accessor s = (round . ra $ s) `mod` 24
+>     accessor s = (round . rad2hr . ra $ s) `mod` 24
 >     bins    = initBins (0, 23) accessor sessions
 >     factors = binsToFactors bins
 
 Select the appropriate pressure factor from the array of pressures.
 
-> frequencyPressure          :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
+> frequencyPressure      :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > frequencyPressure fs f _ a =
->     factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
+>                      factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
 
 > rightAscensionPressure     :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > rightAscensionPressure fs f _ a =
@@ -242,7 +250,8 @@ Translates the total/used times pairs into pressure factors.
 >     -- Equation 11
 >     rmsTrackingError w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
 
-> atmosphericStabilityLimit _ _ = factor "atmosphericStabilityLimit" . Just $ 1.0
+> atmosphericStabilityLimit _ _ =
+>                            factor "atmosphericStabilityLimit" . Just $ 1.0
 
 3.5 Other factors
 
@@ -282,20 +291,20 @@ Scoring utilities
 > type Factor   = (String, Maybe Score)
 > type Factors  = [Factor]
 
+> type ReceiverSchedule = [(DateTime, [Receiver])]
+
 This is the environment that the Scoring Monad is carrying around
 to avoid long lists of repetitive parameters.
 Currently just the weather, but the list will grow, e.g., receiver schedules.
-
-> type ReceiverSchedule = [(DateTime, [Receiver])]
 
 > data ScoringEnv = ScoringEnv {
 >     envWeather    :: Weather
 >   , envReceivers  :: ReceiverSchedule
 >   }
 
-Just an easy way to pull the weather out of ScoringEnv
-This function returns the weather in the Scoring Monad,
-as in the action "w <- weather".
+Just an easy way to pull the stuff like weather or the receiver schedule
+out of ScoringEnv, e.g., the weather function returns the weather in
+the Scoring Monad, as in the action "w <- weather".
 
 > weather :: Scoring Weather
 > weather = asks envWeather
@@ -304,7 +313,7 @@ as in the action "w <- weather".
 > receiverSchedule = asks envReceivers
 
 The Scoring monad encapsulates the concept of a scoring action,
-so all the scoring functions live in the monad so they can
+all the scoring functions live in the monad so they can
 execute scoring actions.
 
 > type Scoring = ReaderT ScoringEnv Identity
@@ -312,8 +321,6 @@ execute scoring actions.
 A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
-
-Here!
 
 > runScoring     :: Weather -> ReceiverSchedule -> Scoring t -> t
 > runScoring w rs f = runIdentity . runReaderT f $ ScoringEnv w rs
@@ -325,7 +332,7 @@ us to easily return a list.
 > factor name val = return [(name, val)]
 
 Sub-class of scoring actions that return a list of factors
-which are the factors listed in Memo 5.2.
+as listed in Memo 5.2.
 
 > type ScoreFunc = DateTime -> Session -> Scoring Factors 
 
@@ -335,14 +342,18 @@ which are the factors listed in Memo 5.2.
 > concatMapM   :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
 > concatMapM f = fmap concat . mapM f
 
-Composite pattern on scoring functions, e.g., political factors.
+Composite pattern on subpartitions ofscoring functions, e.g., political factors.
 
 > score         :: [ScoreFunc] -> ScoreFunc
 > score fs dt s = concatMapM (\f -> f dt s) fs
 
+Provides a means of scoring a session on subsets of the factors.
+
 > ignore       :: [String] -> Factors -> Factors
 > ignore names = filter $ \(n, _) -> not (n `elem` names)
   
+Need to translate a session's factors into the final product score.
+
 > eval :: Factors -> Score
 > eval = foldr step 1.0
 >   where
@@ -351,6 +362,6 @@ Composite pattern on scoring functions, e.g., political factors.
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
-Convenience function for translating truth into a factor.
+Convenience function for translating go/no-go into a factor.
 
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)

@@ -78,16 +78,13 @@
 >     let Just result = runScoring w [] (kineticTemperature dtLP sessLP)
 >     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
 
-TBF: second assert is failing becuase the stringency table only has 
-frequencies above 2 GHz, and 'sessAS' has a freq of 0.5 GHz (bug!).
-
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2007 10 15 18 0 0
->     assertScoringResult "test_stringency" 3 1.400855 (stringency dt sessLP)
->     -- assertScoringResult "test_stringency" 3 5.600565 (stringency dt sessLP)
->     -- assertAlmostEqual "test_stringency" 3 5.600565 result
+>     assertScoringResult "test_stringency" 5 1.40086 (stringency dt sessLP)
+>     assertScoringResult "test_stringency" 5 1.03437 (stringency dt sessAS)
 
-TBF: unit test not passing - inputs (sessLP's project) are probably different.
+TBF: unit test not passing - inputs (sessLP's project) are probably different
+TBF are these partitions stil useful?
 
 > test_politicalFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
@@ -102,7 +99,6 @@ TBF: unit test not passing - inputs (sessLP's project) are probably different.
 >     --           , ("thesisProject", Just 1.0)
 >     --           , ("projectCompletion", Just 1.0)]
 >     let result = eval fs
->     -- TBF why not 1.0?
 >     assertEqual "test_politicalFactors" 1.015 result
 
 > test_trackingEfficiency = TestCase $ do
