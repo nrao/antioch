@@ -1,7 +1,7 @@
 > module Antioch.Simulate where
 
 > import Antioch.DateTime
-> import Antioch.Generators hiding (genScore)
+> import Antioch.Generators
 > import Antioch.Schedule
 > import Antioch.Score     (ReceiverSchedule, genScore, runScoring)
 > import Antioch.Types
@@ -11,7 +11,9 @@
 > simulate06 :: Strategy -> IO [Period]
 > simulate06 sched = do
 >     ps <- generateVec 10
->     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
+>     let ps' = zipWith (\p n -> p { pId = n }) ps [0..]
+>     let ps'' = [makeProject p (sessions p) | p <- ps'']
+>     let ss  = zipWith (\s n -> s { sId = n }) (concatMap sessions ps'') [0..]
 >     simulate sched rs dt dur int history ss
 >   where
 >     rs  = []

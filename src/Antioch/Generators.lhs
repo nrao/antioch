@@ -109,7 +109,9 @@ TBF: how to link these to generated Projects?
 > genSession = do
 >     project    <- genProject
 >     t          <- genSemester
->     b          <- genBand t 
+>     b          <- genBand t
+>     let r      = band2Receiver b
+>     g          <- genGrade [GradeA, GradeA, GradeB, GradeC, GradeC]
 >     f          <- genFreq b
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -127,6 +129,8 @@ TBF: how to link these to generated Projects?
 >                , maxDuration    = maxD
 >                , totalTime      = totalTime
 >                , totalUsed      = 0
+>                , grade          = g
+>                , receivers      = [r]
 >                }
 
 
@@ -141,6 +145,9 @@ TBF: how to link these to generated Projects?
 >     s  <- genSession
 >     ss <- genSessions n
 >     return $ [s] ++ ss
+
+> prop_Grade s = grade s `elem` [GradeA, GradeB, GradeC]
+> prop_Receiver s = head (receivers s) == band2Receiver (band s)
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
 
@@ -219,6 +226,22 @@ U      90     5.9%     3.5   3
 K     230    15.1%     9.1   6
 A      60     3.9%     2.3   6
 Q      80     5.3%     3.2   6
+
+> genGrade    :: [Grade] -> Gen Grade
+> genGrade gs = elements gs
+
+> band2Receiver :: Band -> Receiver
+> band2Receiver L = Rcvr1_2
+> band2Receiver S = Rcvr2_3
+> band2Receiver C = Rcvr4_6
+> band2Receiver X = Rcvr8_10
+> band2Receiver U = Rcvr12_18
+> band2Receiver K = Rcvr18_22 -- Need Rcvr22_26
+> band2Receiver A = Rcvr26_40
+> band2Receiver Q = Rcvr40_52
+
+
+
 
 > genBand     :: Int -> Gen Band
 > genBand sem = fmap (read . str) . elements $ bands !! sem
