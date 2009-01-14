@@ -123,7 +123,7 @@ Helper function to determine the desired forecast type given two DateTimes.
 >     case dropWhile (< difference) $ forecast_types of
 >         []     -> length forecast_types
 >         (x:xs) -> fromJust (elemIndex x forecast_types) + 1
->   where difference = (toSeconds target - toSeconds now) `div` 3600
+>   where difference = (target - now) `div` 3600
 >         forecast_types = [12, 24, 36, 48, 60]
 
 > prop_constrained target now = forecastType target now `elem` forecast_types

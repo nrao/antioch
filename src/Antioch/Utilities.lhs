@@ -26,6 +26,6 @@
 
 > utc2lstHours    :: DateTime -> Float
 > utc2lstHours dt = let
->     gmst = rad2deg . SLA.gmst . toMJD' $ dt
+>     gmst = rad2deg . SLA.gmst . toMJD' . fromSeconds $ dt
 >     gbls = deg2hrs $ gmst + gbtLong
 >     in if gbls < 0.0 then gbls + 24.0 else gbls
