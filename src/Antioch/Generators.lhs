@@ -69,6 +69,8 @@ a project has between 1 and 5 Sessions.
 > prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
 > prop_timeTotal p = (1*2*60) <= timeTotal p && timeTotal p <= (5*30*60)
 
+> prop_timeTotalQuarter p = timeTotal p `mod` 15 == 0
+
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
 > prop_projectPeriods p = let n = sum [ (length . periods $ s) | s <- sessions p] in 0 <= n && n <= 5*3
@@ -103,6 +105,9 @@ Generates RA and Dec based on skyType:
 >     dec <- fmap asin . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (ra, dec)
 
+> round2quarter :: Minutes -> Minutes
+> round2quarter m = m - (m `mod` 15)
+
 TBF: how to link these to generated Projects? 
 
 > genSession :: Gen Session
@@ -125,9 +130,9 @@ TBF: how to link these to generated Projects?
 >                , frequency      = f
 >                , ra             = ra
 >                , dec            = dec
->                , minDuration    = minD
->                , maxDuration    = maxD
->                , totalTime      = totalTime
+>                , minDuration    = round2quarter minD
+>                , maxDuration    = round2quarter maxD
+>                , totalTime      = round2quarter totalTime
 >                , totalUsed      = 0
 >                , grade          = g
 >                , receivers      = [r]
@@ -153,7 +158,13 @@ TBF: how to link these to generated Projects?
 
 Make sure that the total time used up by the periods is correct:
 
-> prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
+> prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
+> prop_totalTime s          = (2*60) <= totalTime s && totalTime s <= (30*60)
+> prop_totalTimeQuarter s   = totalTime s `mod` 15 == 0
+> prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (4*60)
+> prop_minDurationQuarter s = minDuration s `mod` 15 == 0
+> prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)
+> prop_maxDurationQuarter s = maxDuration s `mod` 15 == 0
 
 > prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
 
