@@ -37,7 +37,7 @@
 
 > test_frequencyPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult' "test_frequencyPressure" 1.35154 (freqPressure dt . head $ pSessions)
+>     assertScoringResult "test_frequencyPressure" 5 1.35154 (freqPressure dt . head $ pSessions)
 >   where
 >     freqPressure = genFrequencyPressure pSessions
 
@@ -62,14 +62,14 @@
 > test_efficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     let Just result = runScoring w [] (efficiency dtLP sessLP)
->     assertAlmostEqual "test_efficiency" 5 0.98872 result
+>     assertAlmostEqual "test_efficiency" 5 0.71758 result
 >     let Just result = runScoring w [] (efficiencyHA dtLP sessLP)
->     assertAlmostEqual "test_efficiencyHA" 5 0.72526 result
+>     assertAlmostEqual "test_efficiencyHA" 5 0.72540 result
 
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     let Just result = runScoring w [] (zenithOpticalDepth dtLP sessLP)
->     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00799 result
+>     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00798 result
 
 > test_receiverTemperature = TestCase $ do
 >     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sessLP
@@ -77,7 +77,7 @@
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     let Just result = runScoring w [] (kineticTemperature dtLP sessLP)
->     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
+>     assertAlmostEqual "test_kineticTemperature" 3 257.546 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
@@ -93,7 +93,6 @@
 >     let [(name, Just result)] = runScoring w [] (projectCompletion dt s)
 >     assertAlmostEqual "test_projectCompletion" 3 1.015 result
 
-TBF: unit test not passing - inputs (sessLP's project) are probably different
 TBF are these partitions stil useful?
 
 > test_politicalFactors = TestCase $ do
@@ -106,7 +105,7 @@ TBF are these partitions stil useful?
 >     let politicalFactors = score [scienceGrade
 >                           , thesisProject
 >                           , projectCompletion]
->     let fs = runScoring w [] (politicalFactors dt sessLP)
+>     let fs = runScoring w [] (politicalFactors dt s)
 >     -- TBF: check individual results as well
 >     -- let expFs = [("scienceGrade", Just 1.0)
 >     --           , ("thesisProject", Just 1.0)
