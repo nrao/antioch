@@ -1,12 +1,25 @@
-> module Antioch.Simulate (simulate) where
+> module Antioch.Simulate where
 
-> import Antioch.DateTime  (DateTime, addMinutes', diffMinutes')
+> import Antioch.DateTime
+> import Antioch.Generators hiding (genScore)
 > import Antioch.Schedule  (Strategy)
 > import Antioch.Score     (ReceiverSchedule, genScore, runScoring)
 > import Antioch.Types
 > import Antioch.Weather   (getWeather)
 > import Data.List         (find, partition)
 
+> simulate06 :: Strategy -> IO [Period]
+> simulate06 sched = do
+>     ps <- generateVec 10
+>     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
+>     simulate sched rs dt dur int history ss
+>   where
+>     rs  = []
+>     dt  = fromGregorian 2006 1 1 0 0 0
+>     dur = 60 * 24 * 7
+>     int = 60 * 48
+>     history = []
+  
 > simulate :: Strategy -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
 > simulate sched rs dt dur int history sessions
 >     | dur < hint = return []

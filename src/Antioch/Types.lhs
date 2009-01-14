@@ -35,7 +35,8 @@
 >           deriving (Enum, Eq, Ix, Ord, Read, Show)
 
 > data Session = Session {
->     sName       :: String
+>     sId         :: Int
+>   , sName       :: String
 >   , project     :: Project
 >   , periods     :: [Period]
 >   , totalTime   :: Minutes
@@ -52,7 +53,10 @@
 >   , authorized  :: Bool
 >   , grade       :: Grade
 >   , band        :: Band
->   } deriving (Eq, Show)
+>   } deriving (Show)
+
+> instance Eq Session where
+>     (==) = (==) `on` sId
 
 Tying the knot.
 
@@ -74,6 +78,12 @@ Tying the knot.
 >   , timeTotal :: Minutes
 >   } deriving Eq
 
+> makeProject :: Project -> [Session] -> Project
+> makeProject p ss = p'
+>   where
+>     p' = p { timeTotal = t, timeLeft = t, sessions = map (\s -> s { project = p' }) ss }
+>     t  = sum . map totalTime $ ss
+
 > instance Show Project where
 >     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
 
@@ -82,13 +92,17 @@ Tying the knot.
 >   , startTime :: DateTime
 >   , duration  :: Minutes
 >   , pScore    :: Score
->   } deriving (Eq, Show)
+>   } deriving Eq
+
+> instance Show Period where
+>     show p = "Period: " ++ sName (session p) ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " with " ++ show (pScore p)
 
 > instance Ord Period where
 >     (<) = (<) `on` startTime
 
 > defaultSession = Session {
->     sName       = ""
+>     sId         = 0
+>   , sName       = ""
 >   , project     = defaultProject 
 >   , periods     = [defaultPeriod]
 >   , totalTime   = 0

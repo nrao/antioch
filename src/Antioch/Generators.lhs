@@ -5,6 +5,7 @@
 > import Antioch.Utilities
 > import Antioch.DateTime
 > import Data.Char
+> import System.Random  (getStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
 
@@ -50,11 +51,10 @@ those to calculate timeLeft and timeTotal?
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
->         , sessions = projectSessions
 >         , timeTotal = timeTotal
 >         , timeLeft = timeTotal - timeUsed
 >         }
->     return project
+>     return $ makeProject project projectSessions
 
 
 Now lets make sure we are properly generating Projects: test each attribute
@@ -95,22 +95,20 @@ Generates RA and Dec based on skyType:
 >   where
 >     galacticCenter = do
 >         dec <- choose (-27.0, -29.0)
->         return (deg2rad 18.0, dec)
+>         return (deg2rad 18.0, deg2rad dec)
 >     galactic = do
 >         longitude <- choose (0.0, 250.0)
->         let (rar, decr) = slaGaleq (deg2rad longitude) 0.0
->         return (rar, rad2deg decr)
+>         return $ slaGaleq (deg2rad longitude) 0.0
 > genRaDec _   = do
->     ra  <- choose (0.0, 23.999)
->     dec <- fmap (rad2deg . asin) . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
->     return (hrs2rad ra, dec)
+>     ra  <- choose (0.0, 2*pi)
+>     dec <- fmap asin . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
+>     return (ra, dec)
 
 TBF: how to link these to generated Projects? 
 
 > genSession :: Gen Session
 > genSession = do
 >     project    <- genProject
->     periods    <- genSessionPeriods 
 >     t          <- genSemester
 >     b          <- genBand t 
 >     f          <- genFreq b
@@ -119,10 +117,9 @@ TBF: how to link these to generated Projects?
 >     totalTime  <- choose (2*60, 30*60)
 >     minD       <- choose (2*60, 4*60)
 >     maxD       <- choose (6*60, 8*60)
->     let totalUsed  = sum [ duration p | p <- periods] 
 >     return $ defaultSession {
 >                  project        = project
->                , periods        = periods
+>                , periods        = []
 >                , band           = b
 >                , frequency      = f
 >                , ra             = ra
@@ -130,7 +127,7 @@ TBF: how to link these to generated Projects?
 >                , minDuration    = minD
 >                , maxDuration    = maxD
 >                , totalTime      = totalTime
->                , totalUsed      = totalUsed
+>                , totalUsed      = 0
 >                }
 
 
@@ -245,3 +242,10 @@ Assume we are observing the water line 40% of the time.
 > genFreq U = choose (12.0, 15.4)
 > genFreq A = choose (26.0, 40.0)
 > genFreq Q = choose (40.0, 50.0)
+
+> generate' f = do
+>     g <- getStdGen
+>     return $ generate 0 g f
+
+> generateVec :: Arbitrary a => Int -> IO [a]
+> generateVec = generate' . vector

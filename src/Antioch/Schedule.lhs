@@ -45,7 +45,7 @@ Always schedules a session at a given fixed duration.
 >         rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >         return $ p : rest
 >   where
->     candidates = constrain history . filter (\s -> minDuration s >= len) $ sessions
+>     candidates = constrain history sessions
 
 > constrain _ = id
 
