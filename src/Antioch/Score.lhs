@@ -68,7 +68,7 @@ Ranking System from Memo 5.2, Section 3
 > kineticTemperature      :: DateTime -> Session -> Scoring (Maybe Float)
 > kineticTemperature dt s = do
 >     w <- weather
->     return $ tatm w dt
+>     return $ tsys w dt (frequency s)
 
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
 > zenithOpticalDepth dt s = do

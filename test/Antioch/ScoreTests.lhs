@@ -9,7 +9,7 @@
 > import Data.List (zipWith4)
 
 > tests = TestList [
->     test_hourAngleLimit -- won't work until database is complete
+>     test_hourAngleLimit
 >   , test_rightAscensionPressure
 >   , test_frequencyPressure
 >   , test_efficiency
@@ -32,18 +32,18 @@
 >     score' w dt =
 >         let [(_, Just s)] = runScoring w [] (hourAngleLimit dt sessLP) in s
 >     times = [(60*h) `addMinutes'` dtLP | h <- [0..23]]
->     expected = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
->                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+>     expected = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0,
+>                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 > test_frequencyPressure = TestCase $ do
->     let dt = fromGregorian 2007 10 15 12 0 0
->     assertScoringResult "test_frequencyPressure" 5 1.35155 (freqPressure dt . head $ pSessions)
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     assertScoringResult' "test_frequencyPressure" 1.35154 (freqPressure dt . head $ pSessions)
 >   where
 >     freqPressure = genFrequencyPressure pSessions
 
 > test_rightAscensionPressure = TestCase $ do
->     let dt = fromGregorian 2007 10 15 12 0 0
->     assertScoringResult "test_rightAscensionPressure" 5 1.25729 (raPressure dt . head $ pSessions)
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     assertScoringResult "test_rightAscensionPressure" 5 1.19812 (raPressure dt . head $ pSessions)
 >   where
 >     raPressure = genRightAscensionPressure pSessions
 
@@ -80,13 +80,13 @@
 >     assertAlmostEqual "test_kineticTemperature" 3 257.49832 result
 
 > test_stringency = TestCase $ do
->     let dt = fromGregorian 2007 10 15 18 0 0
+>     let dt = fromGregorian 2006 10 15 18 0 0
 >     assertScoringResult "test_stringency" 5 1.40086 (stringency dt sessLP)
 >     assertScoringResult "test_stringency" 5 1.03437 (stringency dt sessAS)
 
 > test_projectCompletion = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0 -- don't need!
->     let dt = fromGregorian 2007 10 15 18 0 0 -- don't need!
+>     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0 -- don't need!
+>     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
 >     let p = defaultProject {timeLeft=28740, timeTotal=33812}
 >     let s = sessLP {project = p}
@@ -97,8 +97,8 @@ TBF: unit test not passing - inputs (sessLP's project) are probably different
 TBF are these partitions stil useful?
 
 > test_politicalFactors = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2007 10 13 22 0 0
->     let dt = fromGregorian 2007 10 15 12 0 0
+>     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0
+>     let dt = fromGregorian 2006 10 15 12 0 0
 >     -- adjust the project's times to get desired results
 >     let p = defaultProject {timeLeft=28740, timeTotal=33812}
 >     let s = sessLP {project = p}
@@ -115,17 +115,17 @@ TBF are these partitions stil useful?
 >     assertAlmostEqual "test_politicalFactors" 3 1.015 result
 
 > test_trackingEfficiency = TestCase $ do
->     let dt = fromGregorian 2007 10 15 12 0 0
+>     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult "test_trackingEfficiency" 4 0.99764 (trackingEfficiency dt sessLP)
 
 TBF: this unit test fails because 'wind w dt' fails
 
 > test_trackingErrorLimit = TestCase $ do
->     let dt = fromGregorian 2007 10 15 12 0 0
+>     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult' "test_trackingErrorLimit" 1.0 (trackingErrorLimit dt sessLP)
 
 > test_zenithAngleLimit = TestCase $ do
->     let dt = fromGregorian 2007 10 15 0 0 0
+>     let dt = fromGregorian 2006 10 15 0 0 0
 >     assertScoringResult' "test_zenithAngleLimit" 0.0 (zenithAngleLimit dt sessLP)
 
 Test utilities
@@ -149,7 +149,7 @@ Test utilities
 >     assertEqual name expected result
 
 > getTestWeather :: IO Weather
-> getTestWeather = getWeather . Just $ fromGregorian 2007 10 13 22 0 0
+> getTestWeather = getWeather . Just $ fromGregorian 2006 10 13 22 0 0
 
 Test data generation
 
