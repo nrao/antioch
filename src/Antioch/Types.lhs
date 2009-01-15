@@ -83,20 +83,20 @@ useless items.
 >   , sName       :: String
 >   , project     :: Project
 >   , periods     :: [Period]
->   , totalTime   :: Minutes
->   , totalUsed   :: Minutes
->   , minDuration :: Minutes
->   , maxDuration :: Minutes
->   , timeBetween :: Minutes
->   , frequency   :: Float
->   , ra          :: Radians
->   , dec         :: Radians
->   , backup      :: Bool
+>   , totalTime   :: !Minutes
+>   , totalUsed   :: !Minutes
+>   , minDuration :: !Minutes
+>   , maxDuration :: !Minutes
+>   , timeBetween :: !Minutes
+>   , frequency   :: !Float
+>   , ra          :: !Radians
+>   , dec         :: !Radians
+>   , backup      :: !Bool
 >   , receivers   :: [Receiver]
->   , enabled     :: Bool
->   , authorized  :: Bool
->   , grade       :: Grade
->   , band        :: Band
+>   , enabled     :: !Bool
+>   , authorized  :: !Bool
+>   , grade       :: !Grade
+>   , band        :: !Band
 >   } deriving (Show)
 
 > instance Eq Session where
@@ -114,13 +114,13 @@ Tying the knot.
 > updateSession s ps = makeSession s $ periods s ++ ps
 
 > data Project = Project {
->     pId       :: Int
->   , pName     :: String
->   , semester  :: String
+>     pId       :: !Int
+>   , pName     :: !String
+>   , semester  :: !String
 >   , sessions  :: [Session]
->   , thesis    :: Bool
->   , timeLeft  :: Minutes
->   , timeTotal :: Minutes
+>   , thesis    :: !Bool
+>   , timeLeft  :: !Minutes
+>   , timeTotal :: !Minutes
 >   } deriving Eq
 
 > makeProject :: Project -> [Session] -> Project
@@ -134,9 +134,9 @@ Tying the knot.
 
 > data Period  = Period  {
 >     session   :: Session
->   , startTime :: DateTime
->   , duration  :: Minutes
->   , pScore    :: Score
+>   , startTime :: !DateTime
+>   , duration  :: !Minutes
+>   , pScore    :: !Score
 >   } deriving Eq
 
 > instance Show Period where
