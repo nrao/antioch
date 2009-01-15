@@ -4,13 +4,15 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Control.Exception (IOException, bracketOnError, catch)
+> import Control.Monad     (liftM)
 > import Data.IORef
-> import Data.List (elemIndex)
-> import Data.Maybe (fromJust, maybe)
+> import Data.List         (elemIndex)
+> import Data.Maybe        (fromJust, maybe)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import Prelude hiding (catch)
 > import Test.QuickCheck
+> import qualified Data.Map as M
 
 > instance SqlType Float where
 >     toSql x   = SqlDouble ((realToFrac x) :: Double)
@@ -34,86 +36,145 @@
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
 >     now' <- maybe getCurrentTime return now
+>     (windf, tatmf)    <- getWindAndTAtm'
+>     (opacityf, tsysf) <- getOpacityAndTSys'
+>     stringencyf <- getTotalStringency'
+>     minOpacityf <- getMinOpacity'
+>     minTSysf    <- getMinTSysPrime'
 >     return Weather {
->         wind            = pin now' $ getWind conn
->       , tatm            = pin now' $ getTAtm conn
->       , opacity         = pin now' $ getOpacity conn
->       , tsys            = pin now' $ getTSys conn
->       , totalStringency = getTotalStringency conn
->       , minOpacity      = getMinOpacity conn
->       , minTSysPrime    = getMinTSysPrime conn
+>         wind            = pin now' $ windf conn
+>       , tatm            = pin now' $ tatmf conn
+>       , opacity         = pin now' $ opacityf conn
+>       , tsys            = pin now' $ tsysf conn
+>       , totalStringency = stringencyf conn
+>       , minOpacity      = minOpacityf conn
+>       , minTSysPrime    = minTSysf conn
 >       , newWeather      = updateWeather conn
 >       }
 
 > pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
 > pin now f target = f (forecastType target now) target
 
+> toSql' = toSql . toSqlString
+
+> fromSql' SqlNull = Nothing
+> fromSql' x       = Just . fromSql $ x
+
 > freq2Index :: Frequency -> Int
-> freq2Index =  min 50 . max 2 . round
+> freq2Index = min 50 . max 2 . round
 
 Both wind speed and atmospheric temperature are values forecast independently
 of frequency.
 
-> getWind               :: Connection -> Int -> DateTime -> IO (Maybe Float)
-> getWind conn ftype dt =
->     getFloat conn query [toSql' dt, toSql ftype]
->   where query = "SELECT wind_speed FROM forecasts\n\
->                  \WHERE date = ? AND forecast_type_id = ?"
+> getWindAndTAtm' = do
+>     cache <- newIORef M.empty
+>     return (getWind cache, getTAtm cache)
 
-> toSql' = toSql . toSqlString . roundToHour
+> fetchWindAndAtm cnn dt ftype = handleSqlError $ do
+>     result <- quickQuery' cnn query xs
+>     case result of
+>       [[wind, tatm]] -> return (fromSql' wind, fromSql' tatm)
+>       _              -> return (Nothing, Nothing)
+>   where
+>     query = "SELECT wind_speed, tatm FROM forecasts WHERE date = ? AND forecast_type_id = ?"
+>     xs    = [toSql' dt, toSql ftype]
 
-> getTAtm               :: Connection -> Int -> DateTime -> IO (Maybe Float)
-> getTAtm conn ftype dt =
->     getFloat conn query [toSql' dt, toSql ftype]
->   where query = "SELECT tatm FROM forecasts\n\
->                  \WHERE date = ? AND forecast_type_id = ?"
+> getWind :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getWind cache cnn ftype dt = liftM fst . withCache key cache $
+>     fetchWindAndAtm cnn dt' ftype
+>   where
+>     dt' = roundToHour dt
+>     key = (dt', ftype)
+
+> getTAtm :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getTAtm cache cnn ftype dt = liftM snd . withCache key cache $
+>     fetchWindAndAtm cnn dt' ftype
+>   where
+>     dt' = roundToHour dt
+>     key = (dt', ftype)
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
 
-> getOpacity :: Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getOpacity conn ftype dt frequency = 
->     getFloat conn query [toSql' dt
->                        , toSql (freq2Index frequency :: Int)
->                        , toSql ftype]
->   where query = "SELECT opacity\n\
->                  \FROM forecasts, forecast_by_frequency\n\
->                  \WHERE date = ? AND\n\
->                  \frequency = ? AND\n\
->                  \forecast_type_id = ? AND\n\
->                  \forecasts.id = forecast_by_frequency.forecast_id"
+> getOpacityAndTSys' = do
+>     cache <- newIORef M.empty
+>     return (getOpacity cache, getTSys cache)
 
-> getTSys :: Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getTSys conn ftype dt frequency = 
->     getFloat conn query [toSql' dt
->                        , toSql (freq2Index frequency :: Int)
->                        , toSql ftype]
->   where query = "SELECT tsys\n\
->                  \FROM forecasts, forecast_by_frequency\n\
->                  \WHERE date = ? AND frequency = ? AND\n\
->                  \forecast_type_id = ? AND\n\
->                  \forecasts.id = forecast_by_frequency.forecast_id"
+> fetchOpacityAndTSys cnn dt freqIdx ftype = handleSqlError $ do
+>     result <- quickQuery' cnn query xs
+>     case result of
+>       [[opacity, tsys]] -> return (fromSql' opacity, fromSql' tsys)
+>       _                 -> return (Nothing, Nothing)
+>   where
+>     query = "SELECT opacity, tsys\n\
+>             \FROM forecasts, forecast_by_frequency\n\
+>             \WHERE date = ? AND\n\
+>             \frequency = ? AND\n\
+>             \forecast_type_id = ? AND\n\
+>             \forecasts.id = forecast_by_frequency.forecast_id"
+>     xs    = [toSql' dt, toSql freqIdx, toSql ftype]
 
-> getTotalStringency :: Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getTotalStringency conn frequency elevation = 
->     getFloat conn query [toSql (freq2Index frequency :: Int)
->                        , toSql (round . rad2deg $ elevation :: Int)]
->   where query = "SELECT total FROM stringency\n\
->                  \WHERE frequency = ? AND elevation = ?"
+> getOpacity :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
+> getOpacity cache cnn ftype dt frequency = liftM fst. withCache key cache $
+>     fetchOpacityAndTSys cnn dt' freqIdx ftype
+>   where
+>     dt'     = roundToHour dt
+>     freqIdx = freq2Index frequency
+>     key     = (dt', freqIdx, ftype)
 
-> getMinOpacity :: Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getMinOpacity conn frequency elevation = 
->     getFloat conn query [toSql (freq2Index frequency :: Int)
->                        , toSql (round . rad2deg $ elevation :: Int)]
->   where query = "SELECT opacity FROM min_weather\n\
->                  \WHERE frequency = ? AND elevation = ?"
+> getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
+> getTSys cache cnn ftype dt frequency = liftM snd. withCache key cache $
+>     fetchOpacityAndTSys cnn dt' freqIdx ftype
+>   where
+>     dt'     = roundToHour dt
+>     freqIdx = freq2Index frequency
+>     key     = (dt', freqIdx, ftype)
 
-> getMinTSysPrime :: Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getMinTSysPrime conn frequency elevation = 
->     getFloat conn query [toSql (freq2Index frequency :: Int)
->                        , toSql (round . rad2deg $ elevation :: Int)]
->   where query = "SELECT prime FROM t_sys\n\
->                  \WHERE frequency = ? AND elevation = ?"
+> getTotalStringency' = caching getTotalStringency
+> getMinOpacity'      = caching getMinOpacity
+> getMinTSysPrime'    = caching getMinTSysPrime
+
+> caching f = newIORef M.empty >>= return . f
+
+> withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
+> withCache key cache action = do
+>     map <- readIORef cache
+>     case M.lookup key map of
+>         Just val -> return val
+>         Nothing  -> do
+>             val <- action
+>             modifyIORef cache $ M.insert key val
+>             return val
+              
+> getTotalStringency :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
+> getTotalStringency cache conn frequency elevation = withCache key cache $
+>     getFloat conn query [toSql freqIdx, toSql elevIdx]
+>   where
+>     freqIdx = freq2Index frequency
+>     elevIdx = round . rad2deg $ elevation
+>     key     = (freqIdx, elevIdx)
+>     query   = "SELECT total FROM stringency\n\
+>               \WHERE frequency = ? AND elevation = ?"
+
+> getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
+> getMinOpacity cache conn frequency elevation = withCache key cache $
+>     getFloat conn query [toSql freqIdx, toSql elevIdx]
+>   where
+>     freqIdx = freq2Index frequency
+>     elevIdx = round . rad2deg $ elevation
+>     key     = (freqIdx, elevIdx)
+>     query   = "SELECT opacity FROM min_weather\n\
+>               \WHERE frequency = ? AND elevation = ?"
+
+> getMinTSysPrime :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
+> getMinTSysPrime cache conn frequency elevation = withCache key cache $
+>     getFloat conn query [toSql freqIdx, toSql elevIdx]
+>   where
+>     freqIdx = freq2Index frequency
+>     elevIdx = round . rad2deg $ elevation
+>     key     = (freqIdx, elevIdx)
+>     query   = "SELECT prime FROM t_sys\n\
+>               \WHERE frequency = ? AND elevation = ?"
 
 Creates a connection to the weather forecast database.
 

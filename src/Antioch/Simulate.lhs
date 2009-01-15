@@ -12,7 +12,7 @@
 > simulate06 :: Strategy -> IO [Period]
 > simulate06 sched = do
 >     w <- getWeather Nothing
->     ps <- generateVec 10
+>     ps <- generateVec 1000
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
 >     print $ length ss
 >     start <- getCPUTime

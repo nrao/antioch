@@ -51,10 +51,11 @@ explicitly but in the form of the coefficient 8640184.812866, which is
 
 > -- Conversion from universal time to Greenwich mean sidereal time.
 > -- ut1 is modified julian date (jd - 2400000.5)
+> gmst'     :: Double -> Double
 > gmst' ut1 =
 >     (ut1 `mod'` 1.0) * d2pi + s2r * poly tu [-6.2e-6, 0.093104, 8640184.812866, 24110.54841]
 >   where
->     tu = (ut1 - 51544.5) / 36525.0
+>     tu   = (ut1 - 51544.5) / 36525.0
 
 > poly x = foldl1' $ \a b -> a*x + b
 
