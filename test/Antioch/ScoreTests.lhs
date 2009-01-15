@@ -66,20 +66,71 @@
 >     assertEqual "test_getReceivers" [Rcvr4_6, Rcvr12_18] result
 >       where result = getReceivers (fromGregorian 2006 6 24 16 0 0) rSched
 
+> test_zenithAngle = TestCase $ do
+>    let dt = fromGregorian 2006 10 15 12 0 0 
+>    let result = zenithAngle dt sessLP
+>    assertAlmostEqual "test_zenithAngle" 5 (deg2rad 63.704613) result 
+>    let result = zenithAngle dt sessBug
+>    assertAlmostEqual "test_zenithAngle" 4 (deg2rad 40.5076) result 
+
+> test_zenithAngleAtTransit = TestCase $ do
+>    let result = zenithAngleAtTransit sessLP
+>    assertEqual "test_zenithAngleAtTransit" (deg2rad 33.03313) result 
+>    let result = zenithAngleAtTransit sessBug
+>    assertAlmostEqual "test_zenithAngleAtTransit" 5 (deg2rad 30.98467) result 
+
+> test_minTsysPrime = TestCase $ do
+>    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>    -- sessLP
+>    Just result <- minTSysPrime w (frequency sessLP) (elevation sessLP)
+>    assertAlmostEqual "test_minTsysPrime" 3 15.490067 result 
+>    -- sessAS
+>    Just result <- minTSysPrime w (frequency sessAS) (elevation sessAS)
+>    assertAlmostEqual "test_minTsysPrime" 3 25.958 result 
+>    -- sessBug
+>    Just result <- minTSysPrime w (frequency sessBug) (elevation sessBug)
+>    assertAlmostEqual "test_minTsysPrime" 3 92.365046 result 
+>      where 
+>        -- TBF: gaurd against elevations < 5.0 degrees
+>        elevation s = max (deg2rad 5.0)  (pi/2 - zenithAngle dt s)
+>        dt = fromGregorian 2006 10 15 12 0 0
+
 > test_efficiency = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     Just result <- runScoring w [] (efficiency dtLP sessLP) -- returns .7172314
->     assertAlmostEqual "test_efficiency" 5 0.98215 result -- python returns .98215
->     Just result <- runScoring w [] (efficiencyHA dtLP sessLP) -- returns .7252638
->     assertAlmostEqual "test_efficiencyHA" 5 0.72034 result -- python returns .72034
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     -- sessLP
+>     Just result <- runScoring w [] (efficiency dt sessLP) 
+>     assertAlmostEqual "test_efficiency" 2 0.98215 result
+>     Just result <- runScoring w [] (efficiencyHA dt sessLP)
+>     assertAlmostEqual "test_efficiencyHA" 2 0.72034 result
+>     -- sessWV
+>     Just result <- runScoring w [] (efficiency dt sessWV) 
+>     assertAlmostEqual "test_efficiency" 2 0.89721 result 
+>     Just result <- runScoring w [] (efficiencyHA dt sessWV) 
+>     assertAlmostEqual "test_efficiencyHA" 2 0.70341 result 
+>     -- sessAS
+>     Just result <- runScoring w [] (efficiency dt sessAS) 
+>     assertAlmostEqual "test_efficiency" 2 0.9614 result
+>     Just result <- runScoring w [] (efficiencyHA dt sessAS)
+>     assertAlmostEqual "test_efficiencyHA" 2 0.4548 result
+>     -- sessBug
+>     Just result <- runScoring w [] (efficiency dt sessBug) 
+>     assertAlmostEqual "test_efficiency" 2 0.93555 result
 
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
+>     -- sessLP
 >     Just result <- runScoring w [] (zenithOpticalDepth dtLP sessLP)
 >     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00798 result
+>     -- sessBug
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     Just result <- runScoring w [] (zenithOpticalDepth dt sessBug)
+>     assertAlmostEqual "test_zenithOpticalDepth" 5 0.0661772 result
 
 > test_receiverTemperature = TestCase $ do
 >     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sessLP
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     assertEqual "test_receiverTemperature" 60.0 $ receiverTemperature dt sessBug
 
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
@@ -159,6 +210,18 @@ Test utilities
 
 Test data generation
 
+Alloc #6 in beta test
+
+> sessWV = defaultSession {
+>     sName     = "WV"
+>   , ra        = hrs2rad 4.2 
+>   , dec       = deg2rad 17.4
+>   , frequency = 34.9
+>   , receivers = [Rcvr26_40]
+>   }
+
+Alloc #7 in beta test
+
 > sessAS = defaultSession {
 >     sName     = "AS"
 >   , ra        = hrs2rad 14.3 
@@ -167,6 +230,8 @@ Test data generation
 >   , receivers = [Rcvr_450]
 >   }
 
+Alloc #3 in beta test
+
 > sessLP = defaultSession {
 >     sName     = "LP"
 >   , ra        = hrs2rad 12.3
@@ -174,6 +239,17 @@ Test data generation
 >   , frequency = 5.4
 >   , receivers = [Rcvr4_6]
 >   }
+
+*Not* from the beta test code - a session that exposed a bug from the
+QuickCheck properties.
+
+> sessBug = defaultSession {
+>     sName     = "bug"
+>   , ra        = 2.67 
+>   , dec       = 0.13
+>   , frequency = 39.76 
+>   , receivers = [Rcvr26_40]
+>  }
 
 > dtLP = fromGregorian 2006 10 15 12 0 0
 
