@@ -47,6 +47,9 @@
 > freq2Index :: Frequency -> Int
 > freq2Index =  min 50 . max 2 . round
 
+> elev2Index :: Radians -> Int
+> elev2Index =  min 90 . max 5 . round . rad2deg
+
 Both wind speed and atmospheric temperature are values forecast independently
 of frequency.
 
@@ -93,21 +96,21 @@ on frequency.
 > getTotalStringency :: IORef Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getTotalStringency conn frequency elevation = 
 >     getFloat conn query [toSql (freq2Index frequency :: Int)
->                        , toSql (round . rad2deg $ elevation :: Int)]
+>                        , toSql (elev2Index elevation :: Int)]
 >   where query = "SELECT total FROM stringency\n\
 >                  \WHERE frequency = ? AND elevation = ?"
 
 > getMinOpacity :: IORef Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getMinOpacity conn frequency elevation = 
 >     getFloat conn query [toSql (freq2Index frequency :: Int)
->                        , toSql (round . rad2deg $ elevation :: Int)]
+>                        , toSql (elev2Index elevation :: Int)]
 >   where query = "SELECT opacity FROM min_weather\n\
 >                  \WHERE frequency = ? AND elevation = ?"
 
 > getMinTSysPrime :: IORef Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getMinTSysPrime conn frequency elevation = 
 >     getFloat conn query [toSql (freq2Index frequency :: Int)
->                        , toSql (round . rad2deg $ elevation :: Int)]
+>                        , toSql (elev2Index elevation :: Int)]
 >   where query = "SELECT prime FROM t_sys\n\
 >                  \WHERE frequency = ? AND elevation = ?"
 
