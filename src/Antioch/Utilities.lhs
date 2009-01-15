@@ -5,9 +5,9 @@
 > import qualified Antioch.SLALib as SLA
 
 > gbtLat, gbtLong, gbtAlt :: Float
-> gbtLat  = 0.67078465065073467
-> gbtLong = -79.839839722222223
-> gbtAlt  = 855.0
+> gbtLat  = 0.67078465065073467 -- radians
+> gbtLong = -79.839839722222223 -- degrees
+> gbtAlt  = 855.0               -- meters
 
 > deg2rad :: Float -> Float
 > deg2rad deg = deg * pi / 180.0

@@ -31,7 +31,7 @@
 >               deriving (Eq, Show)
 
 > data Grade = GradeA | GradeB | GradeC deriving (Eq, Show, Read)
-> data Band = L | S | C | X | U | K | A | Q
+> data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Enum, Eq, Ix, Ord, Read, Show)
 
 > data Session = Session {
