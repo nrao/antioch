@@ -12,6 +12,7 @@
 > import System.Locale
 > import System.Time hiding (toClockTime)
 > import Test.QuickCheck
+> import Text.Printf
 
 > import qualified Data.Time.Calendar as Calendar
 > import qualified Data.Time.Clock as Clock
@@ -97,12 +98,7 @@ Combine pieces and parts to produce a UTCTime.
 >     day'     = Calendar.fromGregorian (fromIntegral year) month day
 >     seconds' = 3600 * hours + 60 * minutes + seconds
 
-> roundToHour dt
->     | minutes <= 30 = truncated
->     | otherwise     = 60 `addMinutes'` truncated
->   where
->     (year, month, day, hours, minutes, _) = toGregorian dt
->     truncated = fromGregorian year month day hours 0 0
+> roundToHour dt = 3600 * ((dt + 1800) `div` 3600)
 
 Getting closer to the machine: Not all the functionality of
 System.Time is available in Data.Time, and the only way we can convert
@@ -131,8 +127,10 @@ back and forth is to go through seconds.
 Formatting and parsing, with special attention to the format used by
 ODBC and MySQL.
 
-> toSqlString :: DateTime -> String
-> toSqlString = formatUTCTime sqlFormat . fromSeconds
+> toSqlString    :: DateTime -> String
+> toSqlString dt = printf "%04d-%02d-%02d %02d:%02d:%02d" year month day hours minutes seconds
+>   where
+>     (year, month, day, hours, minutes, seconds) = toGregorian dt
 
 > fromSqlString :: String -> Maybe DateTime
 > fromSqlString = fmap toSeconds . parseUTCTime sqlFormat
@@ -172,14 +170,10 @@ Simple arithmetic.
 > diffSeconds = (-)
 
 > getRise    :: DateTime -> DateTime
-> getRise dt = fromGregorian y m d 12 30 0
->     where
->        (y, m, d) = toGregorian' dt
+> getRise dt = 86400 * (dt `div` 86400) + 12 * 3600 + 30 * 60
 
 > getSet    :: DateTime -> DateTime
-> getSet dt = fromGregorian y m d 22 0 0
->     where
->        (y, m, d) = toGregorian' dt
+> getSet dt = 86400 * (dt `div` 86400) + 22 * 3600
 
 > isDayTime    :: DateTime -> Bool
 > isDayTime dt = getRise dt <= dt && dt <= getSet dt
