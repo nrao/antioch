@@ -66,6 +66,11 @@ interest internally.
 
 > prop_Universal = invariant $ fromUniversalTime . toUniversalTime
 
+> replaceYear :: Int -> DateTime -> DateTime
+> replaceYear yyyy dt = fromGregorian yyyy m d h mm s
+>    where
+>      (_, m, d, h, mm, s) = toGregorian dt
+
 Take apart a UTCTime into pieces and parts.
   
 > toGregorian'    :: DateTime -> (Int, Int, Int)

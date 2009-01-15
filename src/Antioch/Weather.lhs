@@ -26,8 +26,8 @@
 >   , minTSysPrime    :: Frequency -> Radians -> IO (Maybe Float)
 >   }
 
-> getWeather     :: Maybe DateTime -> IO Weather
-> getWeather now = bracketOnError connect disconnect $ \conn' -> do
+> getWeather      :: Maybe DateTime -> IO Weather
+> getWeather now  = bracketOnError connect disconnect $ \conn' -> do
 >     now'  <- maybe getCurrentTime return now
 >     conn' <- connect
 >     conn  <- newIORef conn'
@@ -40,6 +40,12 @@
 >       , minOpacity      = getMinOpacity conn
 >       , minTSysPrime    = getMinTSysPrime conn
 >       }
+
+Used for test to ensure the year is always 2006.
+
+> getWeather'     :: DateTime -> IO Weather
+> getWeather' now = do
+>   getWeather $ Just (replaceYear 2006 now)
 
 > pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
 > pin now f target = f (forecastType target now) target

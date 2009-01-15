@@ -1,9 +1,13 @@
 > module Antioch.Reports where
 
-> import Antioch.Types
-> import Antioch.Statistics
-> import Antioch.Plots
+> import Antioch.DateTime
 > import Antioch.Generators (genSessions, genPeriods)
+> import Antioch.Plots
+> import Antioch.Score
+> import Antioch.Statistics
+> import Antioch.Types
+> import Antioch.Weather (getWeather')
+
 > import System.Random
 > import Test.QuickCheck
 
@@ -12,7 +16,7 @@
 >     g <- getStdGen
 >     let sessions = generate 0 g $ genSessions 100
 >     let periods  = generate 0 g $ genPeriods 100
-> --    putStrLn . show $ map startTime periods
+> --    putStrLn . show  $ map (toSqlString . startTime) periods
 >     plot sessions periods
 
 scatter plots ********************************************
@@ -38,7 +42,14 @@ simSatisfyFreq (error bars)
 scatter plots (crosses) ***********************************
 simEffElev
 
-> historicalObsEff ps = sequence [randomRIO (0.0, 1.0) | _ <- ps]
+> getEfficiency p = do
+>   w <- getWeather' $ startTime p
+>   result <- runScoring w [] (efficiency (startTime p) (session p))
+>   case result of
+>       Nothing     -> return 0.0
+>       Just result -> return result
+
+> historicalObsEff = mapM getEfficiency
 
 > plotEffElev' _ ps = do
 >   effs <- historicalObsEff ps
