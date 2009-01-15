@@ -24,7 +24,7 @@
 >   , test_zenithAngleLimit
 >   ]
 
-> benchMark = do
+> benchmark = do
 >     start <- getCurrentTime
 >     runTestTT tests
 >     stop <- getCurrentTime

@@ -36,6 +36,11 @@ Defined here so that users don't need to know about Data.Time.Clock.
 > getCurrentTime :: IO DateTime
 > getCurrentTime = fmap toSeconds Clock.getCurrentTime
 
+> secondsToMJD   :: Int -> Float
+> secondsToMJD s = 40587.0 + (fromIntegral s / 86400.0)
+
+> prop_secondsToMJD = invariant $ fromMJD' . secondsToMJD . toSeconds
+
 Conversion back and forth between UTCTime and MJD.
 
 > toMJD :: UTCTime -> Rational
@@ -66,6 +71,11 @@ interest internally.
 > fromUniversalTime = localTimeToUTC utc . ut1ToLocalTime 0
 
 > prop_Universal = invariant $ fromUniversalTime . toUniversalTime
+
+> replaceYear :: Int -> DateTime -> DateTime
+> replaceYear yyyy dt = fromGregorian yyyy m d h mm s
+>    where
+>      (_, m, d, h, mm, s) = toGregorian dt
 
 Take apart a UTCTime into pieces and parts.
   

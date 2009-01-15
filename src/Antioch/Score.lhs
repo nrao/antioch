@@ -88,7 +88,7 @@ Ranking System from Memo 5.2, Section 3
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
 
 > zenithAngleHA          :: Session -> Radians -> Radians
-> zenithAngleHA Session { dec = dec' } ha =
+> zenithAngleHA Open { dec = dec' } ha =
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
 
@@ -208,7 +208,7 @@ Translates the total/used times pairs into pressure factors.
 3.4 Performance Limits
 
 > minObservingEff :: Session -> Float
-> minObservingEff Session { frequency = freq } =
+> minObservingEff Open { frequency = freq } =
 >     -- Equation 23
 >     avgEff - 0.02 - 0.1*(1 - avgEff)
 >   where
@@ -281,7 +281,7 @@ Translates the total/used times pairs into pressure factors.
 >         GradeC -> 0.1
 
 > receiver                                  :: ScoreFunc
-> receiver dt Session { receivers = rcvrs } = do
+> receiver dt Open { receivers = rcvrs } = do
 >     scheduled <- fmap (getReceivers dt) receiverSchedule
 >     boolean "receiver" . Just $ all (`elem` scheduled) rcvrs
 

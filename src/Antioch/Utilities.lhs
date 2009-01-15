@@ -5,9 +5,9 @@
 > import qualified Antioch.SLALib as SLA
 
 > gbtLat, gbtLong, gbtAlt :: Float
-> gbtLat  = 0.67078465065073467
-> gbtLong = -79.839839722222223
-> gbtAlt  = 855.0
+> gbtLat  = 0.67078465065073467 -- radians
+> gbtLong = -79.839839722222223 -- degrees
+> gbtAlt  = 855.0               -- meters
 
 > deg2rad :: Float -> Float
 > deg2rad deg = deg * pi / 180.0
@@ -26,6 +26,6 @@
 
 > utc2lstHours    :: DateTime -> Float
 > utc2lstHours dt = let
->     gmst = rad2deg . SLA.gmst . toMJD' . fromSeconds $ dt
+>     gmst = rad2deg . SLA.gmst . secondsToMJD $ dt
 >     gbls = deg2hrs $ gmst + gbtLong
 >     in if gbls < 0.0 then gbls + 24.0 else gbls
