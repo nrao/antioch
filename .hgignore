@@ -2,7 +2,10 @@ syntax: glob
 
 #*
 *~
+*.hi
+*.o
 *.orig
+*.prof
 *.swp
 
 dist/
