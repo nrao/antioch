@@ -30,7 +30,7 @@
 >               | Holography
 >               deriving (Eq, Show)
 
-> data Grade = GradeA | GradeB | GradeC deriving (Eq, Show)
+> data Grade = GradeA | GradeB | GradeC deriving (Eq, Show, Read)
 > data Band = L | S | C | X | U | K | A | Q
 >           deriving (Enum, Eq, Ix, Ord, Read, Show)
 
@@ -70,7 +70,8 @@ Tying the knot.
 > updateSession s ps = makeSession s $ periods s ++ ps
 
 > data Project = Project {
->     pName     :: String
+>     pId       :: Int
+>   , pName     :: String
 >   , semester  :: String
 >   , sessions  :: [Session]
 >   , thesis    :: Bool
@@ -122,7 +123,8 @@ Tying the knot.
 >   }
 
 > defaultProject = Project {
->     pName     = ""
+>     pId       = 0
+>   , pName     = ""
 >   , semester  = ""
 >   , sessions  = [defaultSession]
 >   , thesis    = False
