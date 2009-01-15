@@ -34,6 +34,10 @@
 > data Band = L | S | C | X | U | K | A | Q
 >           deriving (Enum, Eq, Ix, Ord, Read, Show)
 
+TBF: Initially, Open, Fixed, and Windowed all share the same contents.
+Ideally, we need to evolve these as we go and add new items and remove
+useless items.
+
 > data Session = Open {
 >     sId         :: Int
 >   , sName       :: String
