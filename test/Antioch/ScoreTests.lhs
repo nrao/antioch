@@ -68,10 +68,10 @@
 
 > test_efficiency = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     Just result <- runScoring w [] (efficiency dtLP sessLP)
->     assertAlmostEqual "test_efficiency" 5 0.71758 result
->     Just result <- runScoring w [] (efficiencyHA dtLP sessLP)
->     assertAlmostEqual "test_efficiencyHA" 5 0.72540 result
+>     Just result <- runScoring w [] (efficiency dtLP sessLP) -- returns .7172314
+>     assertAlmostEqual "test_efficiency" 5 0.98215 result -- python returns .98215
+>     Just result <- runScoring w [] (efficiencyHA dtLP sessLP) -- returns .7252638
+>     assertAlmostEqual "test_efficiencyHA" 5 0.72034 result -- python returns .72034
 
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
@@ -84,7 +84,7 @@
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     Just result <- runScoring w [] (kineticTemperature dtLP sessLP)
->     assertAlmostEqual "test_kineticTemperature" 3 257.546 result
+>     assertEqual "test_kineticTemperature" 257.498 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0

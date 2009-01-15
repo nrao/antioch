@@ -29,7 +29,7 @@ Generate a random project name: 'A' .. 'Z'
 TBF: Currently, the idea of semester is very limited.
 
 > genSemesterName :: Gen String
-> genSemesterName = elements ["07C", "08A", "08B", "08C"]
+> genSemesterName = elements ["06C", "06A", "06B", "06C"]
 
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
@@ -69,6 +69,8 @@ a project has between 1 and 5 Sessions.
 > prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
 > prop_timeTotal p = (1*2*60) <= timeTotal p && timeTotal p <= (5*30*60)
 
+> prop_timeTotalQuarter p = timeTotal p `mod` 15 == 0
+
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
 > prop_projectPeriods p = let n = sum [ (length . periods $ s) | s <- sessions p] in 0 <= n && n <= 5*3
@@ -103,13 +105,18 @@ Generates RA and Dec based on skyType:
 >     dec <- fmap asin . choose $ (sin . deg2rad $ -35.0, sin . deg2rad $ 90.0)
 >     return (ra, dec)
 
+> round2quarter :: Minutes -> Minutes
+> round2quarter m = m - (m `mod` 15)
+
 TBF: how to link these to generated Projects? 
 
 > genSession :: Gen Session
 > genSession = do
 >     project    <- genProject
 >     t          <- genSemester
->     b          <- genBand t 
+>     b          <- genBand t
+>     let r      = band2Receiver b
+>     g          <- genGrade [GradeA, GradeA, GradeB, GradeC, GradeC]
 >     f          <- genFreq b
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -123,10 +130,12 @@ TBF: how to link these to generated Projects?
 >                , frequency      = f
 >                , ra             = ra
 >                , dec            = dec
->                , minDuration    = minD
->                , maxDuration    = maxD
->                , totalTime      = totalTime
+>                , minDuration    = round2quarter minD
+>                , maxDuration    = round2quarter maxD
+>                , totalTime      = round2quarter totalTime
 >                , totalUsed      = 0
+>                , grade          = g
+>                , receivers      = [r]
 >                }
 
 
@@ -142,11 +151,20 @@ TBF: how to link these to generated Projects?
 >     ss <- genSessions n
 >     return $ [s] ++ ss
 
+> prop_Grade s = grade s `elem` [GradeA, GradeB, GradeC]
+> prop_Receiver s = head (receivers s) == band2Receiver (band s)
+
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
 
 Make sure that the total time used up by the periods is correct:
 
-> prop_totalUsed s = 0 <= totalUsed s && totalUsed s <= (3*10*60)
+> prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
+> prop_totalTime s          = (2*60) <= totalTime s && totalTime s <= (30*60)
+> prop_totalTimeQuarter s   = totalTime s `mod` 15 == 0
+> prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (4*60)
+> prop_minDurationQuarter s = minDuration s `mod` 15 == 0
+> prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)
+> prop_maxDurationQuarter s = maxDuration s `mod` 15 == 0
 
 > prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
 
@@ -219,6 +237,22 @@ U      90     5.9%     3.5   3
 K     230    15.1%     9.1   6
 A      60     3.9%     2.3   6
 Q      80     5.3%     3.2   6
+
+> genGrade    :: [Grade] -> Gen Grade
+> genGrade gs = elements gs
+
+> band2Receiver :: Band -> Receiver
+> band2Receiver L = Rcvr1_2
+> band2Receiver S = Rcvr2_3
+> band2Receiver C = Rcvr4_6
+> band2Receiver X = Rcvr8_10
+> band2Receiver U = Rcvr12_18
+> band2Receiver K = Rcvr18_22 -- Need Rcvr22_26
+> band2Receiver A = Rcvr26_40
+> band2Receiver Q = Rcvr40_52
+
+
+
 
 > genBand     :: Int -> Gen Band
 > genBand sem = fmap (read . str) . elements $ bands !! sem
