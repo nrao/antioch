@@ -29,7 +29,7 @@ Generate a random project name: 'A' .. 'Z'
 TBF: Currently, the idea of semester is very limited.
 
 > genSemesterName :: Gen String
-> genSemesterName = elements ["07C", "08A", "08B", "08C"]
+> genSemesterName = elements ["06C", "06A", "06B", "06C"]
 
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
