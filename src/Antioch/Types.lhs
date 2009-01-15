@@ -34,7 +34,47 @@
 > data Band = L | S | C | X | U | K | A | Q
 >           deriving (Enum, Eq, Ix, Ord, Read, Show)
 
-> data Session = Session {
+> data Session = Open {
+>     sId         :: Int
+>   , sName       :: String
+>   , project     :: Project
+>   , periods     :: [Period]
+>   , totalTime   :: Minutes
+>   , totalUsed   :: Minutes
+>   , minDuration :: Minutes
+>   , maxDuration :: Minutes
+>   , timeBetween :: Minutes
+>   , frequency   :: Float
+>   , ra          :: Radians
+>   , dec         :: Radians
+>   , backup      :: Bool
+>   , receivers   :: [Receiver]
+>   , enabled     :: Bool
+>   , authorized  :: Bool
+>   , grade       :: Grade
+>   , band        :: Band
+>   }
+>              | Fixed {
+>     sId         :: Int
+>   , sName       :: String
+>   , project     :: Project
+>   , periods     :: [Period]
+>   , totalTime   :: Minutes
+>   , totalUsed   :: Minutes
+>   , minDuration :: Minutes
+>   , maxDuration :: Minutes
+>   , timeBetween :: Minutes
+>   , frequency   :: Float
+>   , ra          :: Radians
+>   , dec         :: Radians
+>   , backup      :: Bool
+>   , receivers   :: [Receiver]
+>   , enabled     :: Bool
+>   , authorized  :: Bool
+>   , grade       :: Grade
+>   , band        :: Band
+>   }
+>              | Windowed {
 >     sId         :: Int
 >   , sName       :: String
 >   , project     :: Project
@@ -101,7 +141,7 @@ Tying the knot.
 > instance Ord Period where
 >     (<) = (<) `on` startTime
 
-> defaultSession = Session {
+> defaultSession = Open {
 >     sId         = 0
 >   , sName       = ""
 >   , project     = defaultProject 
