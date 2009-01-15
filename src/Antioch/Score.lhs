@@ -8,8 +8,9 @@
 > import Control.Monad.Identity
 > import Control.Monad.Reader
 > import Data.Array
-> import Data.Array.IArray (amap)
+> import Data.Array.IArray  (amap)
 > import Data.Array.ST
+> import Data.Foldable      (foldr')
 > import Data.List
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
@@ -361,7 +362,7 @@ Provides a means of scoring a session on subsets of the factors.
 Need to translate a session's factors into the final product score.
 
 > eval :: Factors -> Score
-> eval = foldr step 1.0
+> eval = foldr' step 1.0
 >   where
 >     step (_, Nothing) s = 0.0
 >     step (_, Just f)  s
