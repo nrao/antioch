@@ -5,17 +5,18 @@
 > import Antioch.Schedule
 > import Antioch.Score     (ReceiverSchedule, genScore, runScoring)
 > import Antioch.Types
-> import Antioch.Weather   (getWeather)
+> import Antioch.Weather   (Weather(..), getWeather)
 > import Data.List         (find, partition)
 > import System.CPUTime
 
 > simulate06 :: Strategy -> IO [Period]
 > simulate06 sched = do
->     ps <- generateVec 10
+>     w <- getWeather Nothing
+>     ps <- generateVec 1000
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
 >     print $ length ss
 >     start <- getCPUTime
->     result <- simulate sched rs dt dur int history ss
+>     result <- simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime
 >     putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     return result
@@ -26,14 +27,14 @@
 >     int = 60 * 24 * 2
 >     history = []
   
-> simulate :: Strategy -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
-> simulate sched rs dt dur int history sessions
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
+> simulate sched w rs dt dur int history sessions
 >     | dur < int  = return []
 >     | otherwise  = do
->         w <- getWeather $ Just (negate hint `addMinutes'` dt)
->         periods <- runScoring w rs $ sched sf start int' history sessions
+>         w' <- newWeather w $ Just (negate hint `addMinutes'` dt)
+>         periods <- runScoring w' rs $ sched sf start int' history sessions
 >         let sessions' = updateSessions sessions periods
->         result <- simulate sched rs (hint `addMinutes'` dt) (dur - hint) int (reverse periods ++ history) sessions'
+>         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse periods ++ history) sessions'
 >         return $ periods ++ result
 >   where
 >     sf    = genScore sessions
