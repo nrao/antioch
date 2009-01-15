@@ -11,6 +11,8 @@
 > import Data.Array.IArray (amap)
 > import Data.Array.ST
 > import Data.List
+> import Test.QuickCheck hiding (frequency)
+> import System.IO.Unsafe (unsafePerformIO)
 
 Ranking System from Memo 5.2, Section 3
 
@@ -36,7 +38,8 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
->     elevation = pi/2 - zat
+>     -- gaurd against Weather server returning nothing for el's < 5.0.
+>     elevation = max (deg2rad 5.0) (pi/2 - za)
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
@@ -50,7 +53,7 @@ Ranking System from Memo 5.2, Section 3
 
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
->     case dropWhile (\(x, _) -> x < freq) freqBand of
+>     case dropWhile (\(x, _) -> x <= freq) freqBand of
 >         (x : _) -> snd x
 >         []      -> 60.0
 >   where 
@@ -386,3 +389,22 @@ Need to translate a session's factors into the final product score.
 Convenience function for translating go/no-go into a factor.
 
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
+
+Quick Check properties:
+
+> prop_efficiency = forAll genProject $ \p ->
+>   -- TBF: can't do this right now because getWeather is creating too
+>   -- many connections to the DB.  So just test the first session's 
+>   -- efficiency for now.  Lazy evaluation avoids so many 
+>   -- calls to calcEfficiency?
+>   --  let es = map calcEfficiency (sessions $ p) in normalized es 
+>   let es = map calcEff (sessions $ p) in 0.0 <= (head es) && (head es) <= 1.0 
+>   where
+>     calcEff s = unsafePerformIO  $ do
+>       w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>       let dt = fromGregorian 2006 10 15 12 0 0
+>       Just result <- runScoring w [] (efficiency dt s)
+>       return $ result
+>     normalized xs = dropWhile normal xs == []
+>       where
+>         normal x = 0.0 <= x && x <= 1.0
