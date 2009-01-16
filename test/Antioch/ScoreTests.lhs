@@ -7,6 +7,7 @@
 > import Antioch.Utilities
 > import Test.HUnit
 > import Data.List (zipWith4, zipWith5)
+> import Data.Maybe (isJust)
 
 > tests = TestList [
 >     test_hourAngleLimit
@@ -44,23 +45,23 @@
 
 > test_frequencyPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_frequencyPressure" 5 1.35154 (freqPressure dt . head $ pSessions)
+>     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure dt . head $ pSessions)
 >   where
 >     freqPressure = genFrequencyPressure pSessions
 
 > test_rightAscensionPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_rightAscensionPressure" 5 1.19812 (raPressure dt . head $ pSessions)
+>     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure dt . head $ pSessions)
 >   where
 >     raPressure = genRightAscensionPressure pSessions
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
->     assertScoringResult' "test_receiver" 0.0 (receiver dt sessLP)
+>     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sessLP)
 >     let dt = fromGregorian 2006 6 25 12 0 0
->     assertScoringResult' "test_receiver" 1.0 (receiver dt sessLP)
+>     assertScoringResult' "test_receiver" Nothing 1.0 (receiver dt sessLP)
 >     let dt = fromGregorian 2006 8 1 12 0 0
->     assertScoringResult' "test_receiver" 0.0 (receiver dt sessAS)
+>     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sessAS)
 
 > test_getReceivers = TestCase $ do
 >     assertEqual "test_getReceivers" [Rcvr4_6, Rcvr12_18] result
@@ -150,14 +151,15 @@
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     Just result <- runScoring w [] (kineticTemperature dtLP sessLP)
 >     assertEqual "test_kineticTemperature" 257.498 result
+>     --assertScoringResult' "test_kineticTemperature" Nothing 257.498 (kineticTemperature dtLP sessLP) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     Just result <- runScoring w [] (kineticTemperature dt sessBug2)
 >     assertEqual "test_kineticTemperature" 256.982 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
->     assertScoringResult "test_stringency" 5 1.40086 (stringency dt sessLP)
->     assertScoringResult "test_stringency" 5 1.03437 (stringency dt sessAS)
+>     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sessLP)
+>     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sessAS)
 
 > test_projectCompletion = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0 -- don't need!
@@ -190,17 +192,24 @@ TBF are these partitions stil useful?
 
 > test_trackingEfficiency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency" 4 0.99764 (trackingEfficiency dt sessLP)
+>     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sessLP)
 
 TBF: this unit test fails because 'wind w dt' fails
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult' "test_trackingErrorLimit" 1.0 (trackingErrorLimit dt sessLP)
+>     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sessLP)
 
 > test_zenithAngleLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 0 0 0
->     assertScoringResult' "test_zenithAngleLimit" 0.0 (zenithAngleLimit dt sessLP)
+>     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sessLP)
+
+> test_surfaceObservingEfficiency = TestCase $ do
+>     let dt  = fromGregorian 2006 4 15 16 0 0
+>     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
+>     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
+>     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
+
 
 Test utilities
 
@@ -210,20 +219,23 @@ Test utilities
 >   where
 >     epsilon = 1.0 / 10.0 ** fromIntegral places
 
-> assertScoringResult :: String -> Int -> Float -> Scoring Factors -> IO ()
-> assertScoringResult name digits expected scoref = do
->     w <- getTestWeather
+> assertScoringResult :: String -> Maybe DateTime -> Int -> Float -> Scoring Factors -> IO ()
+> -- assertScoringResult :: String -> Int -> Float -> Scoring Factors -> IO ()
+> assertScoringResult name dt  digits expected scoref = do
+>     w <- getTestWeather dt --Nothing 
 >     [(_, Just result)] <- runScoring w rSched scoref
 >     assertAlmostEqual name digits expected result
 
-> assertScoringResult' :: String -> Float -> Scoring Factors -> IO ()
-> assertScoringResult' name expected scoref = do
->     w <- getTestWeather
+> assertScoringResult' :: String -> Maybe DateTime -> Float -> Scoring Factors -> IO ()
+> --assertScoringResult' :: String -> Float -> Scoring Factors -> IO ()
+> assertScoringResult' name dt expected scoref = do
+>     w <- getTestWeather dt --Nothing
 >     [(_, Just result)] <- runScoring w rSched scoref
 >     assertEqual name expected result
 
-> getTestWeather :: IO Weather
-> getTestWeather = getWeather . Just $ fromGregorian 2006 10 13 22 0 0
+> getTestWeather :: Maybe DateTime -> IO Weather
+> getTestWeather dt | isJust dt == False = getWeather . Just $ fromGregorian 2006 10 13 22 0 0
+>                   | isJust dt = getWeather dt
 
 Test data generation
 
