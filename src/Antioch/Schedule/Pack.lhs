@@ -28,7 +28,7 @@ to generate `items` for input to the `packWorker` function.
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > pack sf dt dur periods sessions = do
 >     items <- mapM (toItem sf mask) sessions
->     return . map (toPeriod dt) . packWorker sched $ items
+>     return $! map (toPeriod dt) . packWorker sched $ items
 >   where
 >     dts   = scanl (flip addMinutes') dt [stepSize * m | m <- [0 .. numSteps dur]]
 >     sched = toSchedule dts . sort $ periods
@@ -57,7 +57,8 @@ Convert an open session `s` into a schedulable item by scoring it with
 > toItem          :: ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
 > toItem sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
->     return $ Item {
+>     let force = if sum scores >= 0.0 then True else False
+>     return $! force `seq` Item {
 >         iId      = s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps . maxDuration $ s
@@ -79,10 +80,10 @@ Candidates, importantly, don't care what unit of time we're working
 with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
->     cId       :: a
->   , cStart    :: Int
->   , cDuration :: Int
->   , cScore    :: Score
+>     cId       :: !a
+>   , cStart    :: !Int
+>   , cDuration :: !Int
+>   , cScore    :: !Score
 >   } deriving (Eq, Show)
 
 > defaultCandidate = Candidate {
@@ -110,11 +111,11 @@ list.
 >         rest = drop (cDuration x - 1) xs
 
 > data Item a = Item {
->     iId      :: a
->   , iMinDur  :: Int
->   , iMaxDur  :: Int
->   , iFuture  :: [Score]
->   , iPast    :: [Score]
+>     iId      :: !a
+>   , iMinDur  :: !Int
+>   , iMaxDur  :: !Int
+>   , iFuture  :: ![Score]
+>   , iPast    :: ![Score]
 >   }
 
 Generate a series of candidates representing the possibilities for
@@ -151,11 +152,12 @@ block that we know we won't be scheduling across.
 > packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
 > packWorker' []                 past _        = past
 > packWorker' (Just b  : future) past sessions =
->     packWorker' future (Just b:past) . map (step . forget) $ sessions
+>     packWorker' future (Just b:past) $! map (step . forget) sessions
 > packWorker' (Nothing : future) past sessions =
->     packWorker' future (b:past) . map step $ sessions
+>     f `seq` packWorker' future (b:past) $! map step sessions
 >   where
 >     b = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions
+>     f = if maybe 0.0 cScore b >= 0.0 then True else False
 
 Find the best of a collection of candidates.
 
@@ -176,4 +178,4 @@ Add a candidate to a historical value to produce a new candidate.
 > madd                     :: Maybe (Candidate a) -> Maybe (Candidate a) -> Maybe (Candidate a)
 > madd Nothing   _         = Nothing
 > madd c1        Nothing   = c1
-> madd (Just c1) (Just c2) = Just $ c1 { cScore = cScore c1 + cScore c2 }
+> madd (Just c1) (Just c2) = Just $! c1 { cScore = cScore c1 + cScore c2 }
