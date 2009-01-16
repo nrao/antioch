@@ -329,7 +329,7 @@ A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
 
-> runScoring     :: Weather -> ReceiverSchedule -> Scoring t -> IO t
+> runScoring        :: Weather -> ReceiverSchedule -> Scoring t -> IO t
 > runScoring w rs f = runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows
