@@ -92,7 +92,7 @@ Tying the knot.
 >     session   :: Session
 >   , startTime :: DateTime
 >   , duration  :: Minutes
->   , pScore    :: Score
+>   , pScore    :: Score  -- Average forecasted score
 >   } deriving Eq
 
 > instance Show Period where
