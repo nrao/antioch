@@ -10,19 +10,25 @@
 > import Data.Maybe (isJust)
 
 > tests = TestList [
->     test_hourAngleLimit
->   , test_rightAscensionPressure
+>     test_efficiency
 >   , test_frequencyPressure
->   , test_efficiency
->   , test_zenithOpticalDepth
->   , test_receiverTemperature
+>   , test_getReceivers
+>   , test_hourAngleLimit
 >   , test_kineticTemperature
+>   , test_minTsysPrime
 >   , test_projectCompletion
->   , test_stringency
 >   , test_politicalFactors
+>   , test_receiver
+>   , test_receiverTemperature
+>   , test_rightAscensionPressure
+>   , test_stringency
+>   , test_surfaceObservingEfficiency
 >   , test_trackingEfficiency
 >   , test_trackingErrorLimit
+>   , test_zenithAngle
+>   , test_zenithAngleAtTransit
 >   , test_zenithAngleLimit
+>   , test_zenithOpticalDepth
 >   ]
 
 > benchmark = do
@@ -104,42 +110,23 @@
 >        dt = fromGregorian 2006 10 15 12 0 0
 
 > test_efficiency = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     -- sessLP
->     Just result <- runScoring w [] (efficiency dt sessLP) 
->     assertAlmostEqual "test_efficiency" 2 0.98215 result
->     Just result <- runScoring w [] (efficiencyHA dt sessLP)
->     assertAlmostEqual "test_efficiencyHA" 2 0.72034 result
->     -- sessWV
->     Just result <- runScoring w [] (efficiency dt sessWV) 
->     assertAlmostEqual "test_efficiency" 2 0.89721 result 
->     Just result <- runScoring w [] (efficiencyHA dt sessWV) 
->     assertAlmostEqual "test_efficiencyHA" 2 0.70341 result 
->     -- sessAS
->     Just result <- runScoring w [] (efficiency dt sessAS) 
->     assertAlmostEqual "test_efficiency" 2 0.9614 result
->     Just result <- runScoring w [] (efficiencyHA dt sessAS)
->     assertAlmostEqual "test_efficiencyHA" 2 0.4548 result
->     -- sessBug
->     Just result <- runScoring w [] (efficiency dt sessBug) 
->     assertAlmostEqual "test_efficiency" 2 0.93555 result
->     -- sessBug2
->     Just result <- runScoring w [] (efficiency dt sessBug2) 
->     assertAlmostEqual "test_efficiency" 4 0.95340 result
+>     assertResult "test_efficiency" (Just wdt) 2 0.98215 (efficiency dt sessLP)  
+>     assertResult "test_efficiencyHA" (Just wdt) 2 0.72034 (efficiencyHA dt sessLP) 
+>     assertResult "test_efficiency" (Just wdt) 2 0.89721 (efficiency dt sessWV) 
+>     assertResult "test_efficiencyHA" (Just wdt) 2 0.70341 (efficiencyHA dt sessWV) 
+>     assertResult "test_efficiency" (Just wdt) 2 0.9614 (efficiency dt sessAS) 
+>     assertResult "test_efficiencyHA" (Just wdt) 2 0.4548 (efficiencyHA dt sessAS)
+>     assertResult "test_efficiency" (Just wdt) 2 0.93555 (efficiency dt sessBug)
+>     assertResult "test_efficiency" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
 
->     -- sessLP
 > test_zenithOpticalDepth = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     -- sessLP
->     Just result <- runScoring w [] (zenithOpticalDepth dtLP sessLP)
->     assertAlmostEqual "test_zenithOpticalDepth" 5 0.00798 result
->     -- sessBug
+>     let wdt = fromGregorian 2006 10 14 9 15 0
+>     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.00798 (zenithOpticalDepth dtLP sessLP)
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     Just result <- runScoring w [] (zenithOpticalDepth dt sessBug)
->     assertAlmostEqual "test_zenithOpticalDepth" 5 0.0661772 result
->     Just result <- runScoring w [] (zenithOpticalDepth dt sessBug2)
->     assertAlmostEqual "test_zenithOpticalDepth" 5 0.007394265 result
+>     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.0661772 (zenithOpticalDepth dt sessBug)
+>     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.007394265 (zenithOpticalDepth dt sessBug2)
 
 > test_receiverTemperature = TestCase $ do
 >     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sessLP
@@ -148,13 +135,10 @@
 >     assertEqual "test_receiverTemperature" 10.0 $ receiverTemperature dt sessBug2
 
 > test_kineticTemperature = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
->     Just result <- runScoring w [] (kineticTemperature dtLP sessLP)
->     assertEqual "test_kineticTemperature" 257.498 result
->     --assertScoringResult' "test_kineticTemperature" Nothing 257.498 (kineticTemperature dtLP sessLP) 
+>     let wdt = fromGregorian 2006 10 14 9 15 0
+>     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.498 (kineticTemperature dtLP sessLP) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     Just result <- runScoring w [] (kineticTemperature dt sessBug2)
->     assertEqual "test_kineticTemperature" 256.982 result
+>     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.982 (kineticTemperature dt sessBug2) 
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
@@ -162,13 +146,11 @@
 >     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sessAS)
 
 > test_projectCompletion = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0 -- don't need!
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
 >     let p = defaultProject {timeLeft=28740, timeTotal=33812}
 >     let s = sessLP {project = p}
->     [(_, Just result)] <- runScoring w [] (projectCompletion dt s)
->     assertAlmostEqual "test_projectCompletion" 3 1.015 result
+>     assertScoringResult "test_projectCompletion" Nothing 3 1.015 (projectCompletion dt s)
 
 TBF are these partitions stil useful?
 
@@ -183,10 +165,11 @@ TBF are these partitions stil useful?
 >                           , thesisProject
 >                           , projectCompletion]
 >     fs <- runScoring w [] (politicalFactors dt s)
->     -- TBF: check individual results as well
+>     -- TBF: how to check individual results as well?
 >     -- let expFs = [("scienceGrade", Just 1.0)
->     --           , ("thesisProject", Just 1.0)
->     --           , ("projectCompletion", Just 1.0)]
+>     --          , ("thesisProject", Just 1.0)
+>     --          , ("projectCompletion", Just 1.015)]
+>     -- assertEqual "test_politicalFactors" expFs fs
 >     let result = eval fs
 >     assertAlmostEqual "test_politicalFactors" 3 1.015 result
 
@@ -208,7 +191,6 @@ TBF are these partitions stil useful?
 >     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
 >     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
 
-
 Test utilities
 
 > assertAlmostEqual :: String -> Int -> Float -> Float -> IO ()
@@ -218,18 +200,29 @@ Test utilities
 >     epsilon = 1.0 / 10.0 ** fromIntegral places
 
 > assertScoringResult :: String -> Maybe DateTime -> Int -> Float -> Scoring Factors -> IO ()
-> -- assertScoringResult :: String -> Int -> Float -> Scoring Factors -> IO ()
 > assertScoringResult name dt  digits expected scoref = do
->     w <- getTestWeather dt --Nothing 
+>     w <- getTestWeather dt  
 >     [(_, Just result)] <- runScoring w rSched scoref
 >     assertAlmostEqual name digits expected result
 
 > assertScoringResult' :: String -> Maybe DateTime -> Float -> Scoring Factors -> IO ()
-> --assertScoringResult' :: String -> Float -> Scoring Factors -> IO ()
 > assertScoringResult' name dt expected scoref = do
->     w <- getTestWeather dt --Nothing
+>     w <- getTestWeather dt 
 >     [(_, Just result)] <- runScoring w rSched scoref
 >     assertEqual name expected result
+
+> assertResult :: String -> Maybe DateTime -> Int -> Float -> Scoring (Maybe Float) -> IO ()
+> assertResult name dt digits expected scoref = do
+>     w <- getTestWeather dt
+>     Just result <- runScoring w rSched scoref
+>     assertAlmostEqual name digits expected result
+
+> assertResult' :: String -> Maybe DateTime -> Float -> Scoring (Maybe Float) -> IO ()
+> assertResult' name dt expected scoref = do
+>     w <- getTestWeather dt
+>     Just result <- runScoring w rSched scoref
+>     assertEqual name expected result
+
 
 > getTestWeather :: Maybe DateTime -> IO Weather
 > getTestWeather dt | isJust dt == False = getWeather . Just $ fromGregorian 2006 10 13 22 0 0
