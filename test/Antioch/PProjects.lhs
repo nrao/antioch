@@ -7,15 +7,19 @@
 > import Antioch.DateTime
 > import Antioch.Utilities
 
+> pTestProjects :: [Project]
+> pTestProjects = [project1, project2]
+
 > project1' = defaultProject {
->     pName = "TestDB"
+>     pId = 1
+>   , pName = "TestDB"
 >   , semester = "06C"
 >   , timeLeft = 28740
 >   , timeTotal = 33812
 > }
 
 > p1sessions'' = [
->     defaultSession {
+>     defaultOpen {
 >         sId = 1
 >       , sName = "GB"
 >       , periods = []
@@ -29,7 +33,7 @@
 >       , band = A
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 2
 >       , sName = "CV"
 >       , periods = []
@@ -43,7 +47,7 @@
 >       , band = C
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 3
 >       , sName = "LP"
 >       , periods = [
@@ -61,7 +65,7 @@
 >       , band = A
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 4
 >       , sName = "TX"
 >       , totalTime = 40*60
@@ -74,7 +78,7 @@
 >       , band = K
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 5
 >       , sName = "VA"
 >       , totalTime = 30*60
@@ -87,7 +91,7 @@
 >       , band = K
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 6
 >       , sName = "WV"
 >       , totalTime = 120*60
@@ -100,7 +104,7 @@
 >       , band = A
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 7
 >       , sName = "AS"
 >       , totalTime = 40*60
@@ -113,7 +117,7 @@
 >       , band = L
 >       }
 >
->   , defaultSession {
+>   , defaultOpen {
 >         sId = 8
 >       , sName = "MH"
 >       , periods = [
@@ -137,7 +141,7 @@
 >       , band = W
 >       }
 >
->   , defaultSession {
+>   , defaultFixed {
 >         sId = 9
 >       , sName = "TestFixed1"  -- no fixed yet
 >       , periods = [
@@ -156,7 +160,7 @@
 >       , band = W
 >       }
 >
->   , defaultSession {
+>   , defaultFixed {
 >         sId = 10
 >       , sName = "TestFixed2"  -- no fixed yet
 >       , periods = [
@@ -175,7 +179,7 @@
 >       , band = W
 >       }
 >
->   , defaultSession {
+>   , defaultFixed {
 >         sId = 11
 >       , sName = "TestFixed3"  -- no fixed yet
 >       , periods = [
@@ -193,9 +197,90 @@
 >       , receivers = [Rcvr_PAR]
 >       , band = W
 >       }
+>
+>   , defaultWindowed {
+>         sId = 12
+>       , sName = "TestWindowed1"
+>       , totalTime = 4*60
+>       , minDuration = 4*60
+>       , maxDuration = 4*60
+>       , frequency = 67.8
+>       , ra = hrs2rad 12.3
+>       , dec = deg2rad 10.4
+>       , receivers = [Rcvr_PAR]
+>       , band = W
+>       }
+>
+>   , defaultWindowed {
+>         sId = 13
+>       , sName = "TestWindowed2"
+>       , totalTime = 6*60
+>       , minDuration = 6*60
+>       , maxDuration = 6*60
+>       , frequency = 67.8
+>       , ra = hrs2rad 12.3
+>       , dec = deg2rad 10.4
+>       , receivers = [Rcvr_PAR]
+>       , band = W
+>       }
+>
+>   , defaultWindowed {
+>         sId = 14
+>       , sName = "TestWindowed3"
+>       , totalTime = 4*60
+>       , minDuration = 4*60
+>       , maxDuration = 4*60
+>       , frequency = 2.0
+>       , ra = hrs2rad 17.3
+>       , dec = deg2rad 30.4
+>       , receivers = [Rcvr1_2]
+>       , band = L
+>       }
 >   ]
 
 > p1sessions' = [ makeSession s (periods s) | s <- p1sessions'' ]
 > project1 = makeProject project1' p1sessions'
 
-> pTestProjects = [project1]
+> project2' = defaultProject {
+>     pId = 2
+>   , pName = "TestThesis"
+>   , semester = "06C"
+>   , thesis = True
+>   , timeLeft = 14*60
+>   , timeTotal = 14*60
+> }
+
+> p2sessions'' = [
+>     defaultOpen {
+>         sId = 15
+>       , sName = "GB_thesis"
+>       , periods = []
+>       , totalTime = 80*60
+>       , minDuration = 2*60
+>       , maxDuration = 8*60
+>       , frequency = 27.5
+>       , ra = hrs2rad 6.4
+>       , dec = deg2rad 10.4
+>       , receivers = [Rcvr26_40]
+>       , grade = GradeB
+>       , band = A
+>       }
+>
+>   , defaultOpen {
+>         sId = 16
+>       , sName = "WV_thesis"
+>       , periods = []
+>       , totalTime = 120*60
+>       , minDuration = 4*60
+>       , maxDuration = 6*60
+>       , frequency = 34.9
+>       , ra = hrs2rad 4.2
+>       , dec = deg2rad 17.4
+>       , receivers = [Rcvr26_40]
+>       , grade = GradeB
+>       , band = A
+>       }
+>   ]
+
+> p2sessions' = [ makeSession s (periods s) | s <- p2sessions'' ]
+> project2 = makeProject project2' p2sessions'

@@ -166,6 +166,69 @@ Tying the knot.
 >   , band        = L
 >   }
 
+> defaultOpen = Open {
+>     sId         = 0
+>   , sName       = ""
+>   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
+>   }
+
+> defaultFixed = Fixed {
+>     sId         = 0
+>   , sName       = ""
+>   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
+>   }
+
+> defaultWindowed = Windowed {
+>     sId         = 0
+>   , sName       = ""
+>   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
+>   }
+
 > defaultProject = Project {
 >     pId       = 0
 >   , pName     = ""
