@@ -140,16 +140,19 @@ Utilities
 >     case result of
 >         Nothing     -> return 0.0
 >         Just result -> return result
+
 > historicalObsEff w = mapM (getEfficiency w)
 
+This function is only temporary until we get simulations integrated
+
 > getScore      :: ScoreFunc -> Period -> Scoring Score
-> getScore sf p = liftM eval . sf now . session $ p
+> getScore sf p = liftM eval . sf dt . session $ p
 >   where
->     now = replaceYear 2006 . startTime $ p
-  
+>     dt = replaceYear 2006 . startTime $ p
+
 > historicalObsScore w sf ps = do
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
->     runScoring w [] $ mapM (getScore sf) ps
+>     runScoring w' [] $ mapM (getScore sf) ps
 
 Testing Harness
 
