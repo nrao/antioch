@@ -9,6 +9,8 @@
 > type Score     = Float
 > type Radians   = Float
 
+> quarter = 15 :: Minutes
+
 > data Receiver = NoiseSource
 >               | Rcvr_RRI
 >               | Rcvr_342

@@ -301,7 +301,6 @@ Scoring utilities
 
 This is the environment that the Scoring Monad is carrying around
 to avoid long lists of repetitive parameters.
-Currently just the weather, but the list will grow, e.g., receiver schedules.
 
 > data ScoringEnv = ScoringEnv {
 >     envWeather    :: Weather

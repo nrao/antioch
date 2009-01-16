@@ -175,8 +175,6 @@ TBF are these partitions stil useful?
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult "test_trackingEfficiency" 4 0.99764 (trackingEfficiency dt sessLP)
 
-TBF: this unit test fails because 'wind w dt' fails
-
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult' "test_trackingErrorLimit" 1.0 (trackingErrorLimit dt sessLP)
@@ -210,34 +208,33 @@ Test utilities
 
 Test data generation
 
-Alloc #6 in beta test
+From beta tests:
+
+> sessLP = defaultSession {
+>     sId       = 3
+>   , sName     = "LP"
+>   , ra        = hrs2rad 12.3
+>   , dec       = deg2rad  5.4
+>   , frequency = 5.4
+>   , receivers = [Rcvr4_6]
+>   }
 
 > sessWV = defaultSession {
->     sName     = "WV"
+>     sId       = 6
+>   , sName     = "WV"
 >   , ra        = hrs2rad 4.2 
 >   , dec       = deg2rad 17.4
 >   , frequency = 34.9
 >   , receivers = [Rcvr26_40]
 >   }
 
-Alloc #7 in beta test
-
 > sessAS = defaultSession {
->     sName     = "AS"
+>     sId       = 7
+>   , sName     = "AS"
 >   , ra        = hrs2rad 14.3 
 >   , dec       = deg2rad 18.4
 >   , frequency = 0.5
 >   , receivers = [Rcvr_450]
->   }
-
-Alloc #3 in beta test
-
-> sessLP = defaultSession {
->     sName     = "LP"
->   , ra        = hrs2rad 12.3
->   , dec       = deg2rad  5.4
->   , frequency = 5.4
->   , receivers = [Rcvr4_6]
 >   }
 
 *Not* from the beta test code - a session that exposed a bug from the

@@ -9,17 +9,16 @@
 > import Data.List   (foldl', sort)
 > import Data.Maybe  (fromMaybe, isNothing)
 
-> stepSize = 15      :: Minutes
 > epsilon  =  1.0e-6 :: Score
 
 > numSteps :: Minutes -> Int
-> numSteps = (`div` stepSize)
+> numSteps = (`div` quarter)
 
 `Pack` is the top-level driver function.  It is primarily concerned
 with converting between our internal data structures and the external
 representation of sessions and telescope periods.  Given a start time
 `dt` and duration `dur` in minutes, `pack` first constructs a regular
-grid `dts` of datetime values `stepSize` minutes apart.  It then uses
+grid `dts` of datetime values `quarter` minutes apart.  It then uses
 the list of fixed and pre-scheduled `periods` to construct a partial
 schedule and `mask` out datetime values that can't be scheduled.  Then
 all of the open `sessions` are scored at the unmasked datetime values
@@ -30,7 +29,7 @@ to generate `items` for input to the `packWorker` function.
 >     items <- mapM (toItem sf mask) sessions
 >     return . map (toPeriod dt) . packWorker sched $ items
 >   where
->     dts   = scanl (flip addMinutes') dt [stepSize * m | m <- [0 .. numSteps dur]]
+>     dts   = scanl (flip addMinutes') dt [quarter * m | m <- [0 .. numSteps dur]]
 >     sched = toSchedule dts . sort $ periods
 >     mask  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
 
@@ -71,7 +70,7 @@ Convert candidates to telescope periods relative to a given startime.
 > toPeriod dt candidate = defaultPeriod {
 >     session   = cId candidate
 >   , startTime = cStart candidate `addMinutes'` dt
->   , duration  = stepSize * cDuration candidate
+>   , duration  = quarter * cDuration candidate
 >   , pScore    = cScore candidate
 >   }
 

@@ -15,8 +15,6 @@
 > import Data.List         (foldl')
 > import Data.Maybe        (maybe)
 
-> stepSize = 15 :: Minutes
-
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
   Always schedules a session at its minimum duration.
@@ -33,7 +31,7 @@
 >             rest <- scheduleMinDuration sf (d `addMinutes'` dt) (dur - d) (p : history) sessions
 >             return $ p : rest
 >           else do
->             scheduleMinDuration sf (stepSize `addMinutes'` dt) (dur - stepSize) history sessions
+>             scheduleMinDuration sf (quarter `addMinutes'` dt) (dur - quarter) history sessions
 >   where
 >     candidates = constrain history . filter (\s -> minDuration s <= dur) $ sessions
 
@@ -62,7 +60,7 @@ Compute the average score for a given session over an interval.
 > averageScore :: ScoreFunc -> DateTime -> Session -> Scoring Float
 > averageScore sf dt s = do
 >     score <- totalScore sf dt dur s
->     return $ score / fromIntegral (dur `div` stepSize + 1)
+>     return $ score / fromIntegral (dur `div` quarter + 1)
 >   where
 >     dur = minDuration s
 
@@ -73,7 +71,7 @@ Compute the total score for a given session over an interval.
 >     scores <- mapM (liftM eval . flip sf s) $ times
 >     return $ addScores scores
 >   where
->     times  = map (`addMinutes'` dt) [0, stepSize .. dur-1]
+>     times  = map (`addMinutes'` dt) [0, quarter .. dur-1]
 
 Add a set of scores, with the added complication that if any
 individual score is zero then the end result must also be zero.
