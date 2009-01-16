@@ -134,9 +134,9 @@ Tying the knot.
 
 > data Period  = Period  {
 >     session   :: Session
->   , startTime :: !DateTime
->   , duration  :: !Minutes
->   , pScore    :: !Score
+>   , startTime :: DateTime
+>   , duration  :: Minutes
+>   , pScore    :: Score  -- Average forecasted score
 >   } deriving Eq
 
 > instance Show Period where
