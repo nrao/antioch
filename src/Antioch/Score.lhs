@@ -395,19 +395,43 @@ Convenience function for translating go/no-go into a factor.
 
 Quick Check properties:
 
+Avoid making too many connections to the weather DB.
+
+> theWeather = getWeather Nothing
+
+Used for checking that some scoring factors are 0 <= && <= 1
+
+> normalized :: [Float] -> Bool
+> normalized xs = dropWhile normal xs == []
+>   where
+>     normal x = 0.0 <= x && x <= 1.0
+
 > prop_efficiency = forAll genProject $ \p ->
->   -- TBF: can't do this right now because getWeather is creating too
->   -- many connections to the DB.  So just test the first session's 
->   -- efficiency for now.  Lazy evaluation avoids so many 
->   -- calls to calcEfficiency?
->   --  let es = map calcEfficiency (sessions $ p) in normalized es 
->   let es = map calcEff (sessions $ p) in 0.0 <= (head es) && (head es) <= 1.0 
+>   let es = map calcEff (sessions $ p) in normalized es  
 >   where
 >     calcEff s = unsafePerformIO  $ do
->       w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>       w <- theWeather
+>       w' <- newWeather w (Just $ fromGregorian 2006 10 14 9 15 2)
 >       let dt = fromGregorian 2006 10 15 12 0 0
->       Just result <- runScoring w [] (efficiency dt s)
+>       Just result <- runScoring w' [] (efficiency dt s)
 >       return $ result
->     normalized xs = dropWhile normal xs == []
->       where
->         normal x = 0.0 <= x && x <= 1.0
+
+> prop_surfaceObservingEfficiency = forAll genProject $ \p ->
+>   let es = map calcEff (sessions $ p) in normalized es  
+>   where
+>     calcEff s = unsafePerformIO  $ do
+>       w <- theWeather
+>       w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
+>       let dt = fromGregorian 2006 4 15 16 0 0
+>       [(_, Just result)] <- runScoring w' [] (surfaceObservingEfficiency dt s)
+>       return $ result
+
+> prop_trackingEfficiency = forAll genProject $ \p ->
+>   let es = map calcEff (sessions $ p) in normalized es  
+>   where
+>     calcEff s = unsafePerformIO  $ do
+>       w <- theWeather
+>       w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
+>       let dt = fromGregorian 2006 4 15 16 0 0
+>       [(_, Just result)] <- runScoring w' [] (trackingEfficiency dt s)
+>       return $ result
