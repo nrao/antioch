@@ -297,6 +297,35 @@ Translates the total/used times pairs into pressure factors.
 
 Scoring utilities
 
+Compute the average score for a given session over an interval.
+
+> averageScore :: ScoreFunc -> DateTime -> Session -> Scoring Score
+> averageScore sf dt s = do
+>     score <- totalScore sf dt dur s
+>     return $! score / fromIntegral (dur `div` quarter + 1)
+>   where
+>     dur = minDuration s
+
+Compute the total score for a given session over an interval.
+
+> totalScore :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score
+> totalScore sf dt dur s = do
+>     scores <- mapM (liftM eval . flip sf s) $ times
+>     return $! addScores scores
+>   where
+>     times  = map (`addMinutes'` dt) [0, quarter .. dur-1]
+
+Add a set of scores, with the added complication that if any
+individual score is zero then the end result must also be zero.
+
+> addScores :: [Score] -> Score
+> addScores = maybe 0.0 id . foldr' step (Just 0.0)
+>   where
+>     step s Nothing   = Nothing
+>     step s (Just x)
+>         | s < 1.0e-6 = Nothing
+>         | otherwise  = Just $! x + s
+
 > type Factor   = (String, Maybe Score)
 > type Factors  = [Factor]
 
@@ -304,7 +333,6 @@ Scoring utilities
 
 This is the environment that the Scoring Monad is carrying around
 to avoid long lists of repetitive parameters.
-Currently just the weather, but the list will grow, e.g., receiver schedules.
 
 > data ScoringEnv = ScoringEnv {
 >     envWeather    :: Weather
@@ -331,7 +359,7 @@ A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
 
-> runScoring     :: Weather -> ReceiverSchedule -> Scoring t -> IO t
+> runScoring        :: Weather -> ReceiverSchedule -> Scoring t -> IO t
 > runScoring w rs f = runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows

@@ -9,6 +9,8 @@
 > type Score     = Float
 > type Radians   = Float
 
+> quarter = 15 :: Minutes
+
 > data Receiver = NoiseSource
 >               | Rcvr_RRI
 >               | Rcvr_342
@@ -134,9 +136,9 @@ Tying the knot.
 
 > data Period  = Period  {
 >     session   :: Session
->   , startTime :: !DateTime
->   , duration  :: !Minutes
->   , pScore    :: !Score
+>   , startTime :: DateTime
+>   , duration  :: Minutes
+>   , pScore    :: Score  -- Average forecasted score
 >   } deriving Eq
 
 > instance Show Period where
@@ -146,6 +148,69 @@ Tying the knot.
 >     (<) = (<) `on` startTime
 
 > defaultSession = Open {
+>     sId         = 0
+>   , sName       = ""
+>   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
+>   }
+
+> defaultOpen = Open {
+>     sId         = 0
+>   , sName       = ""
+>   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
+>   }
+
+> defaultFixed = Fixed {
+>     sId         = 0
+>   , sName       = ""
+>   , project     = defaultProject 
+>   , periods     = [defaultPeriod]
+>   , totalTime   = 0
+>   , totalUsed   = 0
+>   , minDuration = 0
+>   , maxDuration = 0
+>   , timeBetween = 0
+>   , frequency   = 0.0
+>   , ra          = 0.0
+>   , dec         = 0.0
+>   , backup      = False
+>   , receivers   = [Rcvr12_18]
+>   , enabled     = False
+>   , authorized  = False
+>   , grade       = GradeA
+>   , band        = L
+>   }
+
+> defaultWindowed = Windowed {
 >     sId         = 0
 >   , sName       = ""
 >   , project     = defaultProject 

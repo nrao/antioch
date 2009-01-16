@@ -29,7 +29,7 @@ Generate a random project name: 'A' .. 'Z'
 TBF: Currently, the idea of semester is very limited.
 
 > genSemesterName :: Gen String
-> genSemesterName = elements ["06C", "06A", "06B", "06C"]
+> genSemesterName = elements ["05C", "06A", "06B", "06C"]
 
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
@@ -69,7 +69,7 @@ a project has between 1 and 5 Sessions.
 > prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
 > prop_timeTotal p = (1*2*60) <= timeTotal p && timeTotal p <= (5*30*60)
 
-> prop_timeTotalQuarter p = timeTotal p `mod` 15 == 0
+> prop_timeTotalQuarter p = timeTotal p `mod` quarter == 0
 
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
@@ -106,7 +106,7 @@ Generates RA and Dec based on skyType:
 >     return (ra, dec)
 
 > round2quarter :: Minutes -> Minutes
-> round2quarter m = m - (m `mod` 15)
+> round2quarter m = m - (m `mod` quarter)
 
 TBF: how to link these to generated Projects? 
 
@@ -160,11 +160,11 @@ Make sure that the total time used up by the periods is correct:
 
 > prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 > prop_totalTime s          = (2*60) <= totalTime s && totalTime s <= (30*60)
-> prop_totalTimeQuarter s   = totalTime s `mod` 15 == 0
+> prop_totalTimeQuarter s   = totalTime s `mod` quarter == 0
 > prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (4*60)
-> prop_minDurationQuarter s = minDuration s `mod` 15 == 0
+> prop_minDurationQuarter s = minDuration s `mod` quarter == 0
 > prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)
-> prop_maxDurationQuarter s = maxDuration s `mod` 15 == 0
+> prop_maxDurationQuarter s = maxDuration s `mod` quarter == 0
 
 > prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
 
@@ -172,7 +172,7 @@ TBF: thing is, this is in degrees, and it doesn't pass either!
 
 > prop_DecDegree s = (-180) <= dec s && dec s <= 180 
 
-TBF: start on 15 min. boundraies in a given time range. But how to make them
+TBF: start on 15 min. boundries in a given time range. But how to make them
 mutually exclusive?  Need for varied and interesting start times!!!! :|
 
 > genStartTime :: Gen DateTime
@@ -184,7 +184,7 @@ then an hour.  TBD: use T.frequency
 > genDuration :: Gen Minutes
 > genDuration = do
 >     quarters <- choose (1*4, 10*4)
->     return $ quarters * 15
+>     return $ quarters * quarter
 
 > genPeriod :: Gen Period
 > genPeriod = do
@@ -212,7 +212,7 @@ then an hour.  TBD: use T.frequency
 
 Make sure Durations are made of 15-minute intervals
 
-> prop_duration p = duration p `mod` 15 == 0
+> prop_duration p = duration p `mod` quarter == 0
 
 > type Semester = Int
   

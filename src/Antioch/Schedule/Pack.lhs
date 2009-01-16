@@ -9,17 +9,16 @@
 > import Data.List   (foldl', sort)
 > import Data.Maybe  (fromMaybe, isNothing)
 
-> stepSize = 15      :: Minutes
 > epsilon  =  1.0e-6 :: Score
 
 > numSteps :: Minutes -> Int
-> numSteps = (`div` stepSize)
+> numSteps = (`div` quarter)
 
 `Pack` is the top-level driver function.  It is primarily concerned
 with converting between our internal data structures and the external
 representation of sessions and telescope periods.  Given a start time
 `dt` and duration `dur` in minutes, `pack` first constructs a regular
-grid `dts` of datetime values `stepSize` minutes apart.  It then uses
+grid `dts` of datetime values `quarter` minutes apart.  It then uses
 the list of fixed and pre-scheduled `periods` to construct a partial
 schedule and `mask` out datetime values that can't be scheduled.  Then
 all of the open `sessions` are scored at the unmasked datetime values
@@ -28,9 +27,9 @@ to generate `items` for input to the `packWorker` function.
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > pack sf dt dur periods sessions = do
 >     items <- mapM (toItem sf mask) sessions
->     return . map (toPeriod dt) . packWorker sched $ items
+>     return $! map (toPeriod dt) . packWorker sched $ items
 >   where
->     dts   = scanl (flip addMinutes') dt [stepSize * m | m <- [0 .. numSteps dur]]
+>     dts   = scanl (flip addMinutes') dt [quarter * m | m <- [0 .. numSteps dur]]
 >     sched = toSchedule dts . sort $ periods
 >     mask  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
 
@@ -57,7 +56,8 @@ Convert an open session `s` into a schedulable item by scoring it with
 > toItem          :: ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
 > toItem sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
->     return $ Item {
+>     let force = if sum scores >= 0.0 then True else False
+>     return $! force `seq` Item {
 >         iId      = s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps . maxDuration $ s
@@ -71,7 +71,7 @@ Convert candidates to telescope periods relative to a given startime.
 > toPeriod dt candidate = defaultPeriod {
 >     session   = cId candidate
 >   , startTime = cStart candidate `addMinutes'` dt
->   , duration  = stepSize * cDuration candidate
+>   , duration  = quarter * cDuration candidate
 >   , pScore    = cScore candidate
 >   }
 
@@ -79,10 +79,10 @@ Candidates, importantly, don't care what unit of time we're working
 with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
->     cId       :: a
->   , cStart    :: Int
->   , cDuration :: Int
->   , cScore    :: Score
+>     cId       :: !a
+>   , cStart    :: !Int
+>   , cDuration :: !Int
+>   , cScore    :: !Score
 >   } deriving (Eq, Show)
 
 > defaultCandidate = Candidate {
@@ -110,11 +110,11 @@ list.
 >         rest = drop (cDuration x - 1) xs
 
 > data Item a = Item {
->     iId      :: a
->   , iMinDur  :: Int
->   , iMaxDur  :: Int
->   , iFuture  :: [Score]
->   , iPast    :: [Score]
+>     iId      :: !a
+>   , iMinDur  :: !Int
+>   , iMaxDur  :: !Int
+>   , iFuture  :: ![Score]
+>   , iPast    :: ![Score]
 >   }
 
 Generate a series of candidates representing the possibilities for
@@ -151,11 +151,12 @@ block that we know we won't be scheduling across.
 > packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
 > packWorker' []                 past _        = past
 > packWorker' (Just b  : future) past sessions =
->     packWorker' future (Just b:past) . map (step . forget) $ sessions
+>     packWorker' future (Just b:past) $! map (step . forget) sessions
 > packWorker' (Nothing : future) past sessions =
->     packWorker' future (b:past) . map step $ sessions
+>     f `seq` packWorker' future (b:past) $! map step sessions
 >   where
 >     b = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions
+>     f = if maybe 0.0 cScore b >= 0.0 then True else False
 
 Find the best of a collection of candidates.
 
@@ -176,4 +177,4 @@ Add a candidate to a historical value to produce a new candidate.
 > madd                     :: Maybe (Candidate a) -> Maybe (Candidate a) -> Maybe (Candidate a)
 > madd Nothing   _         = Nothing
 > madd c1        Nothing   = c1
-> madd (Just c1) (Just c2) = Just $ c1 { cScore = cScore c1 + cScore c2 }
+> madd (Just c1) (Just c2) = Just $! c1 { cScore = cScore c1 + cScore c2 }
