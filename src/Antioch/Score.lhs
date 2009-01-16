@@ -44,8 +44,10 @@ Ranking System from Memo 5.2, Section 3
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
+>         -- Round off to the nearest degree to align with hist. min. opacities
+>         rndZa = deg2rad . realToFrac . round . rad2deg $ za
 >         -- Equation 4 & 6
->         opticalDepth = zod / (cos . min 1.5 $ za)
+>         opticalDepth = zod / (cos . min 1.5 $ rndZa)
 >
 >         -- Equation 7
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
