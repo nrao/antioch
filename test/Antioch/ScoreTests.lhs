@@ -6,7 +6,8 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Test.HUnit
-> import Data.List (zipWith4)
+> import Data.List (zipWith4, zipWith5)
+> import Data.Maybe (isJust)
 
 > tests = TestList [
 >     test_hourAngleLimit
@@ -44,23 +45,23 @@
 
 > test_frequencyPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_frequencyPressure" 5 1.35154 (freqPressure dt . head $ pSessions)
+>     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure dt . head $ pSessions)
 >   where
 >     freqPressure = genFrequencyPressure pSessions
 
 > test_rightAscensionPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_rightAscensionPressure" 5 1.19812 (raPressure dt . head $ pSessions)
+>     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure dt . head $ pSessions)
 >   where
 >     raPressure = genRightAscensionPressure pSessions
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
->     assertScoringResult' "test_receiver" 0.0 (receiver dt sessLP)
+>     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sessLP)
 >     let dt = fromGregorian 2006 6 25 12 0 0
->     assertScoringResult' "test_receiver" 1.0 (receiver dt sessLP)
+>     assertScoringResult' "test_receiver" Nothing 1.0 (receiver dt sessLP)
 >     let dt = fromGregorian 2006 8 1 12 0 0
->     assertScoringResult' "test_receiver" 0.0 (receiver dt sessAS)
+>     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sessAS)
 
 > test_getReceivers = TestCase $ do
 >     assertEqual "test_getReceivers" [Rcvr4_6, Rcvr12_18] result
@@ -72,12 +73,16 @@
 >    assertAlmostEqual "test_zenithAngle" 5 (deg2rad 63.704613) result 
 >    let result = zenithAngle dt sessBug
 >    assertAlmostEqual "test_zenithAngle" 4 (deg2rad 40.5076) result 
+>    let result = zenithAngle dt sessBug2
+>    assertAlmostEqual "test_zenithAngle" 4 (deg2rad 81.50164) result 
 
 > test_zenithAngleAtTransit = TestCase $ do
 >    let result = zenithAngleAtTransit sessLP
 >    assertEqual "test_zenithAngleAtTransit" (deg2rad 33.03313) result 
 >    let result = zenithAngleAtTransit sessBug
 >    assertAlmostEqual "test_zenithAngleAtTransit" 5 (deg2rad 30.98467) result 
+>    let result = zenithAngleAtTransit sessBug2
+>    assertAlmostEqual "test_zenithAngleAtTransit" 5 (deg2rad 44.62250) result 
 
 > test_minTsysPrime = TestCase $ do
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
@@ -90,6 +95,9 @@
 >    -- sessBug
 >    Just result <- minTSysPrime w (frequency sessBug) (elevation sessBug)
 >    assertAlmostEqual "test_minTsysPrime" 3 92.365046 result 
+>    -- sessBug2
+>    Just result <- minTSysPrime w (frequency sessBug2) (elevation sessBug2)
+>    assertAlmostEqual "test_minTsysPrime" 4 29.858517 result 
 >      where 
 >        -- TBF: gaurd against elevations < 5.0 degrees
 >        elevation s = max (deg2rad 5.0)  (pi/2 - zenithAngle dt s)
@@ -116,7 +124,11 @@
 >     -- sessBug
 >     Just result <- runScoring w [] (efficiency dt sessBug) 
 >     assertAlmostEqual "test_efficiency" 2 0.93555 result
+>     -- sessBug2
+>     Just result <- runScoring w [] (efficiency dt sessBug2) 
+>     assertAlmostEqual "test_efficiency" 4 0.95340 result
 
+>     -- sessLP
 > test_zenithOpticalDepth = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     -- sessLP
@@ -126,21 +138,28 @@
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     Just result <- runScoring w [] (zenithOpticalDepth dt sessBug)
 >     assertAlmostEqual "test_zenithOpticalDepth" 5 0.0661772 result
+>     Just result <- runScoring w [] (zenithOpticalDepth dt sessBug2)
+>     assertAlmostEqual "test_zenithOpticalDepth" 5 0.007394265 result
 
 > test_receiverTemperature = TestCase $ do
 >     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sessLP
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertEqual "test_receiverTemperature" 60.0 $ receiverTemperature dt sessBug
+>     assertEqual "test_receiverTemperature" 10.0 $ receiverTemperature dt sessBug2
 
 > test_kineticTemperature = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
 >     Just result <- runScoring w [] (kineticTemperature dtLP sessLP)
 >     assertEqual "test_kineticTemperature" 257.498 result
+>     --assertScoringResult' "test_kineticTemperature" Nothing 257.498 (kineticTemperature dtLP sessLP) 
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     Just result <- runScoring w [] (kineticTemperature dt sessBug2)
+>     assertEqual "test_kineticTemperature" 256.982 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
->     assertScoringResult "test_stringency" 5 1.40086 (stringency dt sessLP)
->     assertScoringResult "test_stringency" 5 1.03437 (stringency dt sessAS)
+>     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sessLP)
+>     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sessAS)
 
 > test_projectCompletion = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0 -- don't need!
@@ -173,15 +192,22 @@ TBF are these partitions stil useful?
 
 > test_trackingEfficiency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency" 4 0.99764 (trackingEfficiency dt sessLP)
+>     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sessLP)
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult' "test_trackingErrorLimit" 1.0 (trackingErrorLimit dt sessLP)
+>     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sessLP)
 
 > test_zenithAngleLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 0 0 0
->     assertScoringResult' "test_zenithAngleLimit" 0.0 (zenithAngleLimit dt sessLP)
+>     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sessLP)
+
+> test_surfaceObservingEfficiency = TestCase $ do
+>     let dt  = fromGregorian 2006 4 15 16 0 0
+>     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
+>     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
+>     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
+
 
 Test utilities
 
@@ -191,20 +217,23 @@ Test utilities
 >   where
 >     epsilon = 1.0 / 10.0 ** fromIntegral places
 
-> assertScoringResult :: String -> Int -> Float -> Scoring Factors -> IO ()
-> assertScoringResult name digits expected scoref = do
->     w <- getTestWeather
+> assertScoringResult :: String -> Maybe DateTime -> Int -> Float -> Scoring Factors -> IO ()
+> -- assertScoringResult :: String -> Int -> Float -> Scoring Factors -> IO ()
+> assertScoringResult name dt  digits expected scoref = do
+>     w <- getTestWeather dt --Nothing 
 >     [(_, Just result)] <- runScoring w rSched scoref
 >     assertAlmostEqual name digits expected result
 
-> assertScoringResult' :: String -> Float -> Scoring Factors -> IO ()
-> assertScoringResult' name expected scoref = do
->     w <- getTestWeather
+> assertScoringResult' :: String -> Maybe DateTime -> Float -> Scoring Factors -> IO ()
+> --assertScoringResult' :: String -> Float -> Scoring Factors -> IO ()
+> assertScoringResult' name dt expected scoref = do
+>     w <- getTestWeather dt --Nothing
 >     [(_, Just result)] <- runScoring w rSched scoref
 >     assertEqual name expected result
 
-> getTestWeather :: IO Weather
-> getTestWeather = getWeather . Just $ fromGregorian 2006 10 13 22 0 0
+> getTestWeather :: Maybe DateTime -> IO Weather
+> getTestWeather dt | isJust dt == False = getWeather . Just $ fromGregorian 2006 10 13 22 0 0
+>                   | isJust dt = getWeather dt
 
 Test data generation
 
@@ -237,16 +266,21 @@ From beta tests:
 >   , receivers = [Rcvr_450]
 >   }
 
-*Not* from the beta test code - a session that exposed a bug from the
+*Not* from the beta test code - these are sessions that exposed bugs from the
 QuickCheck properties.
 
-> sessBug = defaultSession {
->     sName     = "bug"
->   , ra        = 2.67 
->   , dec       = 0.13
->   , frequency = 39.76 
->   , receivers = [Rcvr26_40]
->  }
+> bugSessions = zipWith5 genBugSessions names ras decs freqs rcvrs 
+>   where names  = ["bug1",   "bug2"]
+>         ras    = [ 2.67,  0.873562]
+>         decs   = [ 0.13, -0.108025]
+>         freqs  = [39.76,       2.0]
+>         rcvrs  = [[Rcvr26_40],[Rcvr1_2]]
+>         genBugSessions n r d f rcvr = defaultSession {
+>             sName = n, ra = r, dec = d, frequency = f, receivers = rcvr
+>         }
+
+> sessBug = bugSessions!!0
+> sessBug2 = bugSessions!!1
 
 > dtLP = fromGregorian 2006 10 15 12 0 0
 

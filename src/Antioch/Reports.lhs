@@ -14,11 +14,11 @@
 
 simDecFreq (stars, crosses)
 
-> plotDecFreq ss ps = scatterPlots $ [sessDecFreq ss, perDecFreq ps]
+> plotDecFreq ss ps = scatterPlots $ [sessionDecFreq ss, periodDecFreq ps]
 
 simDecRA (stars, crosses)
 
-> plotDecVsRA ss ps = scatterPlots $ [sessRADec ss, perRADec ps]
+> plotDecVsRA ss ps = scatterPlots $ [sessionRADec ss, periodRADec ps]
 
 simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 
@@ -98,7 +98,7 @@ simLSTPFTime3 - need pressure history
 simHistRA
 
 > histSessRA ss ps =
->     histogramPlots $ [sessRA ss, periodRA ps]
+>     histogramPlots $ [sessionRA ss, periodRA ps]
 
 simHistEffHr
 
@@ -110,26 +110,26 @@ simHistEffHr
 > histEffHrBand effs ps =
 >     histogramPlots $ [pBand, effByBand]
 >       where
->         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- perBand ps]
->         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- perEfficiencyByBand ps effs]
+>         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- periodBand ps]
+>         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 
 simHistFreq
 
 > histSessFreq ss ps =
->     histogramPlots $ [[(f, fromIntegral t) | (f, t) <- sessFreq ss]
+>     histogramPlots $ [[(f, fromIntegral t) | (f, t) <- sessionFreq ss]
 >                     , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
 
 simHistDec
 
 > histSessDec ss ps =
->     histogramPlots $ [sessDec ss, periodDec ps]
+>     histogramPlots $ [sessionDec ss, periodDec ps]
 
 simHistPFHours - need pressure history
 simHistPF - need pressure history
 simHistTP
 
 > histSessTP _ ps =
->     histogramPlot $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessTP ps]
+>     histogramPlot $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
 
 Utilities
 
@@ -140,16 +140,19 @@ Utilities
 >     case result of
 >         Nothing     -> return 0.0
 >         Just result -> return result
+
 > historicalObsEff w = mapM (getEfficiency w)
 
+This function is only temporary until we get simulations integrated
+
 > getScore      :: ScoreFunc -> Period -> Scoring Score
-> getScore sf p = liftM eval . sf now . session $ p
+> getScore sf p = liftM eval . sf dt . session $ p
 >   where
->     now = replaceYear 2006 . startTime $ p
-  
+>     dt = replaceYear 2006 . startTime $ p
+
 > historicalObsScore w sf ps = do
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
->     runScoring w [] $ mapM (getScore sf) ps
+>     runScoring w' [] $ mapM (getScore sf) ps
 
 Testing Harness
 

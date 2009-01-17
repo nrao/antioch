@@ -74,35 +74,6 @@ A really dumb scheduler that just looks at the first score for a session.
 
 > constrain _ = id
 
-Compute the average score for a given session over an interval.
-
-> averageScore :: ScoreFunc -> DateTime -> Session -> Scoring Float
-> averageScore sf dt s = do
->     score <- totalScore sf dt dur s
->     return $ score / fromIntegral (dur `div` quarter + 1)
->   where
->     dur = minDuration s
-
-Compute the total score for a given session over an interval.
-
-> totalScore :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Float
-> totalScore sf dt dur s = do
->     scores <- mapM (liftM eval . flip sf s) $ times
->     return $! addScores scores
->   where
->     times  = map (`addMinutes'` dt) [0, quarter .. dur-1]
-
-Add a set of scores, with the added complication that if any
-individual score is zero then the end result must also be zero.
-
-> addScores :: [Score] -> Score
-> addScores = maybe 0.0 id . foldr' step (Just 0.0)
->   where
->     step s Nothing   = Nothing
->     step s (Just x)
->         | s < 1.0e-6 = Nothing
->         | otherwise  = Just $! x + s
-
 Select the highest scoring element of a list.
 
 > best          :: (Monad m, Ord b) => (a -> m b) -> [a] -> m (a, b)
