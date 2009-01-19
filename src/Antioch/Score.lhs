@@ -14,6 +14,7 @@
 > import Data.List
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
+> import System.Random
 
 Ranking System from Memo 5.2, Section 3
 
@@ -423,16 +424,6 @@ Convenience function for translating go/no-go into a factor.
 
 Quick Check properties:
 
-Avoid making too many connections to the weather DB.
-
-> theWeather = getWeather Nothing
-
-Used for checking that some scoring factors are 0 <= && <= 1
-
-> normalized :: [Float] -> Bool
-> normalized xs = dropWhile normal xs == []
->   where
->     normal x = 0.0 <= x && x <= 1.0
 
 > prop_efficiency = forAll genProject $ \p ->
 >   let es = map calcEff (sessions $ p) in normalized es  
@@ -447,19 +438,73 @@ Used for checking that some scoring factors are 0 <= && <= 1
 > prop_surfaceObservingEfficiency = forAll genProject $ \p ->
 >   let es = map calcEff (sessions $ p) in normalized es  
 >   where
->     calcEff s = unsafePerformIO  $ do
->       w <- theWeather
->       w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
->       let dt = fromGregorian 2006 4 15 16 0 0
->       [(_, Just result)] <- runScoring w' [] (surfaceObservingEfficiency dt s)
->       return $ result
+>     calcEff s = getScoringResult surfaceObservingEfficiency s
 
 > prop_trackingEfficiency = forAll genProject $ \p ->
 >   let es = map calcEff (sessions $ p) in normalized es  
 >   where
->     calcEff s = unsafePerformIO  $ do
+>     calcEff s = getScoringResult trackingEfficiency s
+
+> prop_stringency = forAll genProject $ \p ->
+>   let es = map getStringency (sessions $ p) in greaterThenOne es  
+>   where
+>     getStringency s = getScoringResult stringency s
+
+> prop_observingEfficiencyLimit = forAll genProject $ \p ->
+>   let es = map getObsEffLimit (sessions $ p) in normalized es  
+>   where
+>     getObsEffLimit s = getScoringResult observingEfficiencyLimit s
+
+> prop_hourAngleLimit = forAll genProject $ \p -> checkBoolScore p hourAngleLimit
+
+> prop_zenithAngleLimit = forAll genProject $ \p -> checkBoolScore p zenithAngleLimit
+
+> prop_trackingErrorLimit = forAll genProject $ \p -> checkBoolScore p trackingErrorLimit
+
+> prop_atmosphericStabilityLimit = forAll genProject $ \p -> checkBoolScore p atmosphericStabilityLimit
+
+> prop_frequencyPressure = forAll genProject $ \p ->
+>   let es = map (getScoringResult fp) (sessions p) in greaterThenOne es
+>     where
+>       fp = getPressureFunction genFrequencyPressure
+
+> prop_rightAscensionPressure = forAll genProject $ \p ->
+>   let es = map (getScoringResult fp) (sessions p) in greaterOrEqToOne es
+>     where
+>       fp = getPressureFunction genRightAscensionPressure
+>       greaterOrEqToOne xs = dropWhile (>=1) xs == []
+
+Utilities for QuickCheck properties:
+
+> getPressureFunction f = unsafePerformIO $ do
+>         g <- getStdGen
+>         let sessions = generate 0 g $ genSessions 100
+>         return $ f sessions
+
+> checkBoolScore p sf = let es = map (getScoringResult sf) (sessions $ p) in areBools es
+
+> getScoringResult sf s = unsafePerformIO $ do
 >       w <- theWeather
 >       w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
 >       let dt = fromGregorian 2006 4 15 16 0 0
->       [(_, Just result)] <- runScoring w' [] (trackingEfficiency dt s)
+>       [(_, Just result)] <- runScoring w' [] (sf dt s)
 >       return $ result
+
+Avoid making too many connections to the weather DB.
+
+> theWeather = getWeather Nothing
+
+Used for checking that some scoring factors are 0 <= && <= 1, etc.
+
+> normalized :: [Float] -> Bool
+> normalized xs = dropWhile normal xs == []
+>   where
+>     normal x = 0.0 <= x && x <= 1.0
+
+> areBools :: [Float] -> Bool
+> areBools xs = dropWhile isBool xs == []
+>   where
+>     isBool x = 0.0 == x || x == 1.0
+
+> greaterThenOne :: [Float] -> Bool 
+> greaterThenOne xs = dropWhile (>1) xs == []
