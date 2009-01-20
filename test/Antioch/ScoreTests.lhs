@@ -21,6 +21,7 @@
 >   , test_receiver
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
+>   , test_score
 >   , test_stringency
 >   , test_surfaceObservingEfficiency
 >   , test_trackingEfficiency
@@ -190,6 +191,43 @@ TBF are these partitions stil useful?
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
 >     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
 >     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
+
+New tests that do *not* match up to a 'beta test python code test', but rather
+to use in conjunction with Pack tests.
+
+Test the 24-hour scoring profile of the default session, per quarter.
+
+> test_score = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     scores <- mapM (score' w) times
+>     assertEqual "test_score" expected scores
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     fs = genScore [sess]
+>     score' w dt = do
+>         s <- runScoring w [] (fs dt sess)
+>         return $ eval s
+>     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     sess = defaultSession { sName = "singleton"
+>                           , totalTime = 24*60
+>                           , minDuration = 2*60
+>                           , maxDuration = 6*60
+>                           }
+>     expected = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+>                ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+>                ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,3.2315328,3.204887
+>                ,3.211515,3.219639,3.2261572,3.1090422,3.1223507,3.133507
+>                ,3.1399984,3.1896782,3.1915512,3.196607,3.1995785,3.238325
+>                ,3.2398846,3.2477117,3.2488978,3.2764614,3.2764614,3.276668
+>                ,3.276668,3.2787144,3.2787144,3.2785401,3.278336,3.279575
+>                ,3.2791672,3.27873,3.2782738,3.2757246,3.2750547,3.2739065
+>                ,3.2730143,3.2730432,3.2713363,3.270003,3.2675853,3.2646337
+>                ,3.2621348,3.2573557
+>                ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
+>                ,0.0,0.0,0.0,0.0,0.0]
+
+
+
 
 Test utilities
 
