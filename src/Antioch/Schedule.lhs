@@ -2,6 +2,7 @@
 
 > module Antioch.Schedule (
 >     Strategy
+>   , pack
 >   , scheduleFixedDuration
 >   , scheduleFixedDuration'
 >   , scheduleMinDuration
@@ -22,7 +23,7 @@
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
 > pack :: Strategy
-> pack sf dt dur history session = P.pack sf dt dur [] sessions
+> pack sf dt dur _ sessions = P.pack sf dt dur [] sessions
 
 Always schedules a session at its minimum duration.
 
