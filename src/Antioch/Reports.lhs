@@ -4,6 +4,8 @@
 > import Antioch.Generators (genSessions, genPeriods)
 > import Antioch.Plots
 > import Antioch.Score
+> import Antioch.Schedule
+> import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
 > import Antioch.Weather
@@ -154,13 +156,59 @@ This function is only temporary until we get simulations integrated
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
 >     runScoring w' [] $ mapM (getScore sf) ps
 
+> type StatsPlot = [Session] -> [Period] -> IO ()
+
 Testing Harness
 
-> testPlot      :: ([Session] -> [Period] -> IO ()) -> IO ()
+> testPlot      :: StatsPlot -> IO ()
 > testPlot plot = do
+>     (sessions, periods) <- getData
+>     plot sessions periods
+
+> getData :: IO ([Session], [Period])
+> getData = do
 >     g <- getStdGen
 >     let sessions = generate 0 g $ genSessions 100
 >     let periods  = generate 0 g $ genPeriods 100
-> --    putStrLn . show  $ map (toSqlString . startTime) periods
->     plot sessions periods
+>     return $ (sessions, periods)
 
+> testPlots      :: [StatsPlot] -> IO [()]
+> testPlots plots = do
+>     (sessions, periods) <- getData
+>     sequence (map (\f -> f sessions periods) plots)
+
+Simulator Harness
+
+> statsPlots = [
+>    plotDecFreq
+>  , plotDecVsRA
+>  , plotEffVsFreq'
+>  , plotFreqVsTime
+>  , plotSatRatioVsFreq
+>  , plotEffElev'
+>  , plotEffLst'
+>  , plotElevDec'
+>  , plotScoreElev'
+>  , plotLstScore'
+>  , histSessRA
+>  , histEffHrBand'
+>  , histSessFreq
+>  , histSessDec
+>  , histSessTP
+>   ]
+
+> generatePlots :: Strategy -> [StatsPlot] -> IO [()]
+> generatePlots sched sps = do
+>     w <- getWeather Nothing
+>     g <- getStdGen
+>     let sessions = generate 0 g $ genSessions 100
+>     periods <- simulate sched w rs dt dur int history sessions
+>     sequence $ map (\f -> f sessions periods) sps
+>   where
+>     rs      = []
+>     dt      = fromGregorian 2006 1 1 0 0 0
+>     dur     = 60 * 24 * 2
+>     int     = 60 * 24 * 2
+>     history = []
+
+  
