@@ -35,11 +35,11 @@ To Do List (port from Statistics.py):
 > periodDecFreq :: [Period] -> [(Float, Radians)]
 > periodDecFreq = promote sessionDecFreq
 
-> sessionRADec :: [Session] -> [(Radians, Radians)]
-> sessionRADec= ra `vs` dec
+> sessionDecRA :: [Session] -> [(Radians, Radians)]
+> sessionDecRA = dec `vs` ra
 
-> periodRADec :: [Period] -> [(Radians, Radians)]
-> periodRADec = promote sessionRADec
+> periodDecRA :: [Period] -> [(Radians, Radians)]
+> periodDecRA = promote sessionDecRA
 
 Example of scatter plot data w/ datetime:
 
@@ -86,8 +86,8 @@ We may want to move this function to a different file.
 > historicalTime :: [Period] -> [DateTime]
 > historicalTime = map startTime
 >
-> historicalTime' :: [Period] -> [Minutes]
-> historicalTime' ps = map (flip diffMinutes' tzero) times
+> historicalTime' :: [Period] -> [Int]
+> historicalTime' ps = map ((`div` (24 * 60)) . flip diffMinutes' tzero) times
 >   where
 >     times = sort $ map startTime ps
 >     tzero = head times

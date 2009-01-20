@@ -6,22 +6,23 @@
 > histStyle :: PlotStyle
 > histStyle = PlotStyle Boxes (CustomStyle []) Nothing
 
-> histogramPlot :: [(Float, Float)] -> IO ()
-> histogramPlot = plotPathStyle [LogScale "y"] histStyle
+> histogramPlot       :: [Attribute] -> [(Float, Float)] -> IO ()
+> histogramPlot attrs =
+>     plotPathStyle attrs histStyle
 
-> histogramPlots       :: [[(Float, Float)]] -> IO ()
-> histogramPlots plots =
->     plotPathsStyle [LogScale "y"] [(histStyle, xys) | xys <- plots]
+> histogramPlots             :: [Attribute] -> [[(Float, Float)]] -> IO ()
+> histogramPlots attrs plots =
+>     plotPathsStyle attrs [(histStyle, xys) | xys <- plots]
 
 > scatterStyle :: PlotStyle
 > scatterStyle = PlotStyle Points (CustomStyle []) Nothing
 
-> scatterPlot :: [(Float, Float)] -> IO ()
-> scatterPlot = plotPathStyle [] scatterStyle
+> scatterPlot       :: [Attribute] -> [(Float, Float)] -> IO ()
+> scatterPlot attrs = plotPathStyle attrs scatterStyle
 
-> scatterPlots       :: [[(Float, Float)]] -> IO ()
-> scatterPlots plots =
->     plotPathsStyle [] [(scatterStyle, xys) | xys <- plots]
+> scatterPlots             :: [Attribute] -> [[(Float, Float)]] -> IO ()
+> scatterPlots attrs plots =
+>     plotPathsStyle attrs [(scatterStyle, xys) | xys <- plots]
 
-> errorBarPlot :: [(Float, Float, Float)] -> IO ()
-> errorBarPlot = plotErrorBars []
+> errorBarPlot       :: [Attribute] -> [(Float, Float, Float)] -> IO ()
+> errorBarPlot attrs = plotErrorBars attrs
