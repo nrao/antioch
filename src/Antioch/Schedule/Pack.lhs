@@ -115,7 +115,7 @@ list.
 >   , iMaxDur  :: !Int
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
->   }
+>   } deriving (Eq, Show)
 
 Generate a series of candidates representing the possibilities for
 scheduling an item at each of a sequence of durations: 15 minutes, 30
