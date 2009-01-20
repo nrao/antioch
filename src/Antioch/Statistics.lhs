@@ -3,7 +3,7 @@
 > import Antioch.DateTime (fromGregorian, DateTime, addMinutes', diffMinutes')
 > import Antioch.Generators
 > import Antioch.Types
-> import Antioch.Score (zenithAngle)
+> import Antioch.Score (zenithAngle, minObservingEff)
 > import Antioch.Utilities (rad2hr, rad2deg, utc2lstHours)
 > import Data.Function (on)
 > import Data.List
@@ -26,6 +26,9 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
   
+> etaFn :: [(Frequency, Float)]
+> etaFn = [(f, minObservingEff(f)) | f <- [2.0 .. 60.0]]
+
 > sessionDecFreq :: [Session] -> [(Float, Radians)]
 > sessionDecFreq = dec `vs` frequency
 

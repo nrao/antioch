@@ -91,10 +91,12 @@ Ranking System from Memo 5.2, Section 3
 > zenithAngleAtTransit   :: Session -> Radians
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
 
-> zenithAngleHA          :: Session -> Radians -> Radians
-> zenithAngleHA Open { dec = dec' } ha =
+> zenithAngleHA      :: Session -> Radians -> Radians
+> zenithAngleHA s ha =
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
+>   where
+>     dec' = dec s
 
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
@@ -162,7 +164,7 @@ Generate a scoring function having the pressure factors.
 > genFrequencyPressure sessions =
 >     frequencyPressure factors band
 >   where
->     bins    = initBins (L, Q) band sessions
+>     bins    = initBins (L, W) band sessions
 >     factors = binsToFactors bins
 
 > genRightAscensionPressure :: [Session] -> ScoreFunc
@@ -211,8 +213,8 @@ Translates the total/used times pairs into pressure factors.
 
 3.4 Performance Limits
 
-> minObservingEff :: Session -> Float
-> minObservingEff Open { frequency = freq } =
+> minObservingEff :: Frequency -> Float
+> minObservingEff freq  =
 >     -- Equation 23
 >     avgEff - 0.02 - 0.1*(1 - avgEff)
 >   where
@@ -236,13 +238,13 @@ Translates the total/used times pairs into pressure factors.
 >   where
 >     sigma = 0.02
 >     obsEff = 1.0  -- TBF
->     minObsEff = minObservingEff s
+>     minObsEff = minObservingEff . frequency $ s
 
 > hourAngleLimit dt s = do
 >     effHA <- efficiencyHA dt s
 >     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
->     criterion = sqrt . (* 0.5) . minObservingEff $ s
+>     criterion = sqrt . (* 0.5) . minObservingEff . frequency $ s
 
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
