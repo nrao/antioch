@@ -1,7 +1,12 @@
 > module Antioch.Schedule.PackTests where
 
 > import Antioch.Schedule.Pack
+> import Antioch.DateTime
+> import Antioch.Types
+> import Antioch.Score
+> import Antioch.Weather
 > import Test.HUnit
+> import Control.Monad.Reader
 
 > tests = TestList [
 >     test_NumSteps
@@ -133,3 +138,71 @@ attributes of the packing algorithm:
 >              , Item "C" 2 8 [0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5] []
 >              , Item "D" 2 8 [0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0] []
 >              ]
+
+
+> test_pack1 = TestCase $ do
+>   let periods = pack (fs candidate) starttime duration [] [candidate]
+>   w <- getWeather . Just $ starttime 
+>   periods' <- runScoring w [] periods
+>   -- can't schedule anything because of a bug in 'pack's mask? 
+>   assertEqual "test_TestPack_test1" 1 (length periods')
+>     where
+>       starttime = fromGregorian 2006 11 8 12 0 0
+>       duration = 24*60
+>       fs s = genScore [s]
+>       candidate = defaultSession { sName = "singleton"
+>                                  , totalTime = 24*60
+>                                  , minDuration = 2*60
+>                                  , maxDuration = 6*60
+>                                  }
+> 
+
+> test_toItem = TestCase $ do
+>   w <- getWeather . Just $ starttime 
+>   -- create an item without a mask, i.e. no scoring
+>   let item = toItem (fs session) [] session
+>   item' <- runScoring w [] item
+>   assertEqual "test_toItem1" result1 item'
+>   assertEqual "test_toItemFutures" 0 (length . iFuture $ item')
+>   -- now try it with the mask (dts)
+>   let item = toItem (fs session) dts session
+>   item' <- runScoring w [] item
+>   -- TBF: it looks like there is a bug in the creation of pack's mask?
+>   assertEqual "test_toItem2" result2 item'
+>   assertEqual "test_toItemFutures2" 26 (length . iFuture $ item') 
+>     where
+>       starttime = fromGregorian 2006 11 8 12 0 0
+>       fs s = genScore [s]
+>       -- the 'mask' is just a list of datetimes to score at
+>       dts'   = scanl (flip addMinutes') starttime [quarter * m | m <- [0 .. 48]] -- 24 = numSteps (6*60)   
+>       dts = [(Just dt) | dt <- dts']
+>       session = defaultSession { sName = "singleton"
+>                                  , totalTime = 24*60
+>                                  , minDuration = 2*60
+>                                  , maxDuration = 6*60
+>                                  }
+>       result1 = Item { iId = session
+>                     , iMinDur = 8
+>                     , iMaxDur = 24
+>                     , iFuture = []
+>                     , iPast = [] }
+>       -- this expected result for the scoring of the session in 15-min
+>       -- increments starting at starttime is taken from the ScoreTests.lhs
+>       futureResult = [0 | x <- [0 .. 38]] ++ [3.2315328,3.204887,3.211515
+>                                              ,3.219639,3.2261572,3.1090422
+>                                              ,3.1223507,3.133507,3.1399984
+>                                              ,3.1896782,3.1915512]
+>       result2 = result1 { iFuture = futureResult }
+
+Test against python unit tests from beta test code:
+
+TBF: the beta test code runs packing using TScore, which is essentially a
+random score generator.  So to match the two code bases we have to choose:
+   * find some way to use a test scorer here in haskell that produces the same scoring results
+      * one way to do this is to add the list of desired scores to the scoring
+        enviornment; but then we'd have to alter *all* our calls to 
+        'runScoring'?
+      * TBF: is there a better way?
+   * write new unit tests in the beta code and try and match those results
+
+
