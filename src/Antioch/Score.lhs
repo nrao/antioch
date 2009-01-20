@@ -90,10 +90,12 @@ Ranking System from Memo 5.2, Section 3
 > zenithAngleAtTransit   :: Session -> Radians
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
 
-> zenithAngleHA          :: Session -> Radians -> Radians
-> zenithAngleHA Open { dec = dec' } ha =
+> zenithAngleHA      :: Session -> Radians -> Radians
+> zenithAngleHA s ha =
 >     -- Equation 5
 >     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
+>   where
+>     dec' = dec s
 
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
@@ -161,7 +163,7 @@ Generate a scoring function having the pressure factors.
 > genFrequencyPressure sessions =
 >     frequencyPressure factors band
 >   where
->     bins    = initBins (L, Q) band sessions
+>     bins    = initBins (L, W) band sessions
 >     factors = binsToFactors bins
 
 > genRightAscensionPressure :: [Session] -> ScoreFunc
@@ -210,11 +212,12 @@ Translates the total/used times pairs into pressure factors.
 
 3.4 Performance Limits
 
-> minObservingEff :: Session -> Float
-> minObservingEff Open { frequency = freq } =
+> minObservingEff   :: Session -> Float
+> minObservingEff s =
 >     -- Equation 23
 >     avgEff - 0.02 - 0.1*(1 - avgEff)
 >   where
+>     freq = frequency s
 >     nu0 = 12.8
 >     r = max 50 freq / nu0
 >     -- Equation 22

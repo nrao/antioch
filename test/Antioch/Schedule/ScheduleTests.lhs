@@ -1,7 +1,6 @@
 > module Antioch.Schedule.ScheduleTests where
 
 > import Antioch.DateTime
-> import Antioch.Schedule.Pack
 > import Antioch.PProjects
 > import Antioch.Schedule
 > import Antioch.Score
@@ -20,7 +19,7 @@
 >   where
 >       rs       = []
 >       ss       = concatMap sessions pTestProjects
->       sf       =  genScore ss
+>       sf       = genScore ss
 >       dt       = fromGregorian 2006 9 2 8 0 0
 >       dur      = 24*60
 >       history  = []
