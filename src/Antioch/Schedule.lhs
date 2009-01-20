@@ -15,12 +15,16 @@
 > import Data.Foldable     (foldlM, foldr')
 > import Data.List         (foldl')
 > import Data.Maybe        (maybe)
+> import qualified Antioch.Schedule.Pack as P
 
 > stepSize = 15 :: Minutes
 
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
-  Always schedules a session at its minimum duration.
+> pack :: Strategy
+> pack sf dt dur history session = P.pack sf dt dur [] sessions
+
+Always schedules a session at its minimum duration.
 
 > scheduleMinDuration :: Strategy
 > scheduleMinDuration sf dt dur history sessions
