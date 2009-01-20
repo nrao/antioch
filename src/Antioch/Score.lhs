@@ -212,12 +212,11 @@ Translates the total/used times pairs into pressure factors.
 
 3.4 Performance Limits
 
-> minObservingEff   :: Session -> Float
-> minObservingEff s =
+> minObservingEff :: Frequency -> Float
+> minObservingEff freq  =
 >     -- Equation 23
 >     avgEff - 0.02 - 0.1*(1 - avgEff)
 >   where
->     freq = frequency s
 >     nu0 = 12.8
 >     r = max 50 freq / nu0
 >     -- Equation 22
@@ -238,13 +237,13 @@ Translates the total/used times pairs into pressure factors.
 >   where
 >     sigma = 0.02
 >     obsEff = 1.0  -- TBF
->     minObsEff = minObservingEff s
+>     minObsEff = minObservingEff . frequency $ s
 
 > hourAngleLimit dt s = do
 >     effHA <- efficiencyHA dt s
 >     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
->     criterion = sqrt . (* 0.5) . minObservingEff $ s
+>     criterion = sqrt . (* 0.5) . minObservingEff . frequency $ s
 
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
