@@ -2,6 +2,7 @@
 
 > module Antioch.Schedule (
 >     Strategy
+>   , pack
 >   , scheduleFixedDuration
 >   , scheduleFixedDuration'
 >   , scheduleMinDuration
@@ -15,10 +16,14 @@
 > import Data.Foldable     (foldlM, foldr')
 > import Data.List         (foldl')
 > import Data.Maybe        (maybe)
+> import qualified Antioch.Schedule.Pack as P
 
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
-  Always schedules a session at its minimum duration.
+> pack :: Strategy
+> pack sf dt dur _ sessions = P.pack sf dt dur [] sessions
+
+Always schedules a session at its minimum duration.
 
 > scheduleMinDuration :: Strategy
 > scheduleMinDuration sf dt dur history sessions

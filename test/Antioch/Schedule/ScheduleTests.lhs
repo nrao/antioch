@@ -1,7 +1,7 @@
 > module Antioch.Schedule.ScheduleTests where
 
 > import Antioch.DateTime
-> import Antioch.Schedule.Pack
+> import Antioch.Schedule
 > import Antioch.PProjects
 > import Antioch.Schedule
 > import Antioch.Score
