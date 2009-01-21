@@ -26,12 +26,20 @@ to generate `items` for input to the `packWorker` function.
 
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > pack sf dt dur periods sessions = do
->     items <- mapM (toItem sf mask) sessions
+>     let dts = quarterDateTimes dt dur
+>     let sched = toSchedule dts . sort $ periods
+>     items <- mapM (toItem sf (mask dts sched)) sessions
 >     return $! map (toPeriod dt) . packWorker sched $ items
->   where
->     dts   = scanl (flip addMinutes') dt [quarter * m | m <- [0 .. numSteps dur]]
->     sched = toSchedule dts . sort $ periods
->     mask  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
+
+Construct a list of datetimes using quarter intervals
+
+> quarterDateTimes :: DateTime -> Minutes -> [DateTime]
+> quarterDateTimes dt dur = [(quarter * m) `addMinutes` dt | m <- [0 .. numSteps dur]]
+
+Mask out datetimes that are covered by a session already.
+
+> mask :: [DateTime] -> [Maybe (Candidate Session)] -> [Maybe DateTime]
+> mask dts sched  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
 
 A schedule is a list of time slots.  A given slot is either `Nothing`
 if it is free and available to be scheduled, or `Just x` where x is a
@@ -70,7 +78,7 @@ Convert candidates to telescope periods relative to a given startime.
 > toPeriod              :: DateTime -> Candidate Session -> Period
 > toPeriod dt candidate = defaultPeriod {
 >     session   = cId candidate
->   , startTime = cStart candidate `addMinutes'` dt
+>   , startTime = (quarter * (cStart candidate)) `addMinutes'` dt
 >   , duration  = quarter * cDuration candidate
 >   , pScore    = cScore candidate
 >   }
@@ -80,8 +88,8 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
 >     cId       :: !a
->   , cStart    :: !Int
->   , cDuration :: !Int
+>   , cStart    :: !Int 
+>   , cDuration :: !Int 
 >   , cScore    :: !Score
 >   } deriving (Eq, Show)
 
