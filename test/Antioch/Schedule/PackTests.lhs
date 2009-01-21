@@ -17,12 +17,15 @@
 >   , test_Best
 >   , test_Madd1
 >   , test_Madd2
+>   , test_Pack1
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker1
 >   , test_PackWorker2
 >   , test_PackWorker3
 >   , test_PackWorker4
+>   , test_ToItem
+>   , test_ToPeriod
 >   ]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
@@ -140,41 +143,46 @@ attributes of the packing algorithm:
 >              ]
 
 
-> test_pack1 = TestCase $ do
+> test_Pack1 = TestCase $ do
 >   let periods = pack (fs candidate) starttime duration [] [candidate]
 >   w <- getWeather . Just $ starttime 
->   periods' <- runScoring w [] periods
->   -- can't schedule anything because of a bug in 'pack's mask? 
->   assertEqual "test_TestPack_test1" 1 (length periods')
+>   periods' <- runScoring w [] $ periods
+>   assertEqual "test_Pack1_1" 1 (length periods')
+>   assertEqual "test_Pack1_2" expPeriod (head periods')
 >     where
 >       starttime = fromGregorian 2006 11 8 12 0 0
->       duration = 24*60
+>       duration = 12*60
 >       fs s = genScore [s]
 >       candidate = defaultSession { sName = "singleton"
 >                                  , totalTime = 24*60
 >                                  , minDuration = 2*60
 >                                  , maxDuration = 6*60
 >                                  }
-> 
+>       expStartTime = fromGregorian 2006 11 8 21 15 0
+>       expPeriod = defaultPeriod { session = candidate
+>                                 , startTime = expStartTime
+>                                 , duration = 180
+>                                 , pScore = 38.176468
+>                                 }
 
-> test_toItem = TestCase $ do
+> test_ToItem = TestCase $ do
 >   w <- getWeather . Just $ starttime 
 >   -- create an item without a mask, i.e. no scoring
 >   let item = toItem (fs session) [] session
 >   item' <- runScoring w [] item
->   assertEqual "test_toItem1" result1 item'
->   assertEqual "test_toItemFutures" 0 (length . iFuture $ item')
+>   assertEqual "test_ToItem_1" result1 item'
+>   assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >   -- now try it with the mask (dts)
 >   let item = toItem (fs session) dts session
 >   item' <- runScoring w [] item
->   -- TBF: it looks like there is a bug in the creation of pack's mask?
->   assertEqual "test_toItem2" result2 item'
->   assertEqual "test_toItemFutures2" 26 (length . iFuture $ item') 
+>   assertEqual "test_toItem_3" result2 item'
+>   assertEqual "test_toItem_4" 49 (length . iFuture $ item') 
 >     where
 >       starttime = fromGregorian 2006 11 8 12 0 0
+>       duration = 12 * 60
 >       fs s = genScore [s]
 >       -- the 'mask' is just a list of datetimes to score at
->       dts'   = scanl (flip addMinutes') starttime [quarter * m | m <- [0 .. 48]] -- 24 = numSteps (6*60)   
+>       dts' = quarterDateTimes starttime duration 
 >       dts = [(Just dt) | dt <- dts']
 >       session = defaultSession { sName = "singleton"
 >                                  , totalTime = 24*60
@@ -188,21 +196,36 @@ attributes of the packing algorithm:
 >                     , iPast = [] }
 >       -- this expected result for the scoring of the session in 15-min
 >       -- increments starting at starttime is taken from the ScoreTests.lhs
->       futureResult = [0 | x <- [0 .. 38]] ++ [3.2315328,3.204887,3.211515
+>       futureResult = (replicate 37 0.0) ++ [3.2315328,3.204887,3.211515
 >                                              ,3.219639,3.2261572,3.1090422
 >                                              ,3.1223507,3.133507,3.1399984
->                                              ,3.1896782,3.1915512]
+>                                              ,3.1896782,3.1915512,3.196607]
 >       result2 = result1 { iFuture = futureResult }
+
+> test_ToPeriod = TestCase $ do
+>     assertEqual "test_ToPeriod" expected result
+>   where
+>     dt = fromGregorian 2006 11 8 12 0 0
+>     dt1 = (8*quarter) `addMinutes'` dt
+>     c = defaultCandidate { cId = defaultSession
+>                           , cStart = 8 -- quarters
+>                           , cDuration = 12 -- quarters
+>                           , cScore = 20.0
+>                           }
+>     result = toPeriod dt c
+>     expected = defaultPeriod { session = defaultSession
+>                              , startTime = dt1
+>                              , duration = quarter * 12
+>                              , pScore = 20.0
+>                              }
 
 Test against python unit tests from beta test code:
 
 TBF: the beta test code runs packing using TScore, which is essentially a
 random score generator.  So to match the two code bases we have to choose:
    * find some way to use a test scorer here in haskell that produces the same scoring results
-      * one way to do this is to add the list of desired scores to the scoring
-        enviornment; but then we'd have to alter *all* our calls to 
-        'runScoring'?
-      * TBF: is there a better way?
+      * one way to do this is to add the list of desired scores (from the
+        python code) to a funtion of time.  This function could then be used
+        by a test scoring factor, which replaces 'score genScore'.
    * write new unit tests in the beta code and try and match those results
-
 
