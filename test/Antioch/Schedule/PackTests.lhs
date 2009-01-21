@@ -24,6 +24,8 @@
 >   , test_PackWorker2
 >   , test_PackWorker3
 >   , test_PackWorker4
+>   , test_RandomScore
+>   , test_RandomScore2
 >   , test_ToItem
 >   , test_ToPeriod
 >   ]
@@ -231,37 +233,34 @@ random score generator.  So to match the two code bases we have to choose:
 
 Setup framework for duplicating python unit test; We'll try option 1) from above.
 
-This is the list of random numbers generated on the python side:
-
-> randomList :: [Score]
-> --randomList = replicate 100 1.0 -- TBF
-> randomList = [7.1331340485018409, 2.4934096782883213, 7.6572318406256947, 5.046714456152789, 6.8446511584066618, 4.0781524926716983, 2.7252730440470305, 4.9143871264557122, 7.1636843840447568, 6.9446361985339973, 4.8230123064175849, 3.4473390258899297, 6.3350439397544198, 2.8207298844712874, 5.1058061299127466, 2.4985974189931035, 7.7080423642050198, 7.158122187895521, 2.5448732889679264, 5.0495207342152231, 2.6078672746394629, 4.5245768464312714, 4.6630376376658127, 4.9814692299184458, 3.9230995086978351, 3.124772317749299, 4.3545291190078173, 3.9156803332050671, 4.7649071147900779, 3.2957866086525902, 2.5266837648837353, 4.1279381958049832, 2.846086056357267, 7.9501503718916222, 5.0040843232701224, 6.2997134589932822, 2.8066033004458157, 3.3695805540586292, 7.1911605255609041, 5.1902010664882869, 6.0641085042114264, 3.1763244030347106, 5.5648306304235842, 4.8999056732443051, 4.8385202083992347, 7.821359353269389, 6.8195409456787983, 6.5591857654180128, 6.0411887011958951, 7.3687373406644578, 3.925478958851746, 6.1593368290906056, 6.2553947135435362, 2.9056687203569784, 2.0240197872208707, 7.0209407927591698, 7.5301119472143458, 6.5565343260879541, 7.4360080633805605, 5.5085736431979573, 3.2467669017752971, 2.4987826901996266, 2.5630089003230587, 2.7377288186642774, 5.1937658979896675, 3.8563605554932829, 4.4845133909067876, 2.130284284547066, 2.9602689950032728, 5.0062212541991116, 5.9676442585520162, 2.2570001356632856, 6.8411971054101093, 2.7563438298968426, 4.7276830627264941, 3.582367067990142, 3.9523405698149894, 6.8553413853738157, 5.0858901299373809, 4.1812254209649007, 7.2192209080032637, 6.4402617123341059, 6.6274389533438569, 6.3186576885368311, 4.6516827521820217, 4.0545997777170779, 6.865594825435954, 6.4993202696106422, 5.6206213173954378, 4.597663643263302, 5.3082458395844654, 6.4621121691512515, 2.8828921454728942, 2.8137617782918687, 4.6148063504374415, 3.3878648645377645, 5.3193346648162638, 2.1265679616606326, 4.3173508768876703, 2.477299227172681]
-
 Here is how they are used in python's TScore:
 
 > pythonTestStarttime = fromGregorian 2006 11 8 12 0 0
 
+> getRandomScore :: DateTime -> Score
 > getRandomScore dt = randomList!!hour
 >     where
 >   hour = (dt `diffMinutes'` pythonTestStarttime) `div` 60
 
 Now we can create our actual scoring factor
 
-> randomScore :: ScoreFunc
-> randomScore dt _ = factor "randomScore" . Just $ getRandomScore dt
+> randomScoreFactor :: ScoreFunc
+> randomScoreFactor dt _ = factor "randomScore" . Just $ getRandomScore dt
+
+> randomScore = score [randomScoreFactor]
 
 Now we can use it in a test:
 
-> test_TestRandomScore = TestCase $ do
+> test_RandomScore = TestCase $ do
 >     w <- getWeather . Just $ dt
->     [(_, Just result)] <- runScoring w [] (randomScore dt defaultSession)
->     assertEqual "test_TestRandomScore" hr1Score result
->     [(_, Just result)] <- runScoring w [] (randomScore dt1 defaultSession)
->     assertEqual "test_TestRandomScore" hr1Score result
->     [(_, Just result)] <- runScoring w [] (randomScore dt2 defaultSession)
->     assertEqual "test_TestRandomScore" hr2Score result
->     [(_, Just result)] <- runScoring w [] (randomScore dt3 defaultSession)
->     assertEqual "test_TestRandomScore" hr3Score result
+>     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt defaultSession)
+>     assertEqual "test_RandomScore" hr1Score result
+>     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt1 defaultSession)
+>     assertEqual "test_RandomScore" hr1Score result
+>     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt2 defaultSession)
+>     assertEqual "test_RandomScore" hr2Score result
+>     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt3 defaultSession)
+>     assertEqual "test_RandomScore" hr3Score result
 >   where
 >     dt = pythonTestStarttime 
 >     dt1 = 59 `addMinutes'` dt
@@ -271,3 +270,105 @@ Now we can use it in a test:
 >     hr2Score = 2.4934096782883213 
 >     hr3Score = 7.6572318406256947 
 > 
+
+and test again:
+
+> test_RandomScore2 = TestCase $ do
+>     w <- getWeather . Just $ dt
+>     scores <- mapM (score' w) times
+>     assertEqual "test_RandomScore2" expScores scores
+>   where
+>     dt = pythonTestStarttime
+>     times = [(15*q) `addMinutes'` dt | q <- [0..23]]
+>     score' w dt = do
+>         [(_, Just result)] <- runScoring w [] (randomScoreFactor dt defaultSession)
+>         return result
+>     expScores = concat [(replicate 4 x) | x <- (take 6 randomList)]
+
+The next three tests are packing a single session into a duration.  The main
+difference between tests is the packing duration:
+
+Here, packing duration (6 hrs) == session maxDur (6 hrs)
+
+TBF: none of these results match the python results!
+
+> test_TestPack_pack1 = TestCase $ do
+>   let periods = pack randomScore starttime duration [] [testSession]
+>   w <- getWeather . Just $ starttime 
+>   periods' <- runScoring w [] $ periods
+>   putStrLn . show $ periods'
+>   assertEqual "test_Pack1_2" [expPeriod] periods'
+>     where
+>       starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
+>       duration = 6*60
+>       expPeriod = Period testSession starttime  (6*60) 5.54222
+
+Here, packing duration (9 hrs) > session maxDur (6 hrs)
+
+> test_TestPack_pack2 = TestCase $ do
+>   let periods = pack randomScore starttime duration [] [testSession]
+>   w <- getWeather . Just $ starttime 
+>   periods' <- runScoring w [] $ periods
+>   putStrLn . show $ periods'
+>   assertEqual "test_TestPack" expPeriods periods'
+>     where
+>       starttime = pythonTestStarttime
+>       starttime2 = (3*60) `addMinutes'` pythonTestStarttime 
+>       duration = 9*60
+>       expPeriod1 = Period testSession starttime  (3*60) 5.54222
+>       expPeriod2 = Period testSession starttime2 (6*60) 5.54222
+>       expPeriods = [expPeriod1, expPeriod2]
+
+Here, packing duration (7 hrs) > session maxDur (6 hrs)
+
+> test_TestPack_pack3 = TestCase $ do
+>   let periods = pack randomScore starttime duration [] [testSession]
+>   w <- getWeather . Just $ starttime 
+>   periods' <- runScoring w [] $ periods
+>   putStrLn . show $ periods'
+>   assertEqual "test_TestPack" expPeriods periods'
+>     where
+>       starttime = pythonTestStarttime
+>       starttime2 = (2*60) `addMinutes'` pythonTestStarttime 
+>       duration = 7*60
+>       expPeriod1 = Period testSession starttime  (2*60) 5.54222
+>       expPeriod2 = Period testSession starttime2 (5*60) 5.54222
+>       expPeriods = [expPeriod1, expPeriod2]
+
+Now, we change the test by packing using TWO sessions:
+
+> test_TestPack_pack8 = TestCase $ do
+>   let periods = pack randomScore starttime duration [] sessions 
+>   w <- getWeather . Just $ starttime 
+>   periods' <- runScoring w [] $ periods
+>   putStrLn . show $ periods'
+>   assertEqual "test_TestPack_pack8" 3 (length periods')
+>     where
+>       starttime = pythonTestStarttime
+>       --starttime2 = (2*60) `addMinutes'` pythonTestStarttime 
+>       duration = 12*60
+>       sessions = [testSession, testSession2]
+>       --expPeriod1 = Period testSession starttime  (2*60) 5.54222
+>       --expPeriod2 = Period testSession starttime2 (5*60) 5.54222
+>       --expPeriods = [expPeriod1, expPeriod2]
+
+Session data to pack:
+
+> testSession  = defaultSession { sName = "singleton"
+>                               , totalTime = 24*60
+>                               , minDuration = 2*60
+>                               , maxDuration = 6*60
+>                              }
+
+> testSession2 = defaultSession { sName = "second"
+>                               , totalTime = 24*60
+>                               , minDuration = 4*60
+>                               , maxDuration = 8*60
+>                               }
+
+This is the list of random numbers generated on the python side:
+
+> randomList :: [Score]
+> randomList = [7.1331340485018409, 2.4934096782883213, 7.6572318406256947, 5.046714456152789, 6.8446511584066618, 4.0781524926716983, 2.7252730440470305, 4.9143871264557122, 7.1636843840447568, 6.9446361985339973, 4.8230123064175849, 3.4473390258899297, 6.3350439397544198, 2.8207298844712874, 5.1058061299127466, 2.4985974189931035, 7.7080423642050198, 7.158122187895521, 2.5448732889679264, 5.0495207342152231, 2.6078672746394629, 4.5245768464312714, 4.6630376376658127, 4.9814692299184458, 3.9230995086978351, 3.124772317749299, 4.3545291190078173, 3.9156803332050671, 4.7649071147900779, 3.2957866086525902, 2.5266837648837353, 4.1279381958049832, 2.846086056357267, 7.9501503718916222, 5.0040843232701224, 6.2997134589932822, 2.8066033004458157, 3.3695805540586292, 7.1911605255609041, 5.1902010664882869, 6.0641085042114264, 3.1763244030347106, 5.5648306304235842, 4.8999056732443051, 4.8385202083992347, 7.821359353269389, 6.8195409456787983, 6.5591857654180128, 6.0411887011958951, 7.3687373406644578, 3.925478958851746, 6.1593368290906056, 6.2553947135435362, 2.9056687203569784, 2.0240197872208707, 7.0209407927591698, 7.5301119472143458, 6.5565343260879541, 7.4360080633805605, 5.5085736431979573, 3.2467669017752971, 2.4987826901996266, 2.5630089003230587, 2.7377288186642774, 5.1937658979896675, 3.8563605554932829, 4.4845133909067876, 2.130284284547066, 2.9602689950032728, 5.0062212541991116, 5.9676442585520162, 2.2570001356632856, 6.8411971054101093, 2.7563438298968426, 4.7276830627264941, 3.582367067990142, 3.9523405698149894, 6.8553413853738157, 5.0858901299373809, 4.1812254209649007, 7.2192209080032637, 6.4402617123341059, 6.6274389533438569, 6.3186576885368311, 4.6516827521820217, 4.0545997777170779, 6.865594825435954, 6.4993202696106422, 5.6206213173954378, 4.597663643263302, 5.3082458395844654, 6.4621121691512515, 2.8828921454728942, 2.8137617782918687, 4.6148063504374415, 3.3878648645377645, 5.3193346648162638, 2.1265679616606326, 4.3173508768876703, 2.477299227172681]
+
+
