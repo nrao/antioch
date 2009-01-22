@@ -9,7 +9,7 @@
 > import Data.List   (foldl', sort)
 > import Data.Maybe  (fromMaybe, isNothing)
 
-> epsilon  =  1.0e-6 :: Score
+> epsilon  =  1.0e-4 :: Score
 
 > numSteps :: Minutes -> Int
 > numSteps = (`div` quarter)
@@ -25,16 +25,16 @@ all of the open `sessions` are scored at the unmasked datetime values
 to generate `items` for input to the `packWorker` function.
 
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
-> pack sf dt dur periods sessions = do
+> pack sf dt dur fixed sessions = do
 >     let dts = quarterDateTimes dt dur
->     let sched = toSchedule dts . sort $ periods
+>     let sched = toSchedule dts . sort $ fixed
 >     items <- mapM (toItem sf (mask dts sched)) sessions
 >     return $! map (toPeriod dt) . packWorker sched $ items
 
 Construct a list of datetimes using quarter intervals
 
 > quarterDateTimes :: DateTime -> Minutes -> [DateTime]
-> quarterDateTimes dt dur = [(quarter * m) `addMinutes` dt | m <- [0 .. numSteps dur]]
+> quarterDateTimes dt dur = [(quarter * m) `addMinutes` dt | m <- [0 .. numSteps dur - 1]]
 
 Mask out datetimes that are covered by a session already.
 
@@ -78,7 +78,7 @@ Convert candidates to telescope periods relative to a given startime.
 > toPeriod              :: DateTime -> Candidate Session -> Period
 > toPeriod dt candidate = defaultPeriod {
 >     session   = cId candidate
->   , startTime = (quarter * (cStart candidate)) `addMinutes'` dt
+>   , startTime = (quarter * cStart candidate) `addMinutes` dt
 >   , duration  = quarter * cDuration candidate
 >   , pScore    = cScore candidate
 >   }
@@ -177,8 +177,8 @@ Find the better of two candidates.
 > better Nothing   c2         = c2
 > better c1        Nothing    = c1
 > better (Just c1) (Just c2)
->     | cScore c1 > cScore c2 = Just c1
->     | otherwise             = Just c2
+>     | cScore c1 - cScore c2 > epsilon = Just c1
+>     | otherwise                       = Just c2
 
 Add a candidate to a historical value to produce a new candidate.
 

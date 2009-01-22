@@ -164,7 +164,7 @@ Generate a scoring function having the pressure factors.
 > genFrequencyPressure sessions =
 >     frequencyPressure factors band
 >   where
->     bins    = initBins (L, W) band sessions
+>     bins    = initBins (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
 > genRightAscensionPressure :: [Session] -> ScoreFunc
