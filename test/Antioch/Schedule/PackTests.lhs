@@ -301,7 +301,8 @@ TBF: none of these results match the python results!
 >     where
 >       starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
 >       duration = 6*60
->       expPeriod = Period testSession starttime  (6*60) 5.54222
+>       expScore = 5.54222 * (6*4) -- python: mean, here: sum
+>       expPeriod = Period testSession starttime  (6*60) expScore
 
 Here, packing duration (9 hrs) > session maxDur (6 hrs)
 
@@ -315,8 +316,10 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 >       starttime = pythonTestStarttime
 >       starttime2 = (3*60) `addMinutes'` pythonTestStarttime 
 >       duration = 9*60
->       expPeriod1 = Period testSession starttime  (3*60) 5.54222
->       expPeriod2 = Period testSession starttime2 (6*60) 5.54222
+>       expScore1 = 5.76126 * (3 * 4) -- python: mean, here: sum
+>       expScore2 = 5.12881 * (6 * 4) 
+>       expPeriod1 = Period testSession starttime  (3*60) expScore1 
+>       expPeriod2 = Period testSession starttime2 (6*60) expScore2
 >       expPeriods = [expPeriod1, expPeriod2]
 
 Here, packing duration (7 hrs) > session maxDur (6 hrs)
@@ -331,8 +334,10 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 >       starttime = pythonTestStarttime
 >       starttime2 = (2*60) `addMinutes'` pythonTestStarttime 
 >       duration = 7*60
->       expPeriod1 = Period testSession starttime  (2*60) 5.54222
->       expPeriod2 = Period testSession starttime2 (5*60) 5.54222
+>       expScore1 = 4.8132718634 * (3 * 4) -- python: mean, here: sum
+>       expScore2 = 5.2704045983 * (6 * 4) 
+>       expPeriod1 = Period testSession starttime  (2*60) expScore1
+>       expPeriod2 = Period testSession starttime2 (5*60) expScore2
 >       expPeriods = [expPeriod1, expPeriod2]
 
 Now, we change the test by packing using TWO sessions:
