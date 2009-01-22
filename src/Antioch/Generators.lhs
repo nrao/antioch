@@ -5,7 +5,7 @@
 > import Antioch.Utilities
 > import Antioch.DateTime
 > import Data.Char
-> import System.Random  (getStdGen)
+> import System.Random  (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
 
@@ -294,6 +294,13 @@ Assume we are observing the water line 40% of the time.
 
 > generateVec :: Arbitrary a => Int -> IO [a]
 > generateVec = generate' . vector
+
+> generateTestData :: Int -> ([Session], [Period])
+> generateTestData n = (sessions, periods)
+>   where
+>     g = mkStdGen 1
+>     sessions = generate 0 g $ genSessions n
+>     periods  = generate 0 g $ genPeriods n
 
 Sometime in Oct. 2006
 

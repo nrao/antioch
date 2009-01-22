@@ -43,7 +43,8 @@ simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 >   effs <- historicalObsEff w ps
 >   plotEffVsFreq fn effs ps
 
-> plotEffVsFreq fn effs ps = errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
+> plotEffVsFreq fn effs ps =
+>     errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
 >   where
 >     meanEffFreq = meanObsEffByBin $ zip effs (map (frequency . session) ps)
 >     sdomEffFreq = sdomObsEffByBin $ zip effs (map (frequency . session) ps)
@@ -55,7 +56,8 @@ simMeanEffFreq (error bars, crosses, line plot) - Need stats from Dana
 simFreqTime (circles, dt on x-axis)
 
 > plotFreqVsTime         :: StatsPlot
-> plotFreqVsTime fn _ ps = scatterPlot (scatterAttrs t x y fn) $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
+> plotFreqVsTime fn _ ps =
+>     scatterPlot (scatterAttrs t x y fn) $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
 >   where
 >     t = "Frequency vs Time"
 >     x = "Time [days]"

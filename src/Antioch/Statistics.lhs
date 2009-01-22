@@ -14,8 +14,6 @@
 
 To Do List (port from Statistics.py):
 
-   * etaFn (from Reports) (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
-      Need calculation from scoring functions
    * used in error bars (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
       Stats done.  Still need to plot.
        * frequency mean
@@ -26,9 +24,6 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
   
-> etaFn :: [(Frequency, Float)]
-> etaFn = [(f, minObservingEff(f)) | f <- [2.0 .. 60.0]]
-
 > sessionDecFreq :: [Session] -> [(Float, Radians)]
 > sessionDecFreq = dec `vs` frequency
 
@@ -40,6 +35,28 @@ To Do List (port from Statistics.py):
 
 > periodDecRA :: [Period] -> [(Radians, Radians)]
 > periodDecRA = promote sessionDecRA
+
+> sessionRA :: [Session] -> [(Radians, Float)]
+> sessionRA = count (rad2hr . ra) [0..24]
+
+> periodRA :: [Period] -> [(Radians, Float)]
+> periodRA = promote sessionRA
+
+> sessionDec :: [Session] -> [(Radians, Float)]
+> sessionDec = count (rad2deg . dec) [-40..90]
+
+> periodDec :: [Period] -> [(Radians, Float)]
+> periodDec = promote sessionDec
+
+> sessionFreq :: [Session] -> [(Float, Minutes)]
+> sessionFreq = histogram [1.0..50.0] . ((totalTime) `vs` frequency)
+
+> periodFreq :: [Period] -> [(Float, Minutes)]
+> periodFreq =
+>     histogram [1.0..50.0] . (duration `vs` (frequency . session))
+
+> sessionTP :: [Period] -> [(Minutes, Int)]
+> sessionTP = count ((`div` 60) . duration) [1..7]
 
 Example of scatter plot data w/ datetime:
 
@@ -61,6 +78,9 @@ Compare allocated hours by frequency to observed hours by frequency.
 > decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods
 >   where
 >     highEffPeriods = [p | (p, e) <- zip ps es, e > 0.85]
+
+> etaFn :: [(Frequency, Float)]
+> etaFn = [(f, minObservingEff(f)) | f <- [2.0 .. 60.0]]
 
 We may want to move this function to a different file.
 
@@ -95,13 +115,6 @@ We may want to move this function to a different file.
 > historicalLST :: [Period] -> [Float]
 > historicalLST ps = [utc2lstHours $ addMinutes' (duration p `div` 2) $ startTime p | p <- ps]
 
-> sessionFreq :: [Session] -> [(Float, Minutes)]
-> sessionFreq = histogram [1.0..50.0] . ((totalTime) `vs` frequency)
-
-> periodFreq :: [Period] -> [(Float, Minutes)]
-> periodFreq =
->     histogram [1.0..50.0] . (duration `vs` (frequency . session))
-
 Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
@@ -112,21 +125,6 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [(x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
 >     sigmas     = [(x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
-
-> sessionTP :: [Period] -> [(Minutes, Int)]
-> sessionTP = count ((`div` 60) . duration) [1..7]
-
-> sessionRA :: [Session] -> [(Radians, Float)]
-> sessionRA = count (rad2hr . ra) [0..24]
-
-> periodRA :: [Period] -> [(Radians, Float)]
-> periodRA = promote sessionRA
-
-> sessionDec :: [Session] -> [(Radians, Float)]
-> sessionDec = count (rad2deg . dec) [-40..90]
-
-> periodDec :: [Period] -> [(Radians, Float)]
-> periodDec = promote sessionDec
 
 Utilities:
 
