@@ -56,6 +56,19 @@ those to calculate timeLeft and timeTotal?
 >         }
 >     return $ makeProject project sessions
 
+> genProjects         :: Int -> Gen [Project]
+> genProjects 0       = do {return $ []}
+> genProjects (n + 1) = do
+>     p  <- genProject
+>     pp <- genProjects n
+>     return $ [p] ++ pp
+
+> genScheduleProjects :: Gen [Project]
+> genScheduleProjects = do
+>     n <- choose (10, 30)
+>     ps <- genProjects n
+>     return $ ps 
+
 Now lets make sure we are properly generating Projects: test each attribute
 at a time:
 
@@ -281,3 +294,14 @@ Assume we are observing the water line 40% of the time.
 
 > generateVec :: Arbitrary a => Int -> IO [a]
 > generateVec = generate' . vector
+
+Sometime in Oct. 2006
+
+> genStartDate :: Gen DateTime
+> genStartDate = do
+>     day <- choose (1, 30) 
+>     hr <- choose (0, 23)
+>     return $ fromGregorian 2006 10 day hr 0 0
+
+> genScheduleDuration :: Gen Minutes
+> genScheduleDuration = choose (8, 24)
