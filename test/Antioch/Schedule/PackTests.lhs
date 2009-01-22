@@ -26,6 +26,10 @@
 >   , test_PackWorker4
 >   , test_RandomScore
 >   , test_RandomScore2
+>   , test_TestPack_pack1
+>   , test_TestPack_pack2
+>   , test_TestPack_pack3
+>   , test_TestPack_pack8
 >   , test_ToItem
 >   , test_ToPeriod
 >   ]
@@ -298,12 +302,11 @@ TBF: none of these results match the python results!
 >     let periods = pack randomScore starttime duration [] [testSession]
 >     w <- getWeather Nothing
 >     periods' <- runScoring w [] $ periods
->     putStrLn . show $ periods'
 >     assertEqual "test_Pack1_2" [expPeriod] periods'
 >   where
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
 >     duration = 6*60
->     expScore = 5.542216 * (6*4) -- python: mean, here: sum
+>     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
 >     expPeriod = Period testSession starttime  (6*60) expScore
 
 Here, packing duration (9 hrs) > session maxDur (6 hrs)
@@ -312,14 +315,13 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 >     let periods = pack randomScore starttime duration [] [testSession]
 >     w <- getWeather Nothing
 >     periods' <- runScoring w [] $ periods
->     putStrLn . show $ periods'
 >     assertEqual "test_TestPack" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
 >     starttime2 = (3*60) `addMinutes'` pythonTestStarttime 
 >     duration = 9*60
->     expScore1 = 5.761259 * (3 * 4) -- python: mean, here: sum
->     expScore2 = 5.128810 * (6 * 4) 
+>     expScore1 = 69.13509 -- 5.761259 * (3 * 4) python: mean, here: sum
+>     expScore2 = 123.09145 -- 5.128810 * (6 * 4) 
 >     expPeriod1 = Period testSession starttime  (3*60) expScore1 
 >     expPeriod2 = Period testSession starttime2 (6*60) expScore2
 >     expPeriods = [expPeriod1, expPeriod2]
@@ -330,34 +332,38 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 >     let periods = pack randomScore starttime duration [] [testSession]
 >     w <- getWeather Nothing
 >     periods' <- runScoring w [] $ periods
->     putStrLn . show $ periods'
 >     assertEqual "test_TestPack" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
 >     starttime2 = (2*60) `addMinutes'` pythonTestStarttime 
 >     duration = 7*60
->     expScore1 = 4.8132718634 * (2 * 4) -- python: mean, here: sum
->     expScore2 = 5.2704045983 * (5 * 4) 
+>     expScore1 = 38.506172 -- 4.8132718634 * (2 * 4) python: mean, here: sum
+>     expScore2 = 105.408104 -- 5.2704045983 * (5 * 4) 
 >     expPeriod1 = Period testSession starttime  (2*60) expScore1
 >     expPeriod2 = Period testSession starttime2 (5*60) expScore2
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Now, we change the test by packing using TWO sessions:
+Why are these resuts different from python? 
+Basically, the expected solution has a total value
+of 253.086512 whereas pack produces a solution with a value of
+253.0865... the difference of 0.000012 is smaller than the new
+epsilon, and so is "correct".
 
 > test_TestPack_pack8 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] sessions 
 >     w <- getWeather Nothing
 >     periods' <- runScoring w [] $ periods
->     putStrLn . show $ periods'
->     assertEqual "test_TestPack_pack8" 3 (length periods')
+>     assertEqual "test_TestPack_pack8" 2 (length periods')
+>     assertEqual "test_TestPack_pack8" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
->     --starttime2 = (2*60) `addMinutes'` pythonTestStarttime 
+>     starttime2 = (4*60) `addMinutes'` pythonTestStarttime 
 >     duration = 12*60
 >     sessions = [testSession, testSession2]
->     --expPeriod1 = Period testSession starttime  (2*60) 5.54222
->     --expPeriod2 = Period testSession starttime2 (5*60) 5.54222
->     --expPeriods = [expPeriod1, expPeriod2]
+>     expPeriod1 = Period testSession2 starttime  (4*60) 89.321945
+>     expPeriod2 = Period testSession2 starttime2 (8*60) 163.76456
+>     expPeriods = [expPeriod1, expPeriod2]
 
 Session data to pack:
 
