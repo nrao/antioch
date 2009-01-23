@@ -5,8 +5,10 @@
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Weather
+> import Antioch.Generators (generateTestSessions)
 > import Test.HUnit
 > import Control.Monad.Reader
+> import Data.List (zipWith4)
 
 > tests = TestList [
 >     test_NumSteps
@@ -18,6 +20,7 @@
 >   , test_Madd1
 >   , test_Madd2
 >   , test_Pack1
+>   , test_Pack2
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker1
@@ -31,7 +34,9 @@
 >   , test_TestPack_pack3
 >   , test_TestPack_pack8
 >   , test_ToItem
+>   , test_ToItem2
 >   , test_ToPeriod
+>   , test_ToSchedule
 >   ]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
@@ -148,6 +153,7 @@ attributes of the packing algorithm:
 >              , Item "D" 2 8 [0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0] []
 >              ]
 
+Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_Pack1 = TestCase $ do
 >     let periods = pack (fs candidate) starttime duration [] [candidate]
@@ -174,12 +180,12 @@ attributes of the packing algorithm:
 > test_ToItem = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     -- create an item without a mask, i.e. no scoring
->     let item = toItem (fs session) [] session
+>     let item = toItem (fs testSession) [] testSession
 >     item' <- runScoring w [] item
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
->     let item = toItem (fs session) dts session
+>     let item = toItem (fs testSession) dts testSession
 >     item' <- runScoring w [] item
 >     assertEqual "test_ToItem_3" result2 item'
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
@@ -190,25 +196,45 @@ attributes of the packing algorithm:
 >     -- the 'mask' is just a list of datetimes to score at
 >     dts' = quarterDateTimes starttime duration 
 >     dts = [(Just dt) | dt <- dts']
->     session = defaultSession { sName = "singleton"
->                              , totalTime = 24*60
->                              , minDuration = 2*60
->                              , maxDuration = 6*60
->                              }
->     result1 = Item { iId = session
+>     --session = defaultSession { sName = "singleton"
+>     --                         , totalTime = 24*60
+>     --                         , minDuration = 2*60
+>     --                         , maxDuration = 6*60
+>     --                         }
+>     result1 = Item { iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
 >                    , iFuture = []
 >                    , iPast = []
 >                    }
->     -- this expected result for the scoring of the session in 15-min
->     -- increments starting at starttime is taken from the ScoreTests.lhs
->     futureResult = (replicate 37 0.0) ++ [ 3.2315328, 3.204887,  3.211515
->                                          , 3.219639,  3.2261572, 3.1090422
->                                          , 3.1223507, 3.133507,  3.1399984
->                                          , 3.1896782, 3.1915512
->                                          ]
->     result2 = result1 { iFuture = futureResult }
+>     result2 = result1 {iFuture = defaultPackSessionScores}
+
+
+Same as test above, now just checking the affect of pre-scheduled periods:
+
+> test_ToItem2 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     let item = toItem (fs sess) dts sess
+>     result <- runScoring w [] item
+>     assertEqual "test_ToItem2" expected result
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 12 * 60
+>     fs s = genScore [s]
+>     dts' = quarterDateTimes starttime duration 
+>     fixed1 = Period defaultSession starttime 30 0.0
+>     ft2 = (11*60) `addMinutes'` starttime
+>     fixed2 = Period defaultSession ft2 30 0.0
+>     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
+>     sess = testSession
+>     scores = (take 44 defaultPackSessionScores) ++
+>              [0.0, 0.0, 3.1896782, 3.1915512]
+>     expected = Item { iId = sess
+>                    , iMinDur = 8
+>                    , iMaxDur = 24
+>                    , iFuture = scores 
+>                    , iPast = []
+>                    }
 
 > test_ToPeriod = TestCase $ do
 >     assertEqual "test_ToPeriod" expected result
@@ -226,6 +252,91 @@ attributes of the packing algorithm:
 >                              , duration = quarter * 12
 >                              , pScore = 20.0
 >                              }
+
+TBF: are the candidate values for cStart & cDur correct?
+
+> test_ToSchedule = TestCase $ do
+>     assertEqual "test_ToSchedule" expected result
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     ft = 120 `addMinutes'` starttime
+>     fixed = Period defaultSession ft 30 0.0
+>     dts = quarterDateTimes starttime (8*60)
+>     result = toSchedule dts [fixed]
+>     -- TBF: are the candidate values for cStart & cDur correct?
+>     candidates = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [0, 1]
+>     expected = (replicate 8 Nothing) ++ candidates ++ (replicate 22 Nothing) 
+
+Same test, >1 fixed
+
+> test_ToSchedule2 = TestCase $ do
+>     assertEqual "test_ToSchedule" expected result
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     ft = 120 `addMinutes'` starttime
+>     fixed1 = Period defaultSession ft 30 0.0
+>     ft2 = 270 `addMinutes'` starttime
+>     fixed2 = Period defaultSession ft2 30 0.0
+>     dts = quarterDateTimes starttime (8*60)
+>     result = toSchedule dts [fixed1,fixed2]
+>     -- TBF: are the candidate values for cStart & cDur correct?
+>     candidates1 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [0, 1]
+>     candidates2 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [0, 1]
+>     expected = (replicate 8 Nothing) ++ candidates1 ++ (replicate 8 Nothing)
+>                                      ++ candidates2 ++ (replicate 12 Nothing)
+
+Create a long schedule from a reproducable randomly created set of sessions.
+The main value of this test is to catch changes in the packing algorithm that 
+produce changes in the final result.
+
+> test_Pack2 = TestCase $ do
+>     let periods = pack fs starttime duration [] sess
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ periods
+>     assertEqual "test_Pack2" expPeriods periods'  
+>   where
+>     sess = generateTestSessions 20
+>     fs = genScore sess
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 24*60
+>     expPeriods = zipWith4 Period ss times durs scores
+>       where
+>         ids = [26, 14, 26, 49, 40, 0, 46]
+>         ss  = map (\i -> defaultSession {sId = i}) ids
+>         durs = [330, 120, 240, 120, 225, 180, 225]
+>         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
+>         scores = [101.96385, 37.25746, 73.74585, 35.805008, 187.42625,
+>                   177.87897, 138.05206]
+
+Same test, but this time, stick some fixed periods in there.
+TBF: one fixed isn't scheduled right, and more then one causes stack overflow!
+
+> test_Pack3 = TestCase $ do
+>     let periods = pack fs starttime duration [fixed2, fixed1] sess
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ periods
+>     assertEqual "test_Pack3" expPeriods periods'  
+>   where
+>     sess = generateTestSessions 20
+>     ds = defaultSession
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     ft1 = 150     `addMinutes'` starttime
+>     --ft2 = (12*60) `addMinutes'` starttime
+>     ft2 = (6*60) `addMinutes'` starttime
+>     fixed1 = Period ds {sId = 0} ft1 120 0.0
+>     --fixed2 = Period ds {sId = 1} ft2 165 0.0
+>     fixed2 = Period ds {sId = 1} ft2 60 0.0
+>     fixed = [fixed1, fixed2]
+>     fs = genScore sess
+>     duration = 24*60
+>     expPeriods = zipWith4 Period ss times durs scores
+>       where
+>         ids = [26, 14, 26, 49, 40, 0, 46]
+>         ss  = map (\i -> defaultSession {sId = i}) ids
+>         durs = [330, 120, 240, 120, 225, 180, 225]
+>         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
+>         scores = [101.96385, 37.25746, 73.74585, 35.805008, 187.42625,
+>                   177.87897, 138.05206]
 
 Test against python unit tests from beta test code:
 
@@ -295,8 +406,6 @@ The next three tests are packing a single session into a duration.  The main
 difference between tests is the packing duration:
 
 Here, packing duration (6 hrs) == session maxDur (6 hrs)
-
-TBF: none of these results match the python results!
 
 > test_TestPack_pack1 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
@@ -378,6 +487,17 @@ Session data to pack:
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
 >                               }
+
+This expected result for the scoring of the session in 15-min
+increments starting at starttime is taken from the ScoreTests.lhs
+
+> defaultPackSessionScores = (replicate 37 0.0) ++ 
+>                                          [ 3.2315328, 3.204887,  3.211515
+>                                          , 3.219639,  3.2261572, 3.1090422
+>                                          , 3.1223507, 3.133507,  3.1399984
+>                                          , 3.1896782, 3.1915512
+>                                          ]
+
 
 This is the list of random numbers generated on the python side:
 
