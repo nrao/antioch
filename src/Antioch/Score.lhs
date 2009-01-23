@@ -97,9 +97,12 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     dec' = dec s
 
+> observingEfficiency        :: ScoreFunc
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
+
+> observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
 > atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
 
@@ -215,10 +218,10 @@ Translates the total/used times pairs into pressure factors.
 > minObservingEff :: Frequency -> Float
 > minObservingEff freq  =
 >     -- Equation 23
->     avgEff - 0.02 - 0.1*(1 - avgEff)
+>     avgEff - 0.02 - 0.1*(1.0 - avgEff)
 >   where
 >     nu0 = 12.8
->     r = max 50 freq / nu0
+>     r = min 50 freq / nu0
 >     -- Equation 22
 >     avgEff = sum [x * cos (y*r) |
 >                  (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
@@ -229,15 +232,17 @@ Translates the total/used times pairs into pressure factors.
 > trackingErrorLimit        :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
-> observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" . Just $
->     if obsEff < minObsEff
->     -- Equation 24
->     then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
->     else 1.0
+> observingEfficiencyLimit dt s = do
+>     obsEff <- observingEfficiency dt s
+>     let obsEff' = eval obsEff
+>     if obsEff' < minObsEff
+>         -- Equation 24
+>         then fac $ exp (-((obsEff' - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
+>         else fac $ 1.0
 >   where
 >     sigma = 0.02
->     obsEff = 1.0  -- TBF
 >     minObsEff = minObservingEff . frequency $ s
+>     fac = factor "observingEfficiencyLimit" . Just
 
 > hourAngleLimit dt s = do
 >     effHA <- efficiencyHA dt s
@@ -402,6 +407,7 @@ Need to translate a session's factors into the final product score.
 >         | otherwise     = s * f
 
 > genScore          :: [Session] -> ScoreFunc
+> -- missing window, transit, observerOnSite, and observerAvailable
 > genScore sessions = score [
 >     scienceGrade
 >   , thesisProject
@@ -421,6 +427,7 @@ Need to translate a session's factors into the final product score.
 
 Convenience function for translating go/no-go into a factor.
 
+> boolean :: String -> Maybe Bool -> Scoring Factors
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
 
 Quick Check properties:
