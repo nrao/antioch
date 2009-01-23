@@ -53,7 +53,7 @@ function assumes its inputs are sorted.
 > toSchedule []  _   = []
 > toSchedule dts []  = map (const Nothing) dts
 > toSchedule dts@(dt:dts') ps@(p:ps')
->     | dt  <= begin = Nothing : toSchedule dts' ps
+>     | dt  < begin = Nothing : toSchedule dts' ps
 >     | end <= dt    = toSchedule dts ps'
 >     | otherwise    =
 >         Just (Candidate (session p) 0 (numSteps $ dt `diffMinutes'` begin) (pScore p)) : toSchedule dts' ps
