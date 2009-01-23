@@ -117,14 +117,18 @@ We may want to move this function to a different file.
 
 Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
+> killBad n | isNaN n      = 0.0 -- Is this is right value to return?
+>           | isInfinite n = 1.0 -- Is this is right value to return?
+>           | otherwise    = n
+
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
 > satisfactionRatio ss ps = zip3 [frequency $ session p | p <- ps] sRatios sigmas
 >   where 
 >     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
 >     sMinutes   = map (fromIntegral . snd) (sessionFreq ss)
 >     totalRatio = ratio pMinutes sMinutes
->     sRatios    = [(x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
->     sigmas     = [(x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
+>     sRatios    = [killBad (x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
+>     sigmas     = [killBad (x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
 
 Utilities:
 
