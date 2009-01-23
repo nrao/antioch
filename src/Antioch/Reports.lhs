@@ -4,6 +4,8 @@
 > import Antioch.Generators (genSessions, genPeriods)
 > import Antioch.Plots
 > import Antioch.Score
+> import Antioch.Schedule
+> import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
 > import Antioch.Weather
@@ -11,84 +13,143 @@
 
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
+> import Graphics.Gnuplot.Simple
 
 simDecFreq (stars, crosses)
 
-> plotDecFreq ss ps = scatterPlots $ [sessionDecFreq ss, periodDecFreq ps]
+> plotDecFreq          :: StatsPlot
+> plotDecFreq fn ss ps =
+>      scatterPlots (scatterAttrs t x y fn) $ [sessionDecFreq ss, periodDecFreq ps]
+>   where
+>     t   = "Dec vs Freq"
+>     x   = "Frequency [GHz]"
+>     y   = "Declination [deg]"
 
 simDecRA (stars, crosses)
 
-> plotDecVsRA ss ps = scatterPlots $ [sessionRADec ss, periodRADec ps]
+> plotDecVsRA          :: StatsPlot
+> plotDecVsRA fn ss ps =
+>     scatterPlots (scatterAttrs t x y fn) $ [sessionDecRA ss, periodDecRA ps]
+>   where
+>     t = "Dec vs RA"
+>     x = "Right Ascension [hr]"
+>     y = "Declination [deg]"
 
 simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 
-> plotEffVsFreq' _ ps = do
+> plotEffVsFreq'         :: StatsPlot
+> plotEffVsFreq' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotEffVsFreq effs ps
+>   plotEffVsFreq fn effs ps
 
-> plotEffVsFreq effs ps = errorBarPlot $ zip3 meanEffFreq frequencyBins sdomEffFreq
+> plotEffVsFreq fn effs ps =
+>     errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
 >   where
 >     meanEffFreq = meanObsEffByBin $ zip effs (map (frequency . session) ps)
 >     sdomEffFreq = sdomObsEffByBin $ zip effs (map (frequency . session) ps)
+>     t = "Observing Efficiency vs Frequency"
+>     x = "Frequency [GHz]"
+>     y = "Observing Efficiency"
 
 simMeanEffFreq (error bars, crosses, line plot) - Need stats from Dana
 simFreqTime (circles, dt on x-axis)
 
-> plotFreqVsTime _ ps = scatterPlot $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
+> plotFreqVsTime         :: StatsPlot
+> plotFreqVsTime fn _ ps =
+>     scatterPlot (scatterAttrs t x y fn) $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
+>   where
+>     t = "Frequency vs Time"
+>     x = "Time [days]"
+>     y = "Frequency [GHz]"
 
 simSatisfyFreq (error bars)
 
-> plotSatRatioVsFreq ss ps = errorBarPlot $ satisfactionRatio ss ps
+> plotSatRatioVsFreq          :: StatsPlot
+> plotSatRatioVsFreq fn ss ps =
+>     errorBarPlot (scatterAttrs t x y fn) $ satisfactionRatio ss ps
+>   where
+>     t = "Satisfaction Ratio vs Frequency"
+>     x = "Frequency [GHz]"
+>     y = "Satisfaction Ratio"
 
 simEffElev
 
-> plotEffElev' _ ps = do
+> plotEffElev'         :: StatsPlot
+> plotEffElev' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotEffElev effs ps
+>   plotEffElev fn effs ps
 
-> plotEffElev effs ps = scatterPlot $ zip (map elevationFromZenith ps) effs
+> plotEffElev fn effs ps = scatterPlot (scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) effs
+>   where
+>     t = "Efficiency vs Elevation"
+>     x = "Elevation [deg]"
+>     y = "Observing Efficiency"
 
 simEffLST
 
-> plotEffLst' _ ps = do
+> plotEffLst'         :: StatsPlot
+> plotEffLst' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotEffLst effs ps
+>   plotEffLst fn effs ps
 
-> plotEffLst effs ps = scatterPlot $ zip (historicalLST ps) effs
+> plotEffLst fn effs ps =
+>     scatterPlot (scatterAttrs t x y fn) $ zip (historicalLST ps) effs
+>   where
+>     t = "Efficiency vs LST"
+>     x = "LST [hours]"
+>     y = "Observing Efficiency"
 
 simElevDec
 
-> plotElevDec' _ ps = do
+> plotElevDec'         :: StatsPlot
+> plotElevDec' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotElevDec effs ps
+>   plotElevDec fn effs ps
 >
-> plotElevDec effs ps = scatterPlot $ decVsElevation ps effs
+> plotElevDec fn effs ps =
+>     scatterPlot (scatterAttrs t x y fn) $ decVsElevation ps effs
+>   where
+>     t = "Elevation vs Dec"
+>     x = "Declination [deg]"
+>     y = "Elevation [deg]"
 
 simPFLST - need pressure history
 
 simScoreElev
 
-> plotScoreElev' _ ps = do
+> plotScoreElev'         :: StatsPlot
+> plotScoreElev' fn _ ps = do
 >   w      <- getWeather Nothing
 >   let sf = genScore $ map session ps
 >   scores <- historicalObsScore w sf ps
->   plotScoreElev scores ps
+>   plotScoreElev fn scores ps
 
-> plotScoreElev scores ps = scatterPlot $ zip (map elevationFromZenith ps) scores
+> plotScoreElev fn scores ps =
+>     scatterPlot (scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) scores
+>   where
+>     t = "Score vs Elevation"
+>     x = "Elevation [deg]"
+>     y = "Score"
 
 simScoreLST
 
-> plotLstScore' _ ps = do
+> plotLstScore'         :: StatsPlot
+> plotLstScore' fn _ ps = do
 >   w      <- getWeather Nothing
 >   let sf = genScore $ map session ps
 >   scores <- historicalObsScore w sf ps
->   plotLstScore scores ps
+>   plotLstScore fn scores ps
 >
-> plotLstScore scores ps = scatterPlot $ zip (historicalLST ps) scores
+> plotLstScore fn scores ps =
+>     scatterPlot (scatterAttrs t x y fn) $ zip (historicalLST ps) scores
+>   where
+>     t = "Score vs LST"
+>     x = "LST [hours]"
+>     y = "Score"
 
 simBandPFTime - need pressure history
 simLSTPFTime1 - need pressure history
@@ -97,39 +158,63 @@ simLSTPFTime3 - need pressure history
 
 simHistRA
 
-> histSessRA ss ps =
->     histogramPlots $ [sessionRA ss, periodRA ps]
+> histSessRA          :: StatsPlot
+> histSessRA fn ss ps =
+>     histogramPlots (histAttrs t x y fn) $ [sessionRA ss, periodRA ps]
+>   where
+>     t = "Right Ascension Histogram"
+>     x = "RA [hr]"
+>     y = "Counts [Hours]"
 
 simHistEffHr
 
-> histEffHrBand' _ ps = do
+> histEffHrBand'         :: StatsPlot
+> histEffHrBand' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   histEffHrBand effs ps
+>   histEffHrBand fn effs ps
         
-> histEffHrBand effs ps =
->     histogramPlots $ [pBand, effByBand]
+> histEffHrBand fn effs ps =
+>     histogramPlots (histAttrs t x y fn) $ [pBand, effByBand]
 >       where
 >         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- periodBand ps]
 >         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
+>         t = "Hours by Band Histogram"
+>         x = "Band [L, S, C, X, U, K, A, Q]"
+>         y = "Counts [Scheduled Hours]"
 
 simHistFreq
 
-> histSessFreq ss ps =
->     histogramPlots $ [[(f, fromIntegral t) | (f, t) <- sessionFreq ss]
->                     , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
+> histSessFreq          :: StatsPlot
+> histSessFreq fn ss ps =
+>     histogramPlots (histAttrs t x y fn) $ [[(f, fromIntegral t) | (f, t) <- sessionFreq ss]
+>                          , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
+>   where
+>     t = "Frequency Histogram"
+>     x = "Frequency [GHz]"
+>     y = "Counts [Hours]"
 
 simHistDec
 
-> histSessDec ss ps =
->     histogramPlots $ [sessionDec ss, periodDec ps]
+> histSessDec          :: StatsPlot
+> histSessDec fn ss ps =
+>     histogramPlots (histAttrs t x y fn) $ [sessionDec ss, periodDec ps]
+>   where
+>     t = "Declination Histogram"
+>     x = "Declination [deg]"
+>     y = "Counts [Hours]"
 
 simHistPFHours - need pressure history
 simHistPF - need pressure history
 simHistTP
 
-> histSessTP _ ps =
->     histogramPlot $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
+> histSessTP         :: StatsPlot
+> histSessTP fn _ ps =
+>     histogramPlot (tail $ histAttrs t x y fn) $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
+>   where
+>     t = "Telescope Period Histogram"
+>     x = "Session TP [Hours]"
+>     y = "Counts"
 
 Utilities
 
@@ -154,13 +239,92 @@ This function is only temporary until we get simulations integrated
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
 >     runScoring w' [] $ mapM (getScore sf) ps
 
+> type StatsPlot = String -> [Session] -> [Period] -> IO ()
+
+Attributes
+
+> scatterAttrs title xlab ylab fpath =
+>     [Title title
+>    , XLabel xlab
+>    , YLabel ylab
+>     ] ++ if fpath == "" then [] else [PNG fpath]
+
+> histAttrs title xlab ylab fpath =
+>     [LogScale "y"
+>    , Title title
+>    , XLabel xlab
+>    , YLabel ylab
+>     ] ++ if fpath == "" then [] else [PNG fpath]
+
 Testing Harness
 
-> testPlot      :: ([Session] -> [Period] -> IO ()) -> IO ()
-> testPlot plot = do
+> testPlot      :: StatsPlot -> String -> IO ()
+> testPlot plot fn = do
+>     (sessions, periods) <- getData
+>     plot fn sessions periods
+
+> getData :: IO ([Session], [Period])
+> getData = do
 >     g <- getStdGen
 >     let sessions = generate 0 g $ genSessions 100
 >     let periods  = generate 0 g $ genPeriods 100
-> --    putStrLn . show  $ map (toSqlString . startTime) periods
->     plot sessions periods
+>     return $ (sessions, periods)
 
+> testPlots      :: [([Session] -> [Period] -> IO ())] -> IO [()]
+> testPlots plots = do
+>     (sessions, periods) <- getData
+>     sequence (map (\f -> f sessions periods) plots)
+
+Simulator Harness
+
+> statsPlots = [
+>    plotDecFreq ""
+>  , plotDecVsRA ""
+>  , plotEffVsFreq' ""
+>  , plotFreqVsTime "" 
+>  , plotSatRatioVsFreq ""
+>  , plotEffElev' ""
+>  , plotEffLst' ""
+>  , plotElevDec' ""
+>  , plotScoreElev' ""
+>  , plotLstScore' ""
+>  , histSessRA "" 
+>  , histEffHrBand' ""
+>  , histSessFreq ""
+>  , histSessDec ""
+>  , histSessTP ""
+>   ]
+
+> statsPlotsToFile rootPath = statsPlots ++ [
+>    plotDecFreq        $ rootPath ++ "/simDecFreq.png"
+>  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
+>  , plotEffVsFreq'     $ rootPath ++ "/simEffFreq.png"
+>  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
+>  , plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
+>  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
+>  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
+>  , plotElevDec'       $ rootPath ++ "/simElevDec.png"
+>  , plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
+>  , plotLstScore'      $ rootPath ++ "/simScoreLST.png"
+>  , histSessRA         $ rootPath ++ "/simHistRA.png"
+>  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
+>  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
+>  , histSessDec        $ rootPath ++ "/simHistDec.png"
+>  , histSessTP         $ rootPath ++ "/simHistTP.png"
+>   ]
+
+> generatePlots :: Strategy -> [([Session] -> [Period] -> IO ())] -> Int -> IO [()]
+> generatePlots sched sps days = do
+>     w <- getWeather Nothing
+>     g <- getStdGen
+>     let sessions = generate 0 g $ genSessions 100
+>     periods <- simulate sched w rs dt dur int history sessions
+>     sequence $ map (\f -> f sessions periods) sps
+>   where
+>     rs      = []
+>     dt      = fromGregorian 2006 1 1 0 0 0
+>     dur     = 60 * 24 * days
+>     int     = 60 * 24 * 2
+>     history = []
+
+  

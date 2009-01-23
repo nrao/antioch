@@ -6,10 +6,13 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
-> import Data.List   (foldl', sort)
+> import Antioch.Generators
+> import Data.List   (foldl', sort, delete)
 > import Data.Maybe  (fromMaybe, isNothing)
+> import Test.QuickCheck hiding (frequency)
+> import System.IO.Unsafe (unsafePerformIO)
 
-> epsilon  =  1.0e-6 :: Score
+> epsilon  =  1.0e-4 :: Score
 
 > numSteps :: Minutes -> Int
 > numSteps = (`div` quarter)
@@ -25,13 +28,21 @@ all of the open `sessions` are scored at the unmasked datetime values
 to generate `items` for input to the `packWorker` function.
 
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
-> pack sf dt dur periods sessions = do
->     items <- mapM (toItem sf mask) sessions
+> pack sf dt dur fixed sessions = do
+>     let dts = quarterDateTimes dt dur
+>     let sched = toSchedule dts . sort $ fixed
+>     items <- mapM (toItem sf (mask dts sched)) sessions
 >     return $! map (toPeriod dt) . packWorker sched $ items
->   where
->     dts   = scanl (flip addMinutes') dt [quarter * m | m <- [0 .. numSteps dur]]
->     sched = toSchedule dts . sort $ periods
->     mask  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
+
+Construct a list of datetimes using quarter intervals
+
+> quarterDateTimes :: DateTime -> Minutes -> [DateTime]
+> quarterDateTimes dt dur = [(quarter * m) `addMinutes` dt | m <- [0 .. numSteps dur - 1]]
+
+Mask out datetimes that are covered by a session already.
+
+> mask :: [DateTime] -> [Maybe (Candidate Session)] -> [Maybe DateTime]
+> mask dts sched  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
 
 A schedule is a list of time slots.  A given slot is either `Nothing`
 if it is free and available to be scheduled, or `Just x` where x is a
@@ -42,7 +53,7 @@ function assumes its inputs are sorted.
 > toSchedule []  _   = []
 > toSchedule dts []  = map (const Nothing) dts
 > toSchedule dts@(dt:dts') ps@(p:ps')
->     | dt  <= begin = Nothing : toSchedule dts' ps
+>     | dt  < begin = Nothing : toSchedule dts' ps
 >     | end <= dt    = toSchedule dts ps'
 >     | otherwise    =
 >         Just (Candidate (session p) 0 (numSteps $ dt `diffMinutes'` begin) (pScore p)) : toSchedule dts' ps
@@ -70,7 +81,7 @@ Convert candidates to telescope periods relative to a given startime.
 > toPeriod              :: DateTime -> Candidate Session -> Period
 > toPeriod dt candidate = defaultPeriod {
 >     session   = cId candidate
->   , startTime = cStart candidate `addMinutes'` dt
+>   , startTime = (quarter * cStart candidate) `addMinutes` dt
 >   , duration  = quarter * cDuration candidate
 >   , pScore    = cScore candidate
 >   }
@@ -80,8 +91,8 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
 >     cId       :: !a
->   , cStart    :: !Int
->   , cDuration :: !Int
+>   , cStart    :: !Int 
+>   , cDuration :: !Int 
 >   , cScore    :: !Score
 >   } deriving (Eq, Show)
 
@@ -115,7 +126,7 @@ list.
 >   , iMaxDur  :: !Int
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
->   }
+>   } deriving (Eq, Show)
 
 Generate a series of candidates representing the possibilities for
 scheduling an item at each of a sequence of durations: 15 minutes, 30
@@ -169,8 +180,8 @@ Find the better of two candidates.
 > better Nothing   c2         = c2
 > better c1        Nothing    = c1
 > better (Just c1) (Just c2)
->     | cScore c1 > cScore c2 = Just c1
->     | otherwise             = Just c2
+>     | cScore c1 - cScore c2 > epsilon = Just c1
+>     | otherwise                       = Just c2
 
 Add a candidate to a historical value to produce a new candidate.
 
@@ -178,3 +189,84 @@ Add a candidate to a historical value to produce a new candidate.
 > madd Nothing   _         = Nothing
 > madd c1        Nothing   = c1
 > madd (Just c1) (Just c2) = Just $! c1 { cScore = cScore c1 + cScore c2 }
+
+Quick Check properties:
+
+Make sure that the schedule produced by pack has no conlficts: no overlapping
+periods. 
+TBF: this does not work when using genScheduleProjects, genScheduleDuration, 
+and genStartDate.  why not?
+       
+> prop_validSchedule = forAll (genProjects 20) $ \ps ->
+>  --                    forAll genScheduleProjects $ \duration ->
+>  --                    forAll genStartDate $ \starttime ->
+>  --                    forAll genScheduleDuration $ \duration ->
+>  let sched = runPacking ps in 
+>      conflicts sched sched == False  && 
+>      obeyDurations sched && 
+>      obeySchedDuration duration sched
+>  where
+>    runPacking ps  = unsafePerformIO $ do
+>       let starttime = fromGregorian 2006 10 15 12 0 0
+>       w <- theWeather -- TBF: is this right?
+>       w' <- newWeather w (Just $ starttime)
+>       let sess = concatMap sessions ps
+>       let fs = genScore sess
+>       let sched = pack fs starttime duration [] sess
+>       sched' <- runScoring w' [] $ sched
+>       putStrLn . show $ sched'
+>       return $ sched'
+>    duration = 12 * 60
+
+Make sure no single period is longer or shorter then it's session's max and min duration.
+
+> obeyDurations :: [Period] -> Bool
+> obeyDurations ps = dropWhile obeysDurations ps == []
+>   where
+>     obeysDurations p = (minDuration . session $ p) <= duration p &&
+>                        (maxDuration . session $ p) >= duration p
+
+Make sure that we don't have a schedule that has more periods scheduled then 
+what we actually scheduled for.  TBF: right now we are scheduling an extra
+15 minutes at the end.
+
+> obeySchedDuration :: Int -> [Period] -> Bool
+> obeySchedDuration dur ps = sum (map duration ps) <= dur + quarter -- TBF: qtr
+
+TBF: the sudoku.lhs from the python beta test has lots of tested code for 
+finding conflicts.  we should probably tap into that eventually.  For now
+we'll reproduce some of the basic conflict detection stuff:
+
+instance Ord t => Span (Interval t) where
+    (Interval s1 e1) `conflict` (Interval s2 e2) = s1 < e2 && s2 < e1
+
+> overlap :: Period -> Period -> Bool
+> overlap p1 p2 = s1 < e2 && s2 < e1
+>   where
+>     s1 = startTime p1
+>     s2 = startTime p2
+>     e1 = (duration p1) `addMinutes'` s1
+>     e2 = (duration p2) `addMinutes'` s2
+
+TBF: can't seem to implement this with something like dropWhile! arrgh...
+
+> overlaps :: Period -> [Period] -> Bool
+> overlaps y [] = False
+> overlaps y (x:xs) | overlap y x = True
+>                   | otherwise = overlaps y xs
+
+TBF: this sucks.  learn to program dude.
+
+> conflicts :: [Period] -> [Period] -> Bool
+> conflicts [] ys = False
+> conflicts (x:xs) ys | overlaps x (delete x ys) = True
+>                     | otherwise = conflicts xs ys
+
+> testPeriods = [p1, p2, p3]
+> s = defaultSession
+> st1 = fromGregorian 2006 1 1 0 0 0
+> st2 = 60 `addMinutes` st1
+> st3 = 60 `addMinutes` st2
+> p1 = Period s st1 60 0
+> p2 = Period s st2 60 0
+> p3 = Period s st3 60 0

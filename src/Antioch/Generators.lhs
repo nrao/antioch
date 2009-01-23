@@ -5,7 +5,7 @@
 > import Antioch.Utilities
 > import Antioch.DateTime
 > import Data.Char
-> import System.Random  (getStdGen)
+> import System.Random  (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
 
@@ -55,6 +55,19 @@ those to calculate timeLeft and timeTotal?
 >         , timeLeft = timeTotal - timeUsed
 >         }
 >     return $ makeProject project sessions
+
+> genProjects         :: Int -> Gen [Project]
+> genProjects 0       = do {return $ []}
+> genProjects (n + 1) = do
+>     p  <- genProject
+>     pp <- genProjects n
+>     return $ [p] ++ pp
+
+> genScheduleProjects :: Gen [Project]
+> genScheduleProjects = do
+>     n <- choose (10, 30)
+>     ps <- genProjects n
+>     return $ ps 
 
 Now lets make sure we are properly generating Projects: test each attribute
 at a time:
@@ -281,3 +294,38 @@ Assume we are observing the water line 40% of the time.
 
 > generateVec :: Arbitrary a => Int -> IO [a]
 > generateVec = generate' . vector
+
+> generateTestData :: Int -> ([Session], [Period])
+> generateTestData n = (sessions, periods)
+>   where
+>     g = mkStdGen 1
+>     sessions = generate 0 g $ genSessions n
+>     periods  = generate 0 g $ genPeriods n
+
+Consistenly reproduces the *same* randomly generated set of Projects
+
+> generateTestProjects :: Int -> [Project]
+> generateTestProjects n = generate 0 g $ genProjects n
+>   where
+>     g = mkStdGen 1
+
+This essentially returns the same data as generateTestProjects, but as a list
+of just the Sessions, w/ unique id's and names.
+
+> generateTestSessions :: Int -> [Session]
+> generateTestSessions numProjs = sess
+>   where
+>     g = mkStdGen 1
+>     ps = generate 0 g $ genProjects numProjs
+>     sess = zipWith (\s n -> s { sId = n, sName = show n }) (concatMap sessions ps) [0..]
+
+Sometime in Oct. 2006
+
+> genStartDate :: Gen DateTime
+> genStartDate = do
+>     day <- choose (1, 30) 
+>     hr <- choose (0, 23)
+>     return $ fromGregorian 2006 10 day hr 0 0
+
+> genScheduleDuration :: Gen Minutes
+> genScheduleDuration = choose (8, 24)

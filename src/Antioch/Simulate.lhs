@@ -23,7 +23,7 @@
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 1 1 0 0 0
->     dur = 60 * 24 * 365
+>     dur = 60 * 24 * 4
 >     int = 60 * 24 * 2
 >     history = []
   

@@ -12,7 +12,7 @@ profile:
 	./simulate +RTS -p
 
 heap:
-	.simulate +RTS -hc
+	./simulate +RTS -hc
 
 clean:
 	find . -name "*~"   -exec $(RM) {} \;
