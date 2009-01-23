@@ -302,6 +302,23 @@ Assume we are observing the water line 40% of the time.
 >     sessions = generate 0 g $ genSessions n
 >     periods  = generate 0 g $ genPeriods n
 
+Consistenly reproduces the *same* randomly generated set of Projects
+
+> generateTestProjects :: Int -> [Project]
+> generateTestProjects n = generate 0 g $ genProjects n
+>   where
+>     g = mkStdGen 1
+
+This essentially returns the same data as generateTestProjects, but as a list
+of just the Sessions, w/ unique id's and names.
+
+> generateTestSessions :: Int -> [Session]
+> generateTestSessions numProjs = sess
+>   where
+>     g = mkStdGen 1
+>     ps = generate 0 g $ genProjects numProjs
+>     sess = zipWith (\s n -> s { sId = n, sName = show n }) (concatMap sessions ps) [0..]
+
 Sometime in Oct. 2006
 
 > genStartDate :: Gen DateTime
