@@ -14,6 +14,7 @@
 >     test_NumSteps
 >   , test_Unwind1
 >   , test_Unwind2
+>   , test_Unwind3
 >   , test_Candidates1
 >   , test_Candidates2
 >   , test_Best
@@ -23,10 +24,13 @@
 >   , test_Pack2
 >   , test_PackWorker'1
 >   , test_PackWorker'3
+>   , test_PackWorker'Simple
+>   , test_PackWorker'Simple2
 >   , test_PackWorker1
 >   , test_PackWorker2
 >   , test_PackWorker3
 >   , test_PackWorker4
+>   , test_PackWorkerSimple
 >   , test_RandomScore
 >   , test_RandomScore2
 >   , test_TestPack_pack1
@@ -37,6 +41,7 @@
 >   , test_ToItem2
 >   , test_ToPeriod
 >   , test_ToSchedule
+>   , test_ToSchedule2
 >   ]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
@@ -50,6 +55,24 @@
 >   where
 >     xs = [Candidate 1 0 1 1.0, Candidate 2 1 2 1.0, Candidate 3 3 3 1.0]
 >     ys = [Just (Candidate 3 0 3 3.0), Nothing, Nothing, Just (Candidate 2 0 2 2.0), Nothing, Just (Candidate 1 0 1 1.0), Nothing]
+
+> test_Unwind3 = TestCase . assertEqual "test_Unwind3" xs . unwind $ ys
+>   where
+>     xs = [Candidate 1 0 4 4.0]
+>     ys = [Just (Candidate 1 0 4 4.0), Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+
+TBF: this test may be exposing the bu wherein the fixed candiate gets a 
+negative score.
+
+> test_Unwind4 = TestCase . assertEqual "test_Unwind4" xs . unwind $ ys
+>   where
+>     xs = [Candidate "B" 0 3 0.75, Candidate "F1" 3 1 0.0]
+>     ys = [     Just (Candidate "F1" 0 1 0.0)
+>              , Just (Candidate "B"  0 3 0.75)
+>              , Just (Candidate "B"  0 2 0.50)
+>              , Nothing
+>              , Nothing
+>          ]
 
 > test_Candidates1 = TestCase . assertEqual "test_Candidates1" xs . candidates $ ys
 >   where
@@ -95,8 +118,8 @@
 > test_PackWorker1 = TestCase . assertEqual "test_PackWorker1" xs . packWorker ys $ ws
 >   where
 >     xs = [Candidate 1 0 4 4.0]
->     ys = replicate 4 Nothing
->     ws = [Item 1 2 4 (replicate 6 1.0) []]
+>     ys = replicate 4 Nothing  -- nothing prescheduled
+>     ws = [Item 1 2 4 (replicate 6 1.0) []] -- scores 1.0 for 6 units
 
 > test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker ys $ ws
 >   where
@@ -264,7 +287,7 @@ TBF: are the candidate values for cStart & cDur correct?
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed]
 >     -- TBF: are the candidate values for cStart & cDur correct?
->     candidates = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [0, 1]
+>     candidates = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [1, 2]
 >     expected = (replicate 8 Nothing) ++ candidates ++ (replicate 22 Nothing) 
 
 Same test, >1 fixed
@@ -280,8 +303,8 @@ Same test, >1 fixed
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed1,fixed2]
 >     -- TBF: are the candidate values for cStart & cDur correct?
->     candidates1 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [0, 1]
->     candidates2 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [0, 1]
+>     candidates1 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [1, 2]
+>     candidates2 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [1, 2]
 >     expected = (replicate 8 Nothing) ++ candidates1 ++ (replicate 8 Nothing)
 >                                      ++ candidates2 ++ (replicate 12 Nothing)
 
@@ -310,21 +333,159 @@ produce changes in the final result.
 
 Same test, but this time, stick some fixed periods in there.
 TBF: one fixed isn't scheduled right, and more then one causes stack overflow!
+TBF: check out the fixed period - it's getting split up into one quarter w/ a 
+negative score and 0 duration (!!!) and the rest of it's time looks okay.
+
+pack returns periods:
+Period: 1 at 2006-11-08 12:00:00 for 120 with 2.2086082,
+Period:  at 2006-11-08 14:00:00 for 30 with -2.2086082
+
+these periods are derived from packWorker's output:
+Candidate {cId = 1, cStart = 0, cDuration = 8, cScore = 2.2086082}
+Candidate {cId = 0, cStart = 8, cDuration = 2, cScore = -2.2086082}
+
+which is derived from packWorker''s output:
+Nothing,Nothing
+Just (Candidate {cId = 0, cStart = 0, cDuration = 2, cScore = 0.0})
+Just (Candidate {cId = 0, cStart = 0, cDuration = 1, cScore = 0.0})
+Nothing
+Just (Candidate {cId = 1, cStart = 0, cDuration = 8, cScore = 2.2})
+Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing,Nothing
+
+Build up to this case with the simplest examples possible:
+
+> test_PackWorkerSimple =
+>     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker fixed $ open
+>   where
+>     result = [ Candidate "B"  0 4 1.0
+>              ]
+>     fixed = replicate 4 Nothing
+>     open  = [Item "B" 2 4 (replicate 4 0.25) []]
+
+Test PackWorker' w/ the input provided by test_PackWorkerSimple above:
+These results are then used in test_Unwind3.
+
+> test_PackWorker'Simple =
+>     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker' fixed past $ open
+>   where
+>     result = [ Just (Candidate "B" 0 4 1.0)
+>              , Just (Candidate "B" 0 3 0.75)
+>              , Just (Candidate "B" 0 2 0.50)
+>              , Nothing
+>              , Nothing
+>              ]
+>     past  = [Nothing]
+>     fixed = replicate 4 Nothing
+>     open'  = [Item "B" 2 4 (replicate 4 0.25) []]
+>     open   = map step open'
+
+Same as above, but with one time segment pre-scheduled:
+TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
+
+> test_PackWorker'Simple2 =
+>     TestCase . assertEqual "test_PackWorkerSimple2" result . packWorker' fixed past $ open
+>   where
+>     result = [ Just (Candidate "F1" 0 1 0.0)
+>              , Just (Candidate "B"  0 3 0.75)
+>              , Just (Candidate "B"  0 2 0.50)
+>              , Nothing
+>              , Nothing
+>              ]
+>     past  = [Nothing]
+>     fixed = [ Nothing
+>             , Nothing
+>             , Nothing --Just (Candidate "F1" 0 1 0.0)
+>             , Just (Candidate "F1" 0 1 0.0)
+>             ]
+>     open'  = [Item "B" 2 4 (replicate 4 0.25) []]
+>     open   = map step open'
+
+TBF: does not pass due to negative score for F1 !!!
+
+> test_PackWorker5 =
+>     TestCase . assertEqual "test_PackWorker5" result . packWorker fixed $ open
+>   where
+>     result = [ Candidate "B"  0 8 2.2
+>              , Candidate "F1" 8 2 0.0 -- bug: -2.2
+>              ]
+>     fixed  = [ Nothing                        --  0
+>              , Nothing                        --  1
+>              , Nothing                        --  2
+>              , Nothing                        --  3
+>              , Nothing                        --  4
+>              , Nothing                        --  5
+>              , Nothing                        --  6
+>              , Nothing                        --  7
+>              , Just (Candidate "F1" 0 1 0.0)  --  8 bug: durrs = 1 & 2?
+>              , Just (Candidate "F1" 0 2 0.0)  --  9 
+>              , Nothing                        --  10
+>              , Nothing                        --  11
+>              ]
+>     open   = [ Item "A" 12 24 (replicate 12 0.0) [] 
+>              , Item "B"  8 28 ((replicate 8 0.275)++[0.0,0.0,0.275,0.275]) []
+>              , Item "C"  9 28 ((replicate 8 0.257)++[0.0,0.0,0.0,0.0]) []
+>              ]
+
+> test_PackWorker'5 =
+>     TestCase . assertEqual "test_PackWorker'5" result  . packWorker' future past $ sessions
+>   where
+>     result = [ Just (Candidate "B"  0 8 2.2)
+>              , Just (Candidate "F1" 9 2 0.0) -- bug: -2.2
+>              ]
+>     future  = [ Nothing                        --  0
+>              , Nothing                        --  1
+>              , Nothing                        --  2
+>              , Nothing                        --  3
+>              , Nothing                        --  4
+>              , Nothing                        --  5
+>              , Nothing                        --  6
+>              , Nothing                        --  7
+>              , Just (Candidate "F1" 0 1 0.0)  --  8 bug: durrs = 1 & 2?
+>              , Just (Candidate "F1" 0 2 0.0)  --  9 
+>              , Nothing                        --  10
+>              , Nothing                        --  11
+>              ]
+>     past   = [Nothing]
+>     open   = [ Item "A" 12 24 (replicate 12 0.0) []
+>              , Item "B"  8 28 ((replicate 8 0.275)++[0.0,0.0,0.275,0.275]) []
+>              , Item "C"  9 28 ((replicate 8 0.257)++[0.0,0.0,0.0,0.0]) []
+>              ]
+>     sessions = map step open
+
+TBF: Here we have taken the original complicated test of 'pack' that is failing,
+and reduced it to a smaller problem for debugging.  Fails because of fixed
+period's negative score in the result.
 
 > test_Pack3 = TestCase $ do
->     let periods = pack fs starttime duration [fixed2, fixed1] sess
+>     let periods' = pack fs starttime duration [fixed] sess
+>     w <- getWeather . Just $ starttime 
+>     periods <- runScoring w [] $ periods'
+>     print periods
+>     assertEqual "test_Pack3" expPeriods periods  
+>   where
+>     sess = take 3 $ generateTestSessions 20 -- doesn't depend on # of sess
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     ft1 = 120  `addMinutes'` starttime
+>     fixed = Period defaultSession {sId = 0} ft1 30 0.0
+>     fs = genScore sess
+>     duration = 3*60
+>     p1 = Period (sess!!1) starttime 120 2.2086082
+>     expPeriods  = [p1, fixed]
+
+TBF: fixed >1 causes stack overflow!
+
+> test_Pack4 = TestCase $ do
+>     let periods = pack fs starttime duration [fixed1, fixed2] sess
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ periods
->     assertEqual "test_Pack3" expPeriods periods'  
+>     assertEqual "test_Pack4" expPeriods periods'  
 >   where
->     sess = generateTestSessions 20
+>     sess = take 3 $ generateTestSessions 20 -- doesn't depend on # of sess's
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft1 = 150     `addMinutes'` starttime
->     --ft2 = (12*60) `addMinutes'` starttime
 >     ft2 = (6*60) `addMinutes'` starttime
 >     fixed1 = Period ds {sId = 0} ft1 120 0.0
->     --fixed2 = Period ds {sId = 1} ft2 165 0.0
 >     fixed2 = Period ds {sId = 1} ft2 60 0.0
 >     fixed = [fixed1, fixed2]
 >     fs = genScore sess
