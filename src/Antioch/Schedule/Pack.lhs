@@ -30,7 +30,10 @@ to generate `items` for input to the `packWorker` function.
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > pack sf dt dur fixed sessions = do
 >     let dts = quarterDateTimes dt dur
->     let sched = toSchedule dts . sort $ fixed
+>     -- TBF: the call to sort below is causing an infinite loop 
+>     -- (or stack overflow).  For now, just assume that fixed is sorted.
+>     -- let sched = toSchedule dts . sort $ fixed
+>     let sched = toSchedule dts fixed
 >     items <- mapM (toItem sf (mask dts sched)) sessions
 >     return $! map (toPeriod dt) . packWorker sched $ items
 
