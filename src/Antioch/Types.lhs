@@ -139,13 +139,27 @@ Tying the knot.
 >   , startTime :: DateTime
 >   , duration  :: Minutes
 >   , pScore    :: Score  -- Average forecasted score
->   } deriving Eq
+>   } 
 
 > instance Show Period where
 >     show p = "Period: " ++ sName (session p) ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " with " ++ show (pScore p)
 
 > instance Ord Period where
 >     (<) = (<) `on` startTime
+
+TBF: Until scoring settles down, we want an equality operator for periods that
+ignores their numerical scores.
+
+> instance Eq Period where
+>     (==) = periodsEqual
+
+> periodsEqual :: Period -> Period -> Bool
+> periodsEqual p1 p2 = eqStarts p1 p2 && eqDurs p1 p2 && eqIds p1 p2
+>   where
+>     eqStarts p1 p2 = startTime p1 == startTime p2
+>     eqDurs   p1 p2 =  duration p1 == duration p2
+>     eqIds    p1 p2 =   session p1 == session p2 
+
 
 > defaultSession = Open {
 >     sId         = 0
