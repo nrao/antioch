@@ -56,7 +56,7 @@ function assumes its inputs are sorted.
 >     | dt  < begin = Nothing : toSchedule dts' ps
 >     | end <= dt    = toSchedule dts ps'
 >     | otherwise    =
->         Just (Candidate (session p) 0 (numSteps $ dt `diffMinutes'` begin) (pScore p)) : toSchedule dts' ps
+>         Just (Candidate (session p) 0 (1 + (numSteps $ dt `diffMinutes'` begin)) (pScore p)) : toSchedule dts' ps
 >   where
 >     begin = startTime p
 >     end   = addMinutes' (duration p) begin
@@ -156,13 +156,31 @@ block that we know we won't be scheduling across.
 > forget      :: Item a -> Item a
 > forget item = item { iPast = [] }
 
+Given the schedule (showing free and pre-scheduled time slots) and the list
+of sessions to pack (items have scores), returns when the session and pre-
+schedule time slots should occur (a list of *only* candidates)
+
 > packWorker        :: [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
-> packWorker future = unwind . packWorker' future [Nothing] . map step
+> packWorker future items = unwind . packWorker' future [Nothing] . map step $ items
+
+Returns a list representing each time slot, with each element either being 
+Nothing or a Candidate.  Note that this list is 'Nothing' terminated.
+This function is initially called from 'packWorker' as:
+packWorker' future [Nothing] (map step items)
+Note that the 'past' param is seeded w/ [Nothing], and that the Items
+have their first future score moved out their past scores ('step').
+The basic recursive pattern here is that each element of the future list
+is inspected, and the past list is constructed, until we reach the end of the 
+future list, where we terminate and return our constructed past list.
 
 > packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
-> packWorker' []                 past _        = past
+> packWorker' []                 past _        = past  -- termination pattern
+> -- if there is something pre-scheduled, it wins: put it in the 'past' list
+> -- and remove the past scores from all sessions, then step to next time slot
 > packWorker' (Just b  : future) past sessions =
 >     packWorker' future (Just b:past) $! map (step . forget) sessions
+> -- if there is nothing pre-scheduled, find the best candiate for this period,
+> -- then step to the next time slot
 > packWorker' (Nothing : future) past sessions =
 >     f `seq` packWorker' future (b:past) $! map step sessions
 >   where
@@ -172,7 +190,7 @@ block that we know we won't be scheduling across.
 Find the best of a collection of candidates.
 
 > best :: [Maybe (Candidate a)] -> Maybe (Candidate a)
-> best = foldl' better Nothing
+> best = foldl' better Nothing 
 
 Find the better of two candidates.
 
