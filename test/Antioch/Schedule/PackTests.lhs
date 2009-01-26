@@ -25,6 +25,7 @@
 >   , test_Pack2
 >   , test_Pack3
 >   , test_Pack4
+>   , test_Pack5
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker'5
@@ -388,7 +389,7 @@ TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 >     open'  = [Item "B" 2 4 (replicate 4 0.25) []]
 >     open   = map step open'
 
-TBF: does not pass due to negative score for F1 !!!
+TBF: Scores not right due to negative score for F1 !!!
 
 > test_PackWorker5 =
 >     TestCase . assertEqual "test_PackWorker5" result . packWorker fixed $ open
@@ -466,12 +467,12 @@ This is the original test that exposed many of the bugs with packing
 around fixed periods.
 
 > test_Pack4 = TestCase $ do
->     let periods = pack fs starttime duration [fixed1, fixed2] sess
+>     let periods = pack fs starttime duration fixed sess
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ periods
->     assertEqual "test_Pack44" expPeriods periods'  
+>     assertEqual "test_Pack4" expPeriods periods'  
 >   where
->     sess = generateTestSessions 20 -- doesn't depend on # of sess's
+>     sess = generateTestSessions 20
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft1 = 150     `addMinutes'` starttime
@@ -495,6 +496,42 @@ around fixed periods.
 >         -- TBF: bug - second score should be zero!!!!
 >         scores = [39.079136, -39.079136, 0.0, 83.05223, 35.805008,
 >                   187.42627, 177.879, 138.0521]
+
+Same as above, but with even more fixed periods
+
+> test_Pack5 = TestCase $ do
+>     let periods = pack fs starttime duration fixed sess
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ periods
+>     assertEqual "test_Pack5" expPeriods periods'  
+>   where
+>     sess = generateTestSessions 20
+>     ds = defaultSession
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     ft1 = 150     `addMinutes'` starttime
+>     ft2 = (6*60) `addMinutes'` starttime
+>     ft3 = (12*60) `addMinutes'` starttime
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 120 0.0
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 60 0.0
+>     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 135 0.0
+>     fixed = [fixed1, fixed2, fixed3]
+>     fs = genScore sess
+>     duration = 24*60
+>     expPeriods = zipWith4 Period ss times durs scores
+>       where
+>         ids = [31, 1000, 1001, 26, 1002, 40, 46]
+>         ss  = map (\i -> defaultSession {sId = i, sName = show i}) ids
+>         durs = [150, 120, 60, 300, 135, 345, 240]
+>         -- calc the start time, but watch for the dead time between 
+>         -- the fixed periods
+>         times'= scanl (\dur dt -> addMinutes' dt dur) starttime (take 1 durs)
+>         times= times' ++
+>             (scanl (\dur dt -> addMinutes' dt dur) ft2 (drop 2 durs))
+>         -- TBF: don't tie pack tests to numerical scores
+>         -- TBF: bug - second score should be zero!!!!
+>         scores = [39.079136, -39.079136, 0.0, 92.10629,
+>                   -92.10629, 177.879, 138.0521]
+
 
 Test against python unit tests from beta test code:
 
