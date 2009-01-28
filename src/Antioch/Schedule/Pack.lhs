@@ -7,8 +7,8 @@
 > import Antioch.Types
 > import Antioch.Weather
 > import Antioch.Generators
-> import Data.List   (foldl', sort, delete)
-> import Data.Maybe  (fromMaybe, isNothing)
+> import Data.List   (foldl', sort, delete, find)
+> import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 
@@ -215,29 +215,56 @@ Quick Check properties:
 
 Make sure that the schedule produced by pack has no conlficts: no overlapping
 periods. 
-TBF: this does not work when using genScheduleProjects, genScheduleDuration, 
-and genStartDate.  why not?
        
-> prop_validSchedule = forAll (genProjects 20) $ \ps ->
->  --                    forAll genScheduleProjects $ \duration ->
->  --                    forAll genStartDate $ \starttime ->
->  --                    forAll genScheduleDuration $ \duration ->
->  let sched = runPacking ps in 
+> prop_validSchedule = forAll genScheduleProjects $ \ps ->
+>                      forAll genStartDate $ \starttime ->
+>                      forAll genScheduleDuration $ \dur ->
+>  let sched = runPacking ps starttime dur in 
 >      conflicts sched sched == False  && 
 >      obeyDurations sched && 
->      obeySchedDuration duration sched
+>      obeySchedDuration dur sched &&
+>      validPackScores sched
 >  where
->    runPacking ps  = unsafePerformIO $ do
->       let starttime = fromGregorian 2006 10 15 12 0 0
+>    runPacking ps starttime dur = unsafePerformIO $ do
 >       w <- theWeather -- TBF: is this right?
 >       w' <- newWeather w (Just $ starttime)
 >       let sess = concatMap sessions ps
 >       let fs = genScore sess
->       let sched = pack fs starttime duration [] sess
+>       let sched = pack fs starttime dur [] sess
 >       sched' <- runScoring w' [] $ sched
->       putStrLn . show $ sched'
 >       return $ sched'
->    duration = 12 * 60
+
+Same as above, but now insert some pre-schedule periods into the problem.
+
+> prop_validMixedSchedule = forAll genScheduleProjects $ \ps ->
+>                      forAll genStartDate $ \starttime ->
+>                      forAll genScheduleDuration $ \dur ->
+>                      forAll (genSchedulePeriods starttime dur (concatMap sessions ps)) $ \fixed ->
+>  let sched = runPacking ps starttime dur fixed in 
+>      conflicts sched sched == False && 
+>      obeyDurations sched && 
+>      obeySchedDuration dur sched &&
+>      honorsFixed fixed sched
+>      -- validScores sched -- TBF: periods getting neg. scores!
+>  where
+>    runPacking ps starttime dur fixed = unsafePerformIO $ do
+>       let fixed' = concatMap maybeToList fixed
+>       w <- theWeather -- TBF: is this right?
+>       w' <- newWeather w (Just $ starttime)
+>       let sess = concatMap sessions ps
+>       let fs = genScore sess
+>       let sched = pack fs starttime dur fixed' sess
+>       sched' <- runScoring w' [] $ sched
+>       return $ sched'
+
+Make sure the pre-scheduled periods are in the final schedule.
+
+> honorsFixed :: [Maybe Period] -> [Period] -> Bool
+> honorsFixed []    _        = True
+> honorsFixed fixed schedule = if (length fixed' == 0) then True else dropWhile (==True) (findFixed fixed' schedule) == [] 
+>   where 
+>     fixed' = concatMap maybeToList fixed
+>     findFixed fs schedule = [isJust (find (==f) schedule) | f <- fs] 
 
 Make sure no single period is longer or shorter then it's session's max and min duration.
 
@@ -252,7 +279,17 @@ what we actually scheduled for.  TBF: right now we are scheduling an extra
 15 minutes at the end.
 
 > obeySchedDuration :: Int -> [Period] -> Bool
-> obeySchedDuration dur ps = sum (map duration ps) <= dur + quarter -- TBF: qtr
+> obeySchedDuration dur ps = sum (map duration ps) <= dur -- + quarter -- TBF: qtr
+
+All open sessions scheduled w/ by pack should have scores > 0.  Thus, if there
+are no pre-scheduled periods that pack has to work around, *all* the scores
+should be > 0.
+
+> validPackScores :: [Period] -> Bool
+> validPackScores ps = dropWhile (>0.0) (map pScore ps) == []
+
+> validScores :: [Period] -> Bool
+> validScores ps = dropWhile (>=0.0) (map pScore ps) == []
 
 TBF: the sudoku.lhs from the python beta test has lots of tested code for 
 finding conflicts.  we should probably tap into that eventually.  For now
