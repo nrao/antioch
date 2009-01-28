@@ -67,6 +67,7 @@ those to calculate timeLeft and timeTotal?
 > genScheduleProjects = do
 >     n <- choose (10, 30)
 >     ps <- genProjects n
+>     -- TBF: generate unique ids for projects & sessions
 >     return $ ps 
 
 Now lets make sure we are properly generating Projects: test each attribute
@@ -227,6 +228,36 @@ Make sure Durations are made of 15-minute intervals
 
 > prop_duration p = duration p `mod` quarter == 0
 
+We need to (partially) fill a chunk of time with valid periods.  
+It would be good to
+parameterize this such that we can control the degree to which the schedule
+is filled.
+TBF: we can make this more sophisticated.
+
+> genSchedulePeriods :: DateTime -> Minutes -> [Session] -> Gen [Maybe Period]
+> genSchedulePeriods starttime schedDur sessions = do
+>     -- duration probably between 8 - 24 hours.
+>     -- how many periods to stick in there?
+>     n <- choose (1, 3)
+>     -- try to stick each period in the schedule, unless there's no room;
+>     -- make sure that max & min session durations are obeyed, and that
+>     -- we don't create1 any dead space from holes < smalles min. session
+>     let schedDurs = round2quarter $ schedDur `div` n 
+>     let dts = [ (schedDurs * i) `addMinutes'` starttime | i <- [0 .. (n-1)]]
+>     -- TBF: randomly select which sessions to generate periods for
+>     periods <- mapM (genSchedulePeriod (head sessions) schedDurs) dts 
+>     return periods
+
+> genSchedulePeriod :: Session -> Minutes -> DateTime -> Gen (Maybe Period)
+> genSchedulePeriod sess dur dt = do
+>     -- keep it simple: start period at start of time slot
+>     -- see if the period will fit in the allotted time
+>     -- Note: to avoid 'dead time', allow at least min. sess. time at the end
+>     pDur' <- choose (minDuration sess, ((maxDuration sess) - (2*60)))
+>     let pDur = round2quarter pDur' --quarter * (pDur' `div` quarter)
+>     let fits = (minDuration sess) <= dur - (2*60)
+>     return $ if not fits then Nothing else Just $ Period sess dt pDur 0.0 
+
 > type Semester = Int
   
 > genSemester :: Gen Semester
@@ -328,4 +359,4 @@ Sometime in Oct. 2006
 >     return $ fromGregorian 2006 10 day hr 0 0
 
 > genScheduleDuration :: Gen Minutes
-> genScheduleDuration = choose (8, 24)
+> genScheduleDuration = choose (8*60, 24*60)
