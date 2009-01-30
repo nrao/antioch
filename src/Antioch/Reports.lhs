@@ -1,7 +1,7 @@
 > module Antioch.Reports where
 
 > import Antioch.DateTime
-> import Antioch.Generators (genSessions, genPeriods)
+> import Antioch.Generators (genSessions, genPeriods, generateVec)
 > import Antioch.Plots
 > import Antioch.Score
 > import Antioch.Schedule
@@ -12,6 +12,7 @@
 > import Control.Monad      (liftM)
 
 > import System.Random
+> import System.CPUTime
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
@@ -295,7 +296,7 @@ Simulator Harness
 >  , histSessTP ""
 >   ]
 
-> statsPlotsToFile rootPath = statsPlots ++ [
+> statsPlotsToFile rootPath = [
 >    plotDecFreq        $ rootPath ++ "/simDecFreq.png"
 >  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
 >  , plotEffVsFreq'     $ rootPath ++ "/simEffFreq.png"
@@ -317,14 +318,17 @@ Simulator Harness
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
 >     g <- getStdGen
->     let sessions = generate 0 g $ genSessions 100
->     periods <- simulate sched w rs dt dur int history sessions
->     sequence $ map (\f -> f sessions periods) sps
+>     let ss' = generate 0 g $ genSessions 1500
+>     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     print $ length ss
+>     start <- getCPUTime
+>     results <- simulate sched w rs dt dur int history ss
+>     stop <- getCPUTime
+>     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     sequence $ map (\f -> f ss results) sps
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 1 1 0 0 0
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 >     history = []
-
-  
