@@ -5,6 +5,8 @@
 > import Antioch.Utilities
 > import Antioch.DateTime
 > import Data.Char
+> import Data.List 
+> import Data.Maybe (maybeToList)
 > import System.Random  (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
@@ -253,10 +255,54 @@ TBF: we can make this more sophisticated.
 >     -- keep it simple: start period at start of time slot
 >     -- see if the period will fit in the allotted time
 >     -- Note: to avoid 'dead time', allow at least min. sess. time at the end
->     pDur' <- choose (minDuration sess, ((maxDuration sess) - (2*60)))
+>     let maxL = dur - (2*60)
+>     pDur' <- choose (min maxL (minDuration sess), min maxL (maxDuration sess))
 >     let pDur = round2quarter pDur' --quarter * (pDur' `div` quarter)
->     let fits = (minDuration sess) <= dur - (2*60)
+>     let fits = (minDuration sess) <= maxL
 >     return $ if not fits then Nothing else Just $ Period sess dt pDur 0.0 
+
+Check this generator itself: make sure the periods adhere to expected properties
+
+> prop_schedulePeriods = forAll (genSessions 100) $ \ss ->
+>                       forAll genStartDate $ \starttime ->
+>                       forAll genScheduleDuration $ \dur ->
+>                       forAll (genSchedulePeriods starttime dur ss) $ \ps ->
+>   let ps' = concatMap maybeToList ps in length ps' < 4 && 
+>                                         not (internalConflicts ps') &&
+>                                         obeyMinSeparation ps' (2*60)
+
+TBF: this code needs to go somewhere where it can be shared better - duplicate!
+TBF: the sudoku.lhs from the python beta test has lots of tested code for 
+finding conflicts.  we should probably tap into that eventually.  For now
+we'll reproduce some of the basic conflict detection stuff:
+
+instance Ord t => Span (Interval t) where
+    (Interval s1 e1) `conflict` (Interval s2 e2) = s1 < e2 && s2 < e15
+
+> endTime p = duration p `addMinutes` startTime p
+
+> overlap p1 p2 = s1 < e2 && s2 < e1
+>   where
+>     [s1, s2] = map startTime [p1, p2]
+>     [e1, e2] = map endTime [p1, p2]
+
+> overlaps y = maybe False (const True) . find (overlap y)
+
+> internalConflicts xs = or [x `overlaps` (xs \\ [x]) | x <- xs]
+
+> conflicts :: [Period] -> [Period] -> Bool
+> conflicts [] ys = False
+> conflicts (x:xs) ys | overlaps x (delete x ys) = True
+>                     | otherwise = conflicts xs ys
+
+> obeyMinSeparation :: [Period] -> Minutes -> Bool
+> obeyMinSeparation ps minSep = dropWhile (>=minSep) (minutesBetween ps) == []
+
+> minutesBetween :: [Period] -> [Minutes]
+> minutesBetween []     = []
+> minutesBetween (p:[]) = []
+> minutesBetween (p:ps) = diffMinutes' (startTime (head ps)) (endTime p) : minutesBetween ps
+
 
 > type Semester = Int
   
