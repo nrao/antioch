@@ -42,7 +42,15 @@ simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 > plotEffVsFreq' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotEffVsFreq fn effs ps
+>   plotEffVsFreq'' fn effs ps
+
+> plotEffVsFreq'' fn effs ps =
+>     scatterPlot (scatterAttrs t x y fn) $ zip (historicalFreq ps) effs
+>   where
+>     t = "Observing Efficiency vs Frequency"
+>     x = "Frequency [GHz]"
+>     y = "Observing Efficiency"
+
 
 > plotEffVsFreq fn effs ps =
 >     errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
