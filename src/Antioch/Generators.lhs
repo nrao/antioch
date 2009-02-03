@@ -400,8 +400,8 @@ Sometime in Oct. 2006
 
 > genStartDate :: Gen DateTime
 > genStartDate = do
->     day <- choose (1, 30) 
->     hr <- choose (0, 23)
+>     day   <- choose (1, 30) 
+>     hr    <- choose (0, 23)
 >     return $ fromGregorian 2006 10 day hr 0 0
 
 > genScheduleDuration :: Gen Minutes
