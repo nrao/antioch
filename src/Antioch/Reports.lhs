@@ -325,7 +325,7 @@ Simulator Harness
 > generatePlots :: Strategy -> [([Session] -> [Period] -> IO ())] -> Int -> IO [()]
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
->     g <- getStdGen
+>     let g   = mkStdGen 1
 >     let ss' = generate 0 g $ genSessions 1500
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     print $ length ss
