@@ -45,11 +45,12 @@ simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 >   plotEffVsFreq'' fn effs ps
 
 > plotEffVsFreq'' fn effs ps =
->     scatterPlot (scatterAttrs t x y fn) $ zip (historicalFreq ps) effs
+>     scatterPlot attrs $ zip (historicalFreq ps) effs
 >   where
->     t = "Observing Efficiency vs Frequency"
->     x = "Frequency [GHz]"
->     y = "Observing Efficiency"
+>     t     = "Observing Efficiency vs Frequency"
+>     x     = "Frequency [GHz]"
+>     y     = "Observing Efficiency"
+>     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51)] ++ [YRange (-0.1, 1.1)]
 
 
 > plotEffVsFreq fn effs ps =
