@@ -55,9 +55,10 @@ explicitly but in the form of the coefficient 8640184.812866, which is
 > gmst' ut1
 >     | ut1 `seq` False = undefined
 >     | otherwise       =
->         (ut1 `mod'` 1.0) * d2pi + s2r * ((((-6.2e-6*tu + 0.093104)*tu + 8640184.812866)*tu) + 24110.54841)
+>         x0 * d2pi + s2r * ((((-6.2e-6*tu + 0.093104)*tu + 8640184.812866)*tu) + 24110.54841)
 >   where
->     tu = (ut1 - 51544.5) / 36525.0
+>     (_, x0) = properFraction ut1
+>     tu      = (ut1 - 51544.5) / 36525.0
 
 > poly x = foldl1' $ \a b -> a*x + b
 
