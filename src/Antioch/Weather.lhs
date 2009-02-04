@@ -3,16 +3,18 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.Generators
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
 > import Data.IORef
 > import Data.List         (elemIndex)
-> import Data.Maybe        (fromJust, maybe)
+> import Data.Maybe        (fromJust, maybe, isJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import Prelude hiding (catch)
 > import Test.QuickCheck
 > import qualified Data.Map as M
+> import System.IO.Unsafe (unsafePerformIO)
 
 > instance SqlType Float where
 >     toSql x   = SqlDouble ((realToFrac x) :: Double)
@@ -231,3 +233,32 @@ Just some test functions to make sure things are working.
 >     elevation = pi / 4.0 :: Radians
 >     now       = Just (fromGregorian 2004 05 03 12 00 00)
 >     target    = fromGregorian 2004 05 03 12 00 00
+
+Quick Check Properties:
+
+Make sure we always get something - i.e. not nothing!
+TBF: run it enough times, and you get a 2006/1/1 date, and, BANG!!!
+
+> prop_notNothing = forAll gen2006Date $ \dt ->
+>   dropWhile (==True) (map isJust (map unsafePerformIO (getValues dt))) == []
+>     where
+>       getValues dt = unsafePerformIO $ do
+>         -- TBF: randomize these three vars as well!
+>         let target = dt
+>         let f = 2.0 :: Float
+>         let el = pi / 4.0 :: Radians
+>         w' <- theWeather
+>         w <- newWeather w' (Just dt)
+>         return $ [wind w target
+>         -- TBF: this does not work & is not being used: , tatm w target
+>             , opacity w target f
+>             , tsys w target f
+>             , totalStringency w f el
+>         -- TBF: no table! but not being used: , minOpacity w f el
+>             , minTSysPrime w f el
+>             ]
+
+TBF: is this the right way to save connections?
+
+> theWeather = getWeather Nothing
+
