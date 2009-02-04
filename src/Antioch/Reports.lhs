@@ -323,7 +323,7 @@ Simulator Harness
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
 >   ]
 
-> generatePlots :: Strategy -> [([Session] -> [Period] -> IO ())] -> Int -> IO [()]
+> generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> Int -> IO ()
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
@@ -335,7 +335,7 @@ Simulator Harness
 >     results <- simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
->     sequence $ map (\f -> f ss results) sps
+>     mapM_ (\f -> f ss results) sps
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 1 1 0 0 0

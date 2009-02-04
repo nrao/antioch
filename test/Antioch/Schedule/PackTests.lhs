@@ -8,7 +8,7 @@
 > import Antioch.Generators (generateTestSessions)
 > import Test.HUnit
 > import Control.Monad.Reader
-> import Data.List (zipWith4)
+> import Data.List (sort, zipWith4)
 
 > tests = TestList [
 >     test_NumSteps
@@ -475,7 +475,7 @@ around fixed periods.
 >     sess = generateTestSessions 20
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = 150     `addMinutes'` starttime
+>     ft1 = 150    `addMinutes'` starttime
 >     ft2 = (6*60) `addMinutes'` starttime
 >     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 120 0.0
 >     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 60 0.0
