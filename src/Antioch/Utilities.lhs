@@ -31,6 +31,9 @@
 >     gbls = deg2hrs $ gmst + gbtLong
 >     in if gbls < 0.0 then gbls + 24.0 else gbls
 
+> between :: Ord a => a -> a -> a -> Bool
+> between v min max = min <= v && v <= max
+
 > genDate :: Gen DateTime
 > genDate = do
 >     mon <- choose (1, 12)

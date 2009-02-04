@@ -329,7 +329,8 @@ Simulator Harness
 >     let g   = mkStdGen 1
 >     let ss' = generate 0 g $ genSessions 1500
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
->     print $ length ss
+>     putStrLn $ "Number of sessions: " ++ show (length ss)
+>     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
 >     results <- simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime

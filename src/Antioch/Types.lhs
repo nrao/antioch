@@ -142,7 +142,10 @@ Tying the knot.
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ sName (session p) ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " with " ++ show (pScore p)
+>     show p = "Period: " ++ printName p ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " with " ++ show (pScore p)
+>       where 
+>         n = sName . session $ p
+>         printName p = if n == "" then show . sId . session $ p else n
 
 > instance Ord Period where
 >     (<) = (<) `on` startTime

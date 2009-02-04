@@ -6,6 +6,7 @@
 >   , scheduleFixedDuration
 >   , scheduleFixedDuration'
 >   , scheduleMinDuration
+>   , best
 >   ) where
 
 > import Antioch.DateTime  (DateTime, addMinutes', fromGregorian, toSqlString)

@@ -12,6 +12,7 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
+> import Data.Maybe         (fromMaybe)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -136,13 +137,14 @@ Ranking System from Memo 5.2, Section 3
 >     rmsTE' = rmsTE dt
 >     theta' = theta . frequency $ s
 
-> {-
 > minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
-> minimumObservingConditions dt s = undefined
->   where
->       observingEfficiencyOK = efficiency dt s > observingEfficiencyLimit dt s
->       trackingErrorLimitOK = trackingErrorLimit dt s >= 1
-> -}
+> minimumObservingConditions dt s = do  
+>    eff' <- efficiency dt s 
+>    [(_, Just obsEffLimit)] <- observingEfficiencyLimit dt s 
+>    [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
+>    let obsEffOK = fromMaybe 0.0 eff' > obsEffLimit
+>    let trkErrOK = trkErrLimit >= 1
+>    return $ Just (obsEffOK && trkErrOK)
 
 3.2 Stringency
 
