@@ -19,6 +19,14 @@
 >   , test_Candidates1
 >   , test_Candidates2
 >   , test_Best
+>   , test_GetBest1
+>   , test_GetBest1'
+>   , test_GetBest2
+>   , test_GetBest2'
+>   , test_GetBest3
+>   , test_GetBest3'
+>   , test_GetBest4
+>   , test_GetBest4' 
 >   , test_Madd1
 >   , test_Madd2
 >   , test_Pack1
@@ -29,6 +37,7 @@
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker'5
+>   , test_PackWorker'6
 >   , test_PackWorker'Simple
 >   , test_PackWorker'Simple2
 >   , test_PackWorker1
@@ -73,7 +82,7 @@ negative score.
 > test_Unwind4 = TestCase . assertEqual "test_Unwind4" xs . unwind $ ys
 >   where
 >     xs = [Candidate "B" 0 3 0.75, Candidate "F1" 3 1 0.0]
->     ys = [     Just (Candidate "F1" 0 1 0.0)
+>     ys = [     Just (Candidate "F1" 0 1 1.0)
 >              , Just (Candidate "B"  0 3 0.75)
 >              , Just (Candidate "B"  0 2 0.50)
 >              , Nothing
@@ -106,6 +115,64 @@ negative score.
 >     xs = Nothing
 >     ys = [Nothing, Nothing, Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
 >     zs = replicate 2 Nothing
+
+> test_GetBest1 = TestCase . assertEqual "test_getBest1" xs . getBest past $ sessions 
+>   where
+>     xs = Nothing -- Just (Candidate 1 0 4 4.0)
+>     past = [Nothing]
+>     sessions = map step [testItem1]
+
+> test_GetBest1' = TestCase . assertEqual "test_getBest1'" xs . getBest past $ sessions 
+>   where
+>     xs = Nothing -- Just (Candidate 1 0 4 4.0)
+>     past = [Nothing]
+>     sessions = map step testItems
+
+> test_GetBest2 = TestCase . assertEqual "test_getBest2" xs . getBest past $ sessions 
+>   where
+>     xs = Just (Candidate 1 0 2 2.0)
+>     past = [Nothing, Nothing]
+>     sessions = map (step . step) [testItem1]
+
+> test_GetBest2' = TestCase . assertEqual "test_getBest2'1" xs . getBest past $ sessions 
+>   where
+>     xs = Just (Candidate 1 0 2 2.0)
+>     past = [Nothing, Nothing]
+>     sessions = map (step . step) testItems 
+
+> test_GetBest3 = TestCase . assertEqual "test_getBest3" xs . getBest past $ sessions 
+>   where
+>     xs = Just (Candidate 1 0 3 3.0)
+>     past = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     sessions = map (step . step . step) [testItem1] 
+
+> test_GetBest3' = TestCase . assertEqual "test_getBest3'" xs . getBest past $ sessions 
+>   where
+>     xs = Just (Candidate 1 0 3 3.0)
+>     past = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     sessions = map (step . step . step) testItems
+
+> test_GetBest4 = TestCase . assertEqual "test_getBest4" xs . getBest past $ sessions 
+>   where
+>     xs = Just (Candidate 1 0 4 4.0)
+>     past = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     sessions = map (step . step . step . step) [testItem1]
+
+> test_GetBest4' = TestCase . assertEqual "test_getBest4'" xs . getBest past $ sessions 
+>   where
+>     xs = Just (Candidate 2 0 2 6.0)
+>     past = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     sessions = map (step . step . step . step) testItems
+
+> test_PackWorker'6 = TestCase . assertEqual "test_PackWorker'6" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing,Nothing]
+>     ys = replicate 4 Nothing
+>     zs = [Nothing]
+>     ws = map step [Item 1 2 4 (replicate 6 1.0) []
+>                  , Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []]
+
 
 > test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' ys zs $ ws
 >   where
@@ -682,6 +749,10 @@ Session data to pack:
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
 >                               }
+
+> testItem1 = Item 1 2 4 (replicate 6 1.0) []
+> testItem2 = Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []
+> testItems = [testItem1, testItem2]
 
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs
