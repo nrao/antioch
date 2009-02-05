@@ -99,9 +99,12 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     dec' = dec s
 
+> observingEfficiency        :: ScoreFunc
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
+
+> observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
 > atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
 > atmosphericOpacity' eff dt s = factor "atmosphericOpacity" eff
@@ -143,10 +146,11 @@ Ranking System from Memo 5.2, Section 3
 >    w  <- weather
 >    w' <- liftIO $ newWeather w (Just dt)
 >    local (\env -> env { envWeather = w'}) $ do
->      eff' <- efficiency dt s
->      [(_, Just obsEffLimit)] <- observingEfficiencyLimit dt s 
+>      let minObs = minObservingEff (frequency s) 
+>      fs <- observingEfficiency dt s
+>      let obsEff' = eval fs
 >      [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
->      let obsEffOK = fromMaybe 0.0 eff' >= obsEffLimit
+>      let obsEffOK = obsEff' >= minObs - 0.1
 >      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
 
@@ -235,15 +239,17 @@ Translates the total/used times pairs into pressure factors.
 > trackingErrorLimit        :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
-> observingEfficiencyLimit dt s = factor "observingEfficiencyLimit" . Just $
->     if obsEff < minObsEff
->     -- Equation 24
->     then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
->     else 1.0
+> observingEfficiencyLimit dt s = do
+>     obsEff <- observingEfficiency dt s
+>     let obsEff' = eval obsEff
+>     if obsEff' < minObsEff
+>         -- Equation 24
+>         then fac $ exp (-((obsEff' - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
+>         else fac $ 1.0
 >   where
 >     sigma = 0.02
->     obsEff = 1.0  -- TBF
 >     minObsEff = minObservingEff . frequency $ s
+>     fac = factor "observingEfficiencyLimit" . Just
 
 > hourAngleLimit        dt s = efficiencyHA dt s >>= \effHA -> hourAngleLimit' effHA dt s
 > hourAngleLimit' effHA dt s = do
