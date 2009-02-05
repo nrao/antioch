@@ -26,3 +26,4 @@
 
 > errorBarPlot       :: [Attribute] -> [(Float, Float, Float)] -> IO ()
 > errorBarPlot attrs = plotErrorBars attrs
+>

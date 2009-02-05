@@ -228,7 +228,7 @@ Translates the total/used times pairs into pressure factors.
 >     avgEff - 0.02 - 0.1*(1 - avgEff)
 >   where
 >     nu0 = 12.8
->     r = max 50 freq / nu0
+>     r = freq / nu0
 >     -- Equation 22
 >     avgEff = sum [x * cos (y*r) |
 >                  (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]

@@ -35,13 +35,9 @@
 >     | otherwise  = do
 >         w' <- newWeather w $ Just (negate hint `addMinutes'` dt)
 >         schedPeriods <- runScoring w' rs $ sched sf start int' history sessions
->         print "backups: "
->         print . length $ [s | s <- sessions, backup s]
->         putStrLn $ "schedPeriods: " ++ show (schedPeriods)
->         -- now see if all these new periods meet Min. Obs. Conditions         
->         obsPeriods <- runScoring w' rs $ scheduleBackups sf schedPeriods sessions
->         putStrLn $ "obsPeriods: " ++ show (obsPeriods)
+>         obsPeriods   <- runScoring w' rs $ scheduleBackups sf schedPeriods sessions
 >         let sessions' = updateSessions sessions obsPeriods
+>         putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'
 >         return $ obsPeriods ++ result
 >   where
@@ -54,13 +50,14 @@
 >     int'  = end `diffMinutes'` start
 
 > scheduleBackups :: ScoreFunc -> [Period] -> [Session] -> Scoring [Period]
-> {-scheduleBackups sf ps ss | ps == []             = return $ ps
+> {-  do we need the guards
+> scheduleBackups sf ps ss | ps == []             = return $ ps
 >                          | backupSessions == [] = return $ ps
 >                          | otherwise            = return $ replacedPeriods
 >   where
 >     backupSessions  = [ s | s <- ss, backup s]
->     replacedPeriods = mapM (replacePeriod sf backupSessions) ps
-> -}                                    
+>     replacedPeriods = mapM (scheduleBackup sf backupSessions) ps
+> -}
 > scheduleBackups sf ps ss = mapM (scheduleBackup sf backupSessions) ps
 >   where
 >     backupSessions  = [ s | s <- ss, backup s]

@@ -97,6 +97,9 @@ simEffElev
 >     x = "Elevation [deg]"
 >     y = "Observing Efficiency"
 
+> plotMinObsEff        :: StatsPlot
+> plotMinObsEff fn _ _ = plotFunc [] (linearScale 1000 (0, 50)) minObservingEff
+
 simEffLST
 
 > plotEffLst'         :: StatsPlot
@@ -327,7 +330,7 @@ Simulator Harness
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
->     let ss' = generate 0 g $ genSessions 1500
+>     let ss' = generate 0 g $ genSessions 550
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
@@ -338,7 +341,7 @@ Simulator Harness
 >     mapM_ (\f -> f ss results) sps
 >   where
 >     rs      = []
->     dt      = fromGregorian 2006 1 1 0 0 0
+>     dt      = fromGregorian 2006 2 1 0 0 0
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 >     history = []
