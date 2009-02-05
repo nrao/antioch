@@ -139,18 +139,20 @@ Ranking System from Memo 5.2, Section 3
 >     theta' = theta . frequency $ s
 
 > minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
-> minimumObservingConditions dt s = do  
->    eff' <- efficiency dt s 
->    [(_, Just obsEffLimit)] <- observingEfficiencyLimit dt s 
->    [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
->    let obsEffOK = fromMaybe 0.0 eff' > obsEffLimit
->    let trkErrOK = trkErrLimit >= 1
->    return $ Just (obsEffOK && trkErrOK)
+> minimumObservingConditions dt s = do
+>    w  <- weather
+>    w' <- liftIO $ newWeather w (Just dt)
+>    local (\env -> env { envWeather = w'}) $ do
+>      eff' <- efficiency dt s
+>      [(_, Just obsEffLimit)] <- observingEfficiencyLimit dt s 
+>      [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
+>      let obsEffOK = fromMaybe 0.0 eff' >= obsEffLimit
+>      let trkErrOK = trkErrLimit >= 1
+>      return $ Just (obsEffOK && trkErrOK)
 
 3.2 Stringency
 
 > stringency                 :: ScoreFunc
-
 > stringency _ s = do
 >     w <- weather
 >     stringency' <- liftIO $ totalStringency w (frequency s) elevation
