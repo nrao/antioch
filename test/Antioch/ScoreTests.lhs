@@ -5,8 +5,9 @@
 > import Antioch.Types
 > import Antioch.Weather
 > import Antioch.Utilities
+> import Antioch.PProjects
 > import Test.HUnit
-> import Data.List (zipWith4, zipWith5)
+> import Data.List (zip4, zipWith4, zipWith5)
 > import Data.Maybe (isJust)
 
 > tests = TestList [
@@ -16,6 +17,7 @@
 >   , test_getReceivers
 >   , test_hourAngleLimit
 >   , test_kineticTemperature
+>   , test_minimumObservingConditions
 >   , test_minTsysPrime
 >   , test_projectCompletion
 >   , test_politicalFactors
@@ -110,6 +112,58 @@
 >        -- TBF: gaurd against elevations < 5.0 degrees
 >        elevation s = max (deg2rad 5.0)  (pi/2 - zenithAngle dt s)
 >        dt = fromGregorian 2006 10 15 12 0 0
+
+TBF: first part of this test passes, but match to python does not work.
+
+> {-
+> test_observingEfficiency = TestCase $ do
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     fs <- runScoring w [] (observingEfficiency dt s)
+>     let result = eval fs
+>     assertEqual "test_observingEfficiency" 0.8661948 result
+>     -- match to python
+>     let dt = fromGregorian 2006 10 13 16 0 0
+>     w <- getWeather . Just $ dt
+>     fs <- runScoring w [] (observingEfficiency dt sGB)
+>     print sGB
+>     let result = eval fs
+>     assertEqual "test_observingEfficiency" 0.100085918826 result
+>       where    
+>         --names = ["GB","CV","LP","TX","VA","WV","AS"]
+>         --sess = concatMap (\name -> findPSessionByName name) names
+>         sGB = head $ findPSessionByName "GB"
+>     -}
+
+TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too. 
+
+> test_minimumObservingConditions = TestCase $ do
+>    let dt = fromGregorian 2006 10 13 16 0 0
+>    w <- getWeather . Just $ dt
+>    -- effs <- mapM (eff w dt) sess
+>    -- efls <- mapM (efl w dt) sess
+>    mocs <- mapM (moc w dt) sess
+>    let minObsEff = map (minObservingEff . frequency) sess 
+>    -- print $ zip4 names mocs minObsEff effs
+>    assertEqual "test_minimumObservingConditions" expected mocs
+>   where
+>     {-
+>     efl w dt s = do
+>         [(_,Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
+>         return result
+>     eff w dt s = do
+>         fs <- runScoring w [] (observingEfficiency dt s)
+>         return $ eval fs
+>     -}
+>     moc w dt s = do
+>         Just result <- runScoring w [] (minimumObservingConditions dt s)
+>         return result
+>     names = ["GB","CV","LP","TX","VA","WV","AS"]
+>     sess = concatMap (\name -> findPSessionByName name) names
+>     expected = [False, True, True, False, False, False, True]
 
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
