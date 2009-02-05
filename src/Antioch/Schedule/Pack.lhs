@@ -110,6 +110,11 @@ Given a filled list representing all partial solutions of size 1..N,
 return a list of only those solutions contributing to the solution of
 size N.  Assumes the existence of a sentinel at the end of the input
 list.
+What's going on here is the following: first the list of partial solutions
+is correctly unwound to the list of Candiates (w/ correct start's and durs).
+Then the scores deltas are applied to these Candidates, since these scores
+were built up from multiple Candidates in the first place.
+TBF: This does not honor the scores for pre-scheduled (fixed) periods.
 
 > unwind    :: [Maybe (Candidate a)] -> [Candidate a]
 > unwind xs = [ x { cScore = y } | x <- xs' | y <- ys' ]
@@ -122,6 +127,7 @@ list.
 >     unwind' acc (Just x  : xs) = unwind' (x { cStart = length rest - 1} : acc) rest
 >       where
 >         rest = drop (cDuration x - 1) xs
+
 
 > data Item a = Item {
 >     iId      :: !a
@@ -175,20 +181,27 @@ have their first future score moved out their past scores ('step').
 The basic recursive pattern here is that each element of the future list
 is inspected, and the past list is constructed, until we reach the end of the 
 future list, where we terminate and return our constructed past list.
+Remember, the pack algorithm works by breaking down the problem into sub
+problems.  For our case, that means first solving the 15-min schedule, then 
+using this solution to solve for the 30-min schedule, and so on.  The solutions
+to our sub-problems are represented by the 'past' param.
 
 > packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
-> packWorker' []                 past _        = past  -- termination pattern
-> -- if there is something pre-scheduled, it wins: put it in the 'past' list
-> -- and remove the past scores from all sessions, then step to next time slot
+> packWorker' []                 past _        = past 
 > packWorker' (Just b  : future) past sessions =
 >     packWorker' future (Just b:past) $! map (step . forget) sessions
-> -- if there is nothing pre-scheduled, find the best candiate for this period,
-> -- then step to the next time slot
 > packWorker' (Nothing : future) past sessions =
->     f `seq` packWorker' future (b:past) $! map step sessions
->   where
->     b = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions
->     f = if maybe 0.0 cScore b >= 0.0 then True else False
+>     let b = getBest past sessions in
+>     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' future (b:past) $! map step sessions
+
+Given the sessions (items) to pack, and the 'past', which is the step n in our N step packing algorithm (15 minute steps):
+   * from each item, create a set of candidates starting w/ 0 duration up to the max duration of the session (item).  
+   * increase the scores of each candidate using the score from the 'past' candidate (if any).  Eventually, the 'past' will contain the best candidates from the previous sub-problems.
+   * find the best of each of these lists of candidates found from a single item
+   * now find the best from the collection of the best candidates for each item
+
+> getBest ::  [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
+> getBest past sessions = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions    
 
 Find the best of a collection of candidates.
 
@@ -211,6 +224,6 @@ Add a candidate to a historical value to produce a new candidate.
 > madd c1        Nothing   = c1
 > madd (Just c1) (Just c2) = Just $! c1 { cScore = cScore c1 + cScore c2 }
 
-Quick Check properties:
+Quick Check properties: see Schedule.lhs
 
 

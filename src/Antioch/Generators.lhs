@@ -403,6 +403,15 @@ of just the Sessions, w/ unique id's and names.
 >     ps = generate 0 g $ genProjects numProjs
 >     sess = zipWith (\s n -> s { sId = n, sName = show n }) (concatMap sessions ps) [0..]
 
+Anytime in 2006 (to the hour).  Oh yeah, avoiding the last 3 days of each month
+
+> gen2006Date :: Gen DateTime
+> gen2006Date = do
+>     month <- choose (1, 12)
+>     day <- choose (1, 28) 
+>     hr <- choose (0, 23)
+>     return $ fromGregorian 2006 month day hr 0 0
+
 Sometime in Oct. 2006
 
 > genStartDate :: Gen DateTime

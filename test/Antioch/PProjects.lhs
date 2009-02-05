@@ -1,6 +1,8 @@
 > module Antioch.PProjects
 >     (
 >       pTestProjects
+>     , findPSessionByName
+>     , getPSessionId
 >     ) where
 
 > import Antioch.Types
@@ -284,3 +286,13 @@
 
 > p2sessions' = [ makeSession s (periods s) | s <- p2sessions'' ]
 > project2 = makeProject project2' p2sessions'
+
+Utilities:
+
+> findPSessionByName :: String -> [Session]
+> findPSessionByName name = filter (\s' -> (sName s')==name) (concatMap sessions pTestProjects) 
+
+Assumes we have unique names.  
+
+> getPSessionId :: String -> Int
+> getPSessionId name = sId . head $ findPSessionByName name

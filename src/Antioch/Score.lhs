@@ -502,10 +502,6 @@ Utilities for QuickCheck properties:
 >       [(_, Just result)] <- runScoring w' [] (sf dt s)
 >       return $ result
 
-Avoid making too many connections to the weather DB.
-
-> theWeather = getWeather Nothing
-
 Used for checking that some scoring factors are 0 <= && <= 1, etc.
 
 > normalized :: [Float] -> Bool
