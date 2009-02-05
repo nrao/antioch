@@ -6,6 +6,7 @@
 > import Antioch.Score
 > import Antioch.Weather
 > import Antioch.Generators (generateTestSessions)
+> import Antioch.PProjects
 > import Test.HUnit
 > import Control.Monad.Reader
 > import Data.List (zipWith4)
@@ -392,18 +393,22 @@ produce changes in the final result.
 >     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'  
 >   where
->     sess = generateTestSessions 20
+>     sess = concatMap sessions pTestProjects --generateTestSessions 20
 >     fs = genScore sess
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
+>     --expPeriods = [Period defaultSession {sId = 7} starttime duration 113.43763]
 >       where
->         ids = [26, 14, 26, 49, 40, 0, 46]
+>         --ids = [26, 14, 26, 49, 40, 0, 46]
+>         names = ["LP", "AS", "VA", "WV", "WV", "GB"]
+>         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [330, 120, 240, 120, 225, 180, 225]
+>         --durs = [330, 120, 240, 120, 225, 180, 225]
+>         durs = [240, 360, 240, 240, 240, 120]
 >         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
->         scores = [101.96385, 37.25746, 73.74585, 35.805008, 187.42625,
->                   177.87897, 138.05206]
+>         -- TBF
+>         scores = replicate 6 0.0
 
 Same test, but this time, stick some fixed periods in there.
 TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
@@ -521,13 +526,13 @@ period's negative score in the result.
 >     periods <- runScoring w [] $ periods'
 >     assertEqual "test_Pack3" expPeriods periods  
 >   where
->     sess = take 3 $ generateTestSessions 20 -- doesn't depend on # of sess
+>     sess = concatMap sessions pTestProjects
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = 120  `addMinutes'` starttime
->     fixed = Period defaultSession {sId = 0} ft1 30 0.0
+>     ft1 = (4*60)  `addMinutes'` starttime
+>     fixed = Period defaultSession {sId = 0} ft1 60 0.0
 >     fs = genScore sess
->     duration = 3*60
->     p1 = Period (sess!!1) starttime 120 2.2086082
+>     duration = 5*60
+>     p1 = Period defaultSession {sId = getPSessionId "LP"} starttime (4*60) 62.88887
 >     expPeriods  = [p1, fixed]
 
 This is the original test that exposed many of the bugs with packing
@@ -539,26 +544,26 @@ around fixed periods.
 >     periods' <- runScoring w [] $ periods
 >     assertEqual "test_Pack4" expPeriods periods'  
 >   where
->     sess = generateTestSessions 20
+>     sess = concatMap sessions pTestProjects 
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = 150     `addMinutes'` starttime
->     ft2 = (6*60) `addMinutes'` starttime
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 120 0.0
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 60 0.0
+>     ft1 = (4*60)  `addMinutes'` starttime
+>     ft2 = (10*60) `addMinutes'` starttime
+>     dur1 = 2*60
+>     dur2 = 4*60
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 dur2 0.0
 >     fixed = [fixed1, fixed2]
 >     fs = genScore sess
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
 >       where
->         ids = [31, 1000, 1001, 26, 49, 40, 0, 46]
->         ss  = map (\i -> defaultSession {sId = i, sName = show i}) ids
->         durs = [150, 120, 60, 270, 120, 225, 180, 225]
->         -- calc the start time, but watch for the dead time between 
->         -- the fixed periods
->         times'= scanl (\dur dt -> addMinutes' dt dur) starttime (take 1 durs)
->         times= times' ++
->             (scanl (\dur dt -> addMinutes' dt dur) ft2 (drop 2 durs))
+>         names = ["LP", "VA", "WV", "WV", "GB"]
+>         ids' = map getPSessionId names
+>         ids  = [ids'!!0]++[1000]++[ids'!!1]++[1001]++(drop 2 ids')
+>         ss  = map (\i -> ds {sId = i}) ids
+>         durs = [240, dur1, 240, dur2, 240, 240, 120]
+>         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         -- TBF: don't tie pack tests to numerical scores
 >         -- TBF: bug - second score should be zero!!!!
 >         scores = [39.079136, -39.079136, 0.0, 83.05223, 35.805008,
@@ -572,28 +577,29 @@ Same as above, but with even more fixed periods
 >     periods' <- runScoring w [] $ periods
 >     assertEqual "test_Pack5" expPeriods periods'  
 >   where
->     sess = generateTestSessions 20
+>     sess = concatMap sessions pTestProjects
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = 150     `addMinutes'` starttime
->     ft2 = (6*60) `addMinutes'` starttime
->     ft3 = (12*60) `addMinutes'` starttime
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 120 0.0
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 60 0.0
->     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 135 0.0
+>     ft1 = (4*60)     `addMinutes'` starttime
+>     ft2 = (10*60) `addMinutes'` starttime
+>     ft3 = (22*60) `addMinutes'` starttime
+>     d1 = (2*60)
+>     d2 = (4*60)
+>     d3 = (2*60)
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d1 0.0
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0
+>     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0
 >     fixed = [fixed1, fixed2, fixed3]
 >     fs = genScore sess
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
 >       where
->         ids = [31, 1000, 1001, 26, 1002, 40, 46]
->         ss  = map (\i -> defaultSession {sId = i, sName = show i}) ids
->         durs = [150, 120, 60, 300, 135, 345, 240]
->         -- calc the start time, but watch for the dead time between 
->         -- the fixed periods
->         times'= scanl (\dur dt -> addMinutes' dt dur) starttime (take 1 durs)
->         times= times' ++
->             (scanl (\dur dt -> addMinutes' dt dur) ft2 (drop 2 durs))
+>         names = ["LP", "VA", "WV", "WV"]
+>         ids' = map getPSessionId names
+>         ids  = [ids'!!0]++[1000]++[ids'!!1]++[1001]++(drop 2 ids')++[1002]
+>         ss  = map (\i -> ds {sId = i}) ids
+>         durs = [240, d1, 240, d2, 240, 240, d3]
+>         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         -- TBF: don't tie pack tests to numerical scores
 >         -- TBF: bug - second score should be zero!!!!
 >         scores = [39.079136, -39.079136, 0.0, 92.10629,
