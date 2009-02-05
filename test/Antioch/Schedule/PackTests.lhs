@@ -9,7 +9,7 @@
 > import Antioch.PProjects
 > import Test.HUnit
 > import Control.Monad.Reader
-> import Data.List (zipWith4)
+> import Data.List (sort, zipWith4)
 
 > tests = TestList [
 >     test_NumSteps

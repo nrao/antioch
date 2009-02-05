@@ -42,7 +42,16 @@ simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 > plotEffVsFreq' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotEffVsFreq fn effs ps
+>   plotEffVsFreq'' fn effs ps
+
+> plotEffVsFreq'' fn effs ps =
+>     scatterPlot attrs $ zip (historicalFreq ps) effs
+>   where
+>     t     = "Observing Efficiency vs Frequency"
+>     x     = "Frequency [GHz]"
+>     y     = "Observing Efficiency"
+>     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51)] ++ [YRange (-0.1, 1.1)]
+
 
 > plotEffVsFreq fn effs ps =
 >     errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
@@ -314,18 +323,19 @@ Simulator Harness
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
 >   ]
 
-> generatePlots :: Strategy -> [([Session] -> [Period] -> IO ())] -> Int -> IO [()]
+> generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> Int -> IO ()
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
->     g <- getStdGen
+>     let g   = mkStdGen 1
 >     let ss' = generate 0 g $ genSessions 1500
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
->     print $ length ss
+>     putStrLn $ "Number of sessions: " ++ show (length ss)
+>     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
 >     results <- simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
->     sequence $ map (\f -> f ss results) sps
+>     mapM_ (\f -> f ss results) sps
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 1 1 0 0 0

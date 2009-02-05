@@ -12,6 +12,7 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
+> import Data.Maybe         (fromMaybe)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -102,7 +103,8 @@ Ranking System from Memo 5.2, Section 3
 > surfaceObservingEfficiency :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
 
-> atmosphericOpacity dt s = efficiency dt s >>= factor "atmosphericOpacity"
+> atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
+> atmosphericOpacity' eff dt s = factor "atmosphericOpacity" eff
 
 > surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" . Just $
 >     if isDayTime dt
@@ -136,13 +138,14 @@ Ranking System from Memo 5.2, Section 3
 >     rmsTE' = rmsTE dt
 >     theta' = theta . frequency $ s
 
-> {-
 > minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
-> minimumObservingConditions dt s = undefined
->   where
->       observingEfficiencyOK = efficiency dt s > observingEfficiencyLimit dt s
->       trackingErrorLimitOK = trackingErrorLimit dt s >= 1
-> -}
+> minimumObservingConditions dt s = do  
+>    eff' <- efficiency dt s 
+>    [(_, Just obsEffLimit)] <- observingEfficiencyLimit dt s 
+>    [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
+>    let obsEffOK = fromMaybe 0.0 eff' > obsEffLimit
+>    let trkErrOK = trkErrLimit >= 1
+>    return $ Just (obsEffOK && trkErrOK)
 
 3.2 Stringency
 
@@ -240,8 +243,8 @@ Translates the total/used times pairs into pressure factors.
 >     obsEff = 1.0  -- TBF
 >     minObsEff = minObservingEff . frequency $ s
 
-> hourAngleLimit dt s = do
->     effHA <- efficiencyHA dt s
+> hourAngleLimit        dt s = efficiencyHA dt s >>= \effHA -> hourAngleLimit' effHA dt s
+> hourAngleLimit' effHA dt s = do
 >     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff . frequency $ s
@@ -403,22 +406,27 @@ Need to translate a session's factors into the final product score.
 >         | otherwise     = s * f
 
 > genScore          :: [Session] -> ScoreFunc
-> genScore sessions = score [
->     scienceGrade
->   , thesisProject
->   , projectCompletion
->   , stringency
->   , atmosphericOpacity
->   , surfaceObservingEfficiency
->   , trackingEfficiency
->   , genRightAscensionPressure sessions
->   , genFrequencyPressure sessions
->   , observingEfficiencyLimit
->   , hourAngleLimit
->   , zenithAngleLimit
->   , trackingErrorLimit
->   , atmosphericStabilityLimit
->   ]
+> genScore sessions = \dt s -> do
+>     effs <- calcEfficiency dt s
+>     score [
+>         scienceGrade
+>       , thesisProject
+>       , projectCompletion
+>       , stringency
+>       , (atmosphericOpacity' . fmap fst) effs
+>       , surfaceObservingEfficiency
+>       , trackingEfficiency
+>       , raPressure
+>       , freqPressure
+>       , observingEfficiencyLimit
+>       , (hourAngleLimit' . fmap snd) effs
+>       , zenithAngleLimit
+>       , trackingErrorLimit
+>       , atmosphericStabilityLimit
+>       ] dt s
+>   where
+>     raPressure   = genRightAscensionPressure sessions
+>     freqPressure = genFrequencyPressure sessions
 
 Convenience function for translating go/no-go into a factor.
 

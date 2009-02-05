@@ -124,7 +124,12 @@ Generates RA and Dec based on skyType:
 > round2quarter :: Minutes -> Minutes
 > round2quarter m = m - (m `mod` quarter)
 
-TBF: how to link these to generated Projects? 
+Only 20 percent of the low freq. sessions are backups
+
+> genBackupFlag :: Float -> Gen Bool
+> genBackupFlag freq =
+>   if freq > 2.0 then T.frequency [(100, return False)] 
+>            else T.frequency [(20, return True), (80, return False)]
 
 > genSession :: Gen Session
 > genSession = do
@@ -134,6 +139,7 @@ TBF: how to link these to generated Projects?
 >     let r      = band2Receiver b
 >     g          <- genGrade [GradeA, GradeA, GradeB, GradeC, GradeC]
 >     f          <- genFreq b
+>     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
 >     totalTime  <- choose (2*60, 30*60)
@@ -152,6 +158,7 @@ TBF: how to link these to generated Projects?
 >                , totalUsed      = 0
 >                , grade          = g
 >                , receivers      = [r]
+>                , backup         = bk
 >                }
 
 
@@ -409,8 +416,8 @@ Sometime in Oct. 2006
 
 > genStartDate :: Gen DateTime
 > genStartDate = do
->     day <- choose (1, 30) 
->     hr <- choose (0, 23)
+>     day   <- choose (1, 30) 
+>     hr    <- choose (0, 23)
 >     return $ fromGregorian 2006 10 day hr 0 0
 
 > genScheduleDuration :: Gen Minutes

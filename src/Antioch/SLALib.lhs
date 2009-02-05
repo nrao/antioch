@@ -1,5 +1,7 @@
 > module Antioch.SLALib (gmst, slaGaleq) where
 
+> import Antioch.DateTime
+
 > import Data.Fixed    (mod')
 > import Data.Function (on)
 > import Data.List     (foldl1')
@@ -55,9 +57,10 @@ explicitly but in the form of the coefficient 8640184.812866, which is
 > gmst' ut1
 >     | ut1 `seq` False = undefined
 >     | otherwise       =
->         (ut1 `mod'` 1.0) * d2pi + s2r * ((((-6.2e-6*tu + 0.093104)*tu + 8640184.812866)*tu) + 24110.54841)
+>         dranrm $ x0 * d2pi + s2r * ((((-6.2e-6*tu + 0.093104)*tu + 8640184.812866)*tu) + 24110.54841)
 >   where
->     tu = (ut1 - 51544.5) / 36525.0
+>     (_, x0) = properFraction ut1
+>     tu      = (ut1 - 51544.5) / 36525.0
 
 > poly x = foldl1' $ \a b -> a*x + b
 
@@ -69,7 +72,17 @@ Let's test the 'ut1' function: first, generate UT inputs:
 
 Now make sure that the gmst time makes sense (TBD: what are the bounds?):
 
-> -- prop_gmst' = forAll genUTTime $ \a -> let b = gmst' a in 0.0 <= b && b <= 2400000.5
+> --prop_gmst' = forAll genUTTime $ \a -> let b = gmst' a in 0.0 <= b && b <= 2400000.5
+
+> genDate :: Gen DateTime
+> genDate = do
+>     mon <- choose (1, 12)
+>     day <- choose (1, 30) 
+>     hr  <- choose (0, 23)
+>     return $ fromGregorian 2006 mon day hr 0 0
+
+> prop_gmst = forAll genDate $
+>     \a -> let st = gmst $ secondsToMJD a in 0.0 <= st && st <= 2 * pi
 
 Transformation from IAU 1958 Galactic coordinates to J2000.0 equatorial coordinates.
 

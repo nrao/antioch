@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import qualified Antioch.SLALib as SLA
+> import Test.QuickCheck hiding (frequency)
 
 > gbtLat, gbtLong, gbtAlt :: Float
 > gbtLat  = 0.67078465065073467 -- radians
@@ -29,3 +30,16 @@
 >     gmst = rad2deg . SLA.gmst . secondsToMJD $ dt
 >     gbls = deg2hrs $ gmst + gbtLong
 >     in if gbls < 0.0 then gbls + 24.0 else gbls
+
+> between :: Ord a => a -> a -> a -> Bool
+> between v min max = min <= v && v <= max
+
+> genDate :: Gen DateTime
+> genDate = do
+>     mon <- choose (1, 12)
+>     day <- choose (1, 30) 
+>     hr  <- choose (0, 23)
+>     return $ fromGregorian 2006 mon day hr 0 0
+
+> prop_utc2lstHours = forAll genDate $
+>     \a -> let lst = utc2lstHours a in 0.0 <= lst && lst <= 24.0
