@@ -10,7 +10,8 @@
 > import Data.Maybe (isJust)
 
 > tests = TestList [
->     test_efficiency
+>     test_averageScore
+>   , test_efficiency
 >   , test_frequencyPressure
 >   , test_getReceivers
 >   , test_hourAngleLimit
@@ -227,6 +228,22 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                ,0.0,0.0,0.0,0.0,0.0]
 
 
+> test_averageScore = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     scores <- mapM (score' w) times
+>     let scoreTotal = addScores scores
+>     let expected = 0.0
+>     assertEqual "test_score1" expected scoreTotal
+>     avgScore <- runScoring w [] (averageScore fs starttime sess)
+>     assertEqual "test_score2" expected avgScore
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     sess = defaultSession
+>     fs = genScore [sess]
+>     score' w dt = do
+>         s <- runScoring w [] (fs dt sess)
+>         return $ eval s
+>     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 
 
 Test utilities
