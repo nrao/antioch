@@ -64,7 +64,7 @@ useless items.
 >     sId         :: Int
 >   , sName       :: String
 >   , project     :: Project
->   , periods     :: [Period]
+>   , period      :: Period
 >   , totalTime   :: Minutes
 >   , totalUsed   :: Minutes
 >   , minDuration :: Minutes
@@ -103,6 +103,14 @@ useless items.
 
 > instance Eq Session where
 >     (==) = (==) `on` sId
+
+> instance Ord Session where
+>     compare = compare `on` sId
+
+Need to calculate a windowed session's opportunities from its observation details.
+
+> opportunities s@(Windowed { }) = []
+> opportunities _                = []
 
 Tying the knot.
 
@@ -210,7 +218,7 @@ ignores their numerical scores.
 >     sId         = 0
 >   , sName       = ""
 >   , project     = defaultProject 
->   , periods     = [defaultPeriod]
+>   , period      = defaultPeriod
 >   , totalTime   = 0
 >   , totalUsed   = 0
 >   , minDuration = 0

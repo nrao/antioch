@@ -191,4 +191,3 @@ Produces list of (x, y) coordinate pairs.
 
 > promote   :: ([Session] -> t) -> [Period] -> t
 > promote f = f . map session
-
