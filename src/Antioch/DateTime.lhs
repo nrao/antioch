@@ -1,16 +1,16 @@
 > module Antioch.DateTime where
 
-> import Data.Fixed (div')
-> import Data.Function (on)
-> import Data.Maybe (fromJust)
-> import Data.Time.Calendar hiding (fromGregorian, toGregorian)
-> import Data.Time.Clock hiding (getCurrentTime)
+> import Data.Fixed                 (div')
+> import Data.Function              (on)
+> import Data.Maybe                 (fromJust)
+> import Data.Time.Calendar hiding  (fromGregorian, toGregorian)
+> import Data.Time.Clock hiding     (getCurrentTime)
 > import Data.Time.Format
 > import Data.Time.LocalTime
 > import Database.HDBC
-> import Numeric (fromRat)
+> import Numeric                    (fromRat)
 > import System.Locale
-> import System.Time hiding (toClockTime)
+> import System.Time hiding         (toClockTime)
 > import Test.QuickCheck
 > import Text.Printf
 
@@ -27,9 +27,9 @@
 
 So that we can use our UTCTime class with HDBC.
 
-> instance SqlType UTCTime where
->     toSql   = toSql . toClockTime
->     fromSql = fromClockTime . fromSql
+> -- instance SqlType UTCTime where
+> --     toSql   = toSql . toClockTime
+> --     fromSql = fromClockTime . fromSql
 
 Defined here so that users don't need to know about Data.Time.Clock.
 
