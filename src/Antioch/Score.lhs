@@ -7,6 +7,7 @@
 > import Antioch.Weather
 > import Control.Monad.Identity
 > import Control.Monad.Reader
+> import Control.Monad.Writer
 > import Data.Array
 > import Data.Array.IArray  (amap)
 > import Data.Array.ST
@@ -358,14 +359,24 @@ The Scoring monad encapsulates the concept of a scoring action,
 all the scoring functions live in the monad so they can
 execute scoring actions.
 
-> type Scoring = ReaderT ScoringEnv IO
+> data Trace = Trace {
+>   }
+
+> instance Monoid Trace where
+>     mempty      = Trace { }
+>     mappend x y = x
+
+> type Scoring = ReaderT ScoringEnv (WriterT Trace IO)
 
 A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
 
-> runScoring        :: Weather -> ReceiverSchedule -> Scoring t -> IO t
-> runScoring w rs f = runReaderT f $ ScoringEnv w rs
+> runScoring      :: Weather -> ReceiverSchedule -> Scoring t -> IO t
+> runScoring w rs = liftM fst . runScoring' w rs
+
+> runScoring'        :: Weather -> ReceiverSchedule -> Scoring t -> IO (t, Trace)
+> runScoring' w rs f = runWriterT . runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows
 us to easily return a list.
