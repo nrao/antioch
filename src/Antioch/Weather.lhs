@@ -1,3 +1,5 @@
+> {-# OPTIONS -XMultiParamTypeClasses -XScopedTypeVariables #-}
+
 > module Antioch.Weather where
 
 > import Antioch.DateTime
@@ -5,6 +7,7 @@
 > import Antioch.Utilities
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
+> import Data.Convertible
 > import Data.IORef
 > import Data.List         (elemIndex)
 > import Data.Maybe        (fromJust, maybe)
@@ -14,9 +17,13 @@
 > import Test.QuickCheck
 > import qualified Data.Map as M
 
-> instance SqlType Float where
->     toSql x   = SqlDouble ((realToFrac x) :: Double)
->     fromSql x = realToFrac ((fromSql x) :: Double) :: Float
+> instance Convertible Float SqlValue where
+>     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
+
+> instance Convertible SqlValue Float where
+>     safeConvert x = do
+>         val :: Double <- safeConvert x
+>         return $ realToFrac val
 
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
@@ -78,10 +85,11 @@ of frequency.
 >     cache <- newIORef M.empty
 >     return (getWind cache, getTAtm cache)
 
+> fetchWindAndAtm :: Connection -> DateTime -> Int -> IO (Maybe Float, Maybe Float)
 > fetchWindAndAtm cnn dt ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[wind, tatm]] -> return (fromSql' wind, fromSql' tatm)
+>       [[wind, tatm]] -> return (fromSql' $ wind, fromSql' $ tatm)
 >       _              -> return (Nothing, Nothing)
 >   where
 >     query = "SELECT wind_speed, tatm FROM forecasts WHERE date = ? AND forecast_type_id = ?"
@@ -111,7 +119,7 @@ on frequency.
 > fetchOpacityAndTSys cnn dt freqIdx ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[opacity, tsys]] -> return (fromSql' opacity, fromSql' tsys)
+>       [[opacity, tsys]] -> return (fromSql' $ opacity, fromSql' $ tsys)
 >       _                 -> return (Nothing, Nothing)
 >   where
 >     query = "SELECT opacity, tsys\n\
@@ -131,7 +139,7 @@ on frequency.
 >     key     = (dt', freqIdx, ftype)
 
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getTSys cache cnn ftype dt frequency = liftM snd. withCache key cache $
+> getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
 >     fetchOpacityAndTSys cnn dt' freqIdx ftype
 >   where
 >     dt'     = roundToHour dt
@@ -209,7 +217,7 @@ Helper function to get singular Float values out of the database.
 >     result <- quickQuery' conn query xs
 >     case result of
 >         [[SqlNull]] -> return Nothing
->         [[x]] -> return $ Just (fromSql x)
+>         [[x]] -> return $ Just (fromSql $ x)
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
 >         x     -> fail "There is more than one forecast with that time stamp."
