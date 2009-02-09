@@ -17,14 +17,18 @@
 >   , test_getReceivers
 >   , test_hourAngleLimit
 >   , test_kineticTemperature
+>   , test_minObservingEff
 >   , test_minimumObservingConditions
 >   , test_minTsysPrime
->   , test_projectCompletion
+>   , test_observingEfficiency
+>   , test_observingEfficiencyLimit
 >   , test_politicalFactors
+>   , test_projectCompletion
 >   , test_receiver
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
->   , test_score
+>   -- , test_score
+>   -- , test_scoreCV
 >   , test_stringency
 >   , test_surfaceObservingEfficiency
 >   , test_trackingEfficiency
@@ -42,7 +46,7 @@
 >     putStrLn $ "Test Execution Speed: " ++ show (diffSeconds stop start) ++ " seconds"
 
 > test_hourAngleLimit = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
 >     scores <- mapM (score' w) times
 >     assertEqual "test_hourAngleLimit" expected scores
 >   where
@@ -54,14 +58,19 @@
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 > test_frequencyPressure = TestCase $ do
->     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure dt . head $ pSessions)
+>     assertScoringResult "test_frequencyPressure generated" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
 >   where
 >     freqPressure = genFrequencyPressure pSessions
 
+> test_frequencyPressureComparison = TestCase $ do
+>     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
+>   where
+>     ss = concatMap sessions pTestProjects
+>     -- s = head $ filter (\s -> "CV" == (sName s)) ss
+>     freqPressure = genFrequencyPressure ss
+
 > test_rightAscensionPressure = TestCase $ do
->     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure dt . head $ pSessions)
+>     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
 >   where
 >     raPressure = genRightAscensionPressure pSessions
 
@@ -165,6 +174,26 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     sess = concatMap (\name -> findPSessionByName name) names
 >     expected = [False, True, True, False, False, False, True]
 
+> test_observingEfficiency = TestCase $ do
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     fs <- runScoring w [] (observingEfficiency dt s)
+>     let result = eval fs
+>     assertEqual "test_observingEfficiency" 0.8661948 result
+
+> test_observingEfficiencyLimit = TestCase $ do
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     -- result <- runScoring w [] (observingEfficiencyLimit dt s)
+>     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
+>     assertEqual "test_observingEfficiencyLimit" 0.001534758 result
+
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let dt = fromGregorian 2006 10 15 12 0 0
@@ -176,9 +205,18 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     assertResult "test_efficiencyHA" (Just wdt) 2 0.4548 (efficiencyHA dt sessAS)
 >     assertResult "test_efficiency" (Just wdt) 2 0.93555 (efficiency dt sessBug)
 >     assertResult "test_efficiency" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     Just result <- runScoring w [] (efficiency dt s) 
+>     assertEqual "test_efficiency" 0.8713239 result
+>     Just result <- runScoring w [] (efficiencyHA dt s) 
+>     assertEqual "test_efficiencyHA" 0.7837111 result
 
 > test_zenithOpticalDepth = TestCase $ do
->     let wdt = fromGregorian 2006 10 14 9 15 0
+>     let wdt = fromGregorian 2006 10 14 9 15 2
 >     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.00798 (zenithOpticalDepth dtLP sessLP)
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.0661772 (zenithOpticalDepth dt sessBug)
@@ -189,22 +227,54 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertEqual "test_receiverTemperature" 60.0 $ receiverTemperature dt sessBug
 >     assertEqual "test_receiverTemperature" 10.0 $ receiverTemperature dt sessBug2
+>     -- pTestProjects session CV
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let result = receiverTemperature dt s 
+>     assertEqual "test_receiverTemperature" 5.0 result
+
+> test_minObservingEff = TestCase $ do
+>     -- pTestProjects session CV
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let result = minObservingEff . frequency $ s
+>     assertEqual "test_minObservingEff" 0.93819135 result
 
 > test_kineticTemperature = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 0
 >     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.498 (kineticTemperature dtLP sessLP) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.982 (kineticTemperature dt sessBug2) 
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     Just result <- runScoring w [] (kineticTemperature dt s) 
+>     assertEqual "test_kineticTemperatureCV" 271.352 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
 >     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sessLP)
 >     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sessAS)
 
+> makeTestProject :: Minutes -> Minutes -> Project
+> makeTestProject tl tt = makeProject proj' tt ss'
+>   where
+>     proj' = defaultProject { pName = "time use test" }
+>     ss''  = [
+>         defaultOpen {
+>             periods = [defaultPeriod {duration = tt - tl}]
+>           , totalTime = tt
+>           }
+>       ]
+>     ss'   = [ makeSession s (periods s) | s <- ss'' ]
+
 > test_projectCompletion = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
->     let p = defaultProject {timeLeft=28740, timeTotal=33812}
+>     let p = makeTestProject 28740 33812
 >     let s = sessLP {project = p}
 >     assertScoringResult "test_projectCompletion" Nothing 3 1.015 (projectCompletion dt s)
 
@@ -213,9 +283,7 @@ TBF are these partitions stil useful?
 > test_politicalFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     -- adjust the project's times to get desired results
->     let p = defaultProject {timeLeft=28740, timeTotal=33812}
->     let s = sessLP {project = p}
+>     let s = head . filter (\s -> "CV" == (sName s)) . concatMap sessions $ pTestProjects
 >     -- missing window, transit, observerOnSite, and ObserverAvailable
 >     let politicalFactors = score [scienceGrade
 >                           , thesisProject
@@ -227,15 +295,30 @@ TBF are these partitions stil useful?
 >     --          , ("projectCompletion", Just 1.015)]
 >     -- assertEqual "test_politicalFactors" expFs fs
 >     let result = eval fs
->     assertAlmostEqual "test_politicalFactors" 3 1.015 result
+>     assertEqual "test_politicalFactors" 1.0054 result
 
 > test_trackingEfficiency = TestCase $ do
+>     -- sessLP
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sessLP)
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
+>     assertEqual "test_trackingEfficiency" 0.99796414 result
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sessLP)
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
+>     assertEqual "test_trackingErrorLimit" 1.0 result
 
 > test_zenithAngleLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 0 0 0
@@ -246,6 +329,17 @@ TBF are these partitions stil useful?
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
 >     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
 >     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
+
+> test_scoreCV = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     fs <- runScoring w [] $ (genScore ss) dt s
+>     print fs
+>     let result = eval fs
+>     print result
+>     assertAlmostEqual "test_scoreCV" 3 1.015 result  -- got 3.2803972 need ~0
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -392,7 +486,10 @@ QuickCheck properties.
 >         ras   = [  5.4,  10.1,   4.9,  18.1]
 >         bands = [    L,     C,     X,     L]
 >         genPSess t u ra b = defaultSession {
->             totalTime = t, totalUsed = u, ra = ra, band = b
+>             totalTime = t
+>           , periods = [defaultPeriod {duration = u}]
+>           , ra = ra
+>           , band = b
 >         }
 
 > rSessions = zipWith4 genPSess tots useds ras bands 
@@ -401,7 +498,10 @@ QuickCheck properties.
 >         ras   = [  5.4,  10.1,   4.9,  18.1]
 >         bands = [    L,     C,     X,     L]
 >         genPSess t u ra b = defaultSession {
->             totalTime = t, totalUsed = u, ra = ra, band = b
+>             totalTime = t
+>           , periods = [defaultPeriod {duration = u}]
+>           , ra = ra
+>           , band = b
 >         }
 
 > rSched = [ (fromGregorian 2006 6 14 12 0 0, [Rcvr1_2, Rcvr26_40])

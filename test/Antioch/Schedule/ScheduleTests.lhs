@@ -13,7 +13,7 @@
 >   ]
 
 > test_schedule_open = TestCase $ do
->       w      <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>       w      <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >       result <- runScoring w rs (pack sf dt dur history ss)
 >       assertEqual "test_schedule_open" expected result
 >   where

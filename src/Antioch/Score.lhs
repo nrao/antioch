@@ -186,7 +186,7 @@ Generate a scoring function having the pressure factors.
 
 Select the appropriate pressure factor from the array of pressures.
 
-> frequencyPressure      :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
+> frequencyPressure :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > frequencyPressure fs f _ a =
 >                      factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
 
@@ -225,10 +225,10 @@ Translates the total/used times pairs into pressure factors.
 > minObservingEff :: Frequency -> Float
 > minObservingEff freq  =
 >     -- Equation 23
->     avgEff - 0.02 - 0.1*(1 - avgEff)
+>     avgEff - 0.02 - 0.1*(1.0 - avgEff)
 >   where
 >     nu0 = 12.8
->     r = freq / nu0
+>     r = min 50 freq / nu0
 >     -- Equation 22
 >     avgEff = sum [x * cos (y*r) |
 >                  (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
@@ -283,7 +283,7 @@ Translates the total/used times pairs into pressure factors.
 > projectCompletion _ s = let
 >     weight = 1000.0
 >     total = fromIntegral (timeTotal . project $ s)
->     left  = fromIntegral (timeLeft  . project $ s)
+>     left  = total - fromIntegral (timeUsed  . project $ s)
 >     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
 >     in factor "projectCompletion" . Just $
 >     if percent <= 0.0 then 1.0 else 1.0 + percent/weight
@@ -414,6 +414,7 @@ Need to translate a session's factors into the final product score.
 >         | otherwise     = s * f
 
 > genScore          :: [Session] -> ScoreFunc
+> -- missing window, transit, observerOnSite, and observerAvailable
 > genScore sessions = \dt s -> do
 >     effs <- calcEfficiency dt s
 >     score [
@@ -438,6 +439,7 @@ Need to translate a session's factors into the final product score.
 
 Convenience function for translating go/no-go into a factor.
 
+> boolean :: String -> Maybe Bool -> Scoring Factors
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
 
 Quick Check properties:

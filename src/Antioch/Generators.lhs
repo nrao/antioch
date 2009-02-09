@@ -36,9 +36,6 @@ TBF: Currently, the idea of semester is very limited.
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
 
-TBF: how to link to Sessions that have already been generated?  and then use
-those to calculate timeLeft and timeTotal?
-
 > --assignProject p ss = [ s {project = p} | s <- sessions p]
 
 > genProject :: Gen Project
@@ -53,10 +50,9 @@ those to calculate timeLeft and timeTotal?
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
->         , timeTotal = timeTotal
->         , timeLeft = timeTotal - timeUsed
+>         -- , timeTotal = timeTotal
 >         }
->     return $ makeProject project sessions
+>     return $ makeProject project timeTotal sessions
 
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = do {return $ []}
@@ -94,7 +90,7 @@ Each Session can have 0-3 Periods, each with a max of 10 hours:
 TBF: this does not pass because generated periods aren't limited by their
 sessions' totalTime.
 
-> prop_timeLeft p = 0 <= timeLeft p && timeLeft p <= timeTotal p
+> prop_timeUsed p = 0 <= timeUsed p && timeUsed p <= timeTotal p
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
@@ -155,7 +151,6 @@ Only 20 percent of the low freq. sessions are backups
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
 >                , totalTime      = round2quarter totalTime
->                , totalUsed      = 0
 >                , grade          = g
 >                , receivers      = [r]
 >                , backup         = bk
