@@ -40,7 +40,7 @@
 >       , sName = "CV"
 >       , periods = []
 >       , totalTime = 60*60
->       , minDuration = 12*60
+>       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 4.3
 >       , ra = hrs2rad 12.3
@@ -86,10 +86,10 @@
 >       , totalTime = 30*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
->       , frequency = 17.8
->       , ra = hrs2rad 19.9
->       , dec = deg2rad 15.5
->       , receivers = [Rcvr18_22]
+>       , frequency = 22.7
+>       , ra = hrs2rad 12.9
+>       , dec = deg2rad 29.2
+>       , receivers = [Rcvr22_26]
 >       , band = K
 >       }
 >

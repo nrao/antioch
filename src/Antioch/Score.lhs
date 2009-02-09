@@ -106,6 +106,8 @@ Ranking System from Memo 5.2, Section 3
 
 > observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
+> observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
+
 > atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
 > atmosphericOpacity' eff dt s = factor "atmosphericOpacity" eff
 
@@ -225,10 +227,14 @@ Translates the total/used times pairs into pressure factors.
 > minObservingEff :: Frequency -> Float
 > minObservingEff freq  =
 >     -- Equation 23
->     avgEff - 0.02 - 0.1*(1 - avgEff)
+>     avgEff - 0.02 - 0.1*(1.0 - avgEff)
 >   where
 >     nu0 = 12.8
+<<<<<<< local
 >     r = freq / nu0
+=======
+>     r = min 50 freq / nu0
+>>>>>>> other
 >     -- Equation 22
 >     avgEff = sum [x * cos (y*r) |
 >                  (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
@@ -414,6 +420,7 @@ Need to translate a session's factors into the final product score.
 >         | otherwise     = s * f
 
 > genScore          :: [Session] -> ScoreFunc
+<<<<<<< local
 > genScore sessions = \dt s -> do
 >     effs <- calcEfficiency dt s
 >     score [
@@ -435,9 +442,29 @@ Need to translate a session's factors into the final product score.
 >   where
 >     raPressure   = genRightAscensionPressure sessions
 >     freqPressure = genFrequencyPressure sessions
+=======
+> -- missing window, transit, observerOnSite, and observerAvailable
+> genScore sessions = score [
+>     scienceGrade
+>   , thesisProject
+>   , projectCompletion
+>   , stringency
+>   , atmosphericOpacity
+>   , surfaceObservingEfficiency
+>   , trackingEfficiency
+>   , genRightAscensionPressure sessions
+>   , genFrequencyPressure sessions
+>   , observingEfficiencyLimit
+>   , hourAngleLimit
+>   , zenithAngleLimit
+>   , trackingErrorLimit
+>   , atmosphericStabilityLimit
+>   ]
+>>>>>>> other
 
 Convenience function for translating go/no-go into a factor.
 
+> boolean :: String -> Maybe Bool -> Scoring Factors
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
 
 Quick Check properties:

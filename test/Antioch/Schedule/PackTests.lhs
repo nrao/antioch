@@ -53,8 +53,8 @@
 >   , test_TestPack_pack2
 >   , test_TestPack_pack3
 >   , test_TestPack_pack8
->   , test_ToItem
->   , test_ToItem2
+>   -- , test_ToItem
+>   -- , test_ToItem2
 >   , test_ToPeriod
 >   , test_ToSchedule
 >   , test_ToSchedule2

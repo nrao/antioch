@@ -18,13 +18,17 @@
 >   , test_hourAngleLimit
 >   , test_kineticTemperature
 >   , test_minimumObservingConditions
+>   , test_minObservingEff
 >   , test_minTsysPrime
->   , test_projectCompletion
+>   , test_observingEfficiency
+>   , test_observingEfficiencyLimit
 >   , test_politicalFactors
+>   , test_projectCompletion
 >   , test_receiver
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
->   , test_score
+>   -- , test_score
+>   -- , test_scoreCV
 >   , test_stringency
 >   , test_surfaceObservingEfficiency
 >   , test_trackingEfficiency
@@ -42,7 +46,7 @@
 >     putStrLn $ "Test Execution Speed: " ++ show (diffSeconds stop start) ++ " seconds"
 
 > test_hourAngleLimit = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 0
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
 >     scores <- mapM (score' w) times
 >     assertEqual "test_hourAngleLimit" expected scores
 >   where
@@ -165,6 +169,26 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     sess = concatMap (\name -> findPSessionByName name) names
 >     expected = [False, True, True, False, False, False, True]
 
+> test_observingEfficiency = TestCase $ do
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     fs <- runScoring w [] (observingEfficiency dt s)
+>     let result = eval fs
+>     assertEqual "test_observingEfficiency" 0.8661948 result
+
+> test_observingEfficiencyLimit = TestCase $ do
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     -- result <- runScoring w [] (observingEfficiencyLimit dt s)
+>     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
+>     assertEqual "test_observingEfficiencyLimit" 0.001534758 result
+
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let dt = fromGregorian 2006 10 15 12 0 0
@@ -176,9 +200,18 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     assertResult "test_efficiencyHA" (Just wdt) 2 0.4548 (efficiencyHA dt sessAS)
 >     assertResult "test_efficiency" (Just wdt) 2 0.93555 (efficiency dt sessBug)
 >     assertResult "test_efficiency" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     Just result <- runScoring w [] (efficiency dt s) 
+>     assertEqual "test_efficiency" 0.8713239 result
+>     Just result <- runScoring w [] (efficiencyHA dt s) 
+>     assertEqual "test_efficiencyHA" 0.7837111 result
 
 > test_zenithOpticalDepth = TestCase $ do
->     let wdt = fromGregorian 2006 10 14 9 15 0
+>     let wdt = fromGregorian 2006 10 14 9 15 2
 >     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.00798 (zenithOpticalDepth dtLP sessLP)
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.0661772 (zenithOpticalDepth dt sessBug)
@@ -189,12 +222,32 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertEqual "test_receiverTemperature" 60.0 $ receiverTemperature dt sessBug
 >     assertEqual "test_receiverTemperature" 10.0 $ receiverTemperature dt sessBug2
+>     -- pTestProjects session CV
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let result = receiverTemperature dt s 
+>     assertEqual "test_receiverTemperature" 5.0 result
+
+> test_minObservingEff = TestCase $ do
+>     -- pTestProjects session CV
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let result = minObservingEff . frequency $ s
+>     assertEqual "test_minObservingEff" 0.93819135 result
 
 > test_kineticTemperature = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 0
 >     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.498 (kineticTemperature dtLP sessLP) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.982 (kineticTemperature dt sessBug2) 
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     Just result <- runScoring w [] (kineticTemperature dt s) 
+>     assertEqual "test_kineticTemperatureCV" 271.352 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
@@ -230,12 +283,27 @@ TBF are these partitions stil useful?
 >     assertAlmostEqual "test_politicalFactors" 3 1.015 result
 
 > test_trackingEfficiency = TestCase $ do
+>     -- sessLP
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sessLP)
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
+>     assertEqual "test_trackingEfficiency" 0.99796414 result
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sessLP)
+>     -- pTestProjects session CV
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
+>     assertEqual "test_trackingErrorLimit" 1.0 result
 
 > test_zenithAngleLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 0 0 0
@@ -246,6 +314,17 @@ TBF are these partitions stil useful?
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
 >     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
 >     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
+
+> test_scoreCV = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     fs <- runScoring w [] $ (genScore ss) dt s
+>     print fs
+>     let result = eval fs
+>     print result
+>     assertAlmostEqual "test_scoreCV" 3 1.015 result  -- got 3.2803972 need ~0
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
