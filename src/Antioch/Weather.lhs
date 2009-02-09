@@ -30,7 +30,7 @@
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
-> getWeather now = bracketOnError connect disconnect $ \conn -> do
+> getWeather now = bracketOnError connect disconnect $ \conn ->
 >     updateWeather conn now
 
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
@@ -54,9 +54,8 @@
 
 Used for test to ensure the year is always 2006.
 
-> getWeather'     :: DateTime -> IO Weather
-> getWeather' now = do
->   getWeather $ Just (replaceYear 2006 now)
+> getWeather' :: DateTime -> IO Weather
+> getWeather' = getWeather . Just . replaceYear 2006
 
 > pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
 > pin now f target = f (forecastType target now) target
@@ -143,7 +142,7 @@ on frequency.
 > getMinOpacity'      = caching getMinOpacity
 > getMinTSysPrime'    = caching getMinTSysPrime
 
-> caching f = newIORef M.empty >>= return . f
+> caching f = liftM f $ newIORef M.empty
 
 > withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
 > withCache key cache action = do
@@ -194,7 +193,7 @@ Helper function to determine the desired forecast type given two DateTimes.
 
 > forecastType :: DateTime -> DateTime -> Int
 > forecastType target now = 
->     case dropWhile (< difference) $ forecast_types of
+>     case dropWhile (< difference) forecast_types of
 >         []     -> length forecast_types
 >         (x:xs) -> fromJust (elemIndex x forecast_types) + 1
 >   where difference = (target - now) `div` 3600
@@ -219,13 +218,13 @@ Just some test functions to make sure things are working.
 
 > testWeather = do
 >     w <- getWeather now
->     return $ (wind w target
->             , tatm w target
->             , opacity w target frequency
->             , tsys w target frequency
->             , totalStringency w frequency elevation
->             , minOpacity w frequency elevation
->             , minTSysPrime w frequency elevation)
+>     return ( wind w target
+>            , tatm w target
+>            , opacity w target frequency
+>            , tsys w target frequency
+>            , totalStringency w frequency elevation
+>            , minOpacity w frequency elevation
+>            , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
 >     elevation = pi / 4.0 :: Radians

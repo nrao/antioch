@@ -36,7 +36,7 @@ internally by the sudoku code.
 We `mustSchedule` an allocation within a certain time period if it does not
 contain any intervals beyond the end of that time period.
 
-> mustSchedule  start end alloc = mustSchedule' start end (intervals alloc)
+> mustSchedule  start end       = mustSchedule' start end . intervals
 > mustSchedule' _     _   []    = True
 > mustSchedule' start end ((Interval s e):xs)
 >     | end <= s                = False
@@ -80,10 +80,10 @@ of their first intervals.
 >   where
 >     merge [] x = [x]
 >     merge as@(a@(Interval s1 e1):as') x@(Interval s2 e2)
->       | a `conflict` x = (Interval (min s1 s2) (max e1 e2)) : as'
+>       | a `conflict` x = Interval (min s1 s2) (max e1 e2) : as'
 >       | otherwise      = x : as
 
-> mkAllocation i ts = Allocation i . nub . sort $ ts
+> mkAllocation i = Allocation i . nub . sort
 
 > spanAllocation                   :: (Eq a, Num t, Ord t) => Allocation a t -> t
 > spanAllocation (Allocation _ xs) = spanIntervals xs
@@ -105,7 +105,7 @@ of their first intervals.
 >   where
 >     merge [] x = [x]
 >     merge ps x =
->         if n > 5 then ps else (combine (x:as)) : bs
+>         if n > 5 then ps else combine (x:as) : bs
 >       where
 >         (as, bs) = partition (x `conflict`) ps
 >         n        = (1 +) . sum . map (\(PowerSet _ as) -> length as) $ as
@@ -149,7 +149,7 @@ of their first intervals.
 
 > genSessions = fmap (concatMap flatten) $ plural genAllocation
 
-> genAllocations = fmap aggregate $ genSessions
+> genAllocations = fmap aggregate genSessions
 
 > class Span a where
 >     conflict :: a -> a -> Bool
@@ -188,7 +188,7 @@ of their first intervals.
 >       rs -> Just $! concat rs
 
 > nuke       :: (Eq a, Num t, Ord t) => Interval t -> [Allocation a t] -> [Allocation a t]
-> nuke  t xs = fewestFirst . biggestFirst $ nuke' t xs
+> nuke  t    = fewestFirst . biggestFirst . nuke' t
 
 > nuke' t xs = [Allocation i . nukeInterval t $ x | Allocation i x <- xs]
 
@@ -211,7 +211,7 @@ of their first intervals.
 >     intervalCmp ((Interval s1 e1):_) ((Interval s2 e2):_) = (e1 - s1) `compare` (e2 - s2)
 
 > sudoku :: (Eq a, Num t, Ord t) => [Allocation a t] -> Maybe [Schedule a t]
-> sudoku = fmap concat . sequence . map sudoku' . sortWith length . partition'
+> sudoku = fmap concat . mapM sudoku' . sortWith length . partition'
 
 > prop_Valid = forAll genAllocations $ \allocations ->
 >     flip all (partition' allocations) $ \xs ->
@@ -254,8 +254,8 @@ of their first intervals.
 >     let xss = transitiveClosure conflict xs in
 >     and [not . any (x `conflict`) $ ys | xs <- xss, ys <- xss \\ [xs], x <- xs]
 
-> floydWarshall      :: (a -> a -> Bool) -> [a] -> UArray (Int, Int) Bool
-> floydWarshall p xs = runSTUArray (floydWarshall' p xs)
+> floydWarshall       :: (a -> a -> Bool) -> [a] -> UArray (Int, Int) Bool
+> floydWarshall  p xs = runSTUArray $ floydWarshall' p xs
 
 > floydWarshall'      :: (a -> a -> Bool) -> [a] -> ST s (STUArray s (Int, Int) Bool)
 > floydWarshall' p xs = do
@@ -272,8 +272,7 @@ of their first intervals.
 >           writeArray arr (i, j) $! z || (x && y)
 >     return arr
 >   where
->     for []     f = return ()
->     for (x:xs) f = f x >> for xs f
+>     for xs f = foldr ((>>) . f) (return ()) xs
 >     n   = length xs
 >     idx = [0..n-1]
 

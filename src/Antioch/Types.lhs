@@ -167,9 +167,9 @@ ignores their numerical scores.
 > periodsEqual :: Period -> Period -> Bool
 > periodsEqual p1 p2 = eqStarts p1 p2 && eqDurs p1 p2 && eqIds p1 p2
 >   where
->     eqStarts p1 p2 = startTime p1 == startTime p2
->     eqDurs   p1 p2 =  duration p1 == duration p2
->     eqIds    p1 p2 =   session p1 == session p2 
+>     eqStarts = (==) `on` startTime
+>     eqDurs   = (==) `on` duration
+>     eqIds    = (==) `on` session
 
 
 > defaultSession = Open {

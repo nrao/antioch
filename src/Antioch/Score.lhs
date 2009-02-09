@@ -182,7 +182,7 @@ Select the appropriate pressure factor from the array of pressures.
 
 > frequencyPressure      :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > frequencyPressure fs f _ a =
->                      factor "frequencyPressure" . Just $ (fs ! f a) ** 0.5
+>                      factor "frequencyPressure" . Just $ sqrt (fs ! f a)
 
 > rightAscensionPressure     :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > rightAscensionPressure fs f _ a =
@@ -191,8 +191,8 @@ Select the appropriate pressure factor from the array of pressures.
 Creates an array indexed by band or hour angle with the hours total and used
 for each slice for computing pressures.
 
-> initBins        :: Ix a => (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
-> initBins bounds f xs = runSTArray (initBins' bounds f xs)
+> initBins          :: Ix a => (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
+> initBins bounds f = runSTArray . initBins' bounds f
 
 > initBins' bounds f xs = do
 >     arr <- newArray bounds (0, 0)
@@ -202,8 +202,7 @@ for each slice for computing pressures.
 >         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
 >     return arr
 >   where
->     for []     f = return ()
->     for (x:xs) f = f x >> for xs f
+>     for xs f = foldr ((>>) . f) (return ()) xs
 
 Translates the total/used times pairs into pressure factors.
 
@@ -244,7 +243,7 @@ Translates the total/used times pairs into pressure factors.
 >     minObsEff = minObservingEff . frequency $ s
 
 > hourAngleLimit        dt s = efficiencyHA dt s >>= \effHA -> hourAngleLimit' effHA dt s
-> hourAngleLimit' effHA dt s = do
+> hourAngleLimit' effHA dt s =
 >     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff . frequency $ s
@@ -316,7 +315,7 @@ Compute the total score for a given session over an interval.
 
 > totalScore :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score
 > totalScore sf dt dur s = do
->     scores <- mapM (liftM eval . flip sf s) $ times
+>     scores <- mapM (liftM eval . flip sf s) times
 >     return $! addScores scores
 >   where
 >     times  = map (`addMinutes'` dt) [0, quarter .. dur-1]
@@ -325,7 +324,7 @@ Add a set of scores, with the added complication that if any
 individual score is zero then the end result must also be zero.
 
 > addScores :: [Score] -> Score
-> addScores = maybe 0.0 id . foldr' step (Just 0.0)
+> addScores = fromMaybe 0.0 . foldr' step (Just 0.0)
 >   where
 >     step s Nothing   = Nothing
 >     step s (Just x)
@@ -436,34 +435,34 @@ Quick Check properties:
 
 
 > prop_efficiency = forAll genProject $ \p ->
->   let es = map calcEff (sessions $ p) in normalized es  
+>   let es = map calcEff (sessions p) in normalized es  
 >   where
->     calcEff s = unsafePerformIO  $ do
+>     calcEff s = unsafePerformIO $ do
 >       w <- theWeather
 >       w' <- newWeather w (Just $ fromGregorian 2006 10 14 9 15 2)
 >       let dt = fromGregorian 2006 10 15 12 0 0
 >       Just result <- runScoring w' [] (efficiency dt s)
->       return $ result
+>       return result
 
 > prop_surfaceObservingEfficiency = forAll genProject $ \p ->
->   let es = map calcEff (sessions $ p) in normalized es  
+>   let es = map calcEff (sessions p) in normalized es  
 >   where
->     calcEff s = getScoringResult surfaceObservingEfficiency s
+>     calcEff = getScoringResult surfaceObservingEfficiency
 
 > prop_trackingEfficiency = forAll genProject $ \p ->
->   let es = map calcEff (sessions $ p) in normalized es  
+>   let es = map calcEff (sessions p) in normalized es  
 >   where
->     calcEff s = getScoringResult trackingEfficiency s
+>     calcEff = getScoringResult trackingEfficiency
 
 > prop_stringency = forAll genProject $ \p ->
->   let es = map getStringency (sessions $ p) in greaterThenOne es  
+>   let es = map getStringency (sessions p) in greaterThenOne es  
 >   where
->     getStringency s = getScoringResult stringency s
+>     getStringency = getScoringResult stringency
 
 > prop_observingEfficiencyLimit = forAll genProject $ \p ->
->   let es = map getObsEffLimit (sessions $ p) in normalized es  
+>   let es = map getObsEffLimit (sessions p) in normalized es  
 >   where
->     getObsEffLimit s = getScoringResult observingEfficiencyLimit s
+>     getObsEffLimit = getScoringResult observingEfficiencyLimit
 
 > prop_hourAngleLimit = forAll genProject $ \p -> checkBoolScore p hourAngleLimit
 
@@ -491,14 +490,14 @@ Utilities for QuickCheck properties:
 >         let sessions = generate 0 g $ genSessions 100
 >         return $ f sessions
 
-> checkBoolScore p sf = let es = map (getScoringResult sf) (sessions $ p) in areBools es
+> checkBoolScore p sf = let es = map (getScoringResult sf) (sessions p) in areBools es
 
 > getScoringResult sf s = unsafePerformIO $ do
 >       w <- theWeather
 >       w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
 >       let dt = fromGregorian 2006 4 15 16 0 0
 >       [(_, Just result)] <- runScoring w' [] (sf dt s)
->       return $ result
+>       return result
 
 Avoid making too many connections to the weather DB.
 

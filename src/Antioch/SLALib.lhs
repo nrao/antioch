@@ -104,8 +104,8 @@ the results are always normalized (0..1)
 > inPiRng :: Double -> Bool
 > inPiRng x = -pi <= x && x <= pi
 
-> almostEqual :: Double -> Double -> Bool
-> almostEqual x y = if (abs (x - y)) <= 1.0e-6 then True else False
+> almostEqual     :: Double -> Double -> Bool
+> almostEqual x y = abs (x - y) <= 1.0e-6
 
 > prop_slaDcs2c =
 >     forAll genAngleRad $ \a ->
@@ -158,7 +158,7 @@ Direction cosines to spherical coordinates (rads)
 > deg2rad deg = deg * pi / 180.0
 
 > dsign :: Double -> Double -> Double
-> dsign a b | b < 0.0   = (-(abs a))
+> dsign a b | b < 0.0   = - (abs a)
 >           | otherwise = abs a
 
 Normalize angle into range +/- pi       

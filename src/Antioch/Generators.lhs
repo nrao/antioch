@@ -1,13 +1,13 @@
 > module Antioch.Generators where
 
 > import Antioch.Types
-> import Antioch.SLALib (slaGaleq)
+> import Antioch.SLALib  (slaGaleq)
 > import Antioch.Utilities
 > import Antioch.DateTime
 > import Data.Char
 > import Data.List 
-> import Data.Maybe (maybeToList)
-> import System.Random  (getStdGen, setStdGen, mkStdGen)
+> import Data.Maybe      (isJust, maybeToList)
+> import System.Random   (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
 
@@ -59,25 +59,22 @@ those to calculate timeLeft and timeTotal?
 >     return $ makeProject project sessions
 
 > genProjects         :: Int -> Gen [Project]
-> genProjects 0       = do {return $ []}
+> genProjects 0       = return []
 > genProjects (n + 1) = do
 >     p  <- genProject
 >     pp <- genProjects n
->     return $ [p] ++ pp
+>     return $ p : pp
 
 > genScheduleProjects :: Gen [Project]
-> genScheduleProjects = do
->     n <- choose (10, 30)
->     ps <- genProjects n
+> genScheduleProjects =
 >     -- TBF: generate unique ids for projects & sessions
->     return $ ps 
+>     choose (10, 30) >>= genProjects
 
 Now lets make sure we are properly generating Projects: test each attribute
 at a time:
 
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["07C", "08A", "08B", "08C"]
-> prop_thesis p = thesis p == True || thesis p == False
 
 Each Project's Sessions can have a totalTime between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
@@ -89,7 +86,7 @@ a project has between 1 and 5 Sessions.
 
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
-> prop_projectPeriods p = let n = sum [ (length . periods $ s) | s <- sessions p] in 0 <= n && n <= 5*3
+> prop_projectPeriods p = let n = sum [length . periods $ s | s <- sessions p] in 0 <= n && n <= 5*3
 
 TBF: this does not pass because generated periods aren't limited by their
 sessions' totalTime.
@@ -168,11 +165,11 @@ Only 20 percent of the low freq. sessions are backups
 
 
 > genSessions         :: Int -> Gen [Session]
-> genSessions 0       = do {return $ []}
+> genSessions 0       = return []
 > genSessions (n + 1) = do
 >     s  <- genSession
 >     ss <- genSessions n
->     return $ [s] ++ ss
+>     return $ s : ss
 
 > prop_Grade s = grade s `elem` [GradeA, GradeB, GradeC]
 > prop_Receiver s = head (receivers s) == band2Receiver (band s)
@@ -231,7 +228,7 @@ then an hour.  TBD: use T.frequency
 > genPeriods (n + 1) = do
 >     p  <- genPeriod
 >     ps <- genPeriods n
->     return $ [p] ++ ps
+>     return $ p : ps
 
 Make sure Durations are made of 15-minute intervals
 
@@ -254,8 +251,7 @@ TBF: we can make this more sophisticated.
 >     let schedDurs = round2quarter $ schedDur `div` n 
 >     let dts = [ (schedDurs * i) `addMinutes'` starttime | i <- [0 .. (n-1)]]
 >     -- TBF: randomly select which sessions to generate periods for
->     periods <- mapM (genSchedulePeriod (head sessions) schedDurs) dts 
->     return periods
+>     mapM (genSchedulePeriod (head sessions) schedDurs) dts 
 
 > genSchedulePeriod :: Session -> Minutes -> DateTime -> Gen (Maybe Period)
 > genSchedulePeriod sess dur dt = do
@@ -265,7 +261,7 @@ TBF: we can make this more sophisticated.
 >     let maxL = dur - (2*60)
 >     pDur' <- choose (min maxL (minDuration sess), min maxL (maxDuration sess))
 >     let pDur = round2quarter pDur' --quarter * (pDur' `div` quarter)
->     let fits = (minDuration sess) <= maxL
+>     let fits = minDuration sess <= maxL
 >     return $ if not fits then Nothing else Just $ Period sess dt pDur 0.0 
 
 Check this generator itself: make sure the periods adhere to expected properties
@@ -293,7 +289,7 @@ instance Ord t => Span (Interval t) where
 >     [s1, s2] = map startTime [p1, p2]
 >     [e1, e2] = map endTime [p1, p2]
 
-> overlaps y = maybe False (const True) . find (overlap y)
+> overlaps y = isJust . find (overlap y)
 
 > internalConflicts xs = or [x `overlaps` (xs \\ [x]) | x <- xs]
 
@@ -335,8 +331,8 @@ K     230    15.1%     9.1   6
 A      60     3.9%     2.3   6
 Q      80     5.3%     3.2   6
 
-> genGrade    :: [Grade] -> Gen Grade
-> genGrade gs = elements gs
+> genGrade :: [Grade] -> Gen Grade
+> genGrade = elements
 
 > band2Receiver :: Band -> Receiver
 > band2Receiver L = Rcvr1_2
