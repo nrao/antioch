@@ -128,8 +128,8 @@ Only 20 percent of the low freq. sessions are backups
 
 > genBackupFlag :: Float -> Gen Bool
 > genBackupFlag freq =
->   if freq > 2.0 then T.frequency [(100, return False)] 
->            else T.frequency [(20, return True), (80, return False)]
+>   if freq > 10.0 then T.frequency [(100, return False)] 
+>            else T.frequency [(25, return True), (75, return False)]
 
 > genSession :: Gen Session
 > genSession = do
