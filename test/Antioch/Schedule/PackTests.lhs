@@ -250,30 +250,6 @@ attributes of the packing algorithm:
 >              , Item "D" 2 8 [0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0] []
 >              ]
 
-Simplest test case of high-level 'pack': schedule a single candidate.
-
-> test_Pack1 = TestCase $ do
->     let periods = pack (fs candidate) starttime duration [] [candidate]
->     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ periods
->     assertEqual "test_Pack1_1" 1 (length periods')
->     assertEqual "test_Pack1_2" expPeriod (head periods')
->   where
->     starttime = fromGregorian 2006 11 8 12 0 0
->     duration = 12*60
->     fs s = genScore [s]
->     candidate = defaultSession { sName = "singleton"
->                                , totalTime = 24*60
->                                , minDuration = 2*60
->                                , maxDuration = 6*60
->                                }
->     expStartTime = fromGregorian 2006 11 8 21 15 0
->     expPeriod = defaultPeriod { session = candidate
->                               , startTime = expStartTime
->                               , duration = 165
->                               , pScore = 34.97986
->                               }
-
 > test_ToItem = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     -- create an item without a mask, i.e. no scoring
@@ -284,8 +260,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     -- now try it with the mask (dts)
 >     let item = toItem (fs testSession) dts testSession
 >     item' <- runScoring w [] item
->     assertEqual "test_ToItem_3" result2 item'
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
+>     assertEqual "test_ToItem_3" result2 item'
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12 * 60
@@ -382,6 +358,26 @@ Same test, >1 fixed
 >     expected = (replicate 8 Nothing) ++ candidates1 ++ (replicate 8 Nothing)
 >                                      ++ candidates2 ++ (replicate 12 Nothing)
 
+Simplest test case of high-level 'pack': schedule a single candidate.
+
+> test_Pack1 = TestCase $ do
+>     let periods = pack (fs candidate) starttime duration [] [candidate]
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ periods
+>     assertEqual "test_Pack1_1" 1 (length periods')
+>     assertEqual "test_Pack1_2" expPeriod (head periods')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 12*60
+>     fs s = genScore [s]
+>     candidate = defaultSession { sName = "singleton"
+>                                , totalTime = 24*60
+>                                , minDuration = 2*60
+>                                , maxDuration = 6*60
+>                                }
+>     expStartTime = fromGregorian 2006 11 8 21 45 0
+>     expPeriod = Period candidate expStartTime 135 34.97986
+
 Create a long schedule from a reproducable randomly created set of sessions.
 The main value of this test is to catch changes in the packing algorithm that 
 produce changes in the final result.
@@ -390,23 +386,22 @@ produce changes in the final result.
 >     let periods = pack fs starttime duration [] sess
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ periods
->     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'  
 >   where
->     sess = concatMap sessions pTestProjects --generateTestSessions 20
+>     sess = getOpenPSessions 
 >     fs = genScore sess
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
->     --expPeriods = [Period defaultSession {sId = 7} starttime duration 113.43763]
 >       where
->         --ids = [26, 14, 26, 49, 40, 0, 46]
->         names = ["LP", "AS", "VA", "WV", "WV", "GB"]
+>         names = ["AS", "WV", "GB"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         --durs = [330, 120, 240, 120, 225, 180, 225]
->         durs = [240, 360, 240, 240, 240, 120]
->         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
+>         durs = [480, 360, 150]
+>         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
+>         times = [ fromGregorian 2006 11 8 13 45 0
+>                 , fromGregorian 2006 11 9  3 30 0
+>                 , fromGregorian 2006 11 9  9 30 0 ]
 >         -- TBF
 >         scores = replicate 6 0.0
 
@@ -544,7 +539,7 @@ around fixed periods.
 >     periods' <- runScoring w [] $ periods
 >     assertEqual "test_Pack4" expPeriods periods'  
 >   where
->     sess = concatMap sessions pTestProjects 
+>     sess = getOpenPSessions --concatMap sessions pTestProjects 
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft1 = (4*60)  `addMinutes'` starttime
@@ -558,12 +553,15 @@ around fixed periods.
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
 >       where
->         names = ["LP", "VA", "WV", "WV", "GB"]
+>         names = ["LP", "WV", "GB"]
 >         ids' = map getPSessionId names
->         ids  = [ids'!!0]++[1000]++[ids'!!1]++[1001]++(drop 2 ids')
+>         ids  = [head ids']++[1000,1001]++(tail ids')
 >         ss  = map (\i -> ds {sId = i}) ids
->         durs = [240, dur1, 240, dur2, 240, 240, 120]
->         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
+>         durs = [240, dur1, dur2, 360, 150]
+>         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
+>         times = [starttime, ft1, ft2
+>                , fromGregorian 2006 11 9 3 30 0
+>                , fromGregorian 2006 11 9 9 30 0] 
 >         -- TBF: don't tie pack tests to numerical scores
 >         -- TBF: bug - second score should be zero!!!!
 >         scores = [39.079136, -39.079136, 0.0, 83.05223, 35.805008,
@@ -577,33 +575,25 @@ Same as above, but with even more fixed periods
 >     periods' <- runScoring w [] $ periods
 >     assertEqual "test_Pack5" expPeriods periods'  
 >   where
->     sess = concatMap sessions pTestProjects
+>     sess = getOpenPSessions 
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = (4*60)     `addMinutes'` starttime
+>     ft1 = (4*60)  `addMinutes'` starttime
 >     ft2 = (10*60) `addMinutes'` starttime
 >     ft3 = (22*60) `addMinutes'` starttime
 >     d1 = (2*60)
 >     d2 = (4*60)
 >     d3 = (2*60)
+>     -- TBF: scores aren't right - will show up negative!
 >     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d1 0.0
 >     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0
 >     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0
 >     fixed = [fixed1, fixed2, fixed3]
 >     fs = genScore sess
 >     duration = 24*60
->     expPeriods = zipWith4 Period ss times durs scores
->       where
->         names = ["LP", "VA", "WV", "WV"]
->         ids' = map getPSessionId names
->         ids  = [ids'!!0]++[1000]++[ids'!!1]++[1001]++(drop 2 ids')++[1002]
->         ss  = map (\i -> ds {sId = i}) ids
->         durs = [240, d1, 240, d2, 240, 240, d3]
->         times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
->         -- TBF: don't tie pack tests to numerical scores
->         -- TBF: bug - second score should be zero!!!!
->         scores = [39.079136, -39.079136, 0.0, 92.10629,
->                   -92.10629, 177.879, 138.0521]
+>     open1 = Period (ds {sId =  getPSessionId "LP"}) starttime 240 0.0
+>     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 4 0 0) 360 0.0
+>     expPeriods = [open1, fixed1, fixed2, open2, fixed3]
 
 
 Test against python unit tests from beta test code:
@@ -763,13 +753,10 @@ Session data to pack:
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs
 
-> defaultPackSessionScores = (replicate 37 0.0) ++ 
->                                          [ 3.2315328, 3.204887,  3.211515
->                                          , 3.219639,  3.2261572, 3.1090422
->                                          , 3.1223507, 3.133507,  3.1399984
->                                          , 3.1896782, 3.1915512
->                                          ]
-
+> defaultPackSessionScores = (replicate 39 0.0) ++ 
+>     [3.211515, 3.219639,  3.2261572
+>    , 2.847124, 3.0493839, 3.1298869,
+>      3.1399984,3.1896782, 3.1915512]
 
 This is the list of random numbers generated on the python side:
 
