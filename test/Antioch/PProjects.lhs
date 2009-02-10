@@ -3,6 +3,7 @@
 >       pTestProjects
 >     , findPSessionByName
 >     , getPSessionId
+>     , getOpenPSessions
 >     ) where
 
 > import Antioch.Types
@@ -296,3 +297,7 @@ Assumes we have unique names.
 
 > getPSessionId :: String -> Int
 > getPSessionId name = sId . head $ findPSessionByName name
+
+> getOpenPSessions :: [Session]
+> getOpenPSessions = (take 8 ss) ++ (drop ((length ss) - 2) ss)
+>     where ss = concatMap sessions pTestProjects
