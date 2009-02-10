@@ -8,6 +8,7 @@
 > import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
+> import Antioch.Utilities (rad2deg)
 > import Antioch.Weather
 > import Control.Monad      (liftM)
 
@@ -20,7 +21,8 @@ simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
 > plotDecFreq fn ss ps =
->      scatterPlots (scatterAttrs t x y fn) $ [sessionDecFreq ss, periodDecFreq ps]
+>      scatterPlots (scatterAttrs t x y fn) $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
+>                                            , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
 >   where
 >     t   = "Dec vs Freq"
 >     x   = "Frequency [GHz]"
@@ -30,7 +32,8 @@ simDecRA (stars, crosses)
 
 > plotDecVsRA          :: StatsPlot
 > plotDecVsRA fn ss ps =
->     scatterPlots (scatterAttrs t x y fn) $ [sessionDecRA ss, periodDecRA ps]
+>     scatterPlots (scatterAttrs t x y fn) $ [[(x, rad2deg y) | (x, y) <- sessionDecRA ss]
+>                                           , [(x, rad2deg y) | (x, y) <-  periodDecRA ps]]
 >   where
 >     t = "Dec vs RA"
 >     x = "Right Ascension [hr]"
@@ -124,7 +127,7 @@ simElevDec
 >   plotElevDec fn effs ps
 >
 > plotElevDec fn effs ps =
->     scatterPlot (scatterAttrs t x y fn) $ decVsElevation ps effs
+>     scatterPlot (scatterAttrs t x y fn) $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
 >   where
 >     t = "Elevation vs Dec"
 >     x = "Declination [deg]"

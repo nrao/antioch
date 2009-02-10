@@ -189,7 +189,7 @@ Generate a scoring function having the pressure factors.
 
 Select the appropriate pressure factor from the array of pressures.
 
-> frequencyPressure      :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
+> frequencyPressure :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > frequencyPressure fs f _ a =
 >                      factor "frequencyPressure" . Just $ sqrt (fs ! f a)
 
@@ -285,7 +285,7 @@ Translates the total/used times pairs into pressure factors.
 > projectCompletion _ s = let
 >     weight = 1000.0
 >     total = fromIntegral (timeTotal . project $ s)
->     left  = fromIntegral (timeLeft  . project $ s)
+>     left  = total - fromIntegral (timeUsed  . project $ s)
 >     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
 >     in factor "projectCompletion" . Just $
 >     if percent <= 0.0 then 1.0 else 1.0 + percent/weight

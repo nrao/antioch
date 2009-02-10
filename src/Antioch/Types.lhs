@@ -46,7 +46,6 @@ useless items.
 >   , project     :: Project
 >   , periods     :: [Period]
 >   , totalTime   :: Minutes
->   , totalUsed   :: Minutes
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
 >   , timeBetween :: Minutes
@@ -66,7 +65,6 @@ useless items.
 >   , project     :: Project
 >   , period      :: Period
 >   , totalTime   :: Minutes
->   , totalUsed   :: Minutes
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
 >   , timeBetween :: Minutes
@@ -86,7 +84,6 @@ useless items.
 >   , project     :: Project
 >   , periods     :: [Period]
 >   , totalTime   :: !Minutes
->   , totalUsed   :: !Minutes
 >   , minDuration :: !Minutes
 >   , maxDuration :: !Minutes
 >   , timeBetween :: !Minutes
@@ -100,6 +97,9 @@ useless items.
 >   , grade       :: !Grade
 >   , band        :: !Band
 >   } deriving (Show)
+
+> totalUsed :: Session -> Minutes
+> totalUsed = sum . map duration . periods
 
 > instance Eq Session where
 >     (==) = (==) `on` sId
@@ -117,8 +117,7 @@ Tying the knot.
 > makeSession      :: Session -> [Period] -> Session
 > makeSession s ps = s'
 >   where
->     s' = s { totalUsed = t, periods = map (\p -> p { session = s' }) ps }
->     t  = sum . map duration $ ps
+>     s' = s { periods = map (\p -> p { session = s' }) ps }
 
 > updateSession      :: Session -> [Period] -> Session
 > updateSession s ps = makeSession s $ periods s ++ ps
@@ -129,18 +128,20 @@ Tying the knot.
 >   , semester  :: !String
 >   , sessions  :: [Session]
 >   , thesis    :: !Bool
->   , timeLeft  :: !Minutes
 >   , timeTotal :: !Minutes
 >   } deriving Eq
 
-> makeProject :: Project -> [Session] -> Project
-> makeProject p ss = p'
+> timeUsed :: Project -> Minutes
+> timeUsed = sum . map totalUsed . sessions
+
+> makeProject :: Project -> Minutes -> [Session] -> Project
+> makeProject p tt ss = p'
 >   where
->     p' = p { timeTotal = t, timeLeft = t, sessions = map (\s -> s { project = p' }) ss }
+>     p' = p { timeTotal = tt, sessions = map (\s -> s { project = p' }) ss }
 >     t  = sum . map totalTime $ ss
 
 > instance Show Project where
->     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeLeft $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeUsed $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
 
 > data Period  = Period  {
 >     session   :: Session
@@ -178,7 +179,6 @@ ignores their numerical scores.
 >   , project     = defaultProject 
 >   , periods     = [defaultPeriod]
 >   , totalTime   = 0
->   , totalUsed   = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0
@@ -199,7 +199,6 @@ ignores their numerical scores.
 >   , project     = defaultProject 
 >   , periods     = [defaultPeriod]
 >   , totalTime   = 0
->   , totalUsed   = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0
@@ -220,7 +219,6 @@ ignores their numerical scores.
 >   , project     = defaultProject 
 >   , period      = defaultPeriod
 >   , totalTime   = 0
->   , totalUsed   = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0
@@ -241,7 +239,6 @@ ignores their numerical scores.
 >   , project     = defaultProject 
 >   , periods     = [defaultPeriod]
 >   , totalTime   = 0
->   , totalUsed   = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0
@@ -262,7 +259,6 @@ ignores their numerical scores.
 >   , semester  = ""
 >   , sessions  = [defaultSession]
 >   , thesis    = False
->   , timeLeft  = 0
 >   , timeTotal = 0
 >   }
 
