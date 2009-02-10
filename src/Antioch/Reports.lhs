@@ -136,9 +136,9 @@ simScoreElev
 
 > plotScoreElev'         :: StatsPlot
 > plotScoreElev' fn _ ps = do
->   w      <- getWeather Nothing
->   let sf = genScore $ map session ps
->   scores <- historicalObsScore w sf ps
+>   w       <- getWeather Nothing
+>   (sf, _) <- runTracing $ genScore $ map session ps
+>   scores  <- historicalObsScore w sf ps
 >   plotScoreElev fn scores ps
 
 > plotScoreElev fn scores ps =
@@ -152,9 +152,9 @@ simScoreLST
 
 > plotLstScore'         :: StatsPlot
 > plotLstScore' fn _ ps = do
->   w      <- getWeather Nothing
->   let sf = genScore $ map session ps
->   scores <- historicalObsScore w sf ps
+>   w       <- getWeather Nothing
+>   (sf, _) <- runTracing $ genScore $ map session ps
+>   scores  <- historicalObsScore w sf ps
 >   plotLstScore fn scores ps
 >
 > plotLstScore fn scores ps =
@@ -335,7 +335,7 @@ Simulator Harness
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     results <- simulate sched w rs dt dur int history ss
+>     (results, trace) <- runTracing $ simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     mapM_ (\f -> f ss results) sps

@@ -1,16 +1,17 @@
 > module Antioch.Statistics where
 
-> import Antioch.DateTime (fromGregorian, DateTime, addMinutes', diffMinutes')
+> import Antioch.DateTime   (fromGregorian, DateTime, addMinutes', diffMinutes')
 > import Antioch.Generators
 > import Antioch.Types
-> import Antioch.Score (zenithAngle, minObservingEff)
-> import Antioch.Utilities (rad2hr, rad2deg, utc2lstHours)
-> import Data.Function (on)
+> import Antioch.Score      (zenithAngle, minObservingEff)
+> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours)
+> import Control.Arrow      ((&&&))
+> import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
 > import Graphics.Gnuplot.Simple
-> import System.Random (getStdGen)
-> import Test.QuickCheck (generate, choose)
+> import System.Random      (getStdGen)
+> import Test.QuickCheck    (generate, choose)
 
 To Do List (port from Statistics.py):
 
@@ -92,7 +93,7 @@ We may want to move this function to a different file.
 
 > efficiencyVsFrequency :: [Session] -> [Float] -> [(Float, Float)]
 > efficiencyVsFrequency sessions =
->     snd `vs` (frequency . fst) . zip sessions
+>     (snd `vs` (frequency . fst)) . zip sessions
 
 > historicalFreq :: [Period] -> [Float]
 > historicalFreq = map (frequency . session)
@@ -182,8 +183,8 @@ Produces list of (x, y) coordinate pairs.
 
 > sdom' xs = stddev' xs / (sqrt . fromIntegral . length $ xs)
 
-> ratio       :: [Float] -> [Float] -> Float
-> ratio xs ys = (/) `on` sum
+> ratio :: [Float] -> [Float] -> Float
+> ratio = (/) `on` sum
 
 > frequencyBins :: [Float]
 > frequencyBins =

@@ -91,7 +91,7 @@ of frequency.
 > fetchWindAndAtm cnn dt ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[wind, tatm]] -> return (fromSql' $ wind, fromSql' $ tatm)
+>       [[wind, tatm]] -> return (fromSql' wind, fromSql' tatm)
 >       _              -> return (Nothing, Nothing)
 >   where
 >     query = "SELECT wind_speed, tatm FROM forecasts WHERE date = ? AND forecast_type_id = ?"
@@ -121,7 +121,7 @@ on frequency.
 > fetchOpacityAndTSys cnn dt freqIdx ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[opacity, tsys]] -> return (fromSql' $ opacity, fromSql' $ tsys)
+>       [[opacity, tsys]] -> return (fromSql' opacity, fromSql' tsys)
 >       _                 -> return (Nothing, Nothing)
 >   where
 >     query = "SELECT opacity, tsys\n\
@@ -219,7 +219,7 @@ Helper function to get singular Float values out of the database.
 >     result <- quickQuery' conn query xs
 >     case result of
 >         [[SqlNull]] -> return Nothing
->         [[x]] -> return $ Just (fromSql $ x)
+>         [[x]] -> return $ Just (fromSql x)
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
 >         x     -> fail "There is more than one forecast with that time stamp."
@@ -247,7 +247,7 @@ Make sure we always get something - i.e. not nothing!
 TBF: run it enough times, and you get a 2006/1/1 date, and, BANG!!!
 
 > prop_notNothing = forAll gen2006Date $ \dt ->
->   dropWhile (==True) (map isJust (map unsafePerformIO (getValues dt))) == []
+>   dropWhile (==True) (map (isJust . unsafePerformIO) (getValues dt)) == []
 >     where
 >       getValues dt = unsafePerformIO $ do
 >         -- TBF: randomize these three vars as well!

@@ -24,5 +24,5 @@
 > scatterPlots attrs plots =
 >     plotPathsStyle attrs [(scatterStyle, xys) | xys <- plots]
 
-> errorBarPlot       :: [Attribute] -> [(Float, Float, Float)] -> IO ()
-> errorBarPlot attrs = plotErrorBars attrs
+> errorBarPlot :: [Attribute] -> [(Float, Float, Float)] -> IO ()
+> errorBarPlot = plotErrorBars

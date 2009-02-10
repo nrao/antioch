@@ -107,8 +107,6 @@ Ranking System from Memo 5.2, Section 3
 
 > observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
-> observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
-
 > atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
 > atmosphericOpacity' eff dt s = factor "atmosphericOpacity" eff
 
@@ -172,17 +170,17 @@ Ranking System from Memo 5.2, Section 3
 
 Generate a scoring function having the pressure factors.
 
-> genFrequencyPressure :: [Session] -> Scoring ScoreFunc
+> genFrequencyPressure :: Monad m => [Session] -> Tracing m ScoreFunc
 > genFrequencyPressure sessions = do
->     tell defaultTrace { freqPressureHistory = [factors] }
+>     tell [FreqPressureHistory factors]
 >     return $ frequencyPressure factors band
 >   where
 >     bins    = initBins (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
-> genRightAscensionPressure :: [Session] -> Scoring ScoreFunc
+> genRightAscensionPressure :: Monad m => [Session] -> Tracing m ScoreFunc
 > genRightAscensionPressure sessions = do
->     tell defaultTrace { raPressureHistory = [factors] }
+>     tell [RaPressureHistory factors]
 >     return $ rightAscensionPressure factors accessor
 >   where
 >     accessor s = (round . rad2hr . ra $ s) `mod` 24
@@ -249,7 +247,7 @@ Translates the total/used times pairs into pressure factors.
 >     if obsEff' < minObsEff
 >         -- Equation 24
 >         then fac $ exp (-((obsEff' - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
->         else fac $ 1.0
+>         else fac 1.0
 >   where
 >     sigma = 0.02
 >     minObsEff = minObservingEff . frequency $ s
@@ -371,24 +369,17 @@ The Scoring monad encapsulates the concept of a scoring action,
 all the scoring functions live in the monad so they can
 execute scoring actions.
 
-> data Trace = Trace {
->       freqPressureHistory :: [Array Band Float]
->     , raPressureHistory   :: [Array Int Float]
->     } deriving Show
+A Trace collects/logs information about the execution of a monad.
 
-> defaultTrace = Trace {
->       freqPressureHistory = []
->     , raPressureHistory   = []
->     }
+> data Trace = FreqPressureHistory (Array Band Float)
+>            | RaPressureHistory (Array Int Float)
+>            deriving Show
 
-> instance Monoid Trace where
->     mempty        = defaultTrace
->     x `mappend` y = Trace {
->           freqPressureHistory = freqPressureHistory x ++ freqPressureHistory y
->         , raPressureHistory   = raPressureHistory x   ++ raPressureHistory y
->         }
+> type Tracing = WriterT [Trace]
 
-> type Scoring = ReaderT ScoringEnv (WriterT Trace IO)
+> runTracing = runWriterT
+
+> type Scoring = ReaderT ScoringEnv (Tracing IO)
 
 A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
@@ -397,8 +388,14 @@ resulting in simple types rather than monadic types.
 > runScoring      :: Weather -> ReceiverSchedule -> Scoring t -> IO t
 > runScoring w rs = liftM fst . runScoring' w rs
 
-> runScoring'        :: Weather -> ReceiverSchedule -> Scoring t -> IO (t, Trace)
-> runScoring' w rs f = runWriterT . runReaderT f $ ScoringEnv w rs
+> runScoring'        :: Weather -> ReceiverSchedule -> Scoring t -> IO (t, [Trace])
+> runScoring' w rs f = runTracing $ runScoring'' w rs f
+
+This allows us to run scoring multiple times, all within the same trace.  Mainly
+usefule for simulation.
+
+> runScoring''        :: Weather -> ReceiverSchedule -> Scoring t -> Tracing IO t
+> runScoring'' w rs f = runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows
 us to easily return a list.
@@ -437,7 +434,7 @@ Need to translate a session's factors into the final product score.
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
-> genScore          :: [Session] -> Scoring ScoreFunc
+> genScore          :: Monad m => [Session] -> Tracing m ScoreFunc
 > genScore sessions = do
 >     raPressure   <- genRightAscensionPressure sessions
 >     freqPressure <- genFrequencyPressure sessions
@@ -520,18 +517,18 @@ Quick Check properties:
 Utilities for QuickCheck properties:
 
 > getPressureFunction f = unsafePerformIO $ do
->         g <- getStdGen
->         let sessions = generate 0 g $ genSessions 100
->         runScoring undefined undefined $ f sessions
+>     g <- getStdGen
+>     let sessions = generate 0 g $ genSessions 100
+>     liftM fst . runTracing $ f sessions
 
 > checkBoolScore p sf = let es = map (getScoringResult sf) (sessions p) in areBools es
 
 > getScoringResult sf s = unsafePerformIO $ do
->       w <- theWeather
->       w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
->       let dt = fromGregorian 2006 4 15 16 0 0
->       [(_, Just result)] <- runScoring w' [] (sf dt s)
->       return result
+>     w <- theWeather
+>     w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
+>     let dt = fromGregorian 2006 4 15 16 0 0
+>     [(_, Just result)] <- runScoring w' [] (sf dt s)
+>     return result
 
 Used for checking that some scoring factors are 0 <= && <= 1, etc.
 

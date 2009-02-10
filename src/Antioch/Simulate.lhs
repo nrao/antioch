@@ -7,20 +7,21 @@
 > import Antioch.Types
 > import Antioch.Utilities    (between)
 > import Antioch.Weather      (Weather(..), getWeather)
+> import Control.Monad.Writer
 > import Data.List            (find, partition)
 > import Data.Maybe           (fromMaybe)
 > import System.CPUTime
 
-> simulate06 :: Strategy -> IO [Period]
+> simulate06 :: Strategy -> Tracing IO [Period]
 > simulate06 sched = do
->     w <- getWeather Nothing
->     ps <- generateVec 400
+>     w  <- liftIO $ getWeather Nothing
+>     ps <- liftIO $ generateVec 400
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
->     print $ length ss
->     start <- getCPUTime
+>     liftIO $ print $ length ss
+>     start  <- liftIO getCPUTime
 >     result <- simulate sched w rs dt dur int history ss
->     stop <- getCPUTime
->     putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     stop   <- liftIO getCPUTime
+>     liftIO $ putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     return result
 >   where
 >     rs  = []
@@ -29,25 +30,21 @@
 >     int = 60 * 24 * 1
 >     history = []
   
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> Tracing IO [Period]
 > simulate sched w rs dt dur int history sessions
 >     | dur < int  = return []
 >     | otherwise  = do
->         w' <- newWeather w $ Just (negate hint `addMinutes'` dt)
->         (schedPeriods, trace) <- runScoring' w' rs $ do
->             sf <- genScore sessions
->             sched sf start int' history sessions
->         print trace
->         print "backups: "
->         print . length $ [s | s <- sessions, backup s]
->         putStrLn $ "schedPeriods: " ++ show (schedPeriods)
+>         w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
+>         sf <- genScore sessions
+>         schedPeriods <- runScoring'' w' rs $ sched sf start int' history sessions
+>         liftIO $ putStrLn "backups: "
+>         liftIO $ print . length $ [s | s <- sessions, backup s]
+>         liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
->         obsPeriods <- runScoring w' rs $ do
->             sf <- genScore sessions
->             scheduleBackups sf schedPeriods sessions
->         putStrLn $ "obsPeriods: " ++ show (obsPeriods)
+>         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods sessions
+>         liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
 >         let sessions' = updateSessions sessions obsPeriods
->         putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
+>         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'
 >         return $ obsPeriods ++ result
 >   where
