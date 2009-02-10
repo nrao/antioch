@@ -27,8 +27,8 @@
 
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
-> pack :: Strategy
-> pack sf dt dur fixed sessions = P.pack sf dt dur fixed sessions
+> pack             :: Strategy
+> pack sf dt dur _ = P.pack sf dt dur []
 
 Always schedules a session at its minimum duration.
 
@@ -43,7 +43,7 @@ Always schedules a session at its minimum duration.
 >             let p = Period s dt d score
 >             rest <- scheduleMinDuration sf (d `addMinutes'` dt) (dur - d) (p : history) sessions
 >             return $ p : rest
->           else do
+>           else
 >             scheduleMinDuration sf (quarter `addMinutes'` dt) (dur - quarter) history sessions
 >   where
 >     candidates = constrain history . filter (\s -> minDuration s <= dur) $ sessions
@@ -61,7 +61,7 @@ Always schedules a session at a given fixed duration.
 >             let p = Period s dt len score
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
->           else do
+>           else
 >             scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) history sessions
 >   where
 >     candidates = constrain history sessions
@@ -79,7 +79,7 @@ A really dumb scheduler that just looks at the first score for a session.
 >             let p = Period s dt len score
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
->           else do
+>           else
 >             scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) history sessions
 >   where
 >     candidates = constrain history sessions
@@ -91,7 +91,7 @@ Select the highest scoring element of a list.
 > best          :: (Monad m, Ord b) => (a -> m b) -> [a] -> m (a, b)
 > best f (x:xs) = do
 >     s <- f x
->     foldlM f' (x, s) $ xs
+>     foldlM f' (x, s) xs
 >   where
 >     f' (x, s) y = do
 >         s' <- f y
@@ -106,7 +106,7 @@ periods.
 >                      forAll genStartDate $ \starttime ->
 >                      forAll genScheduleDuration $ \dur ->
 >  let sched = runStrategy pack ps starttime dur [Nothing] in 
->      internalConflicts sched == False  && 
+>      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      --validPackScores sched
@@ -119,7 +119,7 @@ Same as above, but now insert some pre-schedule periods into the problem.
 >                      forAll genScheduleDuration $ \dur ->
 >                      forAll (genSchedulePeriods starttime dur (concatMap sessions ps)) $ \fixed ->
 >  let sched = runStrategy pack ps starttime dur fixed in 
->      internalConflicts sched == False && 
+>      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      honorsFixed fixed sched
@@ -129,7 +129,7 @@ Same as above, but now insert some pre-schedule periods into the problem.
 >                      forAll genStartDate $ \starttime ->
 >                      forAll genScheduleDuration $ \dur ->
 >  let sched = runStrategy scheduleMinDuration ps starttime dur [Nothing] in
->      internalConflicts sched == False  && 
+>      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      validScores sched  -- TBF: allows scores of zero
@@ -139,7 +139,7 @@ Same as above, but now insert some pre-schedule periods into the problem.
 >                      forAll genScheduleDuration $ \dur ->
 >                      forAll (genSchedulePeriods starttime dur (concatMap sessions ps)) $ \fixed ->
 >  let sched = runStrategy scheduleMinDuration ps starttime dur fixed in 
->      internalConflicts sched == False && 
+>      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      --honorsFixed fixed sched && -- TBF: fails, by design?  
@@ -156,21 +156,17 @@ Framework for quick checking startegies
 >     print "fixed:"
 >     print fixed' -}
 >     w <- theWeather -- TBF: is this right?
->     w' <- newWeather w (Just $ starttime)
+>     w' <- newWeather w (Just starttime)
 >     let sess = concatMap sessions ps
->     let fs = genScore sess
->     let sched = strategy fs starttime dur fixed' sess
->     sched' <- runScoring w' [] $ sched
->     -- print "schedule:"
->     -- print sched'
->     return $ sched'
- 
+>     runScoring w' [] $ do
+>         fs <- genScore sess
+>         strategy fs starttime dur fixed' sess
 
 Make sure the pre-scheduled periods are in the final schedule.
 
 > honorsFixed :: [Maybe Period] -> [Period] -> Bool
 > honorsFixed []    _        = True
-> honorsFixed fixed schedule = if (length fixed' == 0) then True else dropWhile (==True) (findFixed fixed' schedule) == [] 
+> honorsFixed fixed schedule = null fixed' || dropWhile (==True) (findFixed fixed' schedule) == [] 
 >   where 
 >     fixed' = concatMap maybeToList fixed
 >     findFixed fs schedule = [isJust (find (==f) schedule) | f <- fs] 

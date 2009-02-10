@@ -49,7 +49,7 @@ To Do List (port from Statistics.py):
 > periodDec = promote sessionDec
 
 > sessionFreq :: [Session] -> [(Float, Minutes)]
-> sessionFreq = histogram [1.0..50.0] . ((totalTime) `vs` frequency)
+> sessionFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
 
 > periodFreq :: [Period] -> [(Float, Minutes)]
 > periodFreq =
@@ -80,7 +80,7 @@ Compare allocated hours by frequency to observed hours by frequency.
 >     highEffPeriods = [p | (p, e) <- zip ps es, e > 0.85]
 
 > etaFn :: [(Frequency, Float)]
-> etaFn = [(f, minObservingEff(f)) | f <- [2.0 .. 60.0]]
+> etaFn = [(f, minObservingEff f) | f <- [2.0 .. 60.0]]
 
 We may want to move this function to a different file.
 
@@ -91,8 +91,8 @@ We may want to move this function to a different file.
 >     dt = addMinutes' (duration p `div` 2) $ startTime p
 
 > efficiencyVsFrequency :: [Session] -> [Float] -> [(Float, Float)]
-> efficiencyVsFrequency sessions efficiencies =
->     snd `vs` (frequency . fst) $ zip sessions efficiencies
+> efficiencyVsFrequency sessions =
+>     snd `vs` (frequency . fst) . zip sessions
 
 > historicalFreq :: [Period] -> [Float]
 > historicalFreq = map (frequency . session)
@@ -128,7 +128,7 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >     sMinutes   = map (fromIntegral . snd) (sessionFreq ss)
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [killBad (x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
->     sigmas     = [killBad (x / y ** 0.5) | (x, y) <- zip sRatios sMinutes]
+>     sigmas     = [killBad (sqrt (x / y)) | (x, y) <- zip sRatios sMinutes]
 
 Utilities:
 
@@ -136,7 +136,7 @@ Read Y versus X as you would expect with normal plotting nomenclature.
 Produces list of (x, y) coordinate pairs.
 
 > vs       :: (a -> b) -> (a -> c) -> [a] -> [(c, b)]
-> y `vs` x = map $ \a -> (x a, y a)
+> y `vs` x = map $ x &&& y
 
 > count :: (Ord a, Ord b, Num b) => (t -> a) -> [a] -> [t] -> [(a, b)]
 > count f buckets = histogram buckets . (const 1 `vs` f)
@@ -153,7 +153,7 @@ Produces list of (x, y) coordinate pairs.
 >     (within, without) = span (\(x, _) -> x <= b) xys
 
 > meanFreqsByBin       :: [Float] -> [Float]
-> meanFreqsByBin freqs = mean frequencyBins $ [(x, x) | x <- freqs]
+> meanFreqsByBin freqs = mean frequencyBins [(x, x) | x <- freqs]
 
 > meanObsEffByBin :: [(Float, Float)] -> [Float]
 > meanObsEffByBin = mean frequencyBins
@@ -167,7 +167,7 @@ Produces list of (x, y) coordinate pairs.
 > stddev = simpleStat stddev'
 > sdom   = simpleStat sdom'
 
-> simpleStat f buckets xys = map (f . snd) . allocate buckets $ xys
+> simpleStat f buckets = map (f . snd) . allocate buckets
 
 > mean' xs = sum xs / (fromIntegral . length $ xs)
 
@@ -183,7 +183,7 @@ Produces list of (x, y) coordinate pairs.
 > sdom' xs = stddev' xs / (sqrt . fromIntegral . length $ xs)
 
 > ratio       :: [Float] -> [Float] -> Float
-> ratio xs ys = sum xs / sum ys
+> ratio xs ys = (/) `on` sum
 
 > frequencyBins :: [Float]
 > frequencyBins =

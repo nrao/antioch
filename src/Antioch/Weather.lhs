@@ -1,3 +1,5 @@
+> {-# OPTIONS -XMultiParamTypeClasses -XScopedTypeVariables #-}
+
 > module Antioch.Weather where
 
 > import Antioch.DateTime
@@ -6,6 +8,7 @@
 > import Antioch.Generators
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
+> import Data.Convertible
 > import Data.IORef
 > import Data.List         (elemIndex)
 > import Data.Maybe        (fromJust, maybe, isJust)
@@ -16,9 +19,13 @@
 > import qualified Data.Map as M
 > import System.IO.Unsafe (unsafePerformIO)
 
-> instance SqlType Float where
->     toSql x   = SqlDouble ((realToFrac x) :: Double)
->     fromSql x = realToFrac ((fromSql x) :: Double) :: Float
+> instance Convertible Float SqlValue where
+>     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
+
+> instance Convertible SqlValue Float where
+>     safeConvert x = do
+>         val :: Double <- safeConvert x
+>         return $ realToFrac val
 
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
@@ -32,7 +39,7 @@
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
-> getWeather now = bracketOnError connect disconnect $ \conn -> do
+> getWeather now = bracketOnError connect disconnect $ \conn ->
 >     updateWeather conn now
 
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
@@ -56,9 +63,8 @@
 
 Used for test to ensure the year is always 2006.
 
-> getWeather'     :: DateTime -> IO Weather
-> getWeather' now = do
->   getWeather $ Just (replaceYear 2006 now)
+> getWeather' :: DateTime -> IO Weather
+> getWeather' = getWeather . Just . replaceYear 2006
 
 > pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
 > pin now f target = f (forecastType target now) target
@@ -81,10 +87,11 @@ of frequency.
 >     cache <- newIORef M.empty
 >     return (getWind cache, getTAtm cache)
 
+> fetchWindAndAtm :: Connection -> DateTime -> Int -> IO (Maybe Float, Maybe Float)
 > fetchWindAndAtm cnn dt ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[wind, tatm]] -> return (fromSql' wind, fromSql' tatm)
+>       [[wind, tatm]] -> return (fromSql' $ wind, fromSql' $ tatm)
 >       _              -> return (Nothing, Nothing)
 >   where
 >     query = "SELECT wind_speed, tatm FROM forecasts WHERE date = ? AND forecast_type_id = ?"
@@ -114,7 +121,7 @@ on frequency.
 > fetchOpacityAndTSys cnn dt freqIdx ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[opacity, tsys]] -> return (fromSql' opacity, fromSql' tsys)
+>       [[opacity, tsys]] -> return (fromSql' $ opacity, fromSql' $ tsys)
 >       _                 -> return (Nothing, Nothing)
 >   where
 >     query = "SELECT opacity, tsys\n\
@@ -134,7 +141,7 @@ on frequency.
 >     key     = (dt', freqIdx, ftype)
 
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getTSys cache cnn ftype dt frequency = liftM snd. withCache key cache $
+> getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
 >     fetchOpacityAndTSys cnn dt' freqIdx ftype
 >   where
 >     dt'     = roundToHour dt
@@ -145,7 +152,7 @@ on frequency.
 > getMinOpacity'      = caching getMinOpacity
 > getMinTSysPrime'    = caching getMinTSysPrime
 
-> caching f = newIORef M.empty >>= return . f
+> caching f = liftM f $ newIORef M.empty
 
 > withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
 > withCache key cache action = do
@@ -196,7 +203,7 @@ Helper function to determine the desired forecast type given two DateTimes.
 
 > forecastType :: DateTime -> DateTime -> Int
 > forecastType target now = 
->     case dropWhile (< difference) $ forecast_types of
+>     case dropWhile (< difference) forecast_types of
 >         []     -> length forecast_types
 >         (x:xs) -> fromJust (elemIndex x forecast_types) + 1
 >   where difference = (target - now) `div` 3600
@@ -212,7 +219,7 @@ Helper function to get singular Float values out of the database.
 >     result <- quickQuery' conn query xs
 >     case result of
 >         [[SqlNull]] -> return Nothing
->         [[x]] -> return $ Just (fromSql x)
+>         [[x]] -> return $ Just (fromSql $ x)
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
 >         x     -> fail "There is more than one forecast with that time stamp."
@@ -221,13 +228,13 @@ Just some test functions to make sure things are working.
 
 > testWeather = do
 >     w <- getWeather now
->     return $ (wind w target
->             , tatm w target
->             , opacity w target frequency
->             , tsys w target frequency
->             , totalStringency w frequency elevation
->             , minOpacity w frequency elevation
->             , minTSysPrime w frequency elevation)
+>     return ( wind w target
+>            , tatm w target
+>            , opacity w target frequency
+>            , tsys w target frequency
+>            , totalStringency w frequency elevation
+>            , minOpacity w frequency elevation
+>            , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
 >     elevation = pi / 4.0 :: Radians
