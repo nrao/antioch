@@ -127,7 +127,7 @@ simElevDec
 >   plotElevDec fn effs ps
 >
 > plotElevDec fn effs ps =
->     scatterPlot (scatterAttrs t x y fn) $ decVsElevation ps effs
+>     scatterPlot (scatterAttrs t x y fn) $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
 >   where
 >     t = "Elevation vs Dec"
 >     x = "Declination [deg]"
