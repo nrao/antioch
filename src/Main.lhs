@@ -3,4 +3,4 @@
 > import Antioch.Schedule
 > import Antioch.Simulate
 
-> main = simulate06 pack
+> main = simulate06 (scheduleFixedDuration $ 4*60)

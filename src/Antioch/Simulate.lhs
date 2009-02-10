@@ -5,10 +5,10 @@
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
-> import Antioch.Utilities (between)
-> import Antioch.Weather   (Weather(..), getWeather)
-> import Data.List         (find, partition)
-> import Data.Maybe        (fromMaybe)
+> import Antioch.Utilities    (between)
+> import Antioch.Weather      (Weather(..), getWeather)
+> import Data.List            (find, partition)
+> import Data.Maybe           (fromMaybe)
 > import System.CPUTime
 
 > simulate06 :: Strategy -> IO [Period]
@@ -34,18 +34,22 @@
 >     | dur < int  = return []
 >     | otherwise  = do
 >         w' <- newWeather w $ Just (negate hint `addMinutes'` dt)
->         schedPeriods <- runScoring w' rs $ sched sf start int' history sessions
+>         (schedPeriods, trace) <- runScoring' w' rs $ do
+>             sf <- genScore sessions
+>             sched sf start int' history sessions
+>         print trace
 >         print "backups: "
 >         print . length $ [s | s <- sessions, backup s]
 >         putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
->         obsPeriods <- runScoring w' rs $ scheduleBackups sf schedPeriods sessions
+>         obsPeriods <- runScoring w' rs $ do
+>             sf <- genScore sessions
+>             scheduleBackups sf schedPeriods sessions
 >         putStrLn $ "obsPeriods: " ++ show (obsPeriods)
 >         let sessions' = updateSessions sessions obsPeriods
 >         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'
 >         return $ obsPeriods ++ result
 >   where
->     sf    = genScore sessions
 >     hint  = int `div` 2
 >     start = case history of
 >         (h:_) -> duration h `addMinutes'` startTime h

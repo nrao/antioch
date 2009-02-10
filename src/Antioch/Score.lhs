@@ -164,16 +164,18 @@ Ranking System from Memo 5.2, Section 3
 
 Generate a scoring function having the pressure factors.
 
-> genFrequencyPressure :: [Session] -> ScoreFunc
-> genFrequencyPressure sessions =
->     frequencyPressure factors band
+> genFrequencyPressure :: [Session] -> Scoring ScoreFunc
+> genFrequencyPressure sessions = do
+>     tell defaultTrace { freqPressureHistory = [factors] }
+>     return $ frequencyPressure factors band
 >   where
 >     bins    = initBins (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
-> genRightAscensionPressure :: [Session] -> ScoreFunc
-> genRightAscensionPressure sessions =
->     rightAscensionPressure factors accessor
+> genRightAscensionPressure :: [Session] -> Scoring ScoreFunc
+> genRightAscensionPressure sessions = do
+>     tell defaultTrace { raPressureHistory = [factors] }
+>     return $ rightAscensionPressure factors accessor
 >   where
 >     accessor s = (round . rad2hr . ra $ s) `mod` 24
 >     bins    = initBins (0, 23) accessor sessions
@@ -360,11 +362,21 @@ all the scoring functions live in the monad so they can
 execute scoring actions.
 
 > data Trace = Trace {
->   }
+>       freqPressureHistory :: [Array Band Float]
+>     , raPressureHistory   :: [Array Int Float]
+>     } deriving Show
+
+> defaultTrace = Trace {
+>       freqPressureHistory = []
+>     , raPressureHistory   = []
+>     }
 
 > instance Monoid Trace where
->     mempty      = Trace { }
->     mappend x y = x
+>     mempty        = defaultTrace
+>     x `mappend` y = Trace {
+>           freqPressureHistory = freqPressureHistory x ++ freqPressureHistory y
+>         , raPressureHistory   = raPressureHistory x   ++ raPressureHistory y
+>         }
 
 > type Scoring = ReaderT ScoringEnv (WriterT Trace IO)
 
@@ -415,28 +427,28 @@ Need to translate a session's factors into the final product score.
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
-> genScore          :: [Session] -> ScoreFunc
-> genScore sessions = \dt s -> do
->     effs <- calcEfficiency dt s
->     score [
->         scienceGrade
->       , thesisProject
->       , projectCompletion
->       , stringency
->       , (atmosphericOpacity' . fmap fst) effs
->       , surfaceObservingEfficiency
->       , trackingEfficiency
->       , raPressure
->       , freqPressure
->       , observingEfficiencyLimit
->       , (hourAngleLimit' . fmap snd) effs
->       , zenithAngleLimit
->       , trackingErrorLimit
->       , atmosphericStabilityLimit
->       ] dt s
->   where
->     raPressure   = genRightAscensionPressure sessions
->     freqPressure = genFrequencyPressure sessions
+> genScore          :: [Session] -> Scoring ScoreFunc
+> genScore sessions = do
+>     raPressure   <- genRightAscensionPressure sessions
+>     freqPressure <- genFrequencyPressure sessions
+>     return $ \dt s -> do
+>         effs <- calcEfficiency dt s
+>         score [
+>             scienceGrade
+>           , thesisProject
+>           , projectCompletion
+>           , stringency
+>           , (atmosphericOpacity' . fmap fst) effs
+>           , surfaceObservingEfficiency
+>           , trackingEfficiency
+>           , raPressure
+>           , freqPressure
+>           , observingEfficiencyLimit
+>           , (hourAngleLimit' . fmap snd) effs
+>           , zenithAngleLimit
+>           , trackingErrorLimit
+>           , atmosphericStabilityLimit
+>           ] dt s
 
 Convenience function for translating go/no-go into a factor.
 
@@ -499,7 +511,7 @@ Utilities for QuickCheck properties:
 > getPressureFunction f = unsafePerformIO $ do
 >         g <- getStdGen
 >         let sessions = generate 0 g $ genSessions 100
->         return $ f sessions
+>         runScoring undefined undefined $ f sessions
 
 > checkBoolScore p sf = let es = map (getScoringResult sf) (sessions p) in areBools es
 
