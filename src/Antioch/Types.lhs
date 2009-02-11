@@ -107,6 +107,9 @@ useless items.
 > instance Ord Session where
 >     compare = compare `on` sId
 
+> periods' s@(Fixed { }) = [period s]
+> periods' s             = periods s
+
 Need to calculate a windowed session's opportunities from its observation details.
 
 > opportunities s@(Windowed { }) = []
@@ -115,13 +118,17 @@ Need to calculate a windowed session's opportunities from its observation detail
 Tying the knot.
 
 > makeSession      :: Session -> [Period] -> Session
+> makeSession s@(Fixed { }) [p] = s'
+>   where
+>     s' = s { totalUsed = t, period = p { session = s' } }
+>     t  = duration p
 > makeSession s ps = s'
 >   where
 >     s' = s { totalUsed = t, periods = map (\p -> p { session = s' }) ps }
 >     t  = sum . map duration $ ps
 
 > updateSession      :: Session -> [Period] -> Session
-> updateSession s ps = makeSession s $ periods s ++ ps
+> updateSession s ps = makeSession s $ periods' s ++ ps
 
 > data Project = Project {
 >     pId       :: !Int
@@ -172,26 +179,7 @@ ignores their numerical scores.
 >     eqIds    = (==) `on` session
 
 
-> defaultSession = Open {
->     sId         = 0
->   , sName       = ""
->   , project     = defaultProject 
->   , periods     = [defaultPeriod]
->   , totalTime   = 0
->   , totalUsed   = 0
->   , minDuration = 0
->   , maxDuration = 0
->   , timeBetween = 0
->   , frequency   = 0.0
->   , ra          = 0.0
->   , dec         = 0.0
->   , backup      = False
->   , receivers   = [Rcvr12_18]
->   , enabled     = False
->   , authorized  = False
->   , grade       = GradeA
->   , band        = L
->   }
+> defaultSession = defaultOpen
 
 > defaultOpen = Open {
 >     sId         = 0

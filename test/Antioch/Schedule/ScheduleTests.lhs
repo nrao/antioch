@@ -6,6 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
+> import Control.Monad.Trans  (lift)
 > import Test.HUnit
 
 > tests = TestList [
@@ -14,12 +15,13 @@
 
 > test_schedule_open = TestCase $ do
 >       w      <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
->       result <- runScoring w rs (pack sf dt dur history ss)
+>       result <- runScoring w rs $ do
+>           sf <- lift $ genScore ss
+>           (pack sf dt dur history ss)
 >       assertEqual "test_schedule_open" expected result
 >   where
 >       rs       = []
 >       ss       = concatMap sessions pTestProjects
->       sf       = genScore ss
 >       dt       = fromGregorian 2006 9 2 8 0 0
 >       dur      = 24*60
 >       history  = []

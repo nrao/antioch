@@ -6,9 +6,10 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.PProjects
+> import Control.Monad.Trans  (lift)
 > import Test.HUnit
-> import Data.List (zip4, zipWith4, zipWith5)
-> import Data.Maybe (isJust)
+> import Data.List            (zip4, zipWith4, zipWith5)
+> import Data.Maybe           (isJust)
 
 > tests = TestList [
 >     test_averageScore
@@ -59,15 +60,13 @@
 
 > test_frequencyPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
+>     (freqPressure, _) <- runTracing $ genFrequencyPressure pSessions
 >     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure dt . head $ pSessions)
->   where
->     freqPressure = genFrequencyPressure pSessions
 
 > test_rightAscensionPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
+>     (raPressure, _) <- runTracing $ genRightAscensionPressure pSessions
 >     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure dt . head $ pSessions)
->   where
->     raPressure = genRightAscensionPressure pSessions
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
@@ -320,7 +319,7 @@ TBF are these partitions stil useful?
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     fs <- runScoring w [] $ (genScore ss) dt s
+>     fs <- runScoring w [] $ lift (genScore ss) >>= \f -> f dt s
 >     print fs
 >     let result = eval fs
 >     print result
@@ -333,14 +332,14 @@ Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_score = TestCase $ do
 >     w <- getWeather . Just $ starttime 
+>     (fs, _) <- runTracing $ genScore [sess]
+>     let score' w dt = do
+>         s <- runScoring w [] (fs dt sess)
+>         return $ eval s
 >     scores <- mapM (score' w) times
 >     assertEqual "test_score" expected scores
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     fs = genScore [sess]
->     score' w dt = do
->         s <- runScoring w [] (fs dt sess)
->         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = defaultSession { sName = "singleton"
 >                           , totalTime = 24*60
@@ -363,6 +362,10 @@ Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
+>     (fs, _) <- runTracing $ genScore [sess]
+>     let score' w dt = do
+>         s <- runScoring w [] (fs dt sess)
+>         return $ eval s
 >     scores <- mapM (score' w) times
 >     let scoreTotal = addScores scores
 >     let expected = 0.0
@@ -372,10 +375,6 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     sess = defaultSession
->     fs = genScore [sess]
->     score' w dt = do
->         s <- runScoring w [] (fs dt sess)
->         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 
 

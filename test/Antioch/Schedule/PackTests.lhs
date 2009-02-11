@@ -253,15 +253,15 @@ attributes of the packing algorithm:
 Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_Pack1 = TestCase $ do
->     let periods = pack (fs candidate) starttime duration [] [candidate]
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ periods
+>     periods' <- runScoring w [] $ do
+>         fs <- lift $ genScore [candidate]
+>         pack fs starttime duration [] [candidate]
 >     assertEqual "test_Pack1_1" 1 (length periods')
 >     assertEqual "test_Pack1_2" expPeriod (head periods')
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
->     fs s = genScore [s]
 >     candidate = defaultSession { sName = "singleton"
 >                                , totalTime = 24*60
 >                                , minDuration = 2*60
@@ -277,19 +277,20 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 > test_ToItem = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     -- create an item without a mask, i.e. no scoring
->     let item = toItem (fs testSession) [] testSession
->     item' <- runScoring w [] item
+>     item' <- runScoring w [] $ do
+>         fs <- lift $ genScore [testSession]
+>         toItem fs [] testSession
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
->     let item = toItem (fs testSession) dts testSession
->     item' <- runScoring w [] item
+>     item' <- runScoring w [] $ do
+>         fs <- lift $ genScore [testSession]
+>         toItem fs dts testSession
 >     assertEqual "test_ToItem_3" result2 item'
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12 * 60
->     fs s = genScore [s]
 >     -- the 'mask' is just a list of datetimes to score at
 >     dts' = quarterDateTimes starttime duration 
 >     dts = [(Just dt) | dt <- dts']
@@ -311,13 +312,13 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 
 > test_ToItem2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     let item = toItem (fs sess) dts sess
->     result <- runScoring w [] item
+>     result <- runScoring w [] $ do
+>         fs <- lift $ genScore [sess]
+>         toItem fs dts sess
 >     assertEqual "test_ToItem2" expected result
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12 * 60
->     fs s = genScore [s]
 >     dts' = quarterDateTimes starttime duration 
 >     fixed1 = Period defaultSession starttime 30 0.0
 >     ft2 = (11*60) `addMinutes'` starttime
@@ -387,14 +388,14 @@ The main value of this test is to catch changes in the packing algorithm that
 produce changes in the final result.
 
 > test_Pack2 = TestCase $ do
->     let periods = pack fs starttime duration [] sess
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ periods
+>     periods' <- runScoring w [] $ do
+>         fs <- lift $ genScore sess
+>         pack fs starttime duration [] sess
 >     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'  
 >   where
 >     sess = concatMap sessions pTestProjects --generateTestSessions 20
->     fs = genScore sess
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
@@ -521,16 +522,16 @@ and reduced it to a smaller problem for debugging.  Fails because of fixed
 period's negative score in the result.
 
 > test_Pack3 = TestCase $ do
->     let periods' = pack fs starttime duration [fixed] sess
 >     w <- getWeather . Just $ starttime 
->     periods <- runScoring w [] $ periods'
+>     periods <- runScoring w [] $ do
+>         fs <- lift $ genScore sess
+>         pack fs starttime duration [fixed] sess
 >     assertEqual "test_Pack3" expPeriods periods  
 >   where
 >     sess = concatMap sessions pTestProjects
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft1 = (4*60)  `addMinutes'` starttime
 >     fixed = Period defaultSession {sId = 0} ft1 60 0.0
->     fs = genScore sess
 >     duration = 5*60
 >     p1 = Period defaultSession {sId = getPSessionId "LP"} starttime (4*60) 62.88887
 >     expPeriods  = [p1, fixed]
@@ -539,9 +540,10 @@ This is the original test that exposed many of the bugs with packing
 around fixed periods.
 
 > test_Pack4 = TestCase $ do
->     let periods = pack fs starttime duration fixed sess
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ periods
+>     periods' <- runScoring w [] $ do
+>         fs <- lift $ genScore sess
+>         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack4" expPeriods periods'  
 >   where
 >     sess = concatMap sessions pTestProjects 
@@ -554,7 +556,6 @@ around fixed periods.
 >     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 
 >     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 dur2 0.0
 >     fixed = [fixed1, fixed2]
->     fs = genScore sess
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
 >       where
@@ -572,9 +573,10 @@ around fixed periods.
 Same as above, but with even more fixed periods
 
 > test_Pack5 = TestCase $ do
->     let periods = pack fs starttime duration fixed sess
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ periods
+>     periods' <- runScoring w [] $ do
+>         fs <- lift $ genScore sess
+>         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack5" expPeriods periods'  
 >   where
 >     sess = concatMap sessions pTestProjects
@@ -590,7 +592,6 @@ Same as above, but with even more fixed periods
 >     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0
 >     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0
 >     fixed = [fixed1, fixed2, fixed3]
->     fs = genScore sess
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
 >       where

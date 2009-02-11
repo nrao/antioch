@@ -146,11 +146,10 @@
 >   , defaultFixed {
 >         sId = 9
 >       , sName = "TestFixed1"  -- no fixed yet
->       , periods = [
+>       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 1 18 0 0
 >               , duration = 6*60 }
->           ]
 >       , totalTime = 6*60
 >       , totalUsed = 6*60
 >       , minDuration = 6*60
@@ -165,11 +164,10 @@
 >   , defaultFixed {
 >         sId = 10
 >       , sName = "TestFixed2"  -- no fixed yet
->       , periods = [
+>       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 4 11 0 0
 >               , duration = 6*60 }
->           ]
 >       , totalTime = 4*60
 >       , totalUsed = 4*60
 >       , minDuration = 4*60
@@ -184,11 +182,10 @@
 >   , defaultFixed {
 >         sId = 11
 >       , sName = "TestFixed3"  -- no fixed yet
->       , periods = [
+>       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 5 1 0 0
 >               , duration = 5*60 }
->           ]
 >       , totalTime = 5*60
 >       , totalUsed = 5*60
 >       , minDuration = 5*60
@@ -240,7 +237,7 @@
 >       }
 >   ]
 
-> p1sessions' = [ makeSession s (periods s) | s <- p1sessions'' ]
+> p1sessions' = [ makeSession s (periods' s) | s <- p1sessions'' ]
 > project1 = makeProject project1' p1sessions'
 
 > project2' = defaultProject {
