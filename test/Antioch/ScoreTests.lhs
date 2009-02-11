@@ -18,6 +18,7 @@
 >   , test_getReceivers
 >   , test_hourAngleLimit
 >   , test_kineticTemperature
+>   , test_minObservingEff
 >   , test_minimumObservingConditions
 >   , test_minObservingEff
 >   , test_minTsysPrime
@@ -62,6 +63,13 @@
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     (freqPressure, _) <- runTracing $ genFrequencyPressure pSessions
 >     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure dt . head $ pSessions)
+
+> test_frequencyPressureComparison = TestCase $ do
+>     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
+>   where
+>     ss = concatMap sessions pTestProjects
+>     -- s = head $ filter (\s -> "CV" == (sName s)) ss
+>     freqPressure = genFrequencyPressure ss
 
 > test_rightAscensionPressure = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
@@ -253,10 +261,22 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sessLP)
 >     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sessAS)
 
+> makeTestProject :: Minutes -> Minutes -> Project
+> makeTestProject tl tt = makeProject proj' tt ss'
+>   where
+>     proj' = defaultProject { pName = "time use test" }
+>     ss''  = [
+>         defaultOpen {
+>             periods = [defaultPeriod {duration = tt - tl}]
+>           , totalTime = tt
+>           }
+>       ]
+>     ss'   = [ makeSession s (periods s) | s <- ss'' ]
+
 > test_projectCompletion = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
->     let p = defaultProject {timeLeft=28740, timeTotal=33812}
+>     let p = makeTestProject 28740 33812
 >     let s = sessLP {project = p}
 >     assertScoringResult "test_projectCompletion" Nothing 3 1.015 (projectCompletion dt s)
 
@@ -265,9 +285,7 @@ TBF are these partitions stil useful?
 > test_politicalFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     -- adjust the project's times to get desired results
->     let p = defaultProject {timeLeft=28740, timeTotal=33812}
->     let s = sessLP {project = p}
+>     let s = head . filter (\s -> "CV" == (sName s)) . concatMap sessions $ pTestProjects
 >     -- missing window, transit, observerOnSite, and ObserverAvailable
 >     let politicalFactors = score [scienceGrade
 >                           , thesisProject
@@ -279,7 +297,7 @@ TBF are these partitions stil useful?
 >     --          , ("projectCompletion", Just 1.015)]
 >     -- assertEqual "test_politicalFactors" expFs fs
 >     let result = eval fs
->     assertAlmostEqual "test_politicalFactors" 3 1.015 result
+>     assertEqual "test_politicalFactors" 1.0054 result
 
 > test_trackingEfficiency = TestCase $ do
 >     -- sessLP
@@ -470,7 +488,10 @@ QuickCheck properties.
 >         ras   = [  5.4,  10.1,   4.9,  18.1]
 >         bands = [    L,     C,     X,     L]
 >         genPSess t u ra b = defaultSession {
->             totalTime = t, totalUsed = u, ra = ra, band = b
+>             totalTime = t
+>           , periods = [defaultPeriod {duration = u}]
+>           , ra = ra
+>           , band = b
 >         }
 
 > rSessions = zipWith4 genPSess tots useds ras bands 
@@ -479,7 +500,10 @@ QuickCheck properties.
 >         ras   = [  5.4,  10.1,   4.9,  18.1]
 >         bands = [    L,     C,     X,     L]
 >         genPSess t u ra b = defaultSession {
->             totalTime = t, totalUsed = u, ra = ra, band = b
+>             totalTime = t
+>           , periods = [defaultPeriod {duration = u}]
+>           , ra = ra
+>           , band = b
 >         }
 
 > rSched = [ (fromGregorian 2006 6 14 12 0 0, [Rcvr1_2, Rcvr26_40])
