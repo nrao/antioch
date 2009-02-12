@@ -7,7 +7,7 @@
 > import Antioch.Weather
 > import Control.Monad.Identity
 > import Control.Monad.Reader
-> import Control.Monad.Writer
+> -- import Control.Monad.Writer.Strict
 > import Data.Array
 > import Data.Array.IArray  (amap)
 > import Data.Array.ST
@@ -170,17 +170,17 @@ Ranking System from Memo 5.2, Section 3
 
 Generate a scoring function having the pressure factors.
 
-> genFrequencyPressure :: Monad m => [Session] -> Tracing m ScoreFunc
+> genFrequencyPressure :: [Session] -> IO ScoreFunc
 > genFrequencyPressure sessions = do
->     tell [FreqPressureHistory factors]
+>     -- tell [FreqPressureHistory factors]
 >     return $ frequencyPressure factors band
 >   where
 >     bins    = initBins (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
-> genRightAscensionPressure :: Monad m => [Session] -> Tracing m ScoreFunc
+> genRightAscensionPressure :: [Session] -> IO ScoreFunc
 > genRightAscensionPressure sessions = do
->     tell [RaPressureHistory factors]
+>     -- tell [RaPressureHistory factors]
 >     return $ rightAscensionPressure factors accessor
 >   where
 >     accessor s = (round . rad2hr . ra $ s) `mod` 24
@@ -375,11 +375,11 @@ A Trace collects/logs information about the execution of a monad.
 >            | RaPressureHistory (Array Int Float)
 >            deriving Show
 
-> type Tracing = WriterT [Trace]
+> -- type Tracing = WriterT [Trace]
 
-> runTracing = runWriterT
+> -- runTracing = runWriterT
 
-> type Scoring = ReaderT ScoringEnv (Tracing IO)
+> type Scoring = ReaderT ScoringEnv IO  -- (Tracing IO)
 
 A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
@@ -389,12 +389,12 @@ resulting in simple types rather than monadic types.
 > runScoring w rs = liftM fst . runScoring' w rs
 
 > runScoring'        :: Weather -> ReceiverSchedule -> Scoring t -> IO (t, [Trace])
-> runScoring' w rs f = runTracing $ runScoring'' w rs f
+> runScoring' w rs f =  runScoring'' w rs f >>= \v -> return (v, [])
 
 This allows us to run scoring multiple times, all within the same trace.  Mainly
 usefule for simulation.
 
-> runScoring''        :: Weather -> ReceiverSchedule -> Scoring t -> Tracing IO t
+> runScoring''        :: Weather -> ReceiverSchedule -> Scoring t -> IO t
 > runScoring'' w rs f = runReaderT f $ ScoringEnv w rs
 
 Because ScoreFunc returns lists of factors, this function allows
@@ -434,7 +434,7 @@ Need to translate a session's factors into the final product score.
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
-> genScore          :: Monad m => [Session] -> Tracing m ScoreFunc
+> genScore          :: [Session] -> IO ScoreFunc
 > genScore sessions = do
 >     raPressure   <- genRightAscensionPressure sessions
 >     freqPressure <- genFrequencyPressure sessions
@@ -519,7 +519,7 @@ Utilities for QuickCheck properties:
 > getPressureFunction f = unsafePerformIO $ do
 >     g <- getStdGen
 >     let sessions = generate 0 g $ genSessions 100
->     liftM fst . runTracing $ f sessions
+>     f sessions
 
 > checkBoolScore p sf = let es = map (getScoringResult sf) (sessions p) in areBools es
 

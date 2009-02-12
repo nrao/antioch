@@ -12,7 +12,7 @@
 > import Data.Maybe           (fromMaybe)
 > import System.CPUTime
 
-> simulate06 :: Strategy -> Tracing IO [Period]
+> simulate06 :: Strategy -> IO [Period]
 > simulate06 sched = do
 >     w  <- liftIO $ getWeather Nothing
 >     ps <- liftIO $ generateVec 400
@@ -26,11 +26,11 @@
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 1 2 0 0 0
->     dur = 60 * 24 * 2
+>     dur = 60 * 24 * 30
 >     int = 60 * 24 * 1
 >     history = []
   
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> Tracing IO [Period]
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
 > simulate sched w rs dt dur int history sessions
 >     | dur < int  = return []
 >     | otherwise  = do

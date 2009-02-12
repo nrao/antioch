@@ -5,9 +5,7 @@
 > import Antioch.Simulate
 > import Antioch.Reports
 
-> main = do
->   (_, trace) <- runTracing $ simulate06 (scheduleFixedDuration $ 4*60)
->   print trace
+> main = simulate06 (scheduleFixedDuration $ 4*60)
 >   --generatePlots (scheduleFixedDuration 240) (statsPlotsToFile "~/figuresFD") 334  -- 76 Minutes
 >   --generatePlots (scheduleFixedDuration' 240) (statsPlotsToFile "~/figuresFD2") 334  -- 76 Minutes
 >   --generatePlots pack (statsPlotsToFile "~/figuresPack") 334  -- 96 Minutes

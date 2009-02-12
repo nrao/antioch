@@ -158,7 +158,7 @@ Framework for quick checking startegies
 >     w <- theWeather -- TBF: is this right?
 >     w' <- newWeather w (Just starttime)
 >     let sess = concatMap sessions ps
->     (fs, _) <- runTracing $ genScore sess
+>     fs <- genScore sess
 >     runScoring w' [] $ strategy fs starttime dur fixed' sess
 
 Make sure the pre-scheduled periods are in the final schedule.

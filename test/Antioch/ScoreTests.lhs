@@ -60,18 +60,18 @@
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 > test_frequencyPressure = TestCase $ do
->     (freqPressure, _) <- runTracing $ genFrequencyPressure pSessions
+>     freqPressure <- genFrequencyPressure pSessions
 >     assertScoringResult "test_frequencyPressure generated" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
 
 > test_frequencyPressureComparison = TestCase $ do
->     (freqPressure, _) <- runTracing $ genFrequencyPressure pSessions
+>     freqPressure <- genFrequencyPressure pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
 >   where
 >     ss = concatMap sessions pTestProjects
 >     -- s = head $ filter (\s -> "CV" == (sName s)) ss
 
 > test_rightAscensionPressure = TestCase $ do
->     (raPressure, _) <- runTracing $ genRightAscensionPressure pSessions
+>     raPressure <- genRightAscensionPressure pSessions
 >     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
 
 > test_receiver = TestCase $ do
@@ -378,7 +378,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     (fs, _) <- runTracing $ genScore [sess]
+>     fs <- genScore [sess]
 >     let score' w dt = do
 >         s <- runScoring w [] (fs dt sess)
 >         return $ eval s
