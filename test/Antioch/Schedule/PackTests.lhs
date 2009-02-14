@@ -286,6 +286,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     item' <- runScoring w [] $ do
 >         fs <- lift $ genScore [testSession]
 >         toItem fs dts testSession
+>     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
 >     assertEqual "test_ToItem_3" result2 item'
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
@@ -385,15 +386,15 @@ Same test, >1 fixed
 Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_Pack1 = TestCase $ do
->     let periods = pack (fs candidate) starttime duration [] [candidate]
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ periods
+>     periods' <- runScoring w [] $ do
+>         fs <- lift $ genScore [candidate]
+>         pack fs starttime duration [] [candidate]
 >     assertEqual "test_Pack1_1" 1 (length periods')
 >     assertEqual "test_Pack1_2" expPeriod (head periods')
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
->     fs s = genScore [s]
 >     candidate = defaultSession { sName = "singleton"
 >                                , totalTime = 24*60
 >                                , minDuration = 2*60
@@ -411,10 +412,7 @@ produce changes in the final result.
 >     periods' <- runScoring w [] $ do
 >         fs <- lift $ genScore sess
 >         pack fs starttime duration [] sess
->     -- TBF: how to use 
->     assertEqual "test_Pack2" expPeriods periods'  
->   where
->     sess = concatMap sessions pTestProjects --generateTestSessions 20
+>     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
 >     expPeriods = zipWith4 Period ss times durs scores
