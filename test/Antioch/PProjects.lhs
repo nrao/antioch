@@ -237,7 +237,7 @@
 >   ]
 
 > p1sessions' = [ makeSession s (periods' s) | s <- p1sessions'' ]
-> project1 = makeProject project1' p1sessions'
+> project1 = makeProject project1' (500*60) p1sessions'
 
 > project2' = defaultProject {
 >     pId = 2

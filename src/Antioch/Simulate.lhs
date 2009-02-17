@@ -12,7 +12,7 @@
 > import Data.Maybe           (fromMaybe)
 > import System.CPUTime
 
-> simulate06 :: Strategy -> Tracing IO [Period]
+> simulate06 :: Strategy -> IO [Period]
 > simulate06 sched = do
 >     w  <- liftIO $ getWeather Nothing
 >     ps <- liftIO $ generateVec 400
@@ -26,23 +26,23 @@
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 1 2 0 0 0
->     dur = 60 * 24 * 2
+>     dur = 60 * 24 * 30
 >     int = 60 * 24 * 1
 >     history = []
   
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> Tracing IO [Period]
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
 > simulate sched w rs dt dur int history sessions
 >     | dur < int  = return []
 >     | otherwise  = do
 >         w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
 >         sf <- genScore sessions
 >         schedPeriods <- runScoring'' w' rs $ sched sf start int' history sessions
->         liftIO $ putStrLn "backups: "
->         liftIO $ print . length $ [s | s <- sessions, backup s]
->         liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
+>        -- liftIO $ putStrLn "backups: "
+>        -- liftIO $ print . length $ [s | s <- sessions, backup s]
+>        -- liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
 >         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods sessions
->         liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
+>        -- liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
 >         let sessions' = updateSessions sessions obsPeriods
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'

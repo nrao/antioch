@@ -120,7 +120,7 @@ Tying the knot.
 > makeSession      :: Session -> [Period] -> Session
 > makeSession s@(Fixed { }) [p] = s'
 >   where
->     s' = s { totalUsed = t, period = p { session = s' } }
+>     s' = s { period = p { session = s' } }
 >     t  = duration p
 > makeSession s ps = s'
 >   where
