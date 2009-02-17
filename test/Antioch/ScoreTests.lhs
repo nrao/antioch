@@ -296,7 +296,7 @@ TBF are these partitions stil useful?
 >     --          , ("projectCompletion", Just 1.015)]
 >     -- assertEqual "test_politicalFactors" expFs fs
 >     let result = eval fs
->     assertEqual "test_politicalFactors" 1.0054 result
+>     assertEqual "test_politicalFactors" 1.0024 result
 
 > test_trackingEfficiency = TestCase $ do
 >     -- sessLP
