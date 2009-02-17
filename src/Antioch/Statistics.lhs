@@ -86,8 +86,10 @@ Compare allocated hours by frequency to observed hours by frequency.
 
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
->     histogram bands . (snd `vs` (band . session . fst)) $ zip ps es
->   where bands = [L::Band .. Q::Band]
+>     histogram bands . (effSchdMins `vs` (band . session . fst)) $ zip ps es
+>   where 
+>     bands = [L::Band .. Q::Band]
+>     effSchdMins (p, e) = e * (fromIntegral (duration p))
 
 > decVsElevation :: [Period] -> [Float] -> [(Float, Radians)]
 > decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods
