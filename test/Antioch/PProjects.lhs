@@ -1,6 +1,7 @@
 > module Antioch.PProjects
 >     (
 >       pTestProjects
+>     , p1sessions''
 >     , findPSessionByName
 >     , getPSessionId
 >     , getOpenPSessions
@@ -143,6 +144,7 @@
 >       , band = W
 >       }
 >
+>   {- TBF: period for Fixed vs. periods for Open, Windowed 
 >   , defaultFixed {
 >         sId = 9
 >       , sName = "TestFixed1"  -- no fixed yet
@@ -193,6 +195,7 @@
 >       , receivers = [Rcvr_PAR]
 >       , band = W
 >       }
+>   -}
 >
 >   {-  TBF on hold until actually scoring/scheduling windowed sessions
 >   , defaultWindowed {
