@@ -35,7 +35,12 @@ to generate `items` for input to the `packWorker` function.
 >     -- let sched = toSchedule dts . sort $ fixed
 >     let sched = toSchedule dts fixed
 >     items <- mapM (toItem sf (mask dts sched)) sessions
->     return $! map (toPeriod dt) . packWorker sched $ items
+>     return $! map (restoreFixedScore fixed) $ map (toPeriod dt) . packWorker sched $ items
+
+> restoreFixedScore :: [Period] -> Period -> Period
+> restoreFixedScore fs p = case find (\f -> f == p) fs of
+>     Nothing -> p
+>     Just f  -> p {pScore = pScore f}
 
 Construct a list of datetimes using quarter intervals
 
@@ -108,8 +113,7 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 Given a filled list representing all partial solutions of size 1..N,
 return a list of only those solutions contributing to the solution of
-size N.  Assumes the existence of a sentinel at the end of the input
-list.
+size N.  Assumes the existence of a sentinel at the end of the input list.
 What's going on here is the following: first the list of partial solutions
 is correctly unwound to the list of Candiates (w/ correct start's and durs).
 Then the scores deltas are applied to these Candidates, since these scores
