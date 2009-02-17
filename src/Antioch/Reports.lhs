@@ -213,7 +213,7 @@ simHistDec
 
 > histSessDec          :: StatsPlot
 > histSessDec fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionDec ss, periodDec ps]
+>     histogramPlots (histAttrs t x y fn) $ [sessionDecHrs ss, periodDecHrs ps]
 >   where
 >     t = "Declination Histogram"
 >     x = "Declination [deg]"
