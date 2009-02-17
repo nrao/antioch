@@ -49,6 +49,11 @@ To Do List (port from Statistics.py):
 > periodDec :: [Period] -> [(Radians, Float)]
 > periodDec = promote sessionDec
 
+> sessionDecHrs :: [Session] -> [(Radians, Float)]
+> sessionDecHrs =  histogram [-40..90] . (((/60) . fromIntegral . totalTime) `vs` (rad2deg . dec))
+
+> periodDecHrs :: [Period] -> [(Float, Float)]
+> periodDecHrs = histogram [-40..90] . (((/60.0) . fromIntegral . duration) `vs` (rad2deg . dec . session)) 
 > sessionFreq :: [Session] -> [(Float, Minutes)]
 > sessionFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
 
