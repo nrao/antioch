@@ -52,9 +52,18 @@ To Do List (port from Statistics.py):
 > sessionFreq :: [Session] -> [(Float, Minutes)]
 > sessionFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
 
+> sessionFreqHrs :: [Session] -> [(Float, Float)]
+> sessionFreqHrs ss = histogramToHours $ sessionFreq ss
+
 > periodFreq :: [Period] -> [(Float, Minutes)]
 > periodFreq =
 >     histogram [1.0..50.0] . (duration `vs` (frequency . session))
+
+> periodFreqHrs :: [Period] -> [(Float, Float)]
+> periodFreqHrs ps = histogramToHours $ periodFreq ps
+
+> histogramToHours :: [(Float, Minutes)] -> [(Float, Float)]
+> histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
 
 > sessionTP :: [Period] -> [(Minutes, Int)]
 > sessionTP = count ((`div` 60) . duration) [1..7]

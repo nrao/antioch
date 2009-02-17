@@ -203,8 +203,7 @@ simHistFreq
 
 > histSessFreq          :: StatsPlot
 > histSessFreq fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [[(f, fromIntegral t) | (f, t) <- sessionFreq ss]
->                          , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
+>     histogramPlots (histAttrs t x y fn) $ [sessionFreqHrs ss, periodFreqHrs ps]
 >   where
 >     t = "Frequency Histogram"
 >     x = "Frequency [GHz]"
