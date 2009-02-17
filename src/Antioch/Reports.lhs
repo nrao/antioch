@@ -255,8 +255,6 @@ This function is only temporary until we get simulations integrated
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
 >     runScoring w' [] $ mapM (getScore sf) ps
 
-> type StatsPlot = String -> [Session] -> [Period] -> IO ()
-
 Attributes
 
 > scatterAttrs title xlab ylab fpath =
@@ -292,6 +290,8 @@ Testing Harness
 >     sequence (map (\f -> f sessions periods) plots)
 
 Simulator Harness
+
+> type StatsPlot = String -> [Session] -> [Period] -> IO ()
 
 > statsPlots = [
 >    plotDecFreq ""
