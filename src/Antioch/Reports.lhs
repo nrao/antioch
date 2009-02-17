@@ -8,7 +8,7 @@
 > import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg)
+> import Antioch.Utilities (rad2deg, rad2hr)
 > import Antioch.Weather
 > import Control.Monad      (liftM)
 
@@ -32,8 +32,8 @@ simDecRA (stars, crosses)
 
 > plotDecVsRA          :: StatsPlot
 > plotDecVsRA fn ss ps =
->     scatterPlots (scatterAttrs t x y fn) $ [[(x, rad2deg y) | (x, y) <- sessionDecRA ss]
->                                           , [(x, rad2deg y) | (x, y) <-  periodDecRA ps]]
+>     scatterPlots (scatterAttrs t x y fn) $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
+>                                           , [(rad2hr x, rad2deg y) | (x, y) <-  periodDecRA ps]]
 >   where
 >     t = "Dec vs RA"
 >     x = "Right Ascension [hr]"
