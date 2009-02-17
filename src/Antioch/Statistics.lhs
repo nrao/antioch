@@ -49,6 +49,11 @@ To Do List (port from Statistics.py):
 > periodDec :: [Period] -> [(Radians, Float)]
 > periodDec = promote sessionDec
 
+> sessionDecHrs :: [Session] -> [(Radians, Float)]
+> sessionDecHrs =  histogram [-40..90] . (((/60) . fromIntegral . totalTime) `vs` (rad2deg . dec))
+
+> periodDecHrs :: [Period] -> [(Float, Float)]
+> periodDecHrs = histogram [-40..90] . (((/60.0) . fromIntegral . duration) `vs` (rad2deg . dec . session)) 
 > sessionFreq :: [Session] -> [(Float, Minutes)]
 > sessionFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
 
@@ -81,8 +86,10 @@ Compare allocated hours by frequency to observed hours by frequency.
 
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
->     histogram bands . (snd `vs` (band . session . fst)) $ zip ps es
->   where bands = [L::Band .. Q::Band]
+>     histogram bands . (effSchdMins `vs` (band . session . fst)) $ zip ps es
+>   where 
+>     bands = [L::Band .. Q::Band]
+>     effSchdMins (p, e) = e * (fromIntegral (duration p))
 
 > decVsElevation :: [Period] -> [Float] -> [(Float, Radians)]
 > decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods
