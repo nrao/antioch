@@ -118,7 +118,7 @@
 >     assertEqual "test_periodEfficiencyByBand" expected (periodEfficiencyByBand periods $ getEfficiencies $ length periods)
 >   where
 >     (_, periods) = generateTestData 100
->     expected = [(L,12.25091),(S,3.3140855),(C,2.1376348),(X,1.0520351),(U,1.0382895),(K,3.9982724),(A,1.5661592),(Q,4.667811)]
+>     expected = [(L,3507.9712),(S,1037.5836),(C,551.3534),(X,262.7166),(U,434.65936),(K,1738.3253),(A,495.5778),(Q,1163.3644)]
 
 > test_decVsElevation = TestCase $ do
 >     assertEqual "test_decVsElevation" expected (decVsElevation periods $ getEfficiencies $ length periods)
