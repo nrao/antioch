@@ -173,11 +173,13 @@ ignores their numerical scores.
 >     (==) = periodsEqual
 
 > periodsEqual :: Period -> Period -> Bool
-> periodsEqual p1 p2 = eqStarts p1 p2 && eqDurs p1 p2 && eqIds p1 p2
+> periodsEqual p1 p2 = eqIds p1 p2 &&
+>                      eqStarts p1 p2 &&
+>                      eqDurs p1 p2
 >   where
+>     eqIds    = (==) `on` session
 >     eqStarts = (==) `on` startTime
 >     eqDurs   = (==) `on` duration
->     eqIds    = (==) `on` session
 
 
 > defaultSession = defaultOpen

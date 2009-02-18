@@ -310,6 +310,41 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                    , iPast = []
 >                    }
 
+> fixedPeriods = [ defaultPeriod { session = defaultSession { sId = 1 }
+>                                , pScore = 1.0
+>                                }
+>                , defaultPeriod { session = defaultSession { sId = 2 }
+>                                , pScore = 1.0
+>                                }
+>                , defaultPeriod { session = defaultSession { sId = 3 }
+>                                , pScore = 1.0
+>                                }
+>                ]
+
+> test_restoreFixedScore_replace = TestCase $ do
+>      assertEqual "test_restoreFixedScore_replace_score" before_score . pScore . restoreFixedScore fixed $ after
+>      assertEqual "test_restoreFixedScore_replace_session" after . restoreFixedScore fixed $ after
+>      where
+>        before_score = 20.0
+>        after_score = 25.0
+>        after = before { pScore = after_score }
+>        fixed = fixedPeriods ++ [before]
+>        before =  defaultPeriod { session = defaultSession { sId = 4 }
+>                                , pScore = before_score
+>                                }
+
+> test_restoreFixedScore_not_replace = TestCase $ do
+>      assertEqual "test_restoreFixedScore_not_replace_score" after_score . pScore . restoreFixedScore fixed $ after
+>      assertEqual "test_restoreFixedScore_not_replace_session" after . restoreFixedScore fixed $ after
+>      where
+>        before_score = 20.0
+>        after_score = 25.0
+>        after = before { pScore = after_score }
+>        fixed = fixedPeriods
+>        before =  defaultPeriod { session = defaultSession { sId = 4 }
+>                                , pScore = before_score
+>                                }
+
 > test_ToPeriod = TestCase $ do
 >     assertEqual "test_ToPeriod" expected result
 >   where
