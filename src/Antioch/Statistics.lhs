@@ -81,15 +81,15 @@ Example of scatter plot data w/ datetime:
 Example of log histogram data:
 Compare allocated hours by frequency to observed hours by frequency.
 
-> periodBand :: [Period] -> [(Band, Minutes)]
-> periodBand = histogram [L::Band .. Q::Band] . (duration `vs` (band . session))
+> periodBand :: [Period] -> [(Band, Float)]
+> periodBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . duration) `vs` (band . session))
 
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
 >     histogram bands . (effSchdMins `vs` (band . session . fst)) $ zip ps es
 >   where 
 >     bands = [L::Band .. Q::Band]
->     effSchdMins (p, e) = e * (fromIntegral (duration p))
+>     effSchdMins (p, e) = e * (fromIntegral (duration p) / 60.0)
 
 > decVsElevation :: [Period] -> [Float] -> [(Float, Radians)]
 > decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods

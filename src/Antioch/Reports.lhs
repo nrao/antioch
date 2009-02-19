@@ -193,7 +193,7 @@ simHistEffHr
 > histEffHrBand fn effs ps =
 >     histogramPlots (histAttrs t x y fn) $ [pBand, effByBand]
 >       where
->         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- periodBand ps]
+>         pBand     = [(fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram"
 >         x = "Band [L, S, C, X, U, K, A, Q]"
