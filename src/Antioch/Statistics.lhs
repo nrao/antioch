@@ -43,6 +43,12 @@ To Do List (port from Statistics.py):
 > periodRA :: [Period] -> [(Radians, Float)]
 > periodRA = promote sessionRA
 
+> sessionRAHrs :: [Session] -> [(Radians, Float)]
+> sessionRAHrs =  histogram [0..24] . (((/60) . fromIntegral . totalTime) `vs` (rad2hr . ra))
+
+> periodRAHrs :: [Period] -> [(Radians, Float)]
+> periodRAHrs = histogram [0..24] . (((/60.0) . fromIntegral . duration) `vs` (rad2hr . ra . session))
+
 > sessionDec :: [Session] -> [(Radians, Float)]
 > sessionDec = count (rad2deg . dec) [-40..90]
 

@@ -176,7 +176,7 @@ simHistRA
 
 > histSessRA          :: StatsPlot
 > histSessRA fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionRA ss, periodRA ps]
+>     histogramPlots (histAttrs t x y fn) $ [sessionRAHrs ss, periodRAHrs ps]
 >   where
 >     t = "Right Ascension Histogram"
 >     x = "RA [hr]"
