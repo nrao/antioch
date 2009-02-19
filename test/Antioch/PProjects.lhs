@@ -21,7 +21,7 @@
 >   , timeTotal = 33812
 > }
 
-> p1sessions'' = [
+> p1sessions' = [
 >     defaultOpen {
 >         sId = 1
 >       , sName = "GB"
@@ -143,6 +143,7 @@
 >       , band = W
 >       }
 >
+>   {- TBF: period for Fixed vs. periods for Open, Windowed 
 >   , defaultFixed {
 >         sId = 9
 >       , sName = "TestFixed1"  -- no fixed yet
@@ -166,7 +167,7 @@
 >       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 4 11 0 0
->               , duration = 6*60 }
+>               , duration = 4*60 }
 >       , totalTime = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
@@ -193,6 +194,7 @@
 >       , receivers = [Rcvr_PAR]
 >       , band = W
 >       }
+>   -}
 >
 >   {-  TBF on hold until actually scoring/scheduling windowed sessions
 >   , defaultWindowed {
@@ -230,14 +232,14 @@
 >       , frequency = 2.0
 >       , ra = hrs2rad 17.3
 >       , dec = deg2rad 30.4
->       , receivers = [Rcvr1_2]
->       , band = L
+>       , receivers = [Rcvr2_3]
+>       , band = S
 >       }
 >   -}
 >   ]
 
-> p1sessions' = [ makeSession s (periods' s) | s <- p1sessions'' ]
-> project1 = makeProject project1' p1sessions'
+> p1sessions = [ makeSession s (periods s) | s <- p1sessions' ]
+> project1 = makeProject project1' (500*60) p1sessions
 
 > project2' = defaultProject {
 >     pId = 2
@@ -248,7 +250,7 @@
 >   -- , timeTotal = 14*60
 > }
 
-> p2sessions'' = [
+> p2sessions' = [
 >     defaultOpen {
 >         sId = 15
 >       , sName = "GB_thesis"
@@ -280,8 +282,8 @@
 >       }
 >   ]
 
-> p2sessions' = [ makeSession s (periods s) | s <- p2sessions'' ]
-> project2 = makeProject project2' (14*60) p2sessions'
+> p2sessions = [ makeSession s (periods s) | s <- p2sessions' ]
+> project2 = makeProject project2' (14*60) p2sessions
 
 Utilities:
 

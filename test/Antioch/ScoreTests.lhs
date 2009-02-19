@@ -13,6 +13,7 @@
 
 > tests = TestList [
 >     test_averageScore
+>   , test_averageScore2
 >   , test_efficiency
 >   , test_frequencyPressure
 >   , test_getReceivers
@@ -295,7 +296,7 @@ TBF are these partitions stil useful?
 >     --          , ("projectCompletion", Just 1.015)]
 >     -- assertEqual "test_politicalFactors" expFs fs
 >     let result = eval fs
->     assertEqual "test_politicalFactors" 1.0054 result
+>     assertEqual "test_politicalFactors" 1.0024 result
 
 > test_trackingEfficiency = TestCase $ do
 >     -- sessLP
@@ -346,7 +347,7 @@ to use in conjunction with Pack tests.
 
 Test the 24-hour scoring profile of the default session, per quarter.
 
-> test_score = TestCase $ do
+> {-test_score = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     (fs, _) <- runTracing $ genScore [sess]
 >     let score' w dt = do
@@ -378,7 +379,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                ,3.2621348,3.2573557
 >                ,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0
 >                ,0.0,0.0,0.0,0.0,0.0]
-
+> -}
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -394,9 +395,39 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >     assertEqual "test_score2" expected avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     sess = defaultSession
+>     sess = defaultSession { totalTime = 24*60 
+>                           , minDuration = 2*60 
+>                           , maxDuration = 6*60
+>                           }
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 
+Look at the scores over a range where none are zero.
+
+> test_averageScore2 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     sf <- genScore [sess]
+>     scores <- mapM (score' w sf) times
+>     let scoreTotal = addScores scores
+>     scoreTotal' <- runScoring w [] (totalScore sf dt dur sess)
+>     avgScore <- runScoring w [] (averageScore sf dt sess)
+>     assertAlmostEqual "test_averageScore2_addScores" 3 expectedTotal scoreTotal
+>     assertAlmostEqual "test_averageScore2_totalScore" 3  expectedTotal scoreTotal'
+>     assertAlmostEqual "test_averageScore2_avgScore" 3 expectedAvg avgScore
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     dur = 2*60
+>     sess = defaultSession { totalTime = 24*60 
+>                           , minDuration = dur 
+>                           , maxDuration = 6*60
+>                           }
+>     score' w sf dt = do
+>         fs <- runScoring w [] (sf dt sess)
+>         return $ eval fs
+>     dt = (39*quarter) `addMinutes'` starttime -- start where scores /= 0
+>     numQtrs = dur `div` quarter
+>     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
+>     expectedTotal = 25.0133826 :: Score 
+>     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 Test utilities
 

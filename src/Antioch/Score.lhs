@@ -318,7 +318,7 @@ Compute the average score for a given session over an interval.
 > averageScore :: ScoreFunc -> DateTime -> Session -> Scoring Score
 > averageScore sf dt s = do
 >     score <- totalScore sf dt dur s
->     return $! score / fromIntegral (dur `div` quarter + 1)
+>     return $! score / fromIntegral (dur `div` quarter)
 >   where
 >     dur = minDuration s
 

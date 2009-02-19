@@ -43,18 +43,38 @@ To Do List (port from Statistics.py):
 > periodRA :: [Period] -> [(Radians, Float)]
 > periodRA = promote sessionRA
 
+> sessionRAHrs :: [Session] -> [(Radians, Float)]
+> sessionRAHrs =  histogram [0..24] . (((/60) . fromIntegral . totalTime) `vs` (rad2hr . ra))
+
+> periodRAHrs :: [Period] -> [(Radians, Float)]
+> periodRAHrs = histogram [0..24] . (((/60.0) . fromIntegral . duration) `vs` (rad2hr . ra . session))
+
 > sessionDec :: [Session] -> [(Radians, Float)]
 > sessionDec = count (rad2deg . dec) [-40..90]
 
 > periodDec :: [Period] -> [(Radians, Float)]
 > periodDec = promote sessionDec
 
+> sessionDecHrs :: [Session] -> [(Radians, Float)]
+> sessionDecHrs =  histogram [-40..90] . (((/60) . fromIntegral . totalTime) `vs` (rad2deg . dec))
+
+> periodDecHrs :: [Period] -> [(Float, Float)]
+> periodDecHrs = histogram [-40..90] . (((/60.0) . fromIntegral . duration) `vs` (rad2deg . dec . session)) 
 > sessionFreq :: [Session] -> [(Float, Minutes)]
 > sessionFreq = histogram [1.0..50.0] . (totalTime `vs` frequency)
+
+> sessionFreqHrs :: [Session] -> [(Float, Float)]
+> sessionFreqHrs ss = histogramToHours $ sessionFreq ss
 
 > periodFreq :: [Period] -> [(Float, Minutes)]
 > periodFreq =
 >     histogram [1.0..50.0] . (duration `vs` (frequency . session))
+
+> periodFreqHrs :: [Period] -> [(Float, Float)]
+> periodFreqHrs ps = histogramToHours $ periodFreq ps
+
+> histogramToHours :: [(Float, Minutes)] -> [(Float, Float)]
+> histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
 
 > sessionTP :: [Period] -> [(Minutes, Int)]
 > sessionTP = count ((`div` 60) . duration) [1..7]
@@ -67,13 +87,15 @@ Example of scatter plot data w/ datetime:
 Example of log histogram data:
 Compare allocated hours by frequency to observed hours by frequency.
 
-> periodBand :: [Period] -> [(Band, Minutes)]
-> periodBand = histogram [L::Band .. Q::Band] . (duration `vs` (band . session))
+> periodBand :: [Period] -> [(Band, Float)]
+> periodBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . duration) `vs` (band . session))
 
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
->     histogram bands . (snd `vs` (band . session . fst)) $ zip ps es
->   where bands = [L::Band .. Q::Band]
+>     histogram bands . (effSchdMins `vs` (band . session . fst)) $ zip ps es
+>   where 
+>     bands = [L::Band .. Q::Band]
+>     effSchdMins (p, e) = e * (fromIntegral (duration p) / 60.0)
 
 > decVsElevation :: [Period] -> [Float] -> [(Float, Radians)]
 > decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods

@@ -8,7 +8,7 @@
 > import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg)
+> import Antioch.Utilities (rad2deg, rad2hr)
 > import Antioch.Weather
 > import Control.Monad      (liftM)
 
@@ -32,8 +32,8 @@ simDecRA (stars, crosses)
 
 > plotDecVsRA          :: StatsPlot
 > plotDecVsRA fn ss ps =
->     scatterPlots (scatterAttrs t x y fn) $ [[(x, rad2deg y) | (x, y) <- sessionDecRA ss]
->                                           , [(x, rad2deg y) | (x, y) <-  periodDecRA ps]]
+>     scatterPlots (scatterAttrs t x y fn) $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
+>                                           , [(rad2hr x, rad2deg y) | (x, y) <-  periodDecRA ps]]
 >   where
 >     t = "Dec vs RA"
 >     x = "Right Ascension [hr]"
@@ -176,7 +176,7 @@ simHistRA
 
 > histSessRA          :: StatsPlot
 > histSessRA fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionRA ss, periodRA ps]
+>     histogramPlots (histAttrs t x y fn) $ [sessionRAHrs ss, periodRAHrs ps]
 >   where
 >     t = "Right Ascension Histogram"
 >     x = "RA [hr]"
@@ -193,7 +193,7 @@ simHistEffHr
 > histEffHrBand fn effs ps =
 >     histogramPlots (histAttrs t x y fn) $ [pBand, effByBand]
 >       where
->         pBand     = [(fromIntegral . fromEnum $ b, fromIntegral d) | (b, d) <- periodBand ps]
+>         pBand     = [(fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram"
 >         x = "Band [L, S, C, X, U, K, A, Q]"
@@ -203,8 +203,7 @@ simHistFreq
 
 > histSessFreq          :: StatsPlot
 > histSessFreq fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [[(f, fromIntegral t) | (f, t) <- sessionFreq ss]
->                          , [(f, fromIntegral t) | (f, t) <- periodFreq ps]]
+>     histogramPlots (histAttrs t x y fn) $ [sessionFreqHrs ss, periodFreqHrs ps]
 >   where
 >     t = "Frequency Histogram"
 >     x = "Frequency [GHz]"
@@ -214,7 +213,7 @@ simHistDec
 
 > histSessDec          :: StatsPlot
 > histSessDec fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionDec ss, periodDec ps]
+>     histogramPlots (histAttrs t x y fn) $ [sessionDecHrs ss, periodDecHrs ps]
 >   where
 >     t = "Declination Histogram"
 >     x = "Declination [deg]"
@@ -255,8 +254,6 @@ This function is only temporary until we get simulations integrated
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
 >     runScoring w' [] $ mapM (getScore sf) ps
 
-> type StatsPlot = String -> [Session] -> [Period] -> IO ()
-
 Attributes
 
 > scatterAttrs title xlab ylab fpath =
@@ -292,6 +289,8 @@ Testing Harness
 >     sequence (map (\f -> f sessions periods) plots)
 
 Simulator Harness
+
+> type StatsPlot = String -> [Session] -> [Period] -> IO ()
 
 > statsPlots = [
 >    plotDecFreq ""

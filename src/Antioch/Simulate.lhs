@@ -37,12 +37,12 @@
 >         w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
 >         sf <- genScore sessions
 >         schedPeriods <- runScoring'' w' rs $ sched sf start int' history sessions
->         liftIO $ putStrLn "backups: "
->         liftIO $ print . length $ [s | s <- sessions, backup s]
->         liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
+>        -- liftIO $ putStrLn "backups: "
+>        -- liftIO $ print . length $ [s | s <- sessions, backup s]
+>        -- liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
 >         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods sessions
->         liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
+>        -- liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
 >         let sessions' = updateSessions sessions obsPeriods
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'

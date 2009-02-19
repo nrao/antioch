@@ -250,30 +250,6 @@ attributes of the packing algorithm:
 >              , Item "D" 2 8 [0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0] []
 >              ]
 
-Simplest test case of high-level 'pack': schedule a single candidate.
-
-> test_Pack1 = TestCase $ do
->     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore [candidate]
->         pack fs starttime duration [] [candidate]
->     assertEqual "test_Pack1_1" 1 (length periods')
->     assertEqual "test_Pack1_2" expPeriod (head periods')
->   where
->     starttime = fromGregorian 2006 11 8 12 0 0
->     duration = 12*60
->     candidate = defaultSession { sName = "singleton"
->                                , totalTime = 24*60
->                                , minDuration = 2*60
->                                , maxDuration = 6*60
->                                }
->     expStartTime = fromGregorian 2006 11 8 21 15 0
->     expPeriod = defaultPeriod { session = candidate
->                               , startTime = expStartTime
->                               , duration = 165
->                               , pScore = 34.97986
->                               }
-
 > test_ToItem = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     -- create an item without a mask, i.e. no scoring
@@ -333,6 +309,41 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                    , iFuture = scores 
 >                    , iPast = []
 >                    }
+
+> fixedPeriods = [ defaultPeriod { session = defaultSession { sId = 1 }
+>                                , pScore = 1.0
+>                                }
+>                , defaultPeriod { session = defaultSession { sId = 2 }
+>                                , pScore = 1.0
+>                                }
+>                , defaultPeriod { session = defaultSession { sId = 3 }
+>                                , pScore = 1.0
+>                                }
+>                ]
+
+> test_restoreFixedScore_replace = TestCase $ do
+>      assertEqual "test_restoreFixedScore_replace_score" before_score . pScore . restoreFixedScore fixed $ after
+>      assertEqual "test_restoreFixedScore_replace_session" after . restoreFixedScore fixed $ after
+>      where
+>        before_score = 20.0
+>        after_score = 25.0
+>        after = before { pScore = after_score }
+>        fixed = fixedPeriods ++ [before]
+>        before =  defaultPeriod { session = defaultSession { sId = 4 }
+>                                , pScore = before_score
+>                                }
+
+> test_restoreFixedScore_not_replace = TestCase $ do
+>      assertEqual "test_restoreFixedScore_not_replace_score" after_score . pScore . restoreFixedScore fixed $ after
+>      assertEqual "test_restoreFixedScore_not_replace_session" after . restoreFixedScore fixed $ after
+>      where
+>        before_score = 20.0
+>        after_score = 25.0
+>        after = before { pScore = after_score }
+>        fixed = fixedPeriods
+>        before =  defaultPeriod { session = defaultSession { sId = 4 }
+>                                , pScore = before_score
+>                                }
 
 > test_ToPeriod = TestCase $ do
 >     assertEqual "test_ToPeriod" expected result
@@ -412,6 +423,9 @@ produce changes in the final result.
 >     periods' <- runScoring w [] $ do
 >         fs <- lift $ genScore sess
 >         pack fs starttime duration [] sess
+>     -- TBF: how to use 
+>     assertEqual "test_Pack2" expPeriods periods'  
+>   where
 >     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
