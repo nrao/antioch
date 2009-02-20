@@ -33,6 +33,7 @@
 Always schedules a session at its minimum duration.
 
 > scheduleMinDuration :: Strategy
+> scheduleMinDuration sf dt dur history [] = return []
 > scheduleMinDuration sf dt dur history sessions
 >     | [] <- candidates = return []
 >     | otherwise        = do
@@ -51,6 +52,7 @@ Always schedules a session at its minimum duration.
 Always schedules a session at a given fixed duration.
 
 > scheduleFixedDuration :: Minutes -> Strategy
+> scheduleFixedDuration len sf dt dur history [] = return []
 > scheduleFixedDuration len sf dt dur history sessions
 >     | dur < len        = return []
 >     | [] <- candidates = return []
@@ -69,6 +71,7 @@ Always schedules a session at a given fixed duration.
 A really dumb scheduler that just looks at the first score for a session.
       
 > scheduleFixedDuration' :: Minutes -> Strategy
+> scheduleFixedDuration' len sf dt dur history [] = return []
 > scheduleFixedDuration' len sf dt dur history sessions
 >     | dur < len        = return []
 >     | [] <- candidates = return []
