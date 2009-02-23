@@ -1,7 +1,7 @@
 > module Antioch.Reports where
 
 > import Antioch.DateTime
-> import Antioch.Generators (genSessions, genPeriods, generateVec)
+> import Antioch.Generators (genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.Plots
 > import Antioch.Score
 > import Antioch.Schedule
@@ -231,6 +231,30 @@ simHistTP
 >     x = "Session TP [Hours]"
 >     y = "Counts"
 
+simHistTPQtrs - how are Session minduration and Period duration distributed in terms of a simple count?
+
+> histSessTPQtrs :: StatsPlot
+> histSessTPQtrs fn ss ps = 
+>     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs]
+>   where
+>     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurationQtrs ss]
+>     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTPQtrs ps]
+>     t = "MinDuration & TP Counts Historgram"
+>     x = "Duration [Minutes]"
+>     y = "Counts"
+
+simHistTPDurs - how are Session minDuratin and Period duration distributed in terms of actual minutes?
+
+> histSessTPDurs :: StatsPlot
+> histSessTPDurs fn ss ps = 
+>     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs]
+>   where
+>     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDuration ss]
+>     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
+>     t = "MinDuration & TP Minutes Historgram"
+>     x = "Duration [Minutes]"
+>     y = "Counts [Minutes]"
+
 Utilities
 
 > getEfficiency w p = do
@@ -308,6 +332,8 @@ Simulator Harness
 >  , histSessFreq ""
 >  , histSessDec ""
 >  , histSessTP ""
+>  , histSessTPQtrs ""
+>  , histSessTPDurs ""
 >   ]
 
 > statsPlotsToFile rootPath = [
@@ -326,6 +352,8 @@ Simulator Harness
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
 >  , histSessDec        $ rootPath ++ "/simHistDec.png"
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
+>  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
+>  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
 >   ]
 
 > generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> Int -> IO ()
