@@ -11,7 +11,8 @@
 > import System.Random
 
 > tests = TestList [
->     test_sessionDecFreq
+>     test_count
+>   , test_sessionDecFreq
 >   , test_periodDecFreq
 >   , test_sessionDecRA
 >   , test_periodDecRA
@@ -21,9 +22,13 @@
 >   , test_periodDec
 >   , test_sessionFreq
 >   , test_periodFreq
+>   , test_sessionMinDuration
 >   , test_sessionTP
+>   , test_sessionTP2
+>   , test_sessionTPQtrs
 >   , test_freqTime
 >   , test_periodBand
+>   , test_periodDuration
 >   , test_periodEfficiencyByBand
 >   , test_decVsElevation
 >   , test_efficiencyVsFrequency
@@ -36,6 +41,17 @@
 >   , test_satisfactionRatio
 >     ]
 
+> test_count = TestCase $ do
+>     assertEqual "StatisticsTests_test_count1" exp1 cnt1
+>     assertEqual "StatisticsTests_test_count2" exp2 cnt2
+>  where
+>    cnt1 = count minDuration [0..5] [s1]
+>    s1 = defaultSession {minDuration = 3}
+>    exp1 = [(0,0),(1,0),(2,0),(3,1),(4,0),(5,0)]
+>    s2 = defaultSession {minDuration = 1}
+>    cnt2 = count minDuration [0..5] [s1,s2,s2,s1,s1]
+>    exp2 = [(0,0),(1,2),(2,0),(3,3),(4,0),(5,0)]
+> 
 > test_sessionDecFreq = TestCase $ do
 >     assertEqual "test_sessionDecFreq" expected (sessionDecFreq sessions)
 >   where
@@ -101,6 +117,45 @@
 >   where
 >     (_, periods) = generateTestData 100
 >     expected = [(1,12),(2,13),(3,10),(4,10),(5,10),(6,10),(7,15)]
+
+> test_sessionTP2 = TestCase $ do
+>     assertEqual "test_sessionTP2" exp cnt
+>   where
+>     cnt = sessionTP ps
+>     ps = [p1, p2, p1, p2, p1]
+>     p1 = defaultPeriod {duration = 60}
+>     p2 = defaultPeriod {duration = 150}
+>     exp = [(1,3),(2,2),(3,0),(4,0),(5,0),(6,0),(7,0)]
+
+> test_sessionTPQtrs = TestCase $ do
+>     assertEqual "test_sessionTPQtrs" exp cnt
+>   where
+>     cnt = take 8 $ sessionTPQtrs ps
+>     ps = [p1, p2, p1, p2, p1]
+>     p1 = defaultPeriod {duration = 30}
+>     p2 = defaultPeriod {duration = 105}
+>     q  = quarter
+>     exp = [(0,0),(1*q,0),(2*q,3),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,2)]
+
+> test_periodDuration = TestCase $ do
+>     assertEqual "test_periodDuration" exp cnt
+>   where
+>     cnt = take 8 $ periodDuration ps
+>     ps = [p1, p2, p1, p2, p1]
+>     p1 = defaultPeriod {duration = 30}
+>     p2 = defaultPeriod {duration = 105}
+>     q  = quarter
+>     exp = [(0,0),(1*q,0),(2*q,(3*30)),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,(2*105))]
+
+> test_sessionMinDuration = TestCase $ do
+>     assertEqual "test_sessionMinDuration" exp cnt
+>   where
+>     cnt = take 8 $ sessionMinDuration ss
+>     ss = [s1, s2, s1, s2, s1]
+>     s1 = defaultSession {minDuration = 30}
+>     s2 = defaultSession {minDuration = 105}
+>     q  = quarter
+>     exp = [(0,0),(1*q,0),(2*q,(3*30)),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,(2*105))]
 
 > test_freqTime = TestCase $ do
 >     assertEqual "test_freqTime" expected (freqTime periods)
