@@ -79,6 +79,19 @@ To Do List (port from Statistics.py):
 > sessionTP :: [Period] -> [(Minutes, Int)]
 > sessionTP = count ((`div` 60) . duration) [1..7]
 
+> sessionTPQtrs :: [Period] -> [(Minutes, Int)]
+> sessionTPQtrs = count (duration) [0, quarter..(7*60)]
+
+> sessionMinDurationQtrs :: [Session] -> [(Minutes, Int)]
+> sessionMinDurationQtrs = count (minDuration) [0, quarter..(7*60)]
+
+> periodDuration :: [Period] -> [(Minutes, Minutes)]
+> periodDuration = histogram [0, quarter..(7*60)] . (duration `vs` duration)
+
+> sessionMinDuration :: [Session] -> [(Minutes, Minutes)]
+> sessionMinDuration = histogram [0, quarter..(7*60)] . (minDuration `vs` minDuration)
+
+
 Example of scatter plot data w/ datetime:
 
 > freqTime :: [Period] -> [(DateTime, Float)]
