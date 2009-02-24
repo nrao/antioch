@@ -1,7 +1,7 @@
 > module Antioch.Reports where
 
 > import Antioch.DateTime
-> import Antioch.Generators (genProjects, genSessions, genPeriods, generateVec)
+> import Antioch.Generators (internalConflicts, genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.Plots
 > import Antioch.Score
 > import Antioch.Schedule
@@ -247,11 +247,12 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs]
+>     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs, maxTPTime]
 >   where
 >     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDuration ss]
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
->     t = "MinDuration & TP Minutes Historgram"
+>     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
+>     t = "MinDuration, TP Minutes & Max TP Minutes Historgram"
 >     x = "Duration [Minutes]"
 >     y = "Counts [Minutes]"
 
@@ -368,6 +369,10 @@ Simulator Harness
 >     results <- simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     -- text reports 
+>     if (internalConflicts results) then print "Overlaps in Schedule! " else print "No overlaps in Schedule."
+>     --reportDeadTime results
+>     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >   where
 >     rs      = []
