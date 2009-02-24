@@ -365,7 +365,7 @@ Simulator Harness
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     results <- simulate sched w rs dt dur int history ss
+>     (results, _) <- simulate sched w rs dt dur int history ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     mapM_ (\f -> f ss results) sps

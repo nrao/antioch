@@ -254,13 +254,13 @@ attributes of the packing algorithm:
 >     w <- getWeather . Just $ starttime 
 >     -- create an item without a mask, i.e. no scoring
 >     item' <- runScoring w [] $ do
->         fs <- lift $ genScore [testSession]
+>         fs <- genScore [testSession]
 >         toItem fs [] testSession
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
 >     item' <- runScoring w [] $ do
->         fs <- lift $ genScore [testSession]
+>         fs <- genScore [testSession]
 >         toItem fs dts testSession
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
 >     assertEqual "test_ToItem_3" result2 item'
@@ -289,7 +289,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 > test_ToItem2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     result <- runScoring w [] $ do
->         fs <- lift $ genScore [sess]
+>         fs <- genScore [sess]
 >         toItem fs dts sess
 >     assertEqual "test_ToItem2" expected result
 >   where
@@ -399,7 +399,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 > test_Pack1 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore [candidate]
+>         fs <- genScore [candidate]
 >         pack fs starttime duration [] [candidate]
 >     assertEqual "test_Pack1_1" 1 (length periods')
 >     assertEqual "test_Pack1_2" expPeriod (head periods')
@@ -421,7 +421,7 @@ produce changes in the final result.
 > test_Pack2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration [] sess
 >     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'  
@@ -556,7 +556,7 @@ period's negative score in the result.
 > test_Pack3 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration [fixed] sess
 >     assertEqual "test_Pack3" expPeriods periods  
 >   where
@@ -574,7 +574,7 @@ around fixed periods.
 > test_Pack4 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack4" expPeriods periods'  
 >   where
@@ -610,7 +610,7 @@ Same as above, but with even more fixed periods
 > test_Pack5 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack5" expPeriods periods'  
 >   where

@@ -12,7 +12,7 @@
 > import Data.Maybe           (fromMaybe)
 > import System.CPUTime
 
-> simulate06 :: Strategy -> IO [Period]
+> simulate06 :: Strategy -> IO ([Period], [Trace])
 > simulate06 sched = do
 >     w  <- liftIO $ getWeather Nothing
 >     ps <- liftIO $ generateVec 400
@@ -26,7 +26,7 @@
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 1 2 0 0 0
->     dur = 60 * 24 * 30
+>     dur = 60 * 24 * 180
 >     int = 60 * 24 * 1
 >     history = []
   
@@ -43,34 +43,37 @@ TBF: only have implemented time left so far ...
 >   where
 >     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s) 
 
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
-> simulate sched w rs dt dur int history sessions
->     | dur < int  = return []
->     | otherwise  = do
->         w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
->         sf <- genScore sessions
->         let schedSessions = filterSessions sessions
->         --liftIO $ putStrLn $ "numSess before &  after filter: " ++ (show . length $ sessions) ++ ", " ++ (show . length $ schedSessions)
->         --liftIO $ putStrLn $ "starting schedule at: " ++ (toSqlString start)
->         schedPeriods <- runScoring'' w' rs $ sched sf start int' history schedSessions
->         --liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
->         -- now see if all these new periods meet Min. Obs. Conditions         
->         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods schedSessions
->         --liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
->         let sessions' = updateSessions sessions obsPeriods
->         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'
->         return $ obsPeriods ++ result
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO ([Period], [Trace])
+> simulate sched w rs dt dur int history sessions =
+>     simulate' w dt dur history sessions [] []
 >   where
->     -- make sure we avoid an infinite loop in the case that a period of time
->     -- can't be scheduled with anyting
->     hint   = int `div` 2
->     start' = case history of
->         (h:_) -> duration h `addMinutes'` startTime h
->         _     -> dt
->     start  = max (negate hint `addMinutes'` dt) start'
->     end    = int `addMinutes'` dt
->     int'   = end `diffMinutes'` start
+>     simulate' w dt dur history sessions pAcc tAcc
+>         | dur < int  = return (pAcc, tAcc)
+>         | otherwise  = do
+>             w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
+>             let schedSessions = filterSessions sessions
+>             (obsPeriods, t1) <- runScoring' w' rs $ do
+>                 sf <- genScore sessions
+>                 schedPeriods <- sched sf start int' history schedSessions
+>                 scheduleBackups sf schedPeriods schedSessions
+>             let sessions' = updateSessions sessions obsPeriods
+>             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
+>             -- This print is a necessary hack to force evaluation of the pressure histories.
+>             liftIO $ print t1
+>             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse obsPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
+>       where
+>         -- make sure we avoid an infinite loop in the case that a period of time
+>         -- can't be scheduled with anyting
+>         hint   = int `div` 2
+>         start' = case history of
+>             (h:_) -> duration h `addMinutes'` startTime h
+>             _     -> dt
+>         start  = max (negate hint `addMinutes'` dt) start'
+>         end    = int `addMinutes'` dt
+>         int'   = end `diffMinutes'` start
+
+> forceSeq []     = []
+> forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
 
 > scheduleBackups :: ScoreFunc -> [Period] -> [Session] -> Scoring [Period]
 > scheduleBackups _  [] _  = return []

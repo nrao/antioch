@@ -17,12 +17,15 @@
 
 > test_best = TestCase $ do
 >       w      <- getWeather . Just $ dt
->       sf     <- genScore sess
->       (s, score) <- runScoring w [] (best (averageScore sf dt2) sess) 
+>       (s, score) <- runScoring w [] $ do
+>           sf <- genScore sess
+>           best (averageScore sf dt2) sess 
 >       assertEqual "ScheduleTests_test_best1" expSession s
 >       assertEqual "ScheduleTests_test_best2" expScore score
 >       -- make sure it can handle just one session
->       (s, score) <- runScoring w [] (best (averageScore sf dt2) [(head sess)]) 
+>       (s, score) <- runScoring w [] $ do
+>           sf <- genScore sess
+>           best (averageScore sf dt2) [(head sess)] 
 >       assertEqual "ScheduleTests_test_best3" expSession s
 >       assertEqual "ScheduleTests_test_best4" expScore score
 >       -- make sure it can handle just no sessions
@@ -41,8 +44,8 @@ TBF: this is not passing - but was it meant to copy a python test?
 > test_schedule_open = TestCase $ do
 >       w      <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >       result <- runScoring w rs $ do
->           sf <- lift $ genScore ss
->           (pack sf dt dur history ss)
+>           sf <- genScore ss
+>           pack sf dt dur history ss
 >       assertEqual "test_schedule_open" expected result
 >   where
 >       rs       = []
