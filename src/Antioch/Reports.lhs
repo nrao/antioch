@@ -231,15 +231,14 @@ simHistTP
 >     x = "Session TP [Hours]"
 >     y = "Counts"
 
-simHistTPQtrs - how are Session minduration and Period duration distributed in terms of a simple count?
+simHistTPQtrs 
 
 > histSessTPQtrs :: StatsPlot
 > histSessTPQtrs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs]
+>     histogramPlot (histAttrs t x y fn) tpDurs
 >   where
->     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurationQtrs ss]
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTPQtrs ps]
->     t = "MinDuration & TP Counts Historgram"
+>     t = "TP Counts Historgram"
 >     x = "Duration [Minutes]"
 >     y = "Counts"
 
@@ -247,12 +246,11 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs, maxTPTime]
+>     histogramPlots (histAttrs t x y fn) $ [tpDurs, maxTPTime]
 >   where
->     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDuration ss]
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
 >     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
->     t = "MinDuration, TP Minutes & Max TP Minutes Historgram"
+>     t = "TP Minutes & Max TP Minutes Historgram"
 >     x = "Duration [Minutes]"
 >     y = "Counts [Minutes]"
 
