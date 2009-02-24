@@ -1,7 +1,7 @@
 > module Antioch.Reports where
 
 > import Antioch.DateTime
-> import Antioch.Generators (internalConflicts, genProjects, genSessions, genPeriods, generateVec)
+> import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.Plots
 > import Antioch.Score
 > import Antioch.Schedule
@@ -370,8 +370,12 @@ Simulator Harness
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     -- text reports 
->     if (internalConflicts results) then print "Overlaps in Schedule! " else print "No overlaps in Schedule."
->     --reportDeadTime results
+>     print "Simulation Schedule Checks: "
+>     if (internalConflicts results) then print "  Overlaps in Schedule! " else print "  No overlaps in Schedule."
+>     if (obeyDurations results) then print "  Min/Max Durations Honored" else print "  Min/Max Durations NOT Honored!"
+>     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
+>     let gaps = findScheduleGaps results
+>     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >   where
@@ -380,3 +384,12 @@ Simulator Harness
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 >     history = []
+
+> findScheduleGaps :: [Period] -> [(DateTime, Minutes)]
+> findScheduleGaps []     = []
+> findScheduleGaps (p:[]) = []
+> findScheduleGaps (p:ps) | gap p ps > 1 = (endTime p, gap p ps) : findScheduleGaps ps
+>                         | otherwise    = findScheduleGaps ps
+>   where 
+>     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
+
