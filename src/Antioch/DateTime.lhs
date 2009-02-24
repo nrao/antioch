@@ -140,7 +140,10 @@ ODBC and MySQL.
 > fromSqlString :: String -> Maybe DateTime
 > fromSqlString = fmap toSeconds . parseUTCTime sqlFormat
 
-> prop_SqlString dt = (fromJust . fromSqlString . toSqlString $ dt') == dt'
+The string conversions may loss precsion at the level of a second.  This is
+close enough for our purposes (TBF)?
+
+> prop_SqlString dt = diffSeconds dt dt' <= 1
 >   where
 >     Just dt' = fromSqlString . toSqlString $ dt
 
