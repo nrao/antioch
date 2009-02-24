@@ -7,6 +7,7 @@
 >   , scheduleFixedDuration'
 >   , scheduleMinDuration
 >   , validPackScores
+>   , validScores
 >   , obeyDurations
 >   , obeySchedDuration
 >   , best
@@ -87,7 +88,24 @@ A really dumb scheduler that just looks at the first score for a session.
 >   where
 >     candidates = constrain history sessions
 
+During a scheduling strategy, certain filters must be applied to the list of
+candidate sessions.  Some of  these filters may have been applied already
+before the strategy is first called, but since the act of scheduling a session
+may affect their candidacy, we need to run some of these filters within the 
+strategy as well.  Examples are:
+   * timeLeft - if a Session has been scheduled, and subsequently used up all its useful time, remove it in the filter.
+   * timeBetween - TBF: if a Session has been scheduled recently, we may have to wait till we can do so again.
+   * TBF: what else?
+
 > constrain _ = id
+
+> {-
+> constrain :: [Period] -> [Session] -> [Session]
+> constrain ps ss = filter (timeLeft ps) ss
+>   where
+>     timeLeft ps s = (totalTime s) - (timeUsedHere ps s) >= minDuration s
+>     timeUsedHere ps s = (sum [duration p | p <- ps, session p == s]) + (totalUsed s)
+> -}
 
 Select the highest scoring element of a list.
 
