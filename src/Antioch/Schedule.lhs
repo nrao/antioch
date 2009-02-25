@@ -11,6 +11,7 @@
 >   , obeyDurations
 >   , obeySchedDuration
 >   , best
+>   , constrain
 >   ) where
 
 > import Antioch.DateTime  (DateTime, addMinutes', fromGregorian, toSqlString)
