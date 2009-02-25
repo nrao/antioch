@@ -6,14 +6,70 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
+> import Data.List            (zipWith4)
 > import Control.Monad.Trans  (lift)
 > import Control.Monad        (liftM)
 > import Test.HUnit
 
 > tests = TestList [
 >     test_best
->   --, test_schedule_open
+>   , test_constrain
+>   , test_schedMinDuration
+>   , test_schedMinDuration_starvation
 >   ]
+
+This test of this strategy should have results that are a subset of the
+similar test in SimulationTests.
+
+> test_schedMinDuration = TestCase $ do
+>     w <- getWeather $ Just wdt
+>     sf <- genScore ss
+>     result <- runScoring w rs $ scheduleMinDuration sf dt dur history ss
+>     print result
+>     assertEqual "ScheduleTests_test_schedMinDuration" exp result
+>   where
+>     rs  = []
+>     dt  = fromGregorian 2006 2  1  0 0 0
+>     wdt = fromGregorian 2006 1 31 12 0 0
+>     dur = 60 * 24 * 1
+>     --int = 60 * 24 * 1
+>     history = []
+>     ss' = getOpenPSessions
+>     ss = filter timeLeft ss'
+>     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s)
+>     gb = head $ findPSessionByName "GB"
+>     va = head $ findPSessionByName "VA"
+>     tx = head $ findPSessionByName "TX"
+>     expSs = [gb, va, va, tx, tx] 
+>     dts = [ fromGregorian 2006 2 1 2 30 0
+>           , fromGregorian 2006 2 1 4 30 0
+>           , fromGregorian 2006 2 1 8 30 0
+>           , fromGregorian 2006 2 1 12 30 0
+>           , fromGregorian 2006 2 1 16 30 0]
+>     durs = [120, 240, 240, 240, 240]
+>     scores = replicate 5 0.0
+>     exp = zipWith4 Period expSs dts durs scores
+
+This test ensures that the scheduleMinDuratin strategy can handle running
+out of stuff to schedule, and doesn't over schedule sessions.
+TBF: reveils bug.
+
+> test_schedMinDuration_starvation = TestCase $ do
+>     w <- getWeather $ Just wdt
+>     sf <- genScore ss
+>     result <- runScoring w rs $ scheduleMinDuration sf dt dur history ss
+>     print result
+>     assertEqual "ScheduleTests_test_schedMinDuration" exp result
+>   where
+>     rs  = []
+>     dt  = fromGregorian 2006 2  1  0 0 0
+>     wdt = fromGregorian 2006 1 31 12 0 0
+>     dur = 60 * 24 * 2
+>     history = []
+>     s = defaultSession {minDuration = 120, totalTime = 240}
+>     ss = [s]
+>     exp = [Period s (fromGregorian 2006 2 1 16 30 0) 120 0.0
+>          , Period s (fromGregorian 2006 2 1 18 30 0) 120 0.0]
 
 > test_best = TestCase $ do
 >       w      <- getWeather . Just $ dt
@@ -35,6 +91,17 @@
 >     expScore = 10.177312
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
+
+TBF: constrain has not been fully implemented yet
+
+> test_constrain = TestCase $ do
+>     assertEqual "ScheduleTests_test_constrain_1" ss (constrain [] ss)
+>     assertEqual "ScheduleTests_test_constrain_2" ss (constrain [p1] ss)
+>   where
+>     ss = getOpenPSessions
+>     cv = head $ findPSessionByName "CV"
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     p1 = Period cv dt (minDuration cv) 0.0
 
 TBF: this is not passing - but was it meant to copy a python test?
 
