@@ -364,7 +364,7 @@ Simulator Harness
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     results <- simulate sched w rs dt dur int history ss
+>     (results, canceled) <- simulate sched w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     -- text reports 
@@ -374,6 +374,9 @@ Simulator Harness
 >     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
 >     let gaps = findScheduleGaps results
 >     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
+>     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
+>     print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
+>     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >   where

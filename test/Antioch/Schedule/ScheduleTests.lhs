@@ -25,14 +25,12 @@ similar test in SimulationTests.
 >     w <- getWeather $ Just wdt
 >     sf <- genScore ss
 >     result <- runScoring w rs $ scheduleMinDuration sf dt dur history ss
->     print result
 >     assertEqual "ScheduleTests_test_schedMinDuration" exp result
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 2  1  0 0 0
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 1
->     --int = 60 * 24 * 1
 >     history = []
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
@@ -58,8 +56,7 @@ TBF: reveils bug.
 >     w <- getWeather $ Just wdt
 >     sf <- genScore ss
 >     result <- runScoring w rs $ scheduleMinDuration sf dt dur history ss
->     print result
->     assertEqual "ScheduleTests_test_schedMinDuration" exp result
+>     assertEqual "ScheduleTests_test_schedMinDuration_starvation" exp result
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 2  1  0 0 0

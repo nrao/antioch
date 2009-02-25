@@ -8,7 +8,7 @@
 > import Antioch.Utilities    (between, rad2hr)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
-> import Data.List            (find, partition)
+> import Data.List            (find, partition, nub)
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
@@ -19,7 +19,7 @@
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
 >     liftIO $ print $ length ss
 >     start  <- liftIO getCPUTime
->     result <- simulate sched w rs dt dur int history ss
+>     (result, _) <- simulate sched w rs dt dur int history [] ss
 >     stop   <- liftIO getCPUTime
 >     liftIO $ putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     return result
@@ -43,27 +43,29 @@ TBF: only have implemented time left so far ...
 >   where
 >     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s) 
 
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Session] -> IO [Period]
-> simulate sched w rs dt dur int history sessions
->     | dur < int  = return []
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Period])
+> simulate sched w rs dt dur int history canceled sessions
+>     | dur < int  = return ([], [])
 >     | otherwise  = do
 >         w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
 >         sf <- genScore sessions
 >         let schedSessions = filterSessions sessions
 >         --liftIO $ putStrLn $ "numSess before &  after filter: " ++ (show . length $ sessions) ++ ", " ++ (show . length $ schedSessions)
 >         --liftIO $ putStrLn $ "num backups: " ++ show (length [s | s <- schedSessions, backup s])
->         --liftIO $ putStrLn $ "starting schedule at: " ++ (toSqlString start)
+>         --liftIO $ putStrLn $ "canceled so far: " ++ (show canceled)
+>         --liftIO $ putStrLn $ "starting schedule at: " ++ (toSqlString start) ++ " for: " ++ (show int') ++ " using w dt: " ++ (toSqlString (negate hint `addMinutes'` dt))
 >         schedPeriods <- runScoring'' w' rs $ sched sf start int' history schedSessions
 >         --liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
 >         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods schedSessions
 >         --liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
->         --let canceled = findCanceledPeriods schedPeriods obsPeriods
->         --liftIO $ putStrLn $ "canceled periods: " ++ show (canceled)
+>         let newCanceled = findCanceledPeriods schedPeriods obsPeriods 
+>         let canceled' = nub (reverse newCanceled ++ canceled)
 >         let sessions' = updateSessions sessions obsPeriods
+>         --liftIO $ putStrLn $ "canceled periods: " ++ show (newCanceled)
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions' 
->         return $ obsPeriods ++ result
+>         (result, canceled) <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) canceled' sessions' 
+>         return $ (obsPeriods ++ result, nub (canceled ++ newCanceled))
 >   where
 >     -- make sure we avoid an infinite loop in the case that a period of time
 >     -- can't be scheduled with anyting
