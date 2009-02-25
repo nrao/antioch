@@ -135,8 +135,8 @@ Only 20 percent of the low freq. sessions are backups
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
->     totalTime  <- choose (2*60, 30*60)
->     minD       <- choose (2*60, 4*60)
+>     totalTime  <- choose (6*60, 30*60)
+>     minD       <- choose (2*60, 6*60)
 >     maxD       <- choose (6*60, 8*60)
 >     return $ defaultSession {
 >                  project        = project
