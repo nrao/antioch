@@ -97,22 +97,12 @@ TBF: constrain has not been fully implemented yet
 >     -- one away from maxing out this session
 >     assertEqual "ScheduleTests_test_constrain_3" ss (constrain (tail maxTPs) ss)
 >     -- adding one more period should use up all it's time
->     print "timeLeft CV: "
->     print $ totalTime cv
->     print $ totalUsed cv
->     print $ timeUsedHistory maxTPs cv
->     print $ timeLeftHistory maxTPs cv
 >     assertEqual "ScheduleTests_test_constrain_4" ssMinusCV (constrain maxTPs ss)
 >     -- the same type of checks, but using the session's periods field
->     print "timeLeft almost: "
->     print $ totalTime almostBookedSession
->     print $ totalUsed almostBookedSession
->     print $ timeUsedHistory [] almostBookedSession
 >     assertEqual "ScheduleTests_test_constrain_5" (almostBookedSession:ss) (constrain [] (almostBookedSession:ss))
 >     assertEqual "ScheduleTests_test_constrain_6" ss (constrain [] (bookedSession:ss))
 >     -- now confuse things by placing identical periods in both the
 >     -- periods list, *and* the session's periods
->     print $ timeLeftHistory [Period s' dt 1 0.0] almostBookedSession
 >     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period s' dt 1 0.0] (almostBookedSession:ss))
 >     
 >   where
