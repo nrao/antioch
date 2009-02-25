@@ -93,7 +93,7 @@ TBF: this is retaining the bad TP instead of replacing it w/ dead time
 >     w <- getWeather $ Just dt
 >     result <- simulate scheduleMinDuration w rs dt dur int history ss
 >     print result
->     assertEqual "SimulationTests_test_schedMinDuration_1" exp result
+>     assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup" exp result
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 4 6 0 0
@@ -124,7 +124,7 @@ TBF: this is overallocating periods in the sim's first call to schMinDuration
 >     w <- getWeather $ Just dt
 >     result <- simulate scheduleMinDuration w rs dt dur int history ss
 >     print result
->     assertEqual "SimulationTests_test_sim_schedMinDuration_backup" exp result
+>     assertEqual "SimulationTests_test_sim_schedMinDuration_starvation" exp result
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 1 0 0 0
