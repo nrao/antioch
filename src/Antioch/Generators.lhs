@@ -105,7 +105,7 @@ Generates RA and Dec based on skyType:
 >   where
 >     galacticCenter = do
 >         dec <- choose (-27.0, -29.0)
->         return (deg2rad 18.0, deg2rad dec)
+>         return (hrs2rad 18.0, deg2rad dec)
 >     galactic = do
 >         longitude <- choose (0.0, 250.0)
 >         return $ slaGaleq (deg2rad longitude) 0.0
