@@ -9,7 +9,7 @@
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List            (find, partition)
-> import Data.Maybe           (fromMaybe)
+> import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
 > simulate06 :: Strategy -> IO [Period]
@@ -51,15 +51,18 @@ TBF: only have implemented time left so far ...
 >         sf <- genScore sessions
 >         let schedSessions = filterSessions sessions
 >         --liftIO $ putStrLn $ "numSess before &  after filter: " ++ (show . length $ sessions) ++ ", " ++ (show . length $ schedSessions)
+>         --liftIO $ putStrLn $ "num backups: " ++ show (length [s | s <- schedSessions, backup s])
 >         --liftIO $ putStrLn $ "starting schedule at: " ++ (toSqlString start)
 >         schedPeriods <- runScoring'' w' rs $ sched sf start int' history schedSessions
 >         --liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
 >         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods schedSessions
 >         --liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
+>         --let canceled = findCanceledPeriods schedPeriods obsPeriods
+>         --liftIO $ putStrLn $ "canceled periods: " ++ show (canceled)
 >         let sessions' = updateSessions sessions obsPeriods
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions'
+>         result <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) sessions' 
 >         return $ obsPeriods ++ result
 >   where
 >     -- make sure we avoid an infinite loop in the case that a period of time
@@ -72,38 +75,47 @@ TBF: only have implemented time left so far ...
 >     end    = int `addMinutes'` dt
 >     int'   = end `diffMinutes'` start
 
+> findCanceledPeriods :: [Period] -> [Period] -> [Period]
+> findCanceledPeriods scheduled observed = filter (isPeriodCanceled observed) scheduled
+
+> 
+> isPeriodCanceled :: [Period] -> Period -> Bool
+> isPeriodCanceled ps p = not $ isJust $ find (==p) ps
+
+Replace any badly performing periods with either backups or deadtime.
+
 > scheduleBackups :: ScoreFunc -> [Period] -> [Session] -> Scoring [Period]
 > scheduleBackups _  [] _  = return []
-> scheduleBackups _  ps [] = return ps
-> scheduleBackups sf ps ss = case backupSessions of
->       [] -> return ps -- no backups?  then don't change the schedule!
->       _  -> mapM (scheduleBackup sf backupSessions) ps
+> scheduleBackups sf ps ss = do
+>     sched' <- mapM (scheduleBackup sf ss) ps
+>     let sched = mapMaybe id sched'
+>     return sched
+
+If a scheduled period fails it's Minimum Observing Conditions criteria,
+then try to replace it with the best backup that can (according to it's
+min and max duration limits).  If no suitable backup can be found, then
+schedule this as deadtime.
+
+> scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
+> scheduleBackup sf ss p = do 
+>   moc <- minimumObservingConditions (startTime p) (session p)
+>   if fromMaybe False moc then return $ Just p else
+>     if length backupSessions == 0
+>     then return Nothing -- no appropriate backups -> Deadtime!
+>     else replaceWithBackup sf backupSessions p
 >   where
->     backupSessions  = [ s | s <- ss, backup s]
->     
+>     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
 
-Tries to schedule a backup for the given period, but gaurds against there
-being no backups that will fit in this period's duration
-TBF: if there is no backup candidate for this bad period, should we really
-be keeping the bad period?  Seems like that should be telescope dead time
+Find the best backup for a given period - if the backup in turn fails it's
+MOC, then, since it is likely all the others will as well, then schedule
+deadtime.
 
-> scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring Period
-> scheduleBackup sf ss p = case length candidates of
->   0 -> return p -- no backups that fit here? then use orig. bad period!
->   _ -> scheduleBackup' sf candidates p 
->   where
->     candidates = [s | s <- ss, between (duration p) (minDuration s) (maxDuration s)]
-
-Tries to schedule a backup for the given period, assuming there are candidates
-
-> scheduleBackup' :: ScoreFunc -> [Session] -> Period -> Scoring Period 
-> scheduleBackup' sf candidates p = do
->   moc        <- minimumObservingConditions (startTime p) (session p)
->   (s, score) <- best (averageScore sf (startTime p)) candidates
->   if fromMaybe False moc then return p else
->     if score > 0.0 
->     then return $ Period s (startTime p) (duration p) score
->     else return p
+> replaceWithBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
+> replaceWithBackup sf backups p = do
+>   (s, score) <- best (averageScore sf (startTime p)) backups
+>   if score > 0.0
+>     then return $ Just $ Period s (startTime p) (duration p) score
+>     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
 > updateSessions sessions periods = map update sessions
 >   where
