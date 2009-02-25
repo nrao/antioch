@@ -6,7 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
-> import Data.List            (zipWith4)
+> import Data.List            (zipWith, zipWith4, (\\))
 > import Control.Monad.Trans  (lift)
 > import Control.Monad        (liftM)
 > import Test.HUnit
@@ -94,11 +94,44 @@ TBF: constrain has not been fully implemented yet
 > test_constrain = TestCase $ do
 >     assertEqual "ScheduleTests_test_constrain_1" ss (constrain [] ss)
 >     assertEqual "ScheduleTests_test_constrain_2" ss (constrain [p1] ss)
+>     -- one away from maxing out this session
+>     assertEqual "ScheduleTests_test_constrain_3" ss (constrain (tail maxTPs) ss)
+>     -- adding one more period should use up all it's time
+>     print "timeLeft CV: "
+>     print $ totalTime cv
+>     print $ totalUsed cv
+>     print $ timeUsedHistory maxTPs cv
+>     print $ timeLeftHistory maxTPs cv
+>     assertEqual "ScheduleTests_test_constrain_4" ssMinusCV (constrain maxTPs ss)
+>     -- the same type of checks, but using the session's periods field
+>     print "timeLeft almost: "
+>     print $ totalTime almostBookedSession
+>     print $ totalUsed almostBookedSession
+>     print $ timeUsedHistory [] almostBookedSession
+>     assertEqual "ScheduleTests_test_constrain_5" (almostBookedSession:ss) (constrain [] (almostBookedSession:ss))
+>     assertEqual "ScheduleTests_test_constrain_6" ss (constrain [] (bookedSession:ss))
+>     -- now confuse things by placing identical periods in both the
+>     -- periods list, *and* the session's periods
+>     print $ timeLeftHistory [Period s' dt 1 0.0] almostBookedSession
+>     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period s' dt 1 0.0] (almostBookedSession:ss))
+>     
 >   where
+>     dt  = fromGregorian 2006 2 1 0 0 0
+>     dt2 = fromGregorian 2006 2 1 1 0 0
 >     ss = getOpenPSessions
 >     cv = head $ findPSessionByName "CV"
->     dt = fromGregorian 2006 2 1 0 0 0
+>     ssMinusCV = ss \\ [cv]
+>     s' = defaultSession {sId = 1000, totalTime = 2, minDuration = 1}
+>     almostBookedSession = s' {periods = [Period s' dt 1 0.0]}
+>     bookedSession = s' {periods = [Period s' dt 1 0.0, Period s' dt2 1 0.0]}
 >     p1 = Period cv dt (minDuration cv) 0.0
+>     maxNumTPs = (totalTime cv) `div` (minDuration cv)
+>     maxTPs' = replicate maxNumTPs p1
+>     dts = [(hr*60) `addMinutes'` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 
+>     maxTPs = zipWith adjustPeriod maxTPs' dts
+>       where
+>         adjustPeriod p dt = p {startTime = dt}
+
 
 TBF: this is not passing - but was it meant to copy a python test?
 

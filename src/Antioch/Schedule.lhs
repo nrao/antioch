@@ -12,6 +12,8 @@
 >   , obeySchedDuration
 >   , best
 >   , constrain
+>   , timeLeftHistory
+>   , timeUsedHistory
 >   ) where
 
 > import Antioch.DateTime  (DateTime, addMinutes', fromGregorian, toSqlString)
@@ -21,7 +23,7 @@
 > import Antioch.Generators
 > import Control.Monad     (liftM)
 > import Data.Foldable     (foldlM, foldr')
-> import Data.List         (foldl', find, delete)
+> import Data.List         (foldl', find, delete, nub, (\\))
 > import Data.Maybe        (maybe, maybeToList, isJust)
 > import qualified Antioch.Schedule.Pack as P
 > import Test.QuickCheck hiding (frequency)
@@ -98,15 +100,23 @@ strategy as well.  Examples are:
    * timeBetween - TBF: if a Session has been scheduled recently, we may have to wait till we can do so again.
    * TBF: what else?
 
-> constrain _ = id
-
-> {-
 > constrain :: [Period] -> [Session] -> [Session]
-> constrain ps ss = filter (timeLeft ps) ss
+> constrain ps ss = filter (timeLeftHistory ps) ss
+
+Is there time for this session?  Taking into account both the session's periods
+and the periods in the history?
+
+> timeLeftHistory :: [Period] -> Session -> Bool
+> timeLeftHistory history s = (totalTime s) - (timeUsedHistory history s) >= minDuration s
+
+The list of periods (ps) may contain redundant versions of the
+sessions' periods list.  
+
+> timeUsedHistory :: [Period] -> Session -> Minutes
+> timeUsedHistory ps s = (sum [duration p | p <- uniquePeriods ps s]) + (totalUsed s) 
 >   where
->     timeLeft ps s = (totalTime s) - (timeUsedHere ps s) >= minDuration s
->     timeUsedHere ps s = (sum [duration p | p <- ps, session p == s]) + (totalUsed s)
-> -}
+>     uniquePeriods ps s = [p | p <- ps, s == session p] \\ periods s
+> 
 
 Select the highest scoring element of a list.
 
