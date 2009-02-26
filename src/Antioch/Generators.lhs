@@ -206,11 +206,13 @@ then an hour.  TBD: use T.frequency
 >      session   <- genSession  
 >      startTime <- genStartTime
 >      duration  <- genDuration
->      let period = Period {
+>      let period = defaultPeriod {
 >          session   = session
 >        , startTime = startTime
 >        , duration  = duration
 >        , pScore    = 0.0
+>        , pForecast = startTime
+>        , pBackup   = False
 >        }
 >      return period
 
@@ -257,7 +259,7 @@ TBF: we can make this more sophisticated.
 >     pDur' <- choose (min maxL (minDuration sess), min maxL (maxDuration sess))
 >     let pDur = round2quarter pDur' --quarter * (pDur' `div` quarter)
 >     let fits = minDuration sess <= maxL
->     return $ if not fits then Nothing else Just $ Period sess dt pDur 0.0 
+>     return $ if not fits then Nothing else Just $ Period sess dt pDur 0.0 dt False
 
 Check this generator itself: make sure the periods adhere to expected properties
 

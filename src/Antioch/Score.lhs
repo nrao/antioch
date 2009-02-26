@@ -178,7 +178,7 @@ Generate a scoring function having the pressure factors.
 
 > genRightAscensionPressure :: [Session] -> Scoring ScoreFunc
 > genRightAscensionPressure sessions = do
->     tell [RaPressureHistory factors]
+>     -- tell [RaPressureHistory factors]
 >     return $ rightAscensionPressure factors accessor
 >   where
 >     accessor s = (round . rad2hr . ra $ s) `mod` 24
@@ -189,7 +189,7 @@ Select the appropriate pressure factor from the array of pressures.
 
 > frequencyPressure :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > frequencyPressure fs f _ a =
->                      factor "frequencyPressure" . Just $ sqrt (fs ! f a)
+>     factor "frequencyPressure" . Just $ sqrt (fs ! f a)
 
 > rightAscensionPressure     :: Ix a => Array a Float -> (Session -> a) -> ScoreFunc
 > rightAscensionPressure fs f _ a =

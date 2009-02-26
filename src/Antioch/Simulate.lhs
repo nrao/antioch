@@ -26,7 +26,7 @@
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 1 2 0 0 0
->     dur = 60 * 24 * 180
+>     dur = 60 * 24 * 30
 >     int = 60 * 24 * 1
 >     history = []
   
@@ -58,8 +58,8 @@ TBF: only have implemented time left so far ...
 >                 scheduleBackups sf schedPeriods schedSessions
 >             let sessions' = updateSessions sessions obsPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->             -- This print is a necessary hack to force evaluation of the pressure histories.
->             liftIO $ print t1
+>             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>             liftIO $ writeFile "/dev/null" (show t1)
 >             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse obsPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
 >       where
 >         -- make sure we avoid an infinite loop in the case that a period of time
@@ -103,9 +103,10 @@ Tries to schedule a backup for the given period, assuming there are candidates
 > scheduleBackup' sf candidates p = do
 >   moc        <- minimumObservingConditions (startTime p) (session p)
 >   (s, score) <- best (averageScore sf (startTime p)) candidates
+>   w <- weather
 >   if fromMaybe False moc then return p else
 >     if score > 0.0 
->     then return $ Period s (startTime p) (duration p) score
+>     then return $ Period s (startTime p) (duration p) score (forecast w) True
 >     else return p
 
 > updateSessions sessions periods = map update sessions
