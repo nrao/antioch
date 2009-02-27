@@ -47,18 +47,21 @@ TBF: only have implemented time left so far ...
 > simulate sched w rs dt dur int history canceled sessions
 >     | dur < int  = return ([], [])
 >     | otherwise  = do
->         w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
+>         --liftIO $ putStrLn $ "calling simulate w/: " ++ (toSqlString dt) ++ ", " ++ (show dur) ++ ", " ++ (show int)
+>         let wdt = (negate hint `addMinutes'` dt)
+>         w' <- liftIO $ newWeather w $ Just wdt
 >         sf <- genScore sessions
 >         let schedSessions = filterSessions sessions
 >         --liftIO $ putStrLn $ "numSess before &  after filter: " ++ (show . length $ sessions) ++ ", " ++ (show . length $ schedSessions)
 >         --liftIO $ putStrLn $ "num backups: " ++ show (length [s | s <- schedSessions, backup s])
 >         --liftIO $ putStrLn $ "canceled so far: " ++ (show canceled)
->         --liftIO $ putStrLn $ "starting schedule at: " ++ (toSqlString start) ++ " for: " ++ (show int') ++ " using w dt: " ++ (toSqlString (negate hint `addMinutes'` dt))
+>         --liftIO $ putStrLn $ "calling strategy at: " ++ (toSqlString start) ++ " for: " ++ (show int') ++ " using w dt: " ++ (toSqlString wdt)
 >         schedPeriods <- runScoring'' w' rs $ sched sf start int' history schedSessions
 >         --liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
 >         -- now see if all these new periods meet Min. Obs. Conditions         
 >         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods schedSessions
->         --liftIO $ putStrLn $ "obsPeriods: " ++ show (obsPeriods)
+>         --liftIO $ putStrLn $ (show obsPeriods)
+>         --liftIO $ putStrLn $ "obsPeriods ending at:" ++ show (toSqlString ((duration (last obsPeriods)) `addMinutes'` (startTime (last obsPeriods))))
 >         let newCanceled = findCanceledPeriods schedPeriods obsPeriods 
 >         let canceled' = nub (reverse newCanceled ++ canceled)
 >         let sessions' = updateSessions sessions obsPeriods
@@ -114,8 +117,10 @@ deadtime.
 
 > replaceWithBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
 > replaceWithBackup sf backups p = do
+>   -- TBf: make sure that we are using a weather w/ dt == startTime p
 >   (s, score) <- best (averageScore sf (startTime p)) backups
->   if score > 0.0
+>   moc        <- minimumObservingConditions (startTime p) s 
+>   if score > 0.0 && fromMaybe False moc -- TBF: really use the moc
 >     then return $ Just $ Period s (startTime p) (duration p) score
 >     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
