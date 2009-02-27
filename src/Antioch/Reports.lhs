@@ -358,8 +358,9 @@ Simulator Harness
 > generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> Int -> IO ()
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
->     let g   = mkStdGen 1
->     let ss' = generate 0 g $ genSessions 550
+>     let g   = mkStdGen 3
+>     let projs = generate 0 g $ genProjects 325 
+>     let ss' = concatMap sessions projs
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
