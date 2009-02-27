@@ -82,6 +82,9 @@ To Do List (port from Statistics.py):
 > sessionTPQtrs :: [Period] -> [(Minutes, Int)]
 > sessionTPQtrs = count (duration) [0, quarter..(7*60)]
 
+Counts how many sessions have a min duration for each quarter hour.
+For randomly generated data, this should be a flat distribution.
+
 > sessionMinDurationQtrs :: [Session] -> [(Minutes, Int)]
 > sessionMinDurationQtrs = count (minDuration) [0, quarter..(7*60)]
 
@@ -90,6 +93,14 @@ To Do List (port from Statistics.py):
 
 > sessionMinDuration :: [Session] -> [(Minutes, Minutes)]
 > sessionMinDuration = histogram [0, quarter..(7*60)] . (minDuration `vs` minDuration)
+
+What is the maximum amount of time that can be scheduled using the min duration.
+
+> sessionMinDurMaxTime :: [Session] -> [(Minutes, Minutes)]
+> sessionMinDurMaxTime = histogram [0, quarter..(7*60)] . (maxNumTPTime `vs` minDuration)
+>   where
+>     maxNumTPTime s = (maxNumTPs s) * (minDuration s)
+>     maxNumTPs s = (totalTime s) `div` (minDuration s)
 
 
 Example of scatter plot data w/ datetime:

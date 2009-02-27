@@ -8,8 +8,8 @@
 > import Antioch.Utilities    (between, rad2hr)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
-> import Data.List            (find, partition)
-> import Data.Maybe           (fromMaybe)
+> import Data.List            (find, partition, nub)
+> import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
 > simulate06 :: Strategy -> IO ([Period], [Trace])
@@ -19,7 +19,7 @@
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
 >     liftIO $ print $ length ss
 >     start  <- liftIO getCPUTime
->     result <- simulate sched w rs dt dur int history ss
+>     result <- simulate sched w rs dt dur int [] ss
 >     stop   <- liftIO getCPUTime
 >     liftIO $ putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     return result
@@ -75,39 +75,48 @@ TBF: only have implemented time left so far ...
 > forceSeq []     = []
 > forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
 
+> findCanceledPeriods :: [Period] -> [Period] -> [Period]
+> findCanceledPeriods scheduled observed = filter (isPeriodCanceled observed) scheduled
+
+> 
+> isPeriodCanceled :: [Period] -> Period -> Bool
+> isPeriodCanceled ps p = not $ isJust $ find (==p) ps
+
+Replace any badly performing periods with either backups or deadtime.
+
 > scheduleBackups :: ScoreFunc -> [Period] -> [Session] -> Scoring [Period]
 > scheduleBackups _  [] _  = return []
-> scheduleBackups _  ps [] = return ps
-> scheduleBackups sf ps ss = case backupSessions of
->       [] -> return ps -- no backups?  then don't change the schedule!
->       _  -> mapM (scheduleBackup sf backupSessions) ps
+> scheduleBackups sf ps ss = do
+>     sched' <- mapM (scheduleBackup sf ss) ps
+>     let sched = mapMaybe id sched'
+>     return sched
+
+If a scheduled period fails it's Minimum Observing Conditions criteria,
+then try to replace it with the best backup that can (according to it's
+min and max duration limits).  If no suitable backup can be found, then
+schedule this as deadtime.
+
+> scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
+> scheduleBackup sf ss p = do 
+>   moc <- minimumObservingConditions (startTime p) (session p)
+>   if fromMaybe False moc then return $ Just p else
+>     if length backupSessions == 0
+>     then return Nothing -- no appropriate backups -> Deadtime!
+>     else replaceWithBackup sf backupSessions p
 >   where
->     backupSessions  = [ s | s <- ss, backup s]
->     
+>     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
 
-Tries to schedule a backup for the given period, but gaurds against there
-being no backups that will fit in this period's duration
-TBF: if there is no backup candidate for this bad period, should we really
-be keeping the bad period?  Seems like that should be telescope dead time
+Find the best backup for a given period - if the backup in turn fails it's
+MOC, then, since it is likely all the others will as well, then schedule
+deadtime.
 
-> scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring Period
-> scheduleBackup sf ss p = case length candidates of
->   0 -> return p -- no backups that fit here? then use orig. bad period!
->   _ -> scheduleBackup' sf candidates p 
->   where
->     candidates = [s | s <- ss, between (duration p) (minDuration s) (maxDuration s)]
-
-Tries to schedule a backup for the given period, assuming there are candidates
-
-> scheduleBackup' :: ScoreFunc -> [Session] -> Period -> Scoring Period 
-> scheduleBackup' sf candidates p = do
->   moc        <- minimumObservingConditions (startTime p) (session p)
->   (s, score) <- best (averageScore sf (startTime p)) candidates
+> replaceWithBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
+> replaceWithBackup sf backups p = do
+>   (s, score) <- best (averageScore sf (startTime p)) backups
 >   w <- weather
->   if fromMaybe False moc then return p else
->     if score > 0.0 
->     then return $ Period s (startTime p) (duration p) score (forecast w) True
->     else return p
+>   if score > 0.0
+>     then return $ Just $ Period s (startTime p) (duration p) score (forecast w) True
+>     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
 > updateSessions sessions periods = map update sessions
 >   where

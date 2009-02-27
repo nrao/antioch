@@ -1,7 +1,7 @@
 > module Antioch.Reports where
 
 > import Antioch.DateTime
-> import Antioch.Generators (genProjects, genSessions, genPeriods, generateVec)
+> import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.Plots
 > import Antioch.Score
 > import Antioch.Schedule
@@ -231,15 +231,14 @@ simHistTP
 >     x = "Session TP [Hours]"
 >     y = "Counts"
 
-simHistTPQtrs - how are Session minduration and Period duration distributed in terms of a simple count?
+simHistTPQtrs 
 
 > histSessTPQtrs :: StatsPlot
 > histSessTPQtrs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs]
+>     histogramPlot (histAttrs t x y fn) tpDurs
 >   where
->     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurationQtrs ss]
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTPQtrs ps]
->     t = "MinDuration & TP Counts Historgram"
+>     t = "TP Counts Historgram"
 >     x = "Duration [Minutes]"
 >     y = "Counts"
 
@@ -247,11 +246,11 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [minDurs, tpDurs]
+>     histogramPlots (histAttrs t x y fn) $ [tpDurs, maxTPTime]
 >   where
->     minDurs = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDuration ss]
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
->     t = "MinDuration & TP Minutes Historgram"
+>     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
+>     t = "TP Minutes & Max TP Minutes Historgram"
 >     x = "Duration [Minutes]"
 >     y = "Counts [Minutes]"
 
@@ -365,9 +364,20 @@ Simulator Harness
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     (results, _) <- simulate sched w rs dt dur int history ss
+>     (results, canceled) <- simulate sched w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     -- text reports 
+>     print "Simulation Schedule Checks: "
+>     if (internalConflicts results) then print "  Overlaps in Schedule! " else print "  No overlaps in Schedule."
+>     if (obeyDurations results) then print "  Min/Max Durations Honored" else print "  Min/Max Durations NOT Honored!"
+>     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
+>     let gaps = findScheduleGaps results
+>     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
+>     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
+>     print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
+>     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
+>     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >   where
 >     rs      = []
@@ -375,3 +385,12 @@ Simulator Harness
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 >     history = []
+
+> findScheduleGaps :: [Period] -> [(DateTime, Minutes)]
+> findScheduleGaps []     = []
+> findScheduleGaps (p:[]) = []
+> findScheduleGaps (p:ps) | gap p ps > 1 = (endTime p, gap p ps) : findScheduleGaps ps
+>                         | otherwise    = findScheduleGaps ps
+>   where 
+>     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
+
