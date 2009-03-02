@@ -62,18 +62,18 @@
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 > test_frequencyPressure = TestCase $ do
->     freqPressure <- genFrequencyPressure pSessions
+>     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
 >     assertScoringResult "test_frequencyPressure generated" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
 
 > test_frequencyPressureComparison = TestCase $ do
->     freqPressure <- genFrequencyPressure pSessions
+>     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
 >   where
 >     ss = concatMap sessions pTestProjects
 >     -- s = head $ filter (\s -> "CV" == (sName s)) ss
 
 > test_rightAscensionPressure = TestCase $ do
->     raPressure <- genRightAscensionPressure pSessions
+>     raPressure <- runScoring undefined [] $ genRightAscensionPressure pSessions
 >     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
 
 > test_receiver = TestCase $ do
@@ -337,7 +337,8 @@ TBF are these partitions stil useful?
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     fs <- runScoring w [] $ lift (genScore ss) >>= \f -> f dt s
+>     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
+>     print fs
 >     let result = eval fs
 >     assertEqual "test_scoreCV" (5.4118563e-3) result  
 
@@ -349,23 +350,28 @@ to use in conjunction with Pack tests.
 >     let dt = fromGregorian 2006 10 1 18 0 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     fs <- runScoring w [] $ lift (genScore ss) >>= \f -> f dt s
+>     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
 >     let result = eval fs
 >     assertAlmostEqual "test_scoreCV2" 3 3.9875174 result  
 
 > test_avgScoreForTime = TestCase $ do
 >     -- score on top of weather
 >     w <- getWeather $ Just dt
->     sf <- genScore ss
->     fs <- runScoring w [] (sf dt s)
+>     fs <- runScoring w [] $ do
+>         sf <- genScore ss
+>         sf dt s
 >     let w1Score = eval fs
 >     -- use different forecast; should get different score
 >     w <- getWeather $ Just dt2
->     fs <- runScoring w [] (sf dt s)
+>     fs <- runScoring w [] $ do
+>         sf <- genScore ss
+>         sf dt s
 >     let w2Score = eval fs
 >     assert (w1Score /= w2Score) 
 >     -- now try to get the original score again, despite current weather obj
->     w3Score <- runScoring w [] $ avgScoreForTime sf dt 15 s
+>     w3Score <- runScoring w [] $ do
+>         sf <- genScore ss
+>         avgScoreForTime sf dt 15 s
 >     assertEqual "test_avgScoreForTime" w1Score w3Score
 >   where
 >     dt = fromGregorian 2006 10 1 18 0 0
@@ -377,8 +383,9 @@ to use in conjunction with Pack tests.
 > test_avgScoreForTime2 = TestCase $ do
 >     -- weather that shouldn't get used
 >     w <- getWeather $ Just dummytime
->     sf <- genScore [s]
->     avgScore <- runScoring w [] $ avgScoreForTime sf starttime (24*60) s
+>     avgScore <- runScoring w [] $ do
+>         sf <- genScore [s]
+>         avgScoreForTime sf starttime (24*60) s
 >     assertEqual "test_avgScoreForTime2" exp avgScore
 >   where
 >     dummytime = fromGregorian 2006 11 7 12 0 0
@@ -392,16 +399,16 @@ Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_score = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     fs <- genScore [sess]
->--     let score' w dt = do
->--         s <- runScoring w [] (fs dt sess)
->--         return $ eval s
+>     let score' w dt = runScoring w [] $ do
+>         fs <- genScore [sess]
+>         s <- fs dt sess
+>         return $ eval s
 >     scores <- mapM (score' w) times
 >     assertEqual "test_score" expected scores
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     score' w dt = runScoring w [] $ do
->         fs <- lift $ genScore [sess]
+>         fs <- genScore [sess]
 >         s  <- fs dt sess
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
@@ -425,15 +432,17 @@ plus 39 quarters.
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     fs <- genScore [sess]
->     let score' w dt = do
->         s <- runScoring w [] (fs dt sess)
+>     let score' w dt = runScoring w [] $ do
+>         fs <- genScore [sess]
+>         s <- fs dt sess
 >         return $ eval s
 >     scores <- mapM (score' w) times
 >     let scoreTotal = addScores scores
 >     let expected = 0.0
 >     assertEqual "test_score1" expected scoreTotal
->     avgScore <- runScoring w [] $ averageScore fs starttime sess
+>     avgScore <- runScoring w [] $ do
+>         fs <- genScore [sess]
+>         averageScore fs starttime sess
 >     assertEqual "test_score2" expected avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
@@ -447,11 +456,13 @@ Look at the scores over a range where none are zero.
 
 > test_averageScore2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     sf <- genScore [sess]
->     scores <- mapM (score' w sf) times
->     let scoreTotal = addScores scores
->     scoreTotal' <- runScoring w [] (totalScore sf dt dur sess)
->     avgScore <- runScoring w [] (averageScore sf dt sess)
+>     (scoreTotal, scoreTotal', avgScore) <- runScoring w [] $ do
+>         sf <- genScore [sess]
+>         scores <- lift $ mapM (score' w sf) times
+>         let scoreTotal = addScores scores
+>         scoreTotal' <- totalScore sf dt dur sess
+>         avgScore <- averageScore sf dt sess
+>         return (scoreTotal, scoreTotal', avgScore)
 >     assertAlmostEqual "test_averageScore2_addScores" 3 expectedTotal scoreTotal
 >     assertAlmostEqual "test_averageScore2_totalScore" 3  expectedTotal scoreTotal'
 >     assertAlmostEqual "test_averageScore2_avgScore" 3 expectedAvg avgScore

@@ -9,7 +9,7 @@
 > import Antioch.PProjects
 > import Test.HUnit
 > import Control.Monad.Reader
-> import Data.List (sort, zipWith4)
+> import Data.List (sort, zipWith6)
 
 > tests = TestList [
 >     test_NumSteps
@@ -254,13 +254,13 @@ attributes of the packing algorithm:
 >     w <- getWeather . Just $ starttime 
 >     -- create an item without a mask, i.e. no scoring
 >     item' <- runScoring w [] $ do
->         fs <- lift $ genScore [testSession]
+>         fs <- genScore [testSession]
 >         toItem fs [] testSession
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
 >     item' <- runScoring w [] $ do
->         fs <- lift $ genScore [testSession]
+>         fs <- genScore [testSession]
 >         toItem fs dts testSession
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
 >     assertEqual "test_ToItem_3" result2 item'
@@ -289,16 +289,16 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 > test_ToItem2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     result <- runScoring w [] $ do
->         fs <- lift $ genScore [sess]
+>         fs <- genScore [sess]
 >         toItem fs dts sess
 >     assertEqual "test_ToItem2" expected result
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12 * 60
 >     dts' = quarterDateTimes starttime duration 
->     fixed1 = Period defaultSession starttime 30 0.0
+>     fixed1 = Period defaultSession starttime 30 0.0 undefined False
 >     ft2 = (11*60) `addMinutes'` starttime
->     fixed2 = Period defaultSession ft2 30 0.0
+>     fixed2 = Period defaultSession ft2 30 0.0 undefined False
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
@@ -369,7 +369,7 @@ TBF: are the candidate values for cStart & cDur correct?
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft = 120 `addMinutes'` starttime
->     fixed = Period defaultSession ft 30 0.0
+>     fixed = Period defaultSession ft 30 0.0 undefined False
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed]
 >     -- TBF: are the candidate values for cStart & cDur correct?
@@ -383,9 +383,9 @@ Same test, >1 fixed
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft = 120 `addMinutes'` starttime
->     fixed1 = Period defaultSession ft 30 0.0
+>     fixed1 = Period defaultSession ft 30 0.0 undefined False
 >     ft2 = 270 `addMinutes'` starttime
->     fixed2 = Period defaultSession ft2 30 0.0
+>     fixed2 = Period defaultSession ft2 30 0.0 undefined False
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed1,fixed2]
 >     -- TBF: are the candidate values for cStart & cDur correct?
@@ -399,7 +399,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 > test_Pack1 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore [candidate]
+>         fs <- genScore [candidate]
 >         pack fs starttime duration [] [candidate]
 >     assertEqual "test_Pack1_1" 1 (length periods')
 >     assertEqual "test_Pack1_2" expPeriod (head periods')
@@ -412,7 +412,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , maxDuration = 6*60
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
->     expPeriod = Period candidate expStartTime 135 34.97986
+>     expPeriod = Period candidate expStartTime 135 34.97986 undefined False
 
 Create a long schedule from a reproducable randomly created set of sessions.
 The main value of this test is to catch changes in the packing algorithm that 
@@ -421,7 +421,7 @@ produce changes in the final result.
 > test_Pack2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration [] sess
 >     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'  
@@ -429,7 +429,7 @@ produce changes in the final result.
 >     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
->     expPeriods = zipWith4 Period ss times durs scores
+>     expPeriods = zipWith6 Period ss times durs scores (repeat undefined) (repeat False)
 >       where
 >         names = ["CV", "AS", "WV", "GB"]
 >         ids = map getPSessionId names
@@ -556,16 +556,16 @@ period's negative score in the result.
 > test_Pack3 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration [fixed] sess
 >     assertEqual "test_Pack3" expPeriods periods  
 >   where
 >     sess = concatMap sessions pTestProjects
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft1 = (4*60)  `addMinutes'` starttime
->     fixed = Period defaultSession {sId = 0} ft1 60 0.0
+>     fixed = Period defaultSession {sId = 0} ft1 60 0.0 undefined False
 >     duration = 5*60
->     p1 = Period defaultSession {sId = getPSessionId "CV"} starttime (4*60) 62.88887
+>     p1 = Period defaultSession {sId = getPSessionId "CV"} starttime (4*60) 62.88887 undefined False
 >     expPeriods  = [p1, fixed]
 
 This is the original test that exposed many of the bugs with packing
@@ -574,7 +574,7 @@ around fixed periods.
 > test_Pack4 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack4" expPeriods periods'  
 >   where
@@ -585,11 +585,11 @@ around fixed periods.
 >     ft2 = (10*60) `addMinutes'` starttime
 >     dur1 = 2*60
 >     dur2 = 4*60
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 dur2 0.0
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 undefined False
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 dur2 0.0 undefined False
 >     fixed = [fixed1, fixed2]
 >     duration = 24*60
->     expPeriods = zipWith4 Period ss times durs scores
+>     expPeriods = zipWith6 Period ss times durs scores (repeat undefined) (repeat False)
 >       where
 >         names = ["CV", "WV", "GB"]
 >         ids' = map getPSessionId names
@@ -610,7 +610,7 @@ Same as above, but with even more fixed periods
 > test_Pack5 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
->         fs <- lift $ genScore sess
+>         fs <- genScore sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack5" expPeriods periods'  
 >   where
@@ -624,13 +624,13 @@ Same as above, but with even more fixed periods
 >     d2 = (4*60)
 >     d3 = (2*60)
 >     -- TBF: scores aren't right - will show up negative!
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d1 0.0
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0
->     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d1 0.0 undefined False
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0 undefined False
+>     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0 undefined False
 >     fixed = [fixed1, fixed2, fixed3]
 >     duration = 24*60
->     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 240 0.0
->     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 4 0 0) 360 0.0
+>     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 240 0.0 undefined False
+>     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 4 0 0) 360 0.0 undefined False
 >     expPeriods = [open1, fixed1, fixed2, open2, fixed3]
 
 
@@ -712,7 +712,7 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
 >     duration = 6*60
 >     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
->     expPeriod = Period testSession starttime  (6*60) expScore
+>     expPeriod = Period testSession starttime  (6*60) expScore undefined False
 
 Here, packing duration (9 hrs) > session maxDur (6 hrs)
 
@@ -727,8 +727,8 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 >     duration = 9*60
 >     expScore1 = 69.13509 -- 5.761259 * (3 * 4) python: mean, here: sum
 >     expScore2 = 123.09145 -- 5.128810 * (6 * 4) 
->     expPeriod1 = Period testSession starttime  (3*60) expScore1 
->     expPeriod2 = Period testSession starttime2 (6*60) expScore2
+>     expPeriod1 = Period testSession starttime  (3*60) expScore1 undefined False
+>     expPeriod2 = Period testSession starttime2 (6*60) expScore2 undefined False
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Here, packing duration (7 hrs) > session maxDur (6 hrs)
@@ -744,8 +744,8 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 >     duration = 7*60
 >     expScore1 = 38.506172 -- 4.8132718634 * (2 * 4) python: mean, here: sum
 >     expScore2 = 105.408104 -- 5.2704045983 * (5 * 4) 
->     expPeriod1 = Period testSession starttime  (2*60) expScore1
->     expPeriod2 = Period testSession starttime2 (5*60) expScore2
+>     expPeriod1 = Period testSession starttime  (2*60) expScore1 undefined False
+>     expPeriod2 = Period testSession starttime2 (5*60) expScore2 undefined False
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Now, we change the test by packing using TWO sessions:
@@ -766,8 +766,8 @@ epsilon, and so is "correct".
 >     starttime2 = (4*60) `addMinutes'` pythonTestStarttime 
 >     duration = 12*60
 >     sessions = [testSession, testSession2]
->     expPeriod1 = Period testSession2 starttime  (4*60) 89.321945
->     expPeriod2 = Period testSession2 starttime2 (8*60) 163.76456
+>     expPeriod1 = Period testSession2 starttime  (4*60) 89.321945 undefined False
+>     expPeriod2 = Period testSession2 starttime2 (8*60) 163.76456 undefined False
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Session data to pack:

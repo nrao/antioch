@@ -155,6 +155,8 @@ Tying the knot.
 >   , startTime :: DateTime
 >   , duration  :: Minutes
 >   , pScore    :: Score  -- Average forecasted score
+>   , pForecast :: DateTime
+>   , pBackup   :: Bool
 >   } 
 
 > instance Show Period where
@@ -258,4 +260,6 @@ ignores their numerical scores.
 >   , startTime = fromGregorian' 2008 1 1
 >   , duration  = 0
 >   , pScore    = 0.0
+>   , pForecast = undefined
+>   , pBackup   = False
 >   }

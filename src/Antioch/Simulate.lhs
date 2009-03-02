@@ -12,14 +12,14 @@
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
-> simulate06 :: Strategy -> IO [Period]
+> simulate06 :: Strategy -> IO ([Period], [Trace])
 > simulate06 sched = do
 >     w  <- liftIO $ getWeather Nothing
 >     ps <- liftIO $ generateVec 400
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
 >     liftIO $ print $ length ss
 >     start  <- liftIO getCPUTime
->     (result, _) <- simulate sched w rs dt dur int history [] ss
+>     result <- simulate sched w rs dt dur int [] [] ss
 >     stop   <- liftIO getCPUTime
 >     liftIO $ putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     return result
@@ -43,42 +43,37 @@ TBF: only have implemented time left so far ...
 >   where
 >     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s) 
 
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Period])
-> simulate sched w rs dt dur int history canceled sessions
->     | dur < int  = return ([], [])
->     | otherwise  = do
->         --liftIO $ putStrLn $ "calling simulate w/: " ++ (toSqlString dt) ++ ", " ++ (show dur) ++ ", " ++ (show int)
->         let wdt = dt
->         w' <- liftIO $ newWeather w $ Just wdt
->         sf <- genScore sessions
->         let schedSessions = filterSessions sessions
->         --liftIO $ putStrLn $ "numSess before &  after filter: " ++ (show . length $ sessions) ++ ", " ++ (show . length $ schedSessions)
->         --liftIO $ putStrLn $ "num backups: " ++ show (length [s | s <- schedSessions, backup s])
->         --liftIO $ putStrLn $ "canceled so far: " ++ (show canceled)
->         --liftIO $ putStrLn $ "calling strategy at: " ++ (toSqlString start) ++ " for: " ++ (show int') ++ " using w dt: " ++ (toSqlString wdt)
->         schedPeriods <- runScoring'' w' rs $ sched sf start int' history schedSessions
->         --liftIO $ putStrLn $ "schedPeriods: " ++ show (schedPeriods)
->         -- now see if all these new periods meet Min. Obs. Conditions         
->         obsPeriods <- runScoring'' w' rs $ scheduleBackups sf schedPeriods schedSessions
->         --liftIO $ putStrLn $ (show obsPeriods)
->         --liftIO $ putStrLn $ "obsPeriods ending at:" ++ show (toSqlString ((duration (last obsPeriods)) `addMinutes'` (startTime (last obsPeriods))))
->         let newCanceled = findCanceledPeriods schedPeriods obsPeriods 
->         let canceled' = nub (reverse newCanceled ++ canceled)
->         let sessions' = updateSessions sessions obsPeriods
->         --liftIO $ putStrLn $ "canceled periods: " ++ show (newCanceled)
->         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->         (result, canceled) <- simulate sched w' rs (hint `addMinutes'` dt) (dur - hint) int (reverse obsPeriods ++ history) canceled' sessions' 
->         return $ (obsPeriods ++ result, nub (canceled ++ newCanceled))
+> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
+> simulate sched w rs dt dur int history canceled sessions =
+>     simulate' w dt dur history sessions [] []
 >   where
->     -- make sure we avoid an infinite loop in the case that a period of time
->     -- can't be scheduled with anyting
->     hint   = int `div` 2
->     start' = case history of
->         (h:_) -> duration h `addMinutes'` startTime h
->         _     -> dt
->     start  = max (negate hint `addMinutes'` dt) start'
->     end    = int `addMinutes'` dt
->     int'   = end `diffMinutes'` start
+>     simulate' w dt dur history sessions pAcc tAcc
+>         | dur < int  = return (pAcc, tAcc)
+>         | otherwise  = do
+>             w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
+>             let schedSessions = filterSessions sessions
+>             (obsPeriods, t1) <- runScoring' w' rs $ do
+>                 sf <- genScore sessions
+>                 schedPeriods <- sched sf start int' history schedSessions
+>                 scheduleBackups sf schedPeriods schedSessions
+>             let sessions' = updateSessions sessions obsPeriods
+>             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
+>             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>             liftIO $ writeFile "/dev/null" (show t1)
+>             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse obsPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
+>       where
+>         -- make sure we avoid an infinite loop in the case that a period of time
+>         -- can't be scheduled with anyting
+>         hint   = int `div` 2
+>         start' = case history of
+>             (h:_) -> duration h `addMinutes'` startTime h
+>             _     -> dt
+>         start  = max (negate hint `addMinutes'` dt) start'
+>         end    = int `addMinutes'` dt
+>         int'   = end `diffMinutes'` start
+
+> forceSeq []     = []
+> forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
 
 > findCanceledPeriods :: [Period] -> [Period] -> [Period]
 > findCanceledPeriods scheduled observed = filter (isPeriodCanceled observed) scheduled
@@ -119,9 +114,9 @@ deadtime.
 > replaceWithBackup sf backups p = do
 >   -- TBf: make sure that we are using a weather w/ dt == startTime p
 >   (s, score) <- best (averageScore sf (startTime p)) backups
->   moc        <- minimumObservingConditions (startTime p) s 
->   if score > 0.0 && fromMaybe False moc -- TBF: really use the moc
->     then return $ Just $ Period s (startTime p) (duration p) score
+>   w <- weather
+>   if score > 0.0
+>     then return $ Just $ Period s (startTime p) (duration p) score (forecast w) True
 >     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
 > updateSessions sessions periods = map update sessions

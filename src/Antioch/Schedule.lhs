@@ -44,8 +44,9 @@ Always schedules a session at its minimum duration.
 >         (s, score) <- best (averageScore sf dt) candidates
 >         if score > 0.0
 >           then do
+>             w <- weather
 >             let d = minDuration s
->             let p = Period s dt d score
+>             let p = Period s dt d score (forecast w) False
 >             rest <- scheduleMinDuration sf (d `addMinutes'` dt) (dur - d) (p : history) sessions
 >             return $ p : rest
 >           else
@@ -64,7 +65,8 @@ Always schedules a session at a given fixed duration.
 >         (s, score) <- best (totalScore sf dt len) sessions
 >         if score > 0.0
 >           then do
->             let p = Period s dt len score
+>             w <- weather
+>             let p = Period s dt len score (forecast w) False
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
@@ -83,7 +85,8 @@ A really dumb scheduler that just looks at the first score for a session.
 >         (s, score) <- best (liftM eval . sf dt) sessions
 >         if score > 0.0
 >           then do
->             let p = Period s dt len score
+>             w <- weather
+>             let p = Period s dt len score (forecast w) False
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
@@ -190,8 +193,9 @@ Framework for quick checking startegies
 >     w <- theWeather -- TBF: is this right?
 >     w' <- newWeather w (Just starttime)
 >     let sess = concatMap sessions ps
->     fs <- genScore sess
->     runScoring w' [] $ strategy fs starttime dur fixed' sess
+>     runScoring w' [] $ do
+>         fs <- genScore sess
+>         strategy fs starttime dur fixed' sess
 
 Make sure the pre-scheduled periods are in the final schedule.
 
