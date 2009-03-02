@@ -16,7 +16,7 @@
 > project1' = defaultProject {
 >     pId = 1
 >   , pName = "TestDB"
->   , semester = "06C"
+>   , semester = "06A"
 >   -- , timeLeft = 28740
 >   , timeTotal = 33812
 > }
@@ -244,7 +244,7 @@
 > project2' = defaultProject {
 >     pId = 2
 >   , pName = "TestThesis"
->   , semester = "06C"
+>   , semester = "06A"
 >   , thesis = True
 >   -- , timeLeft = 14*60
 >   -- , timeTotal = 14*60

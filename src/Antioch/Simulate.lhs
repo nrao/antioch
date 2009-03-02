@@ -38,10 +38,22 @@ Sessions that:
    * more ...
 TBF: only have implemented time left so far ...
 
-> filterSessions :: [Session] -> [Session]
-> filterSessions ss = filter timeLeft ss
+trimesterStartDate = [1,2,6,10]
+TBF:  we probably want something smarter in DateTime
+
+> dt2semester :: DateTime -> String
+> dt2semester dt | month < 2                  = "O5C"
+>                | 2  <= month && month < 6   = "06A"
+>                | 6  <= month && month < 10  = "06B"
+>                | 10 <= month && month <= 12 = "06C"
 >   where
->     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s) 
+>     (_, month, _) = toGregorian' dt
+
+> filterSessions :: String -> [Session] -> [Session]
+> filterSessions current_semester ss = filter isMySemester $ filter timeLeft ss
+>   where
+>     timeLeft s     = ((totalTime s) - (totalUsed s)) > (minDuration s)
+>     isMySemester s = (semester $ project s) <= current_semester
 
 > simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Period])
 > simulate sched w rs dt dur int history canceled sessions
@@ -51,7 +63,7 @@ TBF: only have implemented time left so far ...
 >         let wdt = (negate hint `addMinutes'` dt)
 >         w' <- liftIO $ newWeather w $ Just wdt
 >         sf <- genScore sessions
->         let schedSessions = filterSessions sessions
+>         let schedSessions = filterSessions (dt2semester dt) sessions
 >         --liftIO $ putStrLn $ "numSess before &  after filter: " ++ (show . length $ sessions) ++ ", " ++ (show . length $ schedSessions)
 >         --liftIO $ putStrLn $ "num backups: " ++ show (length [s | s <- schedSessions, backup s])
 >         --liftIO $ putStrLn $ "canceled so far: " ++ (show canceled)

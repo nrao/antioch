@@ -137,7 +137,10 @@ TBF: this is overallocating periods in the sim's first call to schMinDuration
 >     dur = 60 * 24 * 10
 >     int = 60 * 24 * 1
 >     history = []
->     s = defaultSession {minDuration = 120, totalTime = 240}
+>     s = defaultSession {minDuration = 120
+>                       , totalTime   = 240
+>                       , project     = defaultProject {semester = "06A"}
+>                        }
 >     ss = [s]
 >     exp = [Period s (fromGregorian 2006 2 1 16 30 0) 120 0.0
 >          , Period s (fromGregorian 2006 2 1 18 30 0) 120 0.0]

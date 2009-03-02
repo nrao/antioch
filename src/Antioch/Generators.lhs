@@ -31,7 +31,13 @@ Generate a random project name: 'A' .. 'Z'
 TBF: Currently, the idea of semester is very limited.
 
 > genSemesterName :: Gen String
-> genSemesterName = elements ["05C", "06A", "06B", "06C"]
+> genSemesterName = elements ["05C"
+>                           , "06A", "06A", "06A", "06A"
+>                           , "06B", "06B", "06B", "06B"
+>                           , "06C", "06C", "06C"
+>                            ]
+
+trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3] 
 
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
@@ -70,7 +76,7 @@ Now lets make sure we are properly generating Projects: test each attribute
 at a time:
 
 > prop_pName p = "A" <= pName p && pName p <= "Z"
-> prop_semester p = any (==(semester p)) ["07C", "08A", "08B", "08C"]
+> prop_semester p = any (==(semester p)) ["05C", "06A", "06B", "06C"]
 
 Each Project's Sessions can have a totalTime between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
