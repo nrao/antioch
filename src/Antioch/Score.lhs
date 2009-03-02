@@ -313,6 +313,28 @@ Translates the total/used times pairs into pressure factors.
 
 Scoring utilities
 
+Compute the average score for a given session over an interval, BUT:
+   * modfiy the weather to start at the time given
+   * don't reject sessions that have quarters of score zero
+This is for use when determining best backups to run.
+
+> 
+> avgScoreForTime  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
+> avgScoreForTime sf dt dur s = do
+>     w  <- weather
+>     w' <- liftIO $ newWeather w (Just dt)
+>     scores <- mapM (scoreLocal w' sf s) times 
+>     case length scores of
+>       0 -> return 0.0
+>       otherwise -> return $ (sum scores) / (fromIntegral $ length scores)
+>   where
+>     scoreLocal w' sf s dt = local (\env -> env { envWeather = w'}) $ do
+>       fs <- sf dt s
+>       return $ eval fs 
+>     numQtrs = dur `div` quarter
+>     times = [(q*quarter) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+> 
+
 Compute the average score for a given session over an interval.
 
 > averageScore :: ScoreFunc -> DateTime -> Session -> Scoring Score

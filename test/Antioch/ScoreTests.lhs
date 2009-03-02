@@ -353,14 +353,49 @@ to use in conjunction with Pack tests.
 >     let result = eval fs
 >     assertAlmostEqual "test_scoreCV2" 3 3.9875174 result  
 
+> test_avgScoreForTime = TestCase $ do
+>     -- score on top of weather
+>     w <- getWeather $ Just dt
+>     sf <- genScore ss
+>     fs <- runScoring w [] (sf dt s)
+>     let w1Score = eval fs
+>     -- use different forecast; should get different score
+>     w <- getWeather $ Just dt2
+>     fs <- runScoring w [] (sf dt s)
+>     let w2Score = eval fs
+>     assert (w1Score /= w2Score) 
+>     -- now try to get the original score again, despite current weather obj
+>     w3Score <- runScoring w [] $ avgScoreForTime sf dt 15 s
+>     assertEqual "test_avgScoreForTime" w1Score w3Score
+>   where
+>     dt = fromGregorian 2006 10 1 18 0 0
+>     dt2 = fromGregorian 2006 10 1 0 0 0
+>     ss = getOpenPSessions
+>     s = head $ findPSessionByName "CV"
+> 
+
+> test_avgScoreForTime2 = TestCase $ do
+>     -- weather that shouldn't get used
+>     w <- getWeather $ Just dummytime
+>     sf <- genScore [s]
+>     avgScore <- runScoring w [] $ avgScoreForTime sf starttime (24*60) s
+>     assertEqual "test_avgScoreForTime2" exp avgScore
+>   where
+>     dummytime = fromGregorian 2006 11 7 12 0 0
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     s = defaultSession {totalTime = 24*60, minDuration=2*60, maxDuration=6*60}
+>     expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
+>     exp = (sum expScores) / (fromIntegral $ length expScores) 
+> 
+
 Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_score = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     fs <- genScore [sess]
->     let score' w dt = do
->         s <- runScoring w [] (fs dt sess)
->         return $ eval s
+>--     let score' w dt = do
+>--         s <- runScoring w [] (fs dt sess)
+>--         return $ eval s
 >     scores <- mapM (score' w) times
 >     assertEqual "test_score" expected scores
 >   where
@@ -375,14 +410,18 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           }
->     nonZeros = [3.211515,3.219639,3.2261572,2.847124,3.0493839
+>     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 23 0.0)
+
+For defaultSession w/ totalTime = 24*60; start time is  2006 11 8 12 0 0
+plus 39 quarters.
+
+> defaultScores= [3.211515,3.219639,3.2261572,2.847124,3.0493839
 >                ,3.1298869,3.1399984,3.1896782,3.1915512,3.196607
 >                ,3.1995785,3.238325,3.2398846,3.2477117,3.2488978
 >                ,3.2764614,3.2764614,3.276668,3.276668,3.2787144
 >                ,3.2787144,3.2785401,3.278336,3.279575,3.2791672
 >                ,3.27873,3.2782738,3.2757246,3.2750547,3.2739065
 >                ,3.2730143,3.2730432,3.2713363,3.270003,3.2675853]
->     expected = (replicate 39 0.0) ++ nonZeros ++ (replicate 23 0.0)
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
