@@ -140,7 +140,6 @@ TBF: first part of this test passes, but match to python does not work.
 >     let dt = fromGregorian 2006 10 13 16 0 0
 >     w <- getWeather . Just $ dt
 >     fs <- runScoring w [] (observingEfficiency dt sGB)
->     print sGB
 >     let result = eval fs
 >     assertEqual "test_observingEfficiency" 0.100085918826 result
 >       where    
@@ -338,7 +337,6 @@ TBF are these partitions stil useful?
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
->     print fs
 >     let result = eval fs
 >     assertEqual "test_scoreCV" (5.4118563e-3) result  
 
