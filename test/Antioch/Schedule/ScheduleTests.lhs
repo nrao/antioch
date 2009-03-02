@@ -6,7 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
-> import Data.List            (zipWith, zipWith4, (\\))
+> import Data.List            (zipWith, zipWith6, (\\))
 > import Control.Monad.Trans  (lift)
 > import Control.Monad        (liftM)
 > import Test.HUnit
@@ -23,8 +23,9 @@ similar test in SimulationTests.
 
 > test_schedMinDuration = TestCase $ do
 >     w <- getWeather $ Just wdt
->     sf <- genScore ss
->     result <- runScoring w rs $ scheduleMinDuration sf dt dur history ss
+>     result <- runScoring w rs $ do
+>         sf <- genScore ss
+>         scheduleMinDuration sf dt dur history ss
 >     assertEqual "ScheduleTests_test_schedMinDuration" exp result
 >   where
 >     rs  = []
@@ -46,7 +47,7 @@ similar test in SimulationTests.
 >           , fromGregorian 2006 2 1 16 30 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith4 Period expSs dts durs scores
+>     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
 This test ensures that the scheduleMinDuratin strategy can handle running
 out of stuff to schedule, and doesn't over schedule sessions.
@@ -54,8 +55,9 @@ TBF: reveils bug.
 
 > test_schedMinDuration_starvation = TestCase $ do
 >     w <- getWeather $ Just wdt
->     sf <- genScore ss
->     result <- runScoring w rs $ scheduleMinDuration sf dt dur history ss
+>     result <- runScoring w rs $ do
+>         sf <- genScore ss
+>         scheduleMinDuration sf dt dur history ss
 >     assertEqual "ScheduleTests_test_schedMinDuration_starvation" exp result
 >   where
 >     rs  = []
@@ -65,17 +67,20 @@ TBF: reveils bug.
 >     history = []
 >     s = defaultSession {minDuration = 120, totalTime = 240}
 >     ss = [s]
->     exp = [Period s (fromGregorian 2006 2 1 16 30 0) 120 0.0
->          , Period s (fromGregorian 2006 2 1 18 30 0) 120 0.0]
+>     exp = [Period s (fromGregorian 2006 2 1 16 30 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 18 30 0) 120 0.0 undefined False]
 
 > test_best = TestCase $ do
 >       w      <- getWeather . Just $ dt
->       sf     <- genScore sess
->       (s, score) <- runScoring w [] (best (averageScore sf dt2) sess) 
+>       (s, score) <- runScoring w [] $ do
+>           sf <- genScore sess
+>           best (averageScore sf dt2) sess 
 >       assertEqual "ScheduleTests_test_best1" expSession s
 >       assertEqual "ScheduleTests_test_best2" expScore score
 >       -- make sure it can handle just one session
->       (s, score) <- runScoring w [] (best (averageScore sf dt2) [(head sess)]) 
+>       (s, score) <- runScoring w [] $ do
+>           sf <- genScore sess
+>           best (averageScore sf dt2) [(head sess)] 
 >       assertEqual "ScheduleTests_test_best3" expSession s
 >       assertEqual "ScheduleTests_test_best4" expScore score
 >       -- make sure it can handle just no sessions
@@ -103,7 +108,7 @@ TBF: constrain has not been fully implemented yet
 >     assertEqual "ScheduleTests_test_constrain_6" ss (constrain [] (bookedSession:ss))
 >     -- now confuse things by placing identical periods in both the
 >     -- periods list, *and* the session's periods
->     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period s' dt 1 0.0] (almostBookedSession:ss))
+>     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period s' dt 1 0.0 undefined False] (almostBookedSession:ss))
 >     
 >   where
 >     dt  = fromGregorian 2006 2 1 0 0 0
@@ -112,9 +117,9 @@ TBF: constrain has not been fully implemented yet
 >     cv = head $ findPSessionByName "CV"
 >     ssMinusCV = ss \\ [cv]
 >     s' = defaultSession {sId = 1000, totalTime = 2, minDuration = 1}
->     almostBookedSession = s' {periods = [Period s' dt 1 0.0]}
->     bookedSession = s' {periods = [Period s' dt 1 0.0, Period s' dt2 1 0.0]}
->     p1 = Period cv dt (minDuration cv) 0.0
+>     almostBookedSession = s' {periods = [Period s' dt 1 0.0 undefined False]}
+>     bookedSession = s' {periods = [Period s' dt 1 0.0 undefined False, Period s' dt2 1 0.0 undefined False]}
+>     p1 = Period cv dt (minDuration cv) 0.0 undefined False
 >     maxNumTPs = (totalTime cv) `div` (minDuration cv)
 >     maxTPs' = replicate maxNumTPs p1
 >     dts = [(hr*60) `addMinutes'` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 
@@ -128,8 +133,8 @@ TBF: this is not passing - but was it meant to copy a python test?
 > test_schedule_open = TestCase $ do
 >       w      <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >       result <- runScoring w rs $ do
->           sf <- lift $ genScore ss
->           (pack sf dt dur history ss)
+>           sf <- genScore ss
+>           pack sf dt dur history ss
 >       assertEqual "test_schedule_open" expected result
 >   where
 >       rs       = []

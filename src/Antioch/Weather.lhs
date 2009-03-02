@@ -36,6 +36,7 @@
 >   , minOpacity      :: Frequency -> Radians -> IO (Maybe Float)
 >   , minTSysPrime    :: Frequency -> Radians -> IO (Maybe Float)
 >   , newWeather      :: Maybe DateTime -> IO Weather
+>   , forecast        :: DateTime
 >   }
 
 > getWeather     :: Maybe DateTime -> IO Weather
@@ -59,6 +60,7 @@
 >       , minOpacity      = minOpacityf conn
 >       , minTSysPrime    = minTSysf conn
 >       , newWeather      = updateWeather conn
+>       , forecast        = now'
 >       }
 
 Used for test to ensure the year is always 2006.
