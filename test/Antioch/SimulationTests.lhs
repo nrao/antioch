@@ -23,8 +23,8 @@
 > test_sim_schedMinDuration = TestCase $ do
 >     w <- getWeather $ Just dt
 >     (result, c) <- simulate scheduleMinDuration w rs dt dur int history cnl ss
->     assertEqual "SimulationTests_test_sim_schedMinDuration" exp result
->     assertEqual "SimulationTests_test_sim_schedMinDuration_2" [] c
+>     assertEqual "SimulationTests_test_sim_schedMinDuration" (take 12 exp) (take 12 result)
+>     assertEqual "SimulationTests_test_sim_schedMinDuration_2" canceled c
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 1 0 0 0
@@ -39,21 +39,23 @@
 >     va = head $ findPSessionByName "VA"
 >     tx = head $ findPSessionByName "TX"
 >     wv = head $ findPSessionByName "WV"
->     expSs = [gb, va, va, tx, tx, wv, gb, gb, lp, cv, tx]
->     dts = [ fromGregorian 2006 2 1 2 30 0
->           , fromGregorian 2006 2 1 4 30 0
->           , fromGregorian 2006 2 1 8 30 0
->           , fromGregorian 2006 2 1 12 30 0
->           , fromGregorian 2006 2 1 16 30 0
->           , fromGregorian 2006 2 1 22 15 0
->           , fromGregorian 2006 2 2  2 15 0
->           , fromGregorian 2006 2 2  4 15 0
->           , fromGregorian 2006 2 2  6 15 0
->           , fromGregorian 2006 2 2 10 15 0
->           , fromGregorian 2006 2 2 15 30 0 ]
->     durs = [120, 240, 240, 240, 240, 240, 120, 120, 240, 120, 240]
->     scores = replicate 11 0.0
+>     expSs = [gb, gb, va, cv, tx, tx, wv, gb, lp, cv, tx, tx]
+>     dts = [ fromGregorian 2006 2 1 1 30 0
+>           , fromGregorian 2006 2 1 3 30 0
+>           , fromGregorian 2006 2 1 5 30 0
+>           , fromGregorian 2006 2 1 9 30 0
+>           , fromGregorian 2006 2 1 11 30 0
+>           , fromGregorian 2006 2 1 15 30 0
+>           , fromGregorian 2006 2 2  1 15 0
+>           , fromGregorian 2006 2 2  5 15 0
+>           , fromGregorian 2006 2 2  7 15 0
+>           , fromGregorian 2006 2 2 11 15 0
+>           , fromGregorian 2006 2 2 13 15 0
+>           , fromGregorian 2006 2 2 17 15 0 ]
+>     durs = [120, 120, 240, 120, 240, 240, 240, 120, 240, 120, 240, 240]
+>     scores = replicate 12 0.0
 >     exp = zipWith4 Period expSs dts durs scores
+>     canceled = [Period wv (fromGregorian 2006 2 1 21 15 0) 240 0.0]
 
 Test the case where a bady performing TP is replaced with a backup
 
@@ -93,13 +95,12 @@ Test the case where a bady performing TP is replaced with a backup
 >     canceled = Period gb (fromGregorian 2006 2 5 2 30 0) 120 0.0
 
 Now have the same session fail it's MOC, but there is no backup - make deadtime
-TBF: this is retaining the bad TP instead of replacing it w/ dead time
 
 > test_sim_schedMinDuration_fail_backup = TestCase $ do
 >     w <- getWeather $ Just dt
 >     (result, c) <- simulate scheduleMinDuration w rs dt dur int history [] ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup" exp result
->     assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup2" [canceled] c
+>     assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup2" canceled c
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 4 6 0 0
@@ -110,21 +111,21 @@ TBF: this is retaining the bad TP instead of replacing it w/ dead time
 >     lp = head $ findPSessionByName "LP"
 >     cv = head $ findPSessionByName "CV"
 >     gb = head $ findPSessionByName "GB"
->     as = head $ findPSessionByName "AS"
->     expSs = [as, lp, lp, gb, cv]
+>     expSs = [lp, cv, cv, lp, cv, cv, cv]
 >     dts = [ fromGregorian 2006 2 4 6  0 0
->           , fromGregorian 2006 2 5 4 30 0
->           , fromGregorian 2006 2 5 8 30 0
->           , fromGregorian 2006 2 6 1 30 0
+>           , fromGregorian 2006 2 4 10 0 0
+>           , fromGregorian 2006 2 5 3 30 0
+>           , fromGregorian 2006 2 5 5 30 0
+>           , fromGregorian 2006 2 5 9 30 0
+>           , fromGregorian 2006 2 5 11 30 0
 >           , fromGregorian 2006 2 6 3 30 0 ]
->     durs = [360, 240, 240, 120, 120]
->     scores = replicate 5 0.0
+>     durs = [240, 120, 120, 240, 120, 120, 120]
+>     scores = replicate 7 0.0
 >     exp = zipWith4 Period expSs dts durs scores
->     canceled = Period gb (fromGregorian 2006 2 5 2 30 0) 120 0.0
+>     canceled = [Period gb (fromGregorian 2006 2 5 2 30 0) 120 0.0]
 
 Make sure the simulation can handle running out of sessions to schedule, and
 that it does not over allocate periods to a session.
-TBF: this is overallocating periods in the sim's first call to schMinDuration
 
 > test_sim_schedMinDuration_starvation = TestCase $ do
 >     w <- getWeather $ Just dt
