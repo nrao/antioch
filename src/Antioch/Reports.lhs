@@ -137,11 +137,12 @@ simPFLST - need pressure history
 
 simScoreElev
 
+
 > plotScoreElev'         :: StatsPlot
 > plotScoreElev' fn _ ps = do
 >   w       <- getWeather Nothing
->   sf <- genScore $ map session ps
->   scores  <- historicalObsScore w sf ps
+>   --sf <- genScore $ map session ps
+>   scores  <- historicalObsScore w ps
 >   plotScoreElev fn scores ps
 
 > plotScoreElev fn scores ps =
@@ -156,8 +157,8 @@ simScoreLST
 > plotLstScore'         :: StatsPlot
 > plotLstScore' fn _ ps = do
 >   w       <- getWeather Nothing
->   sf <- genScore $ map session ps
->   scores  <- historicalObsScore w sf ps
+>   --sf <- genScore $ map session ps
+>   scores  <- historicalObsScore w ps
 >   plotLstScore fn scores ps
 >
 > plotLstScore fn scores ps =
@@ -168,6 +169,11 @@ simScoreLST
 >     y = "Score"
 
 simBandPFTime - need pressure history
+
+TBF: example output:
+[FreqPressureHistory (array (L,W) [(L,9.850087),(S,7.902994),(C,8.072634),(X,7.8811545),(U,7.757223),(K,8.41998),(A,8.343103),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,7.869086),(S,7.902994),(C,8.072634),(X,6.2229266),(U,6.0080233),(K,6.6282206),(A,5.2407613),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,6.6825047),(S,6.3989167),(C,6.819871),(X,6.2229266),(U,6.0080233),(K,6.6282206),(A,5.2407613),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,6.100583),(S,6.3989167),(C,6.819871),(X,6.2229266),(U,6.0080233),(K,6.279914),(A,5.2407613),(Q,7.2461066),(W,1.0)])]
+
+
 simLSTPFTime1 - need pressure history
 simLSTPFTime2 - need pressure history
 simLSTPFTime3 - need pressure history
@@ -267,15 +273,19 @@ Utilities
 > historicalObsEff w = mapM (getEfficiency w)
 
 This function is only temporary until we get simulations integrated
+TBF: how does this give us the score at the time that a period ran?
+The weather is using (2006 1 1), so as year progresses, what forecast
+will they be using?
 
 > getScore      :: ScoreFunc -> Period -> Scoring Score
 > getScore sf p = liftM eval . sf dt . session $ p
 >   where
 >     dt = replaceYear 2006 . startTime $ p
 
-> historicalObsScore w sf ps = do
+> --historicalObsScore :: Weather -> [Period] -> IO [Score]
+> historicalObsScore w ps = do
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
->     runScoring w' [] $ mapM (getScore sf) ps
+>     runScoring w' [] $ genScore (map session ps) >>= \sf -> mapM (getScore sf) ps
 
 Attributes
 
@@ -324,8 +334,8 @@ Simulator Harness
 >  , plotEffElev' ""
 >  , plotEffLst' ""
 >  , plotElevDec' ""
->  , plotScoreElev' ""
->  , plotLstScore' ""
+>  --, plotScoreElev' ""
+>  --, plotLstScore' ""
 >  , histSessRA "" 
 >  , histEffHrBand' ""
 >  , histSessFreq ""
@@ -344,8 +354,8 @@ Simulator Harness
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
 >  , plotElevDec'       $ rootPath ++ "/simElevDec.png"
->  , plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
->  , plotLstScore'      $ rootPath ++ "/simScoreLST.png"
+>  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
+>  --, plotLstScore'      $ rootPath ++ "/simScoreLST.png"
 >  , histSessRA         $ rootPath ++ "/simHistRA.png"
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
@@ -365,7 +375,8 @@ Simulator Harness
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     (results, canceled) <- simulate sched w rs dt dur int history [] ss
+>     (results, trace) <- simulate sched w rs dt dur int history [] ss
+>     print trace
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     -- text reports 
@@ -376,7 +387,7 @@ Simulator Harness
 >     let gaps = findScheduleGaps results
 >     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
 >     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
->     print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
+>     --print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
 >     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps

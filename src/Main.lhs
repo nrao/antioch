@@ -5,9 +5,13 @@
 > import Antioch.Simulate
 > import Antioch.Reports
 
-> main = --simulate06 (scheduleFixedDuration $ 4*60)
->   --generatePlots (scheduleFixedDuration 240) (statsPlotsToFile "~/figuresFD") 334
->   --generatePlots (scheduleFixedDuration' 240) (statsPlotsToFile "~/figuresFD2") 334
->   --generatePlots pack (statsPlotsToFile "~/figuresPack") 334
->   generatePlots scheduleMinDuration (statsPlotsToFile "figuresMD") 334
->   --generatePlots scheduleMinDuration (statsPlots ++ (statsPlotsToFile "./figures")) 334
+> main = do
+>     --(_, trace) <- simulate06 (scheduleFixedDuration $ 4*60)
+>     --return ()
+>     -- print trace
+>   --generatePlots (scheduleFixedDuration 240) (statsPlotsToFile "~/figuresFD") 334  -- 76 Minutes
+>   --generatePlots (scheduleFixedDuration' 240) (statsPlotsToFile "~/figuresFD2") 334  -- 76 Minutes
+>   --generatePlots pack (statsPlotsToFile "~/figuresPack") 334  -- 96 Minutes
+>   generatePlots scheduleMinDuration (statsPlotsToFile "../myplots") 15  -- 76 Minutes
+>   --generatePlots scheduleMinDuration (statsPlots ++ (statsPlotsToFile "./figures")) 334  -- 76 Minutes
+
