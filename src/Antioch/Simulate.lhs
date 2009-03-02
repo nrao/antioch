@@ -111,16 +111,16 @@ schedule this as deadtime.
 >   where
 >     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
 
-Find the best backup for a given period - if the backup in turn fails it's
-MOC, then, since it is likely all the others will as well, then schedule
-deadtime.
+Find the best backup for a given period.  The backups are scored using the
+best forecast and *not* rejecting zero scored quarters.  If the backup in turn
+fails it's MOC, then, since it is likely all the others will as well, then 
+schedule deadtime.
 
 > replaceWithBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
 > replaceWithBackup sf backups p = do
->   -- TBf: make sure that we are using a weather w/ dt == startTime p
->   (s, score) <- best (averageScore sf (startTime p)) backups
+>   (s, score) <- best (avgScoreForTime sf (startTime p) (duration p)) backups
 >   moc        <- minimumObservingConditions (startTime p) s 
->   if score > 0.0 && fromMaybe False moc -- TBF: really use the moc
+>   if score > 0.0 && fromMaybe False moc 
 >     then return $ Just $ Period s (startTime p) (duration p) score
 >     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
