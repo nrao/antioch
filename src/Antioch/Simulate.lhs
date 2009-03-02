@@ -50,6 +50,7 @@ TBF: only have implemented time left so far ...
 >     simulate' w dt dur history sessions pAcc tAcc
 >         | dur < int  = return (pAcc, tAcc)
 >         | otherwise  = do
+>             tell [Timestamp dt]
 >             w' <- liftIO $ newWeather w $ Just (negate hint `addMinutes'` dt)
 >             let schedSessions = filterSessions sessions
 >             (obsPeriods, t1) <- runScoring' w' rs $ do
