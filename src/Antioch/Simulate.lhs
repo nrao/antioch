@@ -48,7 +48,7 @@ TBF: only have implemented time left so far ...
 >     | dur < int  = return ([], [])
 >     | otherwise  = do
 >         --liftIO $ putStrLn $ "calling simulate w/: " ++ (toSqlString dt) ++ ", " ++ (show dur) ++ ", " ++ (show int)
->         let wdt = (negate hint `addMinutes'` dt)
+>         let wdt = dt
 >         w' <- liftIO $ newWeather w $ Just wdt
 >         sf <- genScore sessions
 >         let schedSessions = filterSessions sessions
