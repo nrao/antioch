@@ -62,6 +62,7 @@ TBF:  we probably want something smarter in DateTime
 >     simulate' w dt dur history sessions pAcc tAcc
 >         | dur < int  = return (pAcc, tAcc)
 >         | otherwise  = do
+>             tell [Timestamp dt]
 >             w' <- liftIO $ newWeather w $ Just dt
 >             let schedSessions = filterSessions (dt2semester dt) sessions
 >             --liftIO $ putStrLn $ "Num Sessions before & after filter: " ++ (show $ length sessions) ++ ", " ++ (show $ length schedSessions)

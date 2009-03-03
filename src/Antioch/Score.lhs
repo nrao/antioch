@@ -163,27 +163,32 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     elevation = pi/2 - zenithAngleAtTransit s
 
-
 3.3 Pressure Feedback
 
 Generate a scoring function having the pressure factors.
 
-> genFrequencyPressure :: [Session] -> Scoring ScoreFunc
-> genFrequencyPressure sessions = do
->     tell [FreqPressureHistory factors]
->     return $ frequencyPressure factors band
+> genFrequencyPressure          :: [Session] -> Scoring ScoreFunc
+> genFrequencyPressure sessions = genFrequencyPressure' factors
 >   where
 >     bins    = initBins (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
-> genRightAscensionPressure :: [Session] -> Scoring ScoreFunc
-> genRightAscensionPressure sessions = do
->     -- tell [RaPressureHistory factors]
->     return $ rightAscensionPressure factors accessor
+> genFrequencyPressure' factors = do
+>     tell [FreqPressureHistory factors]
+>     return $ frequencyPressure factors band
+
+> genRightAscensionPressure          :: [Session] -> Scoring ScoreFunc
+> genRightAscensionPressure sessions = genRightAscensionPressure' factors
 >   where
 >     accessor s = (round . rad2hr . ra $ s) `mod` 24
 >     bins    = initBins (0, 23) accessor sessions
 >     factors = binsToFactors bins
+
+> genRightAscensionPressure' factors = do
+>     tell [RaPressureHistory factors]
+>     return $ rightAscensionPressure factors accessor
+>   where
+>     accessor s = (round . rad2hr . ra $ s) `mod` 24
 
 Select the appropriate pressure factor from the array of pressures.
 
@@ -391,7 +396,8 @@ execute scoring actions.
 
 A Trace collects/logs information about the execution of a monad.
 
-> data Trace = FreqPressureHistory (Array Band Float)
+> data Trace = Timestamp DateTime
+>            | FreqPressureHistory (Array Band Float)
 >            | RaPressureHistory (Array Int Float)
 >            deriving (Eq, Show)
 
@@ -454,24 +460,26 @@ Need to translate a session's factors into the final product score.
 > genScore sessions = do
 >     raPressure   <- genRightAscensionPressure sessions
 >     freqPressure <- genFrequencyPressure sessions
->     return $ \dt s -> do
->         effs <- calcEfficiency dt s
->         score [
->             scienceGrade
->           , thesisProject
->           , projectCompletion
->           , stringency
->           , (atmosphericOpacity' . fmap fst) effs
->           , surfaceObservingEfficiency
->           , trackingEfficiency
->           , raPressure
->           , freqPressure
->           , observingEfficiencyLimit
->           , (hourAngleLimit' . fmap snd) effs
->           , zenithAngleLimit
->           , trackingErrorLimit
->           , atmosphericStabilityLimit
->           ] dt s
+>     genScore' raPressure freqPressure
+
+> genScore' raPressure freqPressure = return $ \dt s -> do
+>     effs <- calcEfficiency dt s
+>     score [
+>         scienceGrade
+>       , thesisProject
+>       , projectCompletion
+>       , stringency
+>       , (atmosphericOpacity' . fmap fst) effs
+>       , surfaceObservingEfficiency
+>       , trackingEfficiency
+>       , raPressure
+>       , freqPressure
+>       , observingEfficiencyLimit
+>       , (hourAngleLimit' . fmap snd) effs
+>       , zenithAngleLimit
+>       , trackingErrorLimit
+>       , atmosphericStabilityLimit
+>       ] dt s
 
 Convenience function for translating go/no-go into a factor.
 
@@ -479,7 +487,6 @@ Convenience function for translating go/no-go into a factor.
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
 
 Quick Check properties:
-
 
 > prop_efficiency = forAll genProject $ \p ->
 >   let es = map calcEff (sessions p) in normalized es  
