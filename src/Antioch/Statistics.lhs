@@ -1,6 +1,7 @@
 > module Antioch.Statistics where
 
 > import Antioch.DateTime   (fromGregorian, DateTime, addMinutes', diffMinutes')
+> import Antioch.DateTime   (toGregorian')
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.Score      (zenithAngle, minObservingEff)
@@ -176,6 +177,32 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [killBad (x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
 >     sigmas     = [killBad (sqrt (x / y)) | (x, y) <- zip sRatios sMinutes]
+
+> totalHrs :: [Session] -> (Session -> Bool) -> Float
+> totalHrs ss f = (fromIntegral . sum $ [totalTime s | s <- ss']) / 60.0
+>   where
+>     ss' = filter f ss
+
+> totalPeriodHrs :: [Period] -> (Period -> Bool) -> Float
+> totalPeriodHrs ps f = (fromIntegral . sum $ [duration p | p <- ps']) / 60.0
+>   where
+>     ps' = filter f ps
+
+> isInSemester :: Session -> String -> Bool
+> isInSemester s sem = (semester . project $ s) == sem
+
+> isPeriodInSemester :: Period -> String -> Bool
+> isPeriodInSemester p sem = (dt2semester' . startTime $ p) == sem
+
+TBF: code duplication!  where to put this?
+
+> dt2semester' :: DateTime -> String
+> dt2semester' dt | month < 2                  = "O5C"
+>                 | 2  <= month && month < 6   = "06A"
+>                 | 6  <= month && month < 10  = "06B"
+>                 | 10 <= month && month <= 12 = "06C"
+>   where
+>     (_, month, _) = toGregorian' dt
 
 Utilities:
 
