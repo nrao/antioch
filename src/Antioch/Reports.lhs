@@ -11,7 +11,7 @@
 > import Antioch.Utilities (rad2deg, rad2hr)
 > import Antioch.Weather
 > import Control.Monad      (liftM)
-
+> import Text.Printf
 > import System.Random
 > import System.CPUTime
 > import Test.QuickCheck hiding (promote, frequency)
@@ -376,7 +376,6 @@ Simulator Harness
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
 >     (results, trace) <- simulate sched w rs dt dur int history [] ss
->     print trace
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     -- text reports 
@@ -389,6 +388,7 @@ Simulator Harness
 >     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
 >     --print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
 >     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
+>     reportSemesterInfo ss results gaps
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >   where
@@ -397,6 +397,23 @@ Simulator Harness
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 >     history = []
+
+> reportSemesterInfo :: [Session] -> [Period] -> [(DateTime,Minutes)] -> IO ()
+> reportSemesterInfo ss ps dead = do
+>     putStrLn $ printf "%s   %-9s %-9s %-9s %-9s %-9s " "Sem" "Total" "Backup" "Obs" "ObsBp" "Dead"
+>     putStrLn $ reportSemesterHrs "05C" ss ps dead
+>     putStrLn $ reportSemesterHrs "06A" ss ps dead
+>     putStrLn $ reportSemesterHrs "06B" ss ps dead
+>     putStrLn $ reportSemesterHrs "06C" ss ps dead
+
+> reportSemesterHrs :: String -> [Session] -> [Period] -> [(DateTime,Minutes)] ->  String
+> reportSemesterHrs sem ss ps dead = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f " sem total totalBackup totalObs totalBackupObs (deadtime :: Float) 
+>   where
+>     total = totalHrs ss (\s -> isInSemester s sem) 
+>     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
+>     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
+>     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
+>     deadtime = (fromIntegral . sum $ [dur | (start, dur) <- dead, dt2semester' start == sem]) / 60
 
 > findScheduleGaps :: [Period] -> [(DateTime, Minutes)]
 > findScheduleGaps []     = []
