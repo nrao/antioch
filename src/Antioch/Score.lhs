@@ -399,6 +399,7 @@ A Trace collects/logs information about the execution of a monad.
 > data Trace = Timestamp DateTime
 >            | FreqPressureHistory (Array Band Float)
 >            | RaPressureHistory (Array Int Float)
+>            | Cancellation Period
 >            deriving (Eq, Show)
 
 > type Scoring = RWST ScoringEnv [Trace] () IO
