@@ -68,7 +68,7 @@ TBF:  we probably want something smarter in DateTime
 >             (obsPeriods, t1) <- runScoring' w' rs $ do
 >                 tell [Timestamp dt]
 >                 -- TBF: is this a bug? sessions -> schedSessions?
->                 sf <- genScore sessions
+>                 sf <- genScore schedSessions
 >                 schedPeriods <- sched sf start int' history schedSessions
 >                 scheduleBackups sf schedPeriods schedSessions
 >             let sessions' = updateSessions sessions obsPeriods
