@@ -4,9 +4,11 @@
 > import Antioch.DateTime   (toGregorian')
 > import Antioch.Generators
 > import Antioch.Types
-> import Antioch.Score      (zenithAngle, minObservingEff)
+> import Antioch.Score      (Trace, zenithAngle, minObservingEff)
 > import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours)
+> import Antioch.Debug
 > import Control.Arrow      ((&&&))
+> import Data.Array
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
@@ -160,6 +162,12 @@ We may want to move this function to a different file.
 >     times = sort $ map startTime ps
 >     tzero = head times
 
+> historicalTime'' :: [DateTime] -> [Int]
+> historicalTime'' dts = map ((`div` (24 * 60)) . flip diffMinutes' tzero) times
+>   where
+>     times = sort $ dts 
+>     tzero = head times
+
 > historicalLST :: [Period] -> [Float]
 > historicalLST ps = [utc2lstHours $ addMinutes' (duration p `div` 2) $ startTime p | p <- ps]
 
@@ -203,6 +211,23 @@ TBF: code duplication!  where to put this?
 >                 | 10 <= month && month <= 12 = "06C"
 >   where
 >     (_, month, _) = toGregorian' dt
+
+> bandPressuresByTime :: [Trace] -> [[(Float, Float)]]
+> bandPressuresByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
+>     map bandData [L::Band .. Q::Band]
+>   where
+>     bandData band = [ (fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
+>     fp = getFreqPressureHistory trace -- [(array (L,W) [(L,9.850087), ..]]
+>     times = getTimestampHistory trace
+>     days = historicalTime'' [getTimestamp t | t <- times]
+>     getBandData band = getBandPressures band fp
+>     
+
+> getBandPressures :: Band -> [Trace] -> [Float]
+> getBandPressures band bp = map (getBandPressure band) bp 
+>   where
+>     getBandPressure band t = (getFreqPressure t)!band
+> 
 
 Utilities:
 

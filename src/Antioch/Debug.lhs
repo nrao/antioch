@@ -56,8 +56,15 @@ Reconstruct the factors that were used in scoring a given period.
 > getRaPressureHistory :: [Trace] -> [Trace]
 > getRaPressureHistory = filter isRaPressureHistory
 
+> getTimestampHistory :: [Trace] -> [Trace]
+> getTimestampHistory = filter isTimestamp
+
 > isTimestamp (Timestamp _) = True
 > isTimestamp _             = False
+
+> getTimestamp (Timestamp dt) = dt
+
+> getFreqPressure (FreqPressureHistory dt) = dt
 
 > isFreqPressureHistory (FreqPressureHistory _) = True
 > isFreqPressureHistory _                       = False

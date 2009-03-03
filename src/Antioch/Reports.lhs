@@ -170,9 +170,15 @@ simScoreLST
 
 simBandPFTime - need pressure history
 
-TBF: example output:
-[FreqPressureHistory (array (L,W) [(L,9.850087),(S,7.902994),(C,8.072634),(X,7.8811545),(U,7.757223),(K,8.41998),(A,8.343103),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,7.869086),(S,7.902994),(C,8.072634),(X,6.2229266),(U,6.0080233),(K,6.6282206),(A,5.2407613),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,6.6825047),(S,6.3989167),(C,6.819871),(X,6.2229266),(U,6.0080233),(K,6.6282206),(A,5.2407613),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,6.100583),(S,6.3989167),(C,6.819871),(X,6.2229266),(U,6.0080233),(K,6.279914),(A,5.2407613),(Q,7.2461066),(W,1.0)])]
-
+> 
+> plotBandPressureTime fn trace = 
+>     linePlots attrs $ bandPressuresByTime trace 
+>   where
+>     t = "Band Preassure vs Time"
+>     x = "Time [days]"
+>     y = "Band Preassure"
+>     attrs = scatterAttrs t x y fn
+> 
 
 simLSTPFTime1 - need pressure history
 simLSTPFTime2 - need pressure history
@@ -391,6 +397,8 @@ Simulator Harness
 >     reportSemesterInfo ss results gaps
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
+>     -- create plots from trace; TBF : fold these into above
+>     plotBandPressureTime "" trace
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 2 1 0 0 0
