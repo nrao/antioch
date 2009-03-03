@@ -7,6 +7,7 @@ were scored and how that scoring influenced the scheduling of the telescope.
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
+> import Control.Monad.RWS.Strict
 
 Extract the debugging info that was relevant at a specific date and time.
 
@@ -63,3 +64,20 @@ Reconstruct the factors that were used in scoring a given period.
 
 > isRaPressureHistory (RaPressureHistory _) = True
 > isRaPressureHistory _                     = False
+
+> isCancellation (Cancellation _) = True
+> isCancellation _                = False
+
+Find the total amount of unused time in the schedule.
+
+> deadTime periods = sum $ zipWith gapBetween periods (tail periods)
+>   where
+>     gapBetween p1 p2 = startTime p2 `diffMinutes` (duration p1 `addMinutes` startTime p1)
+
+Find the total amount of time given to backup projects in the schedule.
+
+> totalBackup periods = sum [duration p | p <- periods, pBackup p]
+
+Find the total amount of scheduled periods that were cancelled due to bad weather.
+
+> totalCancelled trace = sum [duration p | Cancellation p <- trace]
