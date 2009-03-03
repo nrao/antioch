@@ -29,6 +29,7 @@ Reconstruct the scoring function that was in place at a specific date and time.
 
 > getScoring          :: DateTime -> [Trace] -> Scoring ScoreFunc
 > getScoring dt trace = do
+>     tell [Timestamp dt]
 >     raPressure   <- genRightAscensionPressure' raFactors
 >     freqPressure <- genFrequencyPressure' freqFactors
 >     genScore' raPressure freqPressure
