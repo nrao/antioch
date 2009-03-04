@@ -168,7 +168,7 @@ simScoreLST
 >     x = "LST [hours]"
 >     y = "Score"
 
-simBandPFTime - need pressure history
+simBandPFTime
 
 > 
 > plotBandPressureTime fn trace = 
@@ -180,9 +180,37 @@ simBandPFTime - need pressure history
 >     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
 > 
 
-simLSTPFTime1 - need pressure history
+simLSTPFTime1
+
+> plotRAPressureTime1 fn trace =
+>     linePlots (scatterAttrs t x y fn) $ take 8 $ zip titles $ raPressuresByTime trace 
+>   where
+>     t = "Ra Preassure vs Time"
+>     x = "Time [days]"
+>     y = "Ra Preassure"
+>     titles = [Just (show a) | a <- [0 .. 7]]
+
 simLSTPFTime2 - need pressure history
+
+> plotRAPressureTime2 fn trace =
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ radata
+>   where
+>     (_, radata) = splitAt 8 $ raPressuresByTime trace
+>     t = "Ra Preassure vs Time"
+>     x = "Time [days]"
+>     y = "Ra Preassure"
+>     titles = [Just (show a) | a <- [8 .. 15]]
+
 simLSTPFTime3 - need pressure history
+
+> plotRAPressureTime3 fn trace =
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ radata
+>   where
+>     (_, radata) = splitAt 16 $ raPressuresByTime trace 
+>     t = "Ra Preassure vs Time"
+>     x = "Time [days]"
+>     y = "Ra Preassure"
+>     titles = [Just (show a) | a <- [16 .. 23]]
 
 simHistRA
 
@@ -398,7 +426,10 @@ Simulator Harness
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
->     plotBandPressureTime "" trace
+>     plotBandPressureTime "../myplots/simBandPFTime.png" trace
+>     plotRAPressureTime1 "../myplots/simLSTPFTime1.png" trace
+>     plotRAPressureTime2 "../myplots/simLSTPFTime2.png" trace
+>     plotRAPressureTime3 "../myplots/simLSTPFTime3.png" trace
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 2 1 0 0 0

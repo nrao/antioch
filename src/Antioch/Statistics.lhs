@@ -229,6 +229,19 @@ TBF: code duplication!  where to put this?
 >     getBandPressure band t = (getFreqPressure t)!band
 > 
 
+> raPressuresByTime :: [Trace] -> [[(Float, Float)]]
+> raPressuresByTime trace = 
+>     map raData [0 .. 23]
+>   where
+>     raData ra = [(fromIntegral x, y) | (x, y) <- zip days (getRaData ra)]
+>     rap   = getRaPressureHistory trace
+>     times = getTimestampHistory trace
+>     days  = historicalTime'' [getTimestamp t | t <- times]
+>     getRaData ra = getRaPressures ra rap
+
+> getRaPressures :: Int -> [Trace] -> [Float]
+> getRaPressures ra rap = map (\t -> (getRaPressure t)!ra) rap 
+
 Utilities:
 
 Read Y versus X as you would expect with normal plotting nomenclature.

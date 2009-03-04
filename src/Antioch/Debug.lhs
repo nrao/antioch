@@ -66,6 +66,8 @@ Reconstruct the factors that were used in scoring a given period.
 
 > getFreqPressure (FreqPressureHistory dt) = dt
 
+> getRaPressure (RaPressureHistory dt) = dt
+
 > isFreqPressureHistory (FreqPressureHistory _) = True
 > isFreqPressureHistory _                       = False
 
