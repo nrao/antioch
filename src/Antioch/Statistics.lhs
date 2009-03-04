@@ -216,10 +216,10 @@ TBF: code duplication!  where to put this?
 > bandPressuresByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
 >     map bandData [L::Band .. Q::Band]
 >   where
->     bandData band = [ (fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
->     fp = getFreqPressureHistory trace -- [(array (L,W) [(L,9.850087), ..]]
+>     bandData band = [(fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
+>     fp    = getFreqPressureHistory trace -- [(array (L,W) [(L,9.850087), ..]]
 >     times = getTimestampHistory trace
->     days = historicalTime'' [getTimestamp t | t <- times]
+>     days  = historicalTime'' [getTimestamp t | t <- times]
 >     getBandData band = getBandPressures band fp
 >     
 

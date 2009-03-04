@@ -172,12 +172,12 @@ simBandPFTime - need pressure history
 
 > 
 > plotBandPressureTime fn trace = 
->     linePlots attrs $ bandPressuresByTime trace 
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ bandPressuresByTime trace 
 >   where
 >     t = "Band Preassure vs Time"
 >     x = "Time [days]"
 >     y = "Band Preassure"
->     attrs = scatterAttrs t x y fn
+>     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
 > 
 
 simLSTPFTime1 - need pressure history

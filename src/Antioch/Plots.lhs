@@ -17,8 +17,8 @@
 > scatterStyle :: PlotStyle
 > scatterStyle = PlotStyle Points (CustomStyle []) Nothing
 
-> lineStyle :: PlotStyle
-> lineStyle = PlotStyle Lines (CustomStyle []) Nothing
+> lineStyle :: Maybe String -> PlotStyle
+> lineStyle title = PlotStyle Lines (CustomStyle []) title
 
 > scatterPlot       :: [Attribute] -> [(Float, Float)] -> IO ()
 > scatterPlot attrs = plotPathStyle attrs scatterStyle
@@ -30,7 +30,7 @@
 > errorBarPlot :: [Attribute] -> [(Float, Float, Float)] -> IO ()
 > errorBarPlot = plotErrorBars
 
-> linePlots             :: [Attribute] -> [[(Float, Float)]] -> IO ()
+> linePlots             :: [Attribute] -> [(Maybe String, [(Float, Float)])] -> IO ()
 > linePlots attrs plots =
->     plotPathsStyle attrs [(lineStyle, xys) | xys <- plots]
+>     plotPathsStyle attrs [(lineStyle t, xys) | (t, xys) <- plots]
 
