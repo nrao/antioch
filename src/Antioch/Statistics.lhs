@@ -76,6 +76,22 @@ To Do List (port from Statistics.py):
 > periodFreqHrs :: [Period] -> [(Float, Float)]
 > periodFreqHrs ps = histogramToHours $ periodFreq ps
 
+> periodFreqBackupHrs :: [Period] -> [(Float, Float)]
+> periodFreqBackupHrs ps = histogramToHours $ periodFreq ps'
+>   where
+>     ps' = [p | p <- ps, pBackup p]
+
+> periodBackupFreqRatio :: [Period] -> [(Float, Float)]
+> periodBackupFreqRatio ps = zipWith backupRatio (periodFreqHrsFunky ps) (periodFreqHrsFunky psBackups)
+>   where
+>     psBackups =  [p | p <- ps, pBackup p]
+>     backupRatio obs backup = (fst obs, ((snd backup) / (snd obs)))
+
+> periodFreqHrsFunky :: [Period] -> [(Float, Float)]
+> periodFreqHrsFunky = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session))
+>   where
+>     bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
+
 > histogramToHours :: [(Float, Minutes)] -> [(Float, Float)]
 > histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
 
