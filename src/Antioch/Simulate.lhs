@@ -49,11 +49,19 @@ TBF:  we probably want something smarter in DateTime
 >   where
 >     (_, month, _) = toGregorian' dt
 
-> filterSessions :: String -> [Session] -> [Session]
-> filterSessions current_semester ss = filter isMySemester $ filter timeLeft ss
->   where
->     timeLeft s     = ((totalTime s) - (totalUsed s)) > (minDuration s)
->     isMySemester s = (semester $ project s) <= current_semester
+> type SelectionCriteria = DateTime -> Session -> Bool
+
+> timeLeft :: SelectionCriteria
+> timeLeft _ s     = ((totalTime s) - (totalUsed s)) > (minDuration s)
+
+> isMySemester :: SelectionCriteria 
+> isMySemester dt s = (semester $ project s) <= current_semester
+>    where
+>      current_semester = dt2semester dt
+
+> filterSessions :: DateTime -> [SelectionCriteria] -> [Session] -> [Session]
+> filterSessions dt []       ss = ss
+> filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
 
 > simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
 > simulate sched w rs dt dur int history canceled sessions =
@@ -63,12 +71,10 @@ TBF:  we probably want something smarter in DateTime
 >         | dur < int  = return (pAcc, tAcc)
 >         | otherwise  = do
 >             w' <- liftIO $ newWeather w $ Just dt
->             let schedSessions = filterSessions (dt2semester dt) sessions
->             --liftIO $ putStrLn $ "Num Sessions before & after filter: " ++ (show $ length sessions) ++ ", " ++ (show $ length schedSessions)
+>             let schedSessions = filterSessions dt [timeLeft, isMySemester] sessions
 >             (obsPeriods, t1) <- runScoring' w' rs $ do
 >                 tell [Timestamp dt]
->                 -- TBF: is this a bug? sessions -> schedSessions?
->                 sf <- genScore schedSessions
+>                 sf <- genScore $ filterSessions dt [isMySemester] sessions
 >                 schedPeriods <- sched sf start int' history schedSessions
 >                 scheduleBackups sf schedPeriods schedSessions
 >             let sessions' = updateSessions sessions obsPeriods
