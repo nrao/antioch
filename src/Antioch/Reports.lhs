@@ -243,7 +243,17 @@ simHistFreq
 
 > histSessFreq          :: StatsPlot
 > histSessFreq fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionFreqHrs ss, periodFreqHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ [sessionFreqHrs ss, periodFreqHrs ps, periodFreqBackupHrs ps]
+>   where
+>     t = "Frequency Histogram"
+>     x = "Frequency [GHz]"
+>     y = "Counts [Hours]"
+
+simHistBackupFreq
+
+> histSessBackupFreq          :: StatsPlot
+> histSessBackupFreq fn ss ps =
+>     histogramPlot (histAttrs t x y fn) $ periodBackupFreqRatio ps
 >   where
 >     t = "Frequency Histogram"
 >     x = "Frequency [GHz]"
@@ -393,6 +403,7 @@ Simulator Harness
 >  , histSessRA         $ rootPath ++ "/simHistRA.png"
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
+>  , histSessBackupFreq $ rootPath ++ "/simHistBackupFreq.png"
 >  , histSessDec        $ rootPath ++ "/simHistDec.png"
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
@@ -462,3 +473,4 @@ Simulator Harness
 >   where 
 >     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
 
+> runSim days filepath = generatePlots scheduleMinDuration (statsPlotsToFile filepath) days
