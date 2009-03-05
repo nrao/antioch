@@ -93,8 +93,6 @@ periods with those that were canceled.
 
 > scheduledFreqHrs :: [Period] -> [Trace] -> [Float] -> [(Float, Float)]
 > scheduledFreqHrs ps trace bins = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session)) $ getScheduledPeriods ps trace 
->  -- where
->  --   bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
 
 > getScheduledPeriods :: [Period] -> [Trace] -> [Period]
 > getScheduledPeriods observed trace = observed' ++ canceled
@@ -105,7 +103,6 @@ periods with those that were canceled.
 > canceledFreqHrs :: [Trace] -> [Float] -> [(Float, Float)]
 > canceledFreqHrs trace bins = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session)) $ canceled trace
 >   where
-> --    bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
 >     canceled trace = getCanceledPeriods trace
 
 
@@ -117,8 +114,6 @@ periods with those that were canceled.
 
 > periodFreqHrsBinned :: [Period] -> [(Float, Float)]
 > periodFreqHrsBinned = histogram freqBins . (((/60) . fromIntegral . duration) `vs` (frequency . session))
->   --where
->   --  bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
 
 > histogramToHours :: [(Float, Minutes)] -> [(Float, Float)]
 > histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
