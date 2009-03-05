@@ -120,12 +120,16 @@ schedule this as deadtime.
 > scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
 > scheduleBackup sf ss p = do 
 >   moc <- minimumObservingConditions (startTime p) (session p)
->   if fromMaybe False moc then return $ Just p else
->     if length backupSessions == 0
->     then return Nothing -- no appropriate backups -> Deadtime!
->     else replaceWithBackup sf backupSessions p
+>   if fromMaybe False moc then return $ Just p else cancelPeriod sf backupSessions p
 >   where
 >     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
+
+> cancelPeriod :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
+> cancelPeriod sf backups p = do
+>   tell [Cancellation p]
+>   if length backups == 0 
+>     then return Nothing
+>     else replaceWithBackup sf backups p
 
 Find the best backup for a given period.  The backups are scored using the
 best forecast and *not* rejecting zero scored quarters.  If the backup in turn
