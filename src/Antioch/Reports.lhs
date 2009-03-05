@@ -217,11 +217,12 @@ simHistRA
 
 > histSessRA          :: StatsPlot
 > histSessRA fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionRAHrs ss, periodRAHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [sessionRAHrs ss, periodRAHrs ps]
 >   where
 >     t = "Right Ascension Histogram"
 >     x = "RA [hr]"
 >     y = "Counts [Hours]"
+>     titles = [Just "Available", Just "Observed"]
 
 simHistEffHr
 
@@ -232,23 +233,25 @@ simHistEffHr
 >   histEffHrBand fn effs ps
         
 > histEffHrBand fn effs ps =
->     histogramPlots (histAttrs t x y fn) $ [pBand, effByBand]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [pBand, effByBand]
 >       where
 >         pBand     = [(fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram"
 >         x = "Band [L, S, C, X, U, K, A, Q]"
 >         y = "Counts [Scheduled Hours]"
+>         titles = [Just "Observed", Just "Obs * Eff"]
 
 simHistFreq
 
 > histSessFreq          :: StatsPlot
 > histSessFreq fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionFreqHrs ss, periodFreqHrs ps, periodFreqBackupHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [sessionFreqHrs ss, periodFreqHrs ps, periodFreqBackupHrs ps]
 >   where
 >     t = "Frequency Histogram"
 >     x = "Frequency [GHz]"
 >     y = "Counts [Hours]"
+>     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
 
 simHistCanceledFreq
 
@@ -263,11 +266,12 @@ simHistDec
 
 > histSessDec          :: StatsPlot
 > histSessDec fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionDecHrs ss, periodDecHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [sessionDecHrs ss, periodDecHrs ps]
 >   where
 >     t = "Declination Histogram"
 >     x = "Declination [deg]"
 >     y = "Counts [Hours]"
+>     titles = [Just "Available", Just "Observed"]
 
 simHistPFHours - need pressure history
 simHistPF - need pressure history
@@ -296,13 +300,14 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [tpDurs, maxTPTime]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [tpDurs, maxTPTime]
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
 >     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
 >     t = "TP Minutes & Max TP Minutes Historgram"
 >     x = "Duration [Minutes]"
 >     y = "Counts [Minutes]"
+>     titles = [Just "Observed", Just "Available"]
 
 Utilities
 

@@ -3,16 +3,16 @@
 > import Antioch.DateTime (DateTime)
 > import Graphics.Gnuplot.Simple
 
-> histStyle :: PlotStyle
-> histStyle = PlotStyle Boxes (CustomStyle []) Nothing
+> histStyle :: Maybe String -> PlotStyle
+> histStyle title = PlotStyle Boxes (CustomStyle []) title
 
 > histogramPlot       :: [Attribute] -> [(Float, Float)] -> IO ()
 > histogramPlot attrs =
->     plotPathStyle attrs histStyle
+>     plotPathStyle attrs $ histStyle Nothing
 
-> histogramPlots             :: [Attribute] -> [[(Float, Float)]] -> IO ()
+> histogramPlots             :: [Attribute] -> [(Maybe String, [(Float, Float)])] -> IO ()
 > histogramPlots attrs plots =
->     plotPathsStyle attrs [(histStyle, xys) | xys <- plots]
+>     plotPathsStyle attrs [(histStyle t, xys) | (t, xys) <- plots]
 
 > scatterStyle :: PlotStyle
 > scatterStyle = PlotStyle Points (CustomStyle []) Nothing
