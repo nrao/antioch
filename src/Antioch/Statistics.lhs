@@ -81,16 +81,44 @@ To Do List (port from Statistics.py):
 >   where
 >     ps' = [p | p <- ps, pBackup p]
 
+Produces a histogram of the ratio of the canceled to scheduled hours by 
+a special frequency bin.  Note that the periods passed in are what
+was observed, so the original schedule is the join of the non-backup observed
+periods with those that were canceled.
+
+> periodCanceledFreqRatio :: [Period] -> [Trace] ->  [(Float, Float)]
+> periodCanceledFreqRatio ps trace = zipWith canceledRatio (canceledFreqHrs trace freqBins) (scheduledFreqHrs ps trace freqBins)
+>   where
+>     canceledRatio canceled scheduled = (fst canceled, ((snd canceled)/(snd scheduled) ))
+
+> scheduledFreqHrs :: [Period] -> [Trace] -> [Float] -> [(Float, Float)]
+> scheduledFreqHrs ps trace bins = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session)) $ getScheduledPeriods ps trace 
+>  -- where
+>  --   bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
+
+> getScheduledPeriods :: [Period] -> [Trace] -> [Period]
+> getScheduledPeriods observed trace = observed' ++ canceled
+>   where
+>     canceled = getCanceledPeriods trace
+>     observed' = [p | p <- observed, not . pBackup $ p]
+
+> canceledFreqHrs :: [Trace] -> [Float] -> [(Float, Float)]
+> canceledFreqHrs trace bins = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session)) $ canceled trace
+>   where
+> --    bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
+>     canceled trace = getCanceledPeriods trace
+
+
 > periodBackupFreqRatio :: [Period] -> [(Float, Float)]
-> periodBackupFreqRatio ps = zipWith backupRatio (periodFreqHrsFunky ps) (periodFreqHrsFunky psBackups)
+> periodBackupFreqRatio ps = zipWith backupRatio (periodFreqHrsBinned ps) (periodFreqHrsBinned psBackups)
 >   where
 >     psBackups =  [p | p <- ps, pBackup p]
 >     backupRatio obs backup = (fst obs, ((snd backup) / (snd obs)))
 
-> periodFreqHrsFunky :: [Period] -> [(Float, Float)]
-> periodFreqHrsFunky = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session))
->   where
->     bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
+> periodFreqHrsBinned :: [Period] -> [(Float, Float)]
+> periodFreqHrsBinned = histogram freqBins . (((/60) . fromIntegral . duration) `vs` (frequency . session))
+>   --where
+>   --  bins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
 
 > histogramToHours :: [(Float, Minutes)] -> [(Float, Float)]
 > histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
@@ -259,6 +287,9 @@ TBF: code duplication!  where to put this?
 > getRaPressures ra rap = map (\t -> (getRaPressure t)!ra) rap 
 
 Utilities:
+
+> freqBins :: [Float]
+> freqBins = [2.0,3.95,5.85,10.0,15.4,20.0,24.0,26.0,30.0,35.0,40.0,45.0,50.0]
 
 Read Y versus X as you would expect with normal plotting nomenclature.
 Produces list of (x, y) coordinate pairs.
