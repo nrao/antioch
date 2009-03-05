@@ -10,6 +10,7 @@
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hr)
 > import Antioch.Weather
+> import Antioch.Debug
 > import Control.Monad      (liftM)
 > import Text.Printf
 > import System.Random
@@ -249,15 +250,14 @@ simHistFreq
 >     x = "Frequency [GHz]"
 >     y = "Counts [Hours]"
 
-simHistBackupFreq
+simHistCanceledFreq
 
-> histSessBackupFreq          :: StatsPlot
-> histSessBackupFreq fn ss ps =
->     histogramPlot (histAttrs t x y fn) $ periodBackupFreqRatio ps
+> histCanceledFreqRatio fn ps trace =
+>     histogramPlot (histAttrs t x y fn) $ periodCanceledFreqRatio ps trace
 >   where
->     t = "Frequency Histogram"
+>     t = "Scheduled/Canceled Frequency Histogram"
 >     x = "Frequency [GHz]"
->     y = "Counts [Hours]"
+>     y = "Scheduled/Canceled [Hours]"
 
 simHistDec
 
@@ -403,7 +403,7 @@ Simulator Harness
 >  , histSessRA         $ rootPath ++ "/simHistRA.png"
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
->  , histSessBackupFreq $ rootPath ++ "/simHistBackupFreq.png"
+>  --, histSessBackupFreq $ rootPath ++ "/simHistBackupFreq.png"
 >  , histSessDec        $ rootPath ++ "/simHistDec.png"
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
@@ -423,20 +423,22 @@ Simulator Harness
 >     (results, trace) <- simulate sched w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     let gaps = findScheduleGaps results
+>     let canceled = getCanceledPeriods trace
 >     -- text reports 
 >     print "Simulation Schedule Checks: "
 >     if (internalConflicts results) then print "  Overlaps in Schedule! " else print "  No overlaps in Schedule."
 >     if (obeyDurations results) then print "  Min/Max Durations Honored" else print "  Min/Max Durations NOT Honored!"
 >     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
->     let gaps = findScheduleGaps results
 >     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
 >     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
->     --print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
+>     print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
 >     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
 >     reportSemesterInfo ss results gaps
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
+>     histCanceledFreqRatio "../myplots/simHistCanceledFreq.png" results trace
 >     plotBandPressureTime "../myplots/simBandPFTime.png" trace
 >     plotRAPressureTime1 "../myplots/simLSTPFTime1.png" trace
 >     plotRAPressureTime2 "../myplots/simLSTPFTime2.png" trace
