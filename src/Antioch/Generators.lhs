@@ -182,7 +182,7 @@ Make sure that the total time used up by the periods is correct:
 > prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 > prop_totalTime s          = (2*60) <= totalTime s && totalTime s <= (30*60)
 > prop_totalTimeQuarter s   = totalTime s `mod` quarter == 0
-> prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (4*60)
+> prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (6*60)
 > prop_minDurationQuarter s = minDuration s `mod` quarter == 0
 > prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)
 > prop_maxDurationQuarter s = maxDuration s `mod` quarter == 0
