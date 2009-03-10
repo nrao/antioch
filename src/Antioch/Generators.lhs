@@ -420,4 +420,6 @@ Sometime in Oct. 2006
 >     return $ fromGregorian 2006 10 day hr 0 0
 
 > genScheduleDuration :: Gen Minutes
-> genScheduleDuration = choose (8*60, 24*60)
+> genScheduleDuration = do
+>   dur <- choose (8*60, 24*60)
+>   return $ round2quarter dur
