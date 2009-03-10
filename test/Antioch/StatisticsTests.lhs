@@ -266,7 +266,8 @@
 >   (observed, canceled, failedBackups) = getTestPeriods
 >   start = fromGregorian 2006 2 1 0 0 0
 >   dur = 12*60
->   times = breakdownSimulationTimes start dur observed canceled
+>   times = breakdownSimulationTimes [defaultSession] start dur observed canceled
+>   sessHrs = 0.0 :: Float
 >   simHrs = 12.0 :: Float
 >   shdHrs = 7.0 :: Float
 >   obsHrs = 5.0 :: Float
@@ -275,7 +276,8 @@
 >   totalDead = 7.0 :: Float
 >   scheduledDead = 5.0 :: Float
 >   failedBackup = 2.0 :: Float
->   exp = (simHrs, shdHrs, obsHrs, cnlHrs, bckHrs, totalDead, scheduledDead, failedBackup)
+>   sessBackupHrs = 0.0 :: Float
+>   exp = (simHrs, sessHrs, sessBackupHrs, shdHrs, obsHrs, cnlHrs, bckHrs, totalDead, scheduledDead, failedBackup)
 
 Test utilities
 
