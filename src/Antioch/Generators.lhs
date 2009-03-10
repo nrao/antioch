@@ -162,7 +162,7 @@ Only 20 percent of the low freq. sessions are backups
 
 > genProjectSessions :: Gen [Session]
 > genProjectSessions = 
->     T.frequency [(25, return 1), (25, return 2), (20, return 3), (20, return 4), (10, return 5)] >>= vector
+>     T.frequency [(30, return 1), (30, return 2), (30, return 3), (5, return 4), (5, return 5)] >>= vector
 
 
 > genSessions         :: Int -> Gen [Session]
