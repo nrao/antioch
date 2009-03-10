@@ -623,7 +623,6 @@ Same as above, but with even more fixed periods
 >     d1 = (2*60)
 >     d2 = (4*60)
 >     d3 = (2*60)
->     -- TBF: scores aren't right - will show up negative!
 >     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d1 0.0 undefined False
 >     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0 undefined False
 >     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0 undefined False
@@ -713,6 +712,20 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 >     duration = 6*60
 >     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
 >     expPeriod = Period testSession starttime  (6*60) expScore undefined False
+
+> test_TestPack_pack1withHistory = TestCase $ do
+>     let periods = pack randomScore starttime duration [fixed] [testSession]
+>     w <- getWeather Nothing
+>     periods' <- runScoring w [] $ periods
+>     assertEqual "test_Pack1_2" [fixed,p2] periods'
+>   where
+>     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
+>     duration = 6*60
+>     fixedSession = defaultSession {sId = 1001}
+>     fixed = Period fixedSession starttime (3*60) 0.0 undefined False
+>     p2 = Period testSession ((3*60) `addMinutes'` starttime) (3*60) 0.0 undefined False
+>     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
+
 
 Here, packing duration (9 hrs) > session maxDur (6 hrs)
 

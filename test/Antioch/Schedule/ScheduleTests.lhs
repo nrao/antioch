@@ -49,6 +49,37 @@ similar test in SimulationTests.
 >     scores = replicate 5 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
+TBF: don't run as a test yet - it fails, but we don't know its status.
+
+> schedMinDurationWithHistory = TestCase $ do
+>     w <- getWeather $ Just wdt
+>     result <- runScoring w rs $ do
+>         sf <- genScore ss
+>         scheduleMinDuration sf dt dur history ss
+>     print result
+>     assertEqual "ScheduleTests_test_schedMinDuration" exp result
+>   where
+>     rs  = []
+>     dt  = fromGregorian 2006 2  1  0 0 0
+>     wdt = fromGregorian 2006 1 31 12 0 0
+>     dur = 60 * 24 * 1
+>     history = [Period tx (fromGregorian 2006 2 1 2 30 0) 120 0.0 undefined False]
+>     ss' = getOpenPSessions
+>     ss = filter timeLeft ss'
+>     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s)
+>     gb = head $ findPSessionByName "GB"
+>     va = head $ findPSessionByName "VA"
+>     tx = head $ findPSessionByName "TX"
+>     expSs = [tx, va, va, tx, tx] 
+>     dts = [ fromGregorian 2006 2 1 2 30 0
+>           , fromGregorian 2006 2 1 4 30 0
+>           , fromGregorian 2006 2 1 8 30 0
+>           , fromGregorian 2006 2 1 12 30 0
+>           , fromGregorian 2006 2 1 16 30 0]
+>     durs = [120, 240, 240, 240, 240]
+>     scores = replicate 5 0.0
+>     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
+
 This test ensures that the scheduleMinDuratin strategy can handle running
 out of stuff to schedule, and doesn't over schedule sessions.
 TBF: reveils bug.
