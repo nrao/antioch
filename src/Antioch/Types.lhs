@@ -167,6 +167,9 @@ Tying the knot.
 
 > instance Ord Period where
 >     (<) = (<) `on` startTime
+>     (>) = (>) `on` startTime
+>     (<=) = (<=) `on` startTime
+>     (>=) = (>=) `on` startTime
 
 TBF: Until scoring settles down, we want an equality operator for periods that
 ignores their numerical scores.

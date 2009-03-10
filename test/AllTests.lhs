@@ -1,5 +1,6 @@
 > module Antioch.AllTests where
 
+> import qualified Antioch.DebugTests as DebugT
 > import qualified Antioch.ScoreTests as ScoreT
 > import qualified Antioch.StatisticsTests as StatsT
 > import qualified Antioch.SimulationTests as SimsT
@@ -9,7 +10,8 @@
 > import Test.HUnit
 
 > tests = TestList [
->     ScoreT.tests
+>     DebugT.tests
+>   , ScoreT.tests
 >   , StatsT.tests
 >   , PackT.tests
 >   , ScheduleT.tests

@@ -281,6 +281,71 @@ TBF: code duplication!  where to put this?
 > getRaPressures :: Int -> [Trace] -> [Float]
 > getRaPressures ra rap = map (\t -> (getRaPressure t)!ra) rap 
 
+The originally scheduled periods can be reconstructed from the observed
+periods, and those that were canceled: put every canceled period in its
+original slot (this will be overwritting a backup period, or a blank).
+
+> getOriginalSchedule :: [Period] -> [Trace] -> [Period]
+> getOriginalSchedule observed trace = sort $ (originals observed) ++ canceled
+>   where 
+>     canceled = getCanceledPeriods trace
+>     originals ps = [p | p <- ps, not . pBackup $ p]
+
+> getOriginalSchedule' :: [Period] -> [Period] -> [Period]
+> getOriginalSchedule' observed canceled = sort $ (originals observed) ++ canceled
+>   where 
+>     --canceled = getCanceledPeriods trace
+>     originals ps = [p | p <- ps, not . pBackup $ p]
+
+> getScheduledDeadTime :: DateTime -> Minutes -> [Period] -> [Trace] -> [(DateTime, Minutes)]
+> getScheduledDeadTime start dur observed trace = findScheduleGaps start dur $ getOriginalSchedule observed trace
+
+> getScheduledDeadTimeHrs :: DateTime -> Minutes -> [Period] -> [Trace] -> Float
+> getScheduledDeadTimeHrs start dur obs trace = (/60) . fromIntegral . sum $ map (\dt -> snd dt) $ getScheduledDeadTime start dur obs trace
+
+> findScheduleGaps :: DateTime -> Minutes -> [Period] -> [(DateTime, Minutes)]
+> findScheduleGaps start dur [] = [(start, dur)]
+> findScheduleGaps start dur ps = startGap ++ (findScheduleGaps' ps) ++ endGap
+>   where
+>     startDiff = (startTime (head ps)) `diffMinutes'` start
+>     startGap = if startDiff == 0 then [] else [(start, startDiff)]
+>     end = dur `addMinutes'` start
+>     realEnd = (duration (last ps)) `addMinutes'` (startTime (last ps)) 
+>     endDiff = end `diffMinutes'` realEnd
+>     endGap = if endDiff == 0 then [] else [(realEnd, endDiff)]
+
+> findScheduleGaps' :: [Period] -> [(DateTime, Minutes)]
+> findScheduleGaps' []     = []
+> findScheduleGaps' (p:[]) = []
+> findScheduleGaps' (p:ps) | gap p ps > 1 = (endTime p, gap p ps) : findScheduleGaps' ps
+>                         | otherwise    = findScheduleGaps' ps
+>   where 
+>     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
+
+> getTotalHours :: [Period] -> Float
+> getTotalHours ps = (/60) . fromIntegral . sum $ map duration ps
+
+> totalSessionHrs :: [Session] -> Float
+> totalSessionHrs ss = (/60) . fromIntegral . sum $ map totalTime ss
+
+> breakdownSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float)
+> breakdownSimulationTimes sessions start dur observed canceled = 
+>   (simHrs, sessHrs, sessBackupHrs, scheduledHrs, observedHrs, canceledHrs, obsBackupHrs, totalObsDeadHrs, totalSchDeadHrs, failedBackupHrs)
+>   where
+>     simHrs = (fromIntegral dur)/60
+>     sessHrs = totalSessionHrs sessions
+>     sessBackupHrs = totalSessionHrs [s | s <- sessions, backup s] 
+>     originalSchedule = getOriginalSchedule' observed canceled
+>     scheduledHrs = getTotalHours originalSchedule
+>     observedHrs  = getTotalHours observed
+>     canceledHrs  = getTotalHours canceled
+>     obsBackupHrs = getTotalHours $ [p | p <- observed, pBackup p]
+>     observedGaps = findScheduleGaps start dur observed
+>     totalObsDeadHrs =  (/60) . fromIntegral . sum $ map snd observedGaps
+>     scheduledGaps = findScheduleGaps start dur originalSchedule
+>     totalSchDeadHrs = (/60) . fromIntegral . sum $ map snd scheduledGaps 
+>     failedBackupHrs  = canceledHrs - obsBackupHrs
+
 Utilities:
 
 > freqBins :: [Float]

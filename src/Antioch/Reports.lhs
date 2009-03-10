@@ -430,7 +430,7 @@ Simulator Harness
 >     (results, trace) <- simulate sched w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
->     let gaps = findScheduleGaps results
+>     let gaps = findScheduleGaps dt dur results
 >     let canceled = getCanceledPeriods trace
 >     -- text reports 
 >     print "Simulation Schedule Checks: "
@@ -438,10 +438,8 @@ Simulator Harness
 >     if (obeyDurations results) then print "  Min/Max Durations Honored" else print "  Min/Max Durations NOT Honored!"
 >     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
 >     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
->     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
->     print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
->     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
->     reportSemesterInfo ss results gaps
+>     reportSimulationInfo ss dt dur results canceled
+>     reportSemesterInfo ss results 
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
@@ -457,29 +455,29 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> reportSemesterInfo :: [Session] -> [Period] -> [(DateTime,Minutes)] -> IO ()
-> reportSemesterInfo ss ps dead = do
->     putStrLn $ printf "%s   %-9s %-9s %-9s %-9s %-9s " "Sem" "Total" "Backup" "Obs" "ObsBp" "Dead"
->     putStrLn $ reportSemesterHrs "05C" ss ps dead
->     putStrLn $ reportSemesterHrs "06A" ss ps dead
->     putStrLn $ reportSemesterHrs "06B" ss ps dead
->     putStrLn $ reportSemesterHrs "06C" ss ps dead
+> reportSimulationInfo :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> IO ()
+> reportSimulationInfo ss dt dur observed canceled = do
+>     putStrLn $ printf "%-9s %-9s %-9s %-9s %-9s" "simulated" "session" "backup" "scheduled" "observed" 
+>     putStrLn $ printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f" t1 t2 t3 t4 t5 
+>     putStrLn $ printf "%-9s %-9s %-9s %-9s %-9s"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
+>     putStrLn $ printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f" t6 t7 t8 t9 t10
+>       where
+>         (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) = breakdownSimulationTimes ss dt dur observed canceled
 
-> reportSemesterHrs :: String -> [Session] -> [Period] -> [(DateTime,Minutes)] ->  String
-> reportSemesterHrs sem ss ps dead = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f " sem total totalBackup totalObs totalBackupObs (deadtime :: Float) 
+> reportSemesterInfo :: [Session] -> [Period] -> IO ()
+> reportSemesterInfo ss ps = do
+>     putStrLn $ printf "%s   %-9s %-9s %-9s %-9s" "Sem" "Total" "Backup" "Obs" "ObsBp" 
+>     putStrLn $ reportSemesterHrs "05C" ss ps 
+>     putStrLn $ reportSemesterHrs "06A" ss ps 
+>     putStrLn $ reportSemesterHrs "06B" ss ps 
+>     putStrLn $ reportSemesterHrs "06C" ss ps 
+
+> reportSemesterHrs :: String -> [Session] -> [Period] -> String
+> reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f" sem total totalBackup totalObs totalBackupObs  
 >   where
 >     total = totalHrs ss (\s -> isInSemester s sem) 
 >     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
->     deadtime = (fromIntegral . sum $ [dur | (start, dur) <- dead, dt2semester' start == sem]) / 60
-
-> findScheduleGaps :: [Period] -> [(DateTime, Minutes)]
-> findScheduleGaps []     = []
-> findScheduleGaps (p:[]) = []
-> findScheduleGaps (p:ps) | gap p ps > 1 = (endTime p, gap p ps) : findScheduleGaps ps
->                         | otherwise    = findScheduleGaps ps
->   where 
->     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
 
 > runSim days filepath = generatePlots scheduleMinDuration (statsPlotsToFile filepath) days
