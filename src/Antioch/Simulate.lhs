@@ -71,17 +71,12 @@ TBF:  we probably want something smarter in DateTime
 >         | dur < int  = return (pAcc, tAcc)
 >         | otherwise  = do
 >             w' <- liftIO $ newWeather w $ Just dt
->             let schedSessions = filterSessions dt [timeLeft, isMySemester] sessions
->             (obsPeriods, t1) <- runScoring' w' rs $ do
->                 tell [Timestamp dt]
->                 sf <- genScore $ filterSessions dt [isMySemester] sessions
->                 schedPeriods <- sched sf start int' history schedSessions
->                 scheduleBackups sf schedPeriods schedSessions
+>             ((schedPeriods, obsPeriods), t1) <- runScoring' w' rs $ runSimStrategy sched start int' sessions history
 >             let sessions' = updateSessions sessions obsPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
 >             liftIO $ writeFile "/dev/null" (show t1)
->             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse obsPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
+>             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse schedPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
 >       where
 >         -- make sure we avoid an infinite loop in the case that a period of time
 >         -- can't be scheduled with anyting
@@ -89,9 +84,20 @@ TBF:  we probably want something smarter in DateTime
 >         start' = case history of
 >             (h:_) -> duration h `addMinutes'` startTime h
 >             _     -> dt
->         start  = max (negate hint `addMinutes'` dt) start'
+>         start  = max dt start' -- strategy never starts before 'now'
 >         end    = int `addMinutes'` dt
 >         int'   = end `diffMinutes'` start
+
+Run the strategy to produce a schedule, then replace with backups where necessary.
+
+> runSimStrategy :: Strategy -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring ([Period], [Period])
+> runSimStrategy strategy dt dur sessions history = do
+>   tell [Timestamp dt]
+>   let schedSessions = filterSessions dt [timeLeft, isMySemester] sessions
+>   sf <- genScore $ filterSessions dt [isMySemester] sessions
+>   schedPeriods <- strategy sf dt dur history schedSessions
+>   obsPeriods <-  scheduleBackups sf schedPeriods schedSessions
+>   return (schedPeriods, obsPeriods)
 
 > forceSeq []     = []
 > forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
