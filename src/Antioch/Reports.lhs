@@ -433,13 +433,11 @@ Simulator Harness
 >     let gaps = findScheduleGaps dt dur results
 >     let canceled = getCanceledPeriods trace
 >     -- text reports 
->     print "Simulation Schedule Checks: "
->     if (internalConflicts results) then print "  Overlaps in Schedule! " else print "  No overlaps in Schedule."
->     if (obeyDurations results) then print "  Min/Max Durations Honored" else print "  Min/Max Durations NOT Honored!"
->     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
->     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
->     reportSimulationInfo ss dt dur results canceled
->     reportSemesterInfo ss results 
+>     now <- getCurrentTime
+>     putStrLn $ reportSimulationGeneralInfo now dt days "scheduleMinDuration" ss results
+>     putStrLn $ reportScheduleChecks results gaps
+>     putStrLn $ reportSimulationTimes ss dt dur results canceled
+>     putStrLn $ reportSemesterTimes ss results 
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
@@ -455,25 +453,51 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> reportSimulationInfo :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> IO ()
-> reportSimulationInfo ss dt dur observed canceled = do
->     putStrLn $ printf "%-9s %-9s %-9s %-9s %-9s" "simulated" "session" "backup" "scheduled" "observed" 
->     putStrLn $ printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f" t1 t2 t3 t4 t5 
->     putStrLn $ printf "%-9s %-9s %-9s %-9s %-9s"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
->     putStrLn $ printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f" t6 t7 t8 t9 t10
->       where
->         (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) = breakdownSimulationTimes ss dt dur observed canceled
+> reportSimulationGeneralInfo :: DateTime -> DateTime -> Int -> String -> [Session] -> [Period] -> String
+> reportSimulationGeneralInfo now start days strategyName ss ps =
+>   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3])
+>     where
+>   heading = "General Simulation Info: \n"
+>   l0 = printf "Ran Simulations on: %s\n" (toSqlString now)
+>   l1 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
+>   l2 = printf "Ran strategy %s\n" strategyName
+>   l3 = printf "Number of Sessions as input: %d\n" (length ss)
 
-> reportSemesterInfo :: [Session] -> [Period] -> IO ()
-> reportSemesterInfo ss ps = do
->     putStrLn $ printf "%s   %-9s %-9s %-9s %-9s" "Sem" "Total" "Backup" "Obs" "ObsBp" 
->     putStrLn $ reportSemesterHrs "05C" ss ps 
->     putStrLn $ reportSemesterHrs "06A" ss ps 
->     putStrLn $ reportSemesterHrs "06B" ss ps 
->     putStrLn $ reportSemesterHrs "06C" ss ps 
+> reportScheduleChecks :: [Period] -> [(DateTime, Minutes)] -> String
+> reportScheduleChecks ps gaps =
+>   heading ++ (concat $ map ("    "++) [overlaps, durs, scores, gs])
+>     where
+>   heading = "Schedule Checks: \n"
+>   error = "WARNING: "
+>   overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
+>   durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
+>   scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
+>   gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
+
+> reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
+> reportSimulationTimes ss dt dur observed canceled = 
+>     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4])
+>   where
+>     heading = "Simulation Time Breakdown: \n"
+>     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
+>     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t4 t5 
+>     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
+>     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t6 t7 t8 t9 t10
+>     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) = breakdownSimulationTimes ss dt dur observed canceled
+
+> reportSemesterTimes :: [Session] -> [Period] -> String 
+> reportSemesterTimes ss ps = do
+>     heading ++ (concat $ map ("    "++) [hdr, l1, l2, l3, l4])
+>   where
+>     heading = "Simulation By Semester: \n"
+>     hdr = printf "%s   %-9s %-9s %-9s %-9s\n" "Sem" "Total" "Backup" "Obs" "ObsBp" 
+>     l1 = reportSemesterHrs "05C" ss ps 
+>     l2 = reportSemesterHrs "06A" ss ps 
+>     l3 = reportSemesterHrs "06B" ss ps 
+>     l4 = reportSemesterHrs "06C" ss ps 
 
 > reportSemesterHrs :: String -> [Session] -> [Period] -> String
-> reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f" sem total totalBackup totalObs totalBackupObs  
+> reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
 >   where
 >     total = totalHrs ss (\s -> isInSemester s sem) 
 >     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
