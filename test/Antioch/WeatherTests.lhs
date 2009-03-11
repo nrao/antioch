@@ -8,10 +8,24 @@
 > import System.IO.Unsafe (unsafePerformIO)
 
 > tests = TestList [
->     test_IsJust
+>     test_WeatherIsJust
+>   , test_WindsArePositive
+>   , test_WindsAreReasonable
 >      ]
 
-> test_IsJust = TestCase $ do
+> test_WindsArePositive = TestCase $ do
+>   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed < 0.0"
+>   cnn <- connect
+>   result <- getFloat cnn sql []
+>   assertEqual "test_WindsArePositive" True (isNothing result)
+
+> test_WindsAreReasonable = TestCase $ do
+>   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed > 200.0"
+>   cnn <- connect
+>   result <- getFloat cnn sql []
+>   assertEqual "test_WindsAreReasonable" True (isNothing result)
+
+> test_WeatherIsJust = TestCase $ do
 >   -- first success
 >   assertEqual "test_IsJust1" True (notNothing dt1) 
 >   -- TBF: then failure
@@ -33,4 +47,5 @@
 >         -- TBF: no table! but not being used: , minOpacity w f el
 >             , minTSysPrime w f el
 >             ]
+
 
