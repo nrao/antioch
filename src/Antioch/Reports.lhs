@@ -493,13 +493,14 @@ Simulator Harness
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
->     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4])
+>     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4, l5])
 >   where
 >     heading = "Simulation Time Breakdown: \n"
 >     l1 = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "avSess" "avBckp" "scheduled" "observed" 
 >     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t4 t5 t6 t7
 >     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
 >     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
+>     l5 = crossCheckSimulationBreakdown t1 t6 t7 t8 t9 t10 t11 t12 
 >     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) = breakdownSimulationTimes ss dt dur observed canceled
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
