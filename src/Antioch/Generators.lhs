@@ -423,3 +423,16 @@ Sometime in Oct. 2006
 > genScheduleDuration = do
 >   dur <- choose (8*60, 24*60)
 >   return $ round2quarter dur
+
+Tsys values are looked up from a database using integer values (really 
+rounded off floats) for frequency and elevation.
+
+In GHz
+
+> genLookupFrequency :: Gen Float
+> genLookupFrequency = choose (2.0, 50.0)
+
+In Radians
+
+> genLookupElevation :: Gen Float
+> genLookupElevation = choose (deg2rad 5, deg2rad 90)
