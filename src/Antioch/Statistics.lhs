@@ -336,6 +336,16 @@ time could you really schedule with these sessions?
 >     where
 >   availableTime s = if (minDuration s) == 0 then 0 else (minDuration s) * ((totalTime s) `div` (minDuration s))
 
+> crossCheckSimulationBreakdown :: Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> String
+> crossCheckSimulationBreakdown simulated scheduled observed canceled obsBackup totalDead schedDead failedBackup =
+>     (concat warnings) ++ "\n"
+>   where
+>     error = "WARNING: "
+>     w1 = if totalDead /= schedDead + failedBackup then error ++ "Total Dead Time != Scheduled Dead Time + Failed Backup Time!" else ""
+>     w2 = if observed + totalDead /= simulated then error ++ "Total Simulated Time != Observed + Dead Times!\n" else ""
+>     w3 = if scheduled - observed /= canceled - obsBackup then error ++ "Scheduled - Observed Time != Canceled - Observed Backup Times!\n" else ""
+>     warnings = [w1, w2, w3]
+
 > breakdownSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float)
 > breakdownSimulationTimes sessions start dur observed canceled = 
 >   (simHrs, sessHrs, sessBackupHrs, sessAvHrs, sessAvBackupHrs, scheduledHrs, observedHrs, canceledHrs, obsBackupHrs, totalObsDeadHrs, totalSchDeadHrs, failedBackupHrs)
