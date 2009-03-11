@@ -328,13 +328,23 @@ original slot (this will be overwritting a backup period, or a blank).
 > totalSessionHrs :: [Session] -> Float
 > totalSessionHrs ss = (/60) . fromIntegral . sum $ map totalTime ss
 
-> breakdownSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float)
+If you were scheduling with the scheduleMinDuration strategy, how much
+time could you really schedule with these sessions?
+
+> totalSessMinDurHrs :: [Session] -> Float
+> totalSessMinDurHrs ss = (/60) . fromIntegral . sum $ map availableTime ss
+>     where
+>   availableTime s = if (minDuration s) == 0 then 0 else (minDuration s) * ((totalTime s) `div` (minDuration s))
+
+> breakdownSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float)
 > breakdownSimulationTimes sessions start dur observed canceled = 
->   (simHrs, sessHrs, sessBackupHrs, scheduledHrs, observedHrs, canceledHrs, obsBackupHrs, totalObsDeadHrs, totalSchDeadHrs, failedBackupHrs)
+>   (simHrs, sessHrs, sessBackupHrs, sessAvHrs, sessAvBackupHrs, scheduledHrs, observedHrs, canceledHrs, obsBackupHrs, totalObsDeadHrs, totalSchDeadHrs, failedBackupHrs)
 >   where
 >     simHrs = (fromIntegral dur)/60
 >     sessHrs = totalSessionHrs sessions
 >     sessBackupHrs = totalSessionHrs [s | s <- sessions, backup s] 
+>     sessAvHrs = totalSessMinDurHrs sessions
+>     sessAvBackupHrs = totalSessMinDurHrs [s | s <- sessions, backup s] 
 >     originalSchedule = getOriginalSchedule' observed canceled
 >     scheduledHrs = getTotalHours originalSchedule
 >     observedHrs  = getTotalHours observed
