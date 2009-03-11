@@ -11,7 +11,7 @@
 > import Data.Convertible
 > import Data.IORef
 > import Data.List         (elemIndex)
-> import Data.Maybe        (fromJust, maybe, isJust)
+> import Data.Maybe        (fromJust, maybe, isJust, fromMaybe)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import Prelude hiding (catch)
@@ -245,17 +245,22 @@ Just some test functions to make sure things are working.
 
 Quick Check Properties:
 
-Make sure we always get something - i.e. not nothing!
-TBF: run it enough times, and you get a 2006/1/1 date, and, BANG!!!
+TBF: 1. can't use more then 100 connections
+TBF: 2. Weather is screwed up, but these don't always find the problems: need to run
+more then 100 tests.
 
-> prop_notNothing = forAll gen2006Date $ \dt ->
->   dropWhile (==True) (map (isJust . unsafePerformIO) (getValues dt)) == []
+> prop_validWeather = forAll gen2006Date $ \dt ->
+>                     forAll genLookupFrequency $ \f ->
+>                     forAll genLookupElevation $ \el ->
+>   let values = getValues dt f el in noneAreNothing values &&
+>                                windIsPositive values &&
+>                                windIsReasonable values
 >     where
->       getValues dt = unsafePerformIO $ do
->         -- TBF: randomize these three vars as well!
+>       noneAreNothing values = dropWhile (==True) (map (isJust . unsafePerformIO) values) == []
+>       windIsPositive values = 0.0 <= fromMaybe (-1.0) (head (map unsafePerformIO values))
+>       windIsReasonable values = 200.0 >= fromMaybe (201.0) (head (map unsafePerformIO values))
+>       getValues dt f el = unsafePerformIO $ do
 >         let target = dt
->         let f = 2.0 :: Float
->         let el = pi / 4.0 :: Radians
 >         w' <- theWeather
 >         w <- newWeather w' (Just dt)
 >         return $ [wind w target
