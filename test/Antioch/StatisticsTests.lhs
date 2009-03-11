@@ -276,8 +276,10 @@
 >   totalDead = 7.0 :: Float
 >   scheduledDead = 5.0 :: Float
 >   failedBackup = 2.0 :: Float
+>   sessAvHrs = 0.0 :: Float
 >   sessBackupHrs = 0.0 :: Float
->   exp = (simHrs, sessHrs, sessBackupHrs, shdHrs, obsHrs, cnlHrs, bckHrs, totalDead, scheduledDead, failedBackup)
+>   sessAvBckp = 0.0 :: Float
+>   exp = (simHrs, sessHrs, sessBackupHrs, sessAvHrs, sessAvBckp, shdHrs, obsHrs, cnlHrs, bckHrs, totalDead, scheduledDead, failedBackup)
 
 Test utilities
 
