@@ -98,9 +98,8 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 
 > test_sim_schedMinDuration_fail_backup = TestCase $ do
 >     w <- getWeather $ Just dt
->     (result, c) <- simulate scheduleMinDuration w rs dt dur int history [] ss
+>     (result, _) <- simulate scheduleMinDuration w rs dt dur int history [] ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup" exp result
->     --assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup2" [canceled] c
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 4 6 0 0
@@ -110,19 +109,15 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >     ss = getOpenPSessions
 >     lp = head $ findPSessionByName "LP"
 >     cv = head $ findPSessionByName "CV"
->     gb = head $ findPSessionByName "GB"
->     expSs = [lp, cv, cv, lp, cv, cv, cv]
+>     expSs = [lp, cv, lp, lp, cv]
 >     dts = [ fromGregorian 2006 2 4 6  0 0
 >           , fromGregorian 2006 2 4 10 0 0
->           , fromGregorian 2006 2 5 3 30 0
->           , fromGregorian 2006 2 5 5 30 0
->           , fromGregorian 2006 2 5 9 30 0
->           , fromGregorian 2006 2 5 11 30 0
->           , fromGregorian 2006 2 6 3 30 0 ]
->     durs = [240, 120, 120, 240, 120, 120, 120]
->     scores = replicate 7 0.0
+>           , fromGregorian 2006 2 5 4 30 0
+>           , fromGregorian 2006 2 5 8 30 0
+>           , fromGregorian 2006 2 6 3 30 0]
+>     durs = [240, 120, 240, 240, 120]
+>     scores = replicate 5 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
->     canceled = Period gb (fromGregorian 2006 2 5 2 30 0) 120 0.0 undefined False
 
 Make sure the simulation can handle running out of sessions to schedule, and
 that it does not over allocate periods to a session.
