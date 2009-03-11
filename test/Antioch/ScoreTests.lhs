@@ -24,6 +24,7 @@
 >   , test_minObservingEff
 >   , test_minTsysPrime
 >   , test_observingEfficiency
+>   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
 >   , test_politicalFactors
 >   , test_projectCompletion
@@ -185,6 +186,21 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     let result = eval fs
 >     assertEqual "test_observingEfficiency" 0.8661948 result
 
+Test against beta test code:
+
+> test_observingEfficiency2 = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
+>     let dt1 = fromGregorian 2006 10 15 12 0 0
+>     let dt2 = fromGregorian 2006 10 15 11 0 0
+>     let sLP = head $ findPSessionByName "LP" 
+>     let sGB = head $ findPSessionByName "GB" 
+>     fs <- runScoring w [] (observingEfficiency dt1 sLP)
+>     assertAlmostEqual "test_observingEfficiency2" 5 0.97984 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt2 sLP)
+>     assertAlmostEqual "test_observingEfficiency2" 5 0.97567 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt1 sGB)
+>     assertAlmostEqual "test_observingEfficiency2" 5 0.83052 (eval fs)
+
 > test_observingEfficiencyLimit = TestCase $ do
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
@@ -308,7 +324,7 @@ TBF are these partitions stil useful?
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
->     assertEqual "test_trackingEfficiency" 0.99796414 result
+>     assertEqual "test_trackingEfficiency" 0.996546058942 result --0.99796414 result
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
