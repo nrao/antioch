@@ -429,15 +429,17 @@ Simulator Harness
 >     start <- getCPUTime
 >     (results, trace) <- simulate sched w rs dt dur int history [] ss
 >     stop <- getCPUTime
->     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     let execTime = fromIntegral (stop-start) / 1.0e12 
+>     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
 >     let gaps = findScheduleGaps dt dur results
 >     let canceled = getCanceledPeriods trace
 >     -- text reports 
 >     now <- getCurrentTime
->     putStrLn $ reportSimulationGeneralInfo now dt days "scheduleMinDuration" ss results
->     putStrLn $ reportScheduleChecks results gaps
->     putStrLn $ reportSimulationTimes ss dt dur results canceled
->     putStrLn $ reportSemesterTimes ss results 
+>     textReports now execTime dt days "scheduleMinDuration" ss results canceled gaps
+>     --putStrLn $ reportSimulationGeneralInfo now dt days "scheduleMinDuration" ss results
+>     --putStrLn $ reportScheduleChecks results gaps
+>     --putStrLn $ reportSimulationTimes ss dt dur results canceled
+>     --putStrLn $ reportSemesterTimes ss results 
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
@@ -453,15 +455,30 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> reportSimulationGeneralInfo :: DateTime -> DateTime -> Int -> String -> [Session] -> [Period] -> String
-> reportSimulationGeneralInfo now start days strategyName ss ps =
->   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3])
+> textReports :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] ->[(DateTime, Minutes)] -> IO () 
+> textReports now execTime dt days "scheduleMinDuration" ss ps canceled gaps = do
+>     putStrLn $ report
+>     writeFile filename report
+>   where
+>     (year, month, day, hours, minutes, seconds) = toGregorian now
+>     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
+>     filename = "simulation_" ++ nowStr ++ ".txt"
+>     r1 = reportSimulationGeneralInfo now execTime dt days "scheduleMinDuration" ss ps
+>     r2 = reportScheduleChecks ps gaps
+>     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
+>     r4 = reportSemesterTimes ss ps 
+>     report = concat [r1, r2, r3, r4]
+
+> reportSimulationGeneralInfo :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
+> reportSimulationGeneralInfo now execTime start days strategyName ss ps =
+>   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3, l4])
 >     where
 >   heading = "General Simulation Info: \n"
 >   l0 = printf "Ran Simulations on: %s\n" (toSqlString now)
->   l1 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
->   l2 = printf "Ran strategy %s\n" strategyName
->   l3 = printf "Number of Sessions as input: %d\n" (length ss)
+>   l1 = printf "Simulation Execution Speed: %f seconds\n" execTime
+>   l2 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
+>   l3 = printf "Ran strategy %s\n" strategyName
+>   l4 = printf "Number of Sessions as input: %d\n" (length ss)
 
 > reportScheduleChecks :: [Period] -> [(DateTime, Minutes)] -> String
 > reportScheduleChecks ps gaps =
@@ -479,11 +496,11 @@ Simulator Harness
 >     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4])
 >   where
 >     heading = "Simulation Time Breakdown: \n"
->     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
->     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t4 t5 
+>     l1 = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "avSess" "avBckp" "scheduled" "observed" 
+>     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t4 t5 t6 t7
 >     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
->     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t6 t7 t8 t9 t10
->     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10) = breakdownSimulationTimes ss dt dur observed canceled
+>     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
+>     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) = breakdownSimulationTimes ss dt dur observed canceled
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
