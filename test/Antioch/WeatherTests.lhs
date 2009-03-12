@@ -55,6 +55,13 @@
 
 These tests are meant to produce the same results as the Beta Test code:
 
+> test_dataFirstLine = TestCase $ do
+>   let now = fromGregorian 2006 1 1 0 0 0  
+>   let dt  = fromGregorian 2006 1 1 1 0 0 
+>   w <- getWeather $ Just now
+>   wind' <- wind w dt
+>   assertEqual "test_dataFirstLine" 6.13935418989 (fromMaybe 0.0 wind')
+
 1. TestTWeather.testData0_11Night - uses 2007 in date, but server converts this
 to 2006 date.  
 
@@ -68,7 +75,7 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_data0_11Night_opacity" 4 0.0149 (fromMaybe 0.0 opacity')
 >   assertAlmostEqual "test_data0_11Night_tsys" 3 273.6758 (fromMaybe 0.0 tsys')
->   assertEqual "test_data0_11Night_wind"  1.3302 (fromMaybe 0.0 wind')
+>   assertEqual "test_data0_11Night_wind"  1.3301781 (fromMaybe 0.0 wind')
 
 2. TestTWeather.testData0_11Day - uses 2007 in date, but server converts this
 to 2006 date.  
@@ -83,7 +90,7 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_data0_11Day_opacity" 4 0.01682 (fromMaybe 0.0 opacity')
 >   assertAlmostEqual "test_data0_11Day_tsys" 3 275.3244 (fromMaybe 0.0 tsys')
->   assertEqual "test_data0_11Day_wind"  3.3372 (fromMaybe 0.0 wind')
+>   assertEqual "test_data0_11Day_wind"  3.337157 (fromMaybe 0.0 wind')
 
 3. TestTWeather.testData36_47Night - uses 2007 in date, but server converts this
 to 2006 date.  
@@ -127,7 +134,10 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_dataTrue_opacity" 4 0.0148 (fromMaybe 0.0 opacity')
 >   assertAlmostEqual "test_dataTrue_tsys" 3 273.7657 (fromMaybe 0.0 tsys')
->   assertAlmostEqual "test_dataTrue_wind" 4 0.9366 (fromMaybe 0.0 wind')
+>   -- in beta test unit test, the fact taht now == dt would mean that the
+>   -- wind returned would be weather station 2 data.  Here we're still
+>   -- getting forecatss
+>   assertEqual "test_dataTrue_wind" 1.2343843 (fromMaybe 0.0 wind')
 
 Test utilities
 
