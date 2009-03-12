@@ -37,17 +37,26 @@ to generate `items` for input to the `packWorker` function.
 >     items <- mapM (toItem sf (mask dts sched)) sessions
 >     return $! map (restoreFixedScore fixed) $ map (toPeriod dt) . packWorker sched $ items
 
+Using a list 'fs' of pre-scheduled (fixed) periods, return a period 'p'
+with its original pre-packing score.
+
 > restoreFixedScore :: [Period] -> Period -> Period
 > restoreFixedScore fs p = case find (\f -> f == p) fs of
 >     Nothing -> p
 >     Just f  -> p {pScore = pScore f}
 
-Construct a list of datetimes using quarter intervals
+Construct a list of datetimes (in minutes) at quarter intervals
+starting at 'dt' for 'dur' minutes.
 
 > quarterDateTimes :: DateTime -> Minutes -> [DateTime]
 > quarterDateTimes dt dur = [(quarter * m) `addMinutes` dt | m <- [0 .. numSteps dur - 1]]
 
-Mask out datetimes that are covered by a session already.
+Translate a list of datetimes 'dts' into a list of possible datetimes
+(using Maybe), according to the previously scheduled times found in the
+schedule 'sched'.
+[Mask out datetimes 'dts' that are already covered by a session in 'sched'.]
+A datetime is previously scheduled if its associated value in the
+schedule is Nothing.
 
 > mask :: [DateTime] -> [Maybe (Candidate Session)] -> [Maybe DateTime]
 > mask dts sched  = zipWith (\dt s -> maybe (Just dt) (const Nothing) s) dts sched
@@ -120,7 +129,8 @@ What's going on here is the following: first the list of partial solutions
 is correctly unwound to the list of Candiates (w/ correct start's and durs).
 Then the scores deltas are applied to these Candidates, since these scores
 were built up from multiple Candidates in the first place.
-TBF: This does not honor the scores for pre-scheduled (fixed) periods.
+Note that this does not honor for pre-scheduled periods, this value
+is restored later in pack.
 
 > unwind    :: [Maybe (Candidate a)] -> [Candidate a]
 > unwind xs = [ x { cScore = y } | x <- xs' | y <- ys' ]
@@ -134,6 +144,10 @@ TBF: This does not honor the scores for pre-scheduled (fixed) periods.
 >       where
 >         rest = drop (cDuration x - 1) xs
 
+An Item is a "value-added" session where the additional information
+is used for scheduling. Namely: min and max durations in units of
+"scoring periods", e.g., quarters, and two lists of scores for
+available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 
 > data Item a = Item {
 >     iId      :: !a
@@ -154,6 +168,9 @@ minutes, etc.
 >   where
 >     past' = acc . takeWhile (>= epsilon) . take max $ past
 >     acc   = scanl1 (+)
+
+Given possible scores (using Maybe) over a range of a session's durations,
+generate a list of possible candidates corresponding to the scores.
 
 > toCandidate           :: a -> [Maybe Score] -> [Maybe (Candidate a)]
 > toCandidate id scores = [fmap (Candidate id 0 d) s | s <- scores | d <- [1..]]
