@@ -184,7 +184,7 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] (observingEfficiency dt s)
 >     let result = eval fs
->     assertEqual "test_observingEfficiency" 0.8661948 result
+>     assertEqual "test_observingEfficiency" 0.86619097 result
 
 Test against beta test code:
 
@@ -195,11 +195,11 @@ Test against beta test code:
 >     let sLP = head $ findPSessionByName "LP" 
 >     let sGB = head $ findPSessionByName "GB" 
 >     fs <- runScoring w [] (observingEfficiency dt1 sLP)
->     assertAlmostEqual "test_observingEfficiency2" 5 0.97984 (eval fs)
+>     assertEqual "test_observingEfficiency2"  0.9798773 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt2 sLP)
->     assertAlmostEqual "test_observingEfficiency2" 5 0.97567 (eval fs)
+>     assertEqual "test_observingEfficiency2"  0.97485375 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt1 sGB)
->     assertAlmostEqual "test_observingEfficiency2" 5 0.83052 (eval fs)
+>     assertEqual "test_observingEfficiency2"  0.83010453 (eval fs)
 
 > test_observingEfficiencyLimit = TestCase $ do
 >     -- pTestProjects session CV
@@ -228,9 +228,9 @@ Test against beta test code:
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     Just result <- runScoring w [] (efficiency dt s) 
->     assertEqual "test_efficiency" 0.8713239 result
+>     assertEqual "test_efficiency" 0.87132007 result
 >     Just result <- runScoring w [] (efficiencyHA dt s) 
->     assertEqual "test_efficiencyHA" 0.7837111 result
+>     assertEqual "test_efficiencyHA" 0.783711 result
 
 > test_zenithOpticalDepth = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
@@ -260,16 +260,16 @@ Test against beta test code:
 
 > test_kineticTemperature = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 0
->     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.498 (kineticTemperature dtLP sessLP) 
+>     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.49832 (kineticTemperature dtLP sessLP) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.982 (kineticTemperature dt sessBug2) 
+>     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.9823 (kineticTemperature dt sessBug2) 
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     Just result <- runScoring w [] (kineticTemperature dt s) 
->     assertEqual "test_kineticTemperatureCV" 271.352 result
+>     assertEqual "test_kineticTemperatureCV" 271.3523 result
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
