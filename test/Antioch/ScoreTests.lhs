@@ -209,7 +209,7 @@ Test against beta test code:
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     -- result <- runScoring w [] (observingEfficiencyLimit dt s)
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit" 0.001534758 result
+>     assertEqual "test_observingEfficiencyLimit" (1.5337046e-3) result
 
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
@@ -324,7 +324,7 @@ TBF are these partitions stil useful?
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
->     assertEqual "test_trackingEfficiency" 0.996546058942 result --0.99796414 result
+>     assertEqual "test_trackingEfficiency" 0.99796414 result 
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
@@ -354,7 +354,7 @@ TBF are these partitions stil useful?
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV" (5.4118563e-3) result  
+>     assertEqual "test_scoreCV" (5.408132e-3) result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -436,13 +436,13 @@ Test the 24-hour scoring profile of the default session, per quarter.
 For defaultSession w/ totalTime = 24*60; start time is  2006 11 8 12 0 0
 plus 39 quarters.
 
-> defaultScores= [3.211515,3.219639,3.2261572,2.847124,3.0493839
->                ,3.1298869,3.1399984,3.1896782,3.1915512,3.196607
->                ,3.1995785,3.238325,3.2398846,3.2477117,3.2488978
->                ,3.2764614,3.2764614,3.276668,3.276668,3.2787144
->                ,3.2787144,3.2785401,3.278336,3.279575,3.2791672
->                ,3.27873,3.2782738,3.2757246,3.2750547,3.2739065
->                ,3.2730143,3.2730432,3.2713363,3.270003,3.2675853]
+> defaultScores= [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
+>                ,3.1299076,3.140008,3.1896837,3.1915457,3.1966023
+>                ,3.1995883,3.2383318,3.239888,3.2477167,3.248886
+>                ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
+>                ,3.2787113,3.278528,3.2783365,3.2795804,3.2791758
+>                ,3.2787383,3.27825,3.2757215,3.2750494,3.273897
+>                ,3.273018,3.2730415,3.271333,3.2699947,3.2675872]
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 

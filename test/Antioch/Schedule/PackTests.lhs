@@ -302,7 +302,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
->              [0.0, 0.0, 3.1896782, 3.1915512]
+>              [0.0, 0.0, 3.1896837,3.1915457]
 >     expected = Item { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -805,9 +805,9 @@ This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs
 
 > defaultPackSessionScores = (replicate 39 0.0) ++ 
->     [3.211515, 3.219639,  3.2261572
->    , 2.847124, 3.0493839, 3.1298869,
->      3.1399984,3.1896782, 3.1915512]
+>                [3.2114944,3.2196305,3.2261546
+>                ,2.8470442,3.0492089,3.1299076
+>                ,3.140008,3.1896837,3.1915457]
 
 This is the list of random numbers generated on the python side:
 
