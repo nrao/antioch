@@ -7,11 +7,15 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.Generators (generateTestData)
+> import Data.List
 > import Test.HUnit
 > import System.Random
 
 > tests = TestList [
->     test_count
+>     test_breakdownSimulationTimes
+>   , test_count
+>   , test_findScheduleGaps
+>   , test_getOriginalSchedule'
 >   , test_sessionDecFreq
 >   , test_periodDecFreq
 >   , test_sessionDecRA
@@ -230,7 +234,68 @@
 >     (sessions, periods) = generateTestData 100
 >     expected = [(40.421623,0.0,0.0),(4.2308164,1.0807323,5.132569e-3),(8.545437,15.772972,0.20508842),(29.43433,3.1774065,4.201459e-2),(2.0,1.8622164,3.055228e-2),(22.2,2.632171,4.1076623e-2),(2.0,0.0,0.0),(9.564482,0.0,0.0),(3.6233535,0.2158659,5.54528e-3),(42.254066,0.483213,1.0539614e-2),(3.366477,0.0,0.0),(2.0,0.0,0.0),(2.0,0.6972484,1.4703777e-2),(2.0,0.6027983,1.077711e-2),(13.078968,0.0,0.0),(5.0934834,0.0,0.0),(45.92087,0.0,0.0),(13.252991,0.0,0.0),(2.0,0.50919974,2.3030771e-2),(2.0,0.0,0.0),(2.0,1.0,1.0),(22.2,0.0,0.0),(2.0,1.5267622,1.6699122e-2),(38.70217,0.0,0.0),(22.2,0.0,0.0),(3.2661185,0.0,0.0),(37.20534,0.0,0.0),(2.0,0.0,0.0),(4.90036,0.0,0.0),(44.334812,1.0,1.0),(29.68108,0.0,0.0),(2.0,0.0,0.0),(2.0,1.1160543,3.1925347e-2),(2.0,0.7578787,3.427836e-2),(5.34516,0.0,0.0),(42.155487,0.0,0.0),(2.0,0.6709456,2.0941025e-2),(32.833515,1.0,1.0),(2.0,1.6064893,3.883865e-2),(2.0,1.0,1.0),(40.167473,2.054081,2.8808536e-2),(37.422455,0.0,0.0),(3.8554935,2.8515186,6.293205e-2),(5.75789,0.0,0.0),(36.23306,1.0,1.0),(2.0,0.6110397,1.4565938e-2),(12.526739,0.0,0.0),(42.382786,1.0,1.0),(48.33146,0.330013,1.6688079e-2),(2.0,0.0,0.0)]
 
+
+> test_findScheduleGaps = TestCase $ do
+>   assertEqual "test_findScheduleGaps" exp gaps
+>     where
+>   start = fromGregorian 2006 2 1 0 0 0
+>   dur   = 24 * 60
+>   gaps = findScheduleGaps start dur ps 
+>   dt1 = fromGregorian 2006 2 1 1 30 0 -- gap at start for 1.5 hrs
+>   dt2 = fromGregorian 2006 2 1 5 30 0 -- gap p1-p2 of 1 hr
+>   dur1 = 120
+>   dur2 = 240
+>   end1 = dur1 `addMinutes'` dt1
+>   end2 = dur2 `addMinutes'` dt2
+>   p1 = Period defaultSession dt1 dur1 0.0 undefined False
+>   p2 = Period defaultSession dt2 dur2 0.0 undefined False
+>   ps = [p1, p2]
+>   exp = [(start, 90), (end1, 120), (end2, (14*60)+30)]
+
+> test_getOriginalSchedule' = TestCase $ do
+>   assertEqual "test_getOriginalSchedule'" exp original
+>     where
+>   (observed, canceled, failedBackups) = getTestPeriods
+>   original = getOriginalSchedule' observed canceled
+>   exp = sort $ observed ++ failedBackups
+>   
+
+> test_breakdownSimulationTimes = TestCase $ do
+>   assertEqual "test_breakdownSimulationTimes" exp times
+>     where
+>   (observed, canceled, failedBackups) = getTestPeriods
+>   start = fromGregorian 2006 2 1 0 0 0
+>   dur = 12*60
+>   times = breakdownSimulationTimes [defaultSession] start dur observed canceled
+>   sessHrs = 0.0 :: Float
+>   simHrs = 12.0 :: Float
+>   shdHrs = 7.0 :: Float
+>   obsHrs = 5.0 :: Float
+>   cnlHrs = 5.0 :: Float
+>   bckHrs = 3.0 :: Float
+>   totalDead = 7.0 :: Float
+>   scheduledDead = 5.0 :: Float
+>   failedBackup = 2.0 :: Float
+>   sessAvHrs = 0.0 :: Float
+>   sessBackupHrs = 0.0 :: Float
+>   sessAvBckp = 0.0 :: Float
+>   exp = (simHrs, sessHrs, sessBackupHrs, sessAvHrs, sessAvBckp, shdHrs, obsHrs, cnlHrs, bckHrs, totalDead, scheduledDead, failedBackup)
+
 Test utilities
+
+> getTestPeriods :: ([Period], [Period], [Period])
+> getTestPeriods = (observed, canceled, failedBackups)
+>   where
+>   start = fromGregorian 2006 2 1 0 0 0
+>   dur = 60
+>   dts = [(2*i*60) `addMinutes'` start | i <- [1..5]]
+>   observed = zipWith mkPeriod dts [True, True, True, False, False] 
+>   mkPeriod dt backup = Period defaultSession dt dur 0.0 undefined backup
+>   canceled' = take 3 observed
+>   canceledDts = [start, (5*60) `addMinutes'` start]
+>   failedBackups = zipWith mkPeriod canceledDts [False, False]
+>   canceled = sort $ failedBackups ++ canceled'
+>   
 
 > getEfficiencies    :: Int -> [Float]
 > getEfficiencies n =

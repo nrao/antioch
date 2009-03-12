@@ -49,11 +49,19 @@ TBF:  we probably want something smarter in DateTime
 >   where
 >     (_, month, _) = toGregorian' dt
 
-> filterSessions :: String -> [Session] -> [Session]
-> filterSessions current_semester ss = filter isMySemester $ filter timeLeft ss
->   where
->     timeLeft s     = ((totalTime s) - (totalUsed s)) > (minDuration s)
->     isMySemester s = (semester $ project s) <= current_semester
+> type SelectionCriteria = DateTime -> Session -> Bool
+
+> timeLeft :: SelectionCriteria
+> timeLeft _ s     = ((totalTime s) - (totalUsed s)) > (minDuration s)
+
+> isMySemester :: SelectionCriteria 
+> isMySemester dt s = (semester $ project s) <= current_semester
+>    where
+>      current_semester = dt2semester dt
+
+> filterSessions :: DateTime -> [SelectionCriteria] -> [Session] -> [Session]
+> filterSessions dt []       ss = ss
+> filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
 
 > simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
 > simulate sched w rs dt dur int history canceled sessions =
@@ -63,19 +71,12 @@ TBF:  we probably want something smarter in DateTime
 >         | dur < int  = return (pAcc, tAcc)
 >         | otherwise  = do
 >             w' <- liftIO $ newWeather w $ Just dt
->             let schedSessions = filterSessions (dt2semester dt) sessions
->             --liftIO $ putStrLn $ "Num Sessions before & after filter: " ++ (show $ length sessions) ++ ", " ++ (show $ length schedSessions)
->             (obsPeriods, t1) <- runScoring' w' rs $ do
->                 tell [Timestamp dt]
->                 -- TBF: is this a bug? sessions -> schedSessions?
->                 sf <- genScore sessions
->                 schedPeriods <- sched sf start int' history schedSessions
->                 scheduleBackups sf schedPeriods schedSessions
+>             ((schedPeriods, obsPeriods), t1) <- runScoring' w' rs $ runSimStrategy sched start int' sessions history
 >             let sessions' = updateSessions sessions obsPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
 >             liftIO $ writeFile "/dev/null" (show t1)
->             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse obsPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
+>             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse schedPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
 >       where
 >         -- make sure we avoid an infinite loop in the case that a period of time
 >         -- can't be scheduled with anyting
@@ -83,9 +84,20 @@ TBF:  we probably want something smarter in DateTime
 >         start' = case history of
 >             (h:_) -> duration h `addMinutes'` startTime h
 >             _     -> dt
->         start  = max (negate hint `addMinutes'` dt) start'
+>         start  = max dt start' -- strategy never starts before 'now'
 >         end    = int `addMinutes'` dt
 >         int'   = end `diffMinutes'` start
+
+Run the strategy to produce a schedule, then replace with backups where necessary.
+
+> runSimStrategy :: Strategy -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring ([Period], [Period])
+> runSimStrategy strategy dt dur sessions history = do
+>   tell [Timestamp dt]
+>   let schedSessions = filterSessions dt [timeLeft, isMySemester] sessions
+>   sf <- genScore $ filterSessions dt [isMySemester] sessions
+>   schedPeriods <- strategy sf dt dur history schedSessions
+>   obsPeriods <-  scheduleBackups sf schedPeriods schedSessions
+>   return (schedPeriods, obsPeriods)
 
 > forceSeq []     = []
 > forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
@@ -114,12 +126,16 @@ schedule this as deadtime.
 > scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
 > scheduleBackup sf ss p = do 
 >   moc <- minimumObservingConditions (startTime p) (session p)
->   if fromMaybe False moc then return $ Just p else
->     if length backupSessions == 0
->     then return Nothing -- no appropriate backups -> Deadtime!
->     else replaceWithBackup sf backupSessions p
+>   if fromMaybe False moc then return $ Just p else cancelPeriod sf backupSessions p
 >   where
 >     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
+
+> cancelPeriod :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
+> cancelPeriod sf backups p = do
+>   tell [Cancellation p]
+>   if length backups == 0 
+>     then return Nothing
+>     else replaceWithBackup sf backups p
 
 Find the best backup for a given period.  The backups are scored using the
 best forecast and *not* rejecting zero scored quarters.  If the backup in turn

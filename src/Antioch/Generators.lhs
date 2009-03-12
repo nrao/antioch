@@ -162,7 +162,7 @@ Only 20 percent of the low freq. sessions are backups
 
 > genProjectSessions :: Gen [Session]
 > genProjectSessions = 
->     T.frequency [(25, return 1), (25, return 2), (20, return 3), (20, return 4), (10, return 5)] >>= vector
+>     T.frequency [(30, return 1), (30, return 2), (30, return 3), (5, return 4), (5, return 5)] >>= vector
 
 
 > genSessions         :: Int -> Gen [Session]
@@ -182,7 +182,7 @@ Make sure that the total time used up by the periods is correct:
 > prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
 > prop_totalTime s          = (2*60) <= totalTime s && totalTime s <= (30*60)
 > prop_totalTimeQuarter s   = totalTime s `mod` quarter == 0
-> prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (4*60)
+> prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (6*60)
 > prop_minDurationQuarter s = minDuration s `mod` quarter == 0
 > prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)
 > prop_maxDurationQuarter s = maxDuration s `mod` quarter == 0
@@ -420,4 +420,19 @@ Sometime in Oct. 2006
 >     return $ fromGregorian 2006 10 day hr 0 0
 
 > genScheduleDuration :: Gen Minutes
-> genScheduleDuration = choose (8*60, 24*60)
+> genScheduleDuration = do
+>   dur <- choose (8*60, 24*60)
+>   return $ round2quarter dur
+
+Tsys values are looked up from a database using integer values (really 
+rounded off floats) for frequency and elevation.
+
+In GHz
+
+> genLookupFrequency :: Gen Float
+> genLookupFrequency = choose (2.0, 50.0)
+
+In Radians
+
+> genLookupElevation :: Gen Float
+> genLookupElevation = choose (deg2rad 5, deg2rad 90)

@@ -10,6 +10,7 @@
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hr)
 > import Antioch.Weather
+> import Antioch.Debug
 > import Control.Monad      (liftM)
 > import Text.Printf
 > import System.Random
@@ -21,23 +22,25 @@ simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
 > plotDecFreq fn ss ps =
->      scatterPlots (scatterAttrs t x y fn) $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
+>      scatterPlots (scatterAttrs t x y fn) $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
 >                                            , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
 >   where
 >     t   = "Dec vs Freq"
 >     x   = "Frequency [GHz]"
 >     y   = "Declination [deg]"
+>     titles = [Just "Available", Just "Observed"]
 
 simDecRA (stars, crosses)
 
 > plotDecVsRA          :: StatsPlot
 > plotDecVsRA fn ss ps =
->     scatterPlots (scatterAttrs t x y fn) $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
+>     scatterPlots (scatterAttrs t x y fn) $ zip titles $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
 >                                           , [(rad2hr x, rad2deg y) | (x, y) <-  periodDecRA ps]]
 >   where
 >     t = "Dec vs RA"
 >     x = "Right Ascension [hr]"
 >     y = "Declination [deg]"
+>     titles = [Just "Available", Just "Observed"]
 
 simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 
@@ -96,7 +99,7 @@ simEffElev
 
 > plotEffElev fn effs ps = scatterPlot (scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) effs
 >   where
->     t = "Efficiency vs Elevation"
+>     t = "Observing Efficiency vs Elevation"
 >     x = "Elevation [deg]"
 >     y = "Observing Efficiency"
 
@@ -114,7 +117,7 @@ simEffLST
 > plotEffLst fn effs ps =
 >     scatterPlot (scatterAttrs t x y fn) $ zip (historicalLST ps) effs
 >   where
->     t = "Efficiency vs LST"
+>     t = "Observing Efficiency vs LST"
 >     x = "LST [hours]"
 >     y = "Observing Efficiency"
 
@@ -129,9 +132,9 @@ simElevDec
 > plotElevDec fn effs ps =
 >     scatterPlot (scatterAttrs t x y fn) $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
 >   where
->     t = "Elevation vs Dec"
->     x = "Declination [deg]"
->     y = "Elevation [deg]"
+>     t = "Dec vs Elevation"
+>     x = "Elevation [deg]"
+>     y = "Declination [deg]"
 
 simPFLST - need pressure history
 
@@ -168,25 +171,60 @@ simScoreLST
 >     x = "LST [hours]"
 >     y = "Score"
 
-simBandPFTime - need pressure history
+simBandPFTime
 
-TBF: example output:
-[FreqPressureHistory (array (L,W) [(L,9.850087),(S,7.902994),(C,8.072634),(X,7.8811545),(U,7.757223),(K,8.41998),(A,8.343103),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,7.869086),(S,7.902994),(C,8.072634),(X,6.2229266),(U,6.0080233),(K,6.6282206),(A,5.2407613),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,6.6825047),(S,6.3989167),(C,6.819871),(X,6.2229266),(U,6.0080233),(K,6.6282206),(A,5.2407613),(Q,8.344719),(W,1.0)]),FreqPressureHistory (array (L,W) [(L,6.100583),(S,6.3989167),(C,6.819871),(X,6.2229266),(U,6.0080233),(K,6.279914),(A,5.2407613),(Q,7.2461066),(W,1.0)])]
+> 
+> plotBandPressureTime fn trace = 
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ bandPressuresByTime trace 
+>   where
+>     t = "Band Pressure Factor vs Time"
+>     x = "Time [days]"
+>     y = "Band Pressure Factor"
+>     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+> 
 
+simLSTPFTime1
 
-simLSTPFTime1 - need pressure history
+> plotRAPressureTime1 fn trace =
+>     linePlots (scatterAttrs t x y fn) $ take 8 $ zip titles $ raPressuresByTime trace 
+>   where
+>     t = "LST Pressure Factor vs Time"
+>     x = "Time [days]"
+>     y = "LST Pressure Factor"
+>     titles = [Just (show a) | a <- [0 .. 7]]
+
 simLSTPFTime2 - need pressure history
+
+> plotRAPressureTime2 fn trace =
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ radata
+>   where
+>     (_, radata) = splitAt 8 $ raPressuresByTime trace
+>     t = "LST Pressure Factor vs Time"
+>     x = "Time [days]"
+>     y = "LST Pressure Factor"
+>     titles = [Just (show a) | a <- [8 .. 15]]
+
 simLSTPFTime3 - need pressure history
+
+> plotRAPressureTime3 fn trace =
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ radata
+>   where
+>     (_, radata) = splitAt 16 $ raPressuresByTime trace 
+>     t = "LST Pressure Factor vs Time"
+>     x = "Time [days]"
+>     y = "LST Pressure Factor"
+>     titles = [Just (show a) | a <- [16 .. 23]]
 
 simHistRA
 
 > histSessRA          :: StatsPlot
 > histSessRA fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionRAHrs ss, periodRAHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [sessionRAHrs ss, periodRAHrs ps]
 >   where
 >     t = "Right Ascension Histogram"
 >     x = "RA [hr]"
 >     y = "Counts [Hours]"
+>     titles = [Just "Available", Just "Observed"]
 
 simHistEffHr
 
@@ -197,33 +235,45 @@ simHistEffHr
 >   histEffHrBand fn effs ps
         
 > histEffHrBand fn effs ps =
->     histogramPlots (histAttrs t x y fn) $ [pBand, effByBand]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [pBand, effByBand]
 >       where
 >         pBand     = [(fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram"
 >         x = "Band [L, S, C, X, U, K, A, Q]"
 >         y = "Counts [Scheduled Hours]"
+>         titles = [Just "Observed", Just "Obs * Eff"]
 
 simHistFreq
 
 > histSessFreq          :: StatsPlot
 > histSessFreq fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionFreqHrs ss, periodFreqHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [sessionFreqHrs ss, periodFreqHrs ps, periodFreqBackupHrs ps]
 >   where
 >     t = "Frequency Histogram"
 >     x = "Frequency [GHz]"
 >     y = "Counts [Hours]"
+>     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
+
+simHistCanceledFreq
+
+> histCanceledFreqRatio fn ps trace =
+>     histogramPlot (histAttrs t x y fn) $ periodCanceledFreqRatio ps trace
+>   where
+>     t = "Canceled/Scheduled Frequency Histogram"
+>     x = "Frequency [GHz]"
+>     y = "Canceled/Scheduled [Hours]"
 
 simHistDec
 
 > histSessDec          :: StatsPlot
 > histSessDec fn ss ps =
->     histogramPlots (histAttrs t x y fn) $ [sessionDecHrs ss, periodDecHrs ps]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [sessionDecHrs ss, periodDecHrs ps]
 >   where
 >     t = "Declination Histogram"
 >     x = "Declination [deg]"
 >     y = "Counts [Hours]"
+>     titles = [Just "Available", Just "Observed"]
 
 simHistPFHours - need pressure history
 simHistPF - need pressure history
@@ -231,10 +281,10 @@ simHistTP
 
 > histSessTP         :: StatsPlot
 > histSessTP fn _ ps =
->     histogramPlot (tail $ histAttrs t x y fn) $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
+>     histogramPlot (histAttrs t x y fn) $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
 >   where
 >     t = "Telescope Period Histogram"
->     x = "Session TP [Hours]"
+>     x = "TP [Hours]"
 >     y = "Counts"
 
 simHistTPQtrs 
@@ -244,21 +294,22 @@ simHistTPQtrs
 >     histogramPlot (histAttrs t x y fn) tpDurs
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTPQtrs ps]
->     t = "TP Counts Historgram"
->     x = "Duration [Minutes]"
+>     t = "Telescope Period Historgram"
+>     x = "TP [Minutes]"
 >     y = "Counts"
 
 simHistTPDurs - how are Session minDuratin and Period duration distributed in terms of actual minutes?
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn ss ps = 
->     histogramPlots (histAttrs t x y fn) $ [tpDurs, maxTPTime]
+>     histogramPlots (histAttrs t x y fn) $ zip titles [maxTPTime, tpDurs]
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
 >     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
->     t = "TP Minutes & Max TP Minutes Historgram"
->     x = "Duration [Minutes]"
+>     t = "Telescope Period Historgram"
+>     x = "TP [Minutes]"
 >     y = "Counts [Minutes]"
+>     titles = [Just "Available", Just "Observed"]
 
 Utilities
 
@@ -359,6 +410,7 @@ Simulator Harness
 >  , histSessRA         $ rootPath ++ "/simHistRA.png"
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
+>  --, histSessBackupFreq $ rootPath ++ "/simHistBackupFreq.png"
 >  , histSessDec        $ rootPath ++ "/simHistDec.png"
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
@@ -369,7 +421,7 @@ Simulator Harness
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
->     let projs = generate 0 g $ genProjects 325 
+>     let projs = generate 0 g $ genProjects 230 
 >     let ss' = concatMap sessions projs
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
@@ -377,20 +429,25 @@ Simulator Harness
 >     start <- getCPUTime
 >     (results, trace) <- simulate sched w rs dt dur int history [] ss
 >     stop <- getCPUTime
->     putStrLn $ "Simulation Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
+>     let execTime = fromIntegral (stop-start) / 1.0e12 
+>     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
+>     let gaps = findScheduleGaps dt dur results
+>     let canceled = getCanceledPeriods trace
 >     -- text reports 
->     print "Simulation Schedule Checks: "
->     if (internalConflicts results) then print "  Overlaps in Schedule! " else print "  No overlaps in Schedule."
->     if (obeyDurations results) then print "  Min/Max Durations Honored" else print "  Min/Max Durations NOT Honored!"
->     if (validScores results) then print "  All scores >= 0.0" else print "  Socres < 0.0!"
->     let gaps = findScheduleGaps results
->     if (gaps == []) then print "  No Gaps in Schedule." else print $ "  Gaps in Schedule: " ++ (show gaps)
->     print $ "  Total Scheduled Time (min): " ++ (show $ sum (map duration results))
->     --print $ "  Total Canceled Time (min): " ++ (show $ sum (map duration canceled))
->     print $ "  Total Dead Time (min): "  ++ (show $ sum (map snd gaps))
->     reportSemesterInfo ss results gaps
+>     now <- getCurrentTime
+>     textReports now execTime dt days "scheduleMinDuration" ss results canceled gaps
+>     --putStrLn $ reportSimulationGeneralInfo now dt days "scheduleMinDuration" ss results
+>     --putStrLn $ reportScheduleChecks results gaps
+>     --putStrLn $ reportSimulationTimes ss dt dur results canceled
+>     --putStrLn $ reportSemesterTimes ss results 
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
+>     -- create plots from trace; TBF : fold these into above
+>     histCanceledFreqRatio "./figures/simHistCanceledFreq.png" results trace
+>     plotBandPressureTime "./figures/simBandPFTime.png" trace
+>     plotRAPressureTime1 "./figures/simLSTPFTime1.png" trace
+>     plotRAPressureTime2 "./figures/simLSTPFTime2.png" trace
+>     plotRAPressureTime3 "./figures/simLSTPFTime3.png" trace
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 2 1 0 0 0
@@ -398,28 +455,71 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> reportSemesterInfo :: [Session] -> [Period] -> [(DateTime,Minutes)] -> IO ()
-> reportSemesterInfo ss ps dead = do
->     putStrLn $ printf "%s   %-9s %-9s %-9s %-9s %-9s " "Sem" "Total" "Backup" "Obs" "ObsBp" "Dead"
->     putStrLn $ reportSemesterHrs "05C" ss ps dead
->     putStrLn $ reportSemesterHrs "06A" ss ps dead
->     putStrLn $ reportSemesterHrs "06B" ss ps dead
->     putStrLn $ reportSemesterHrs "06C" ss ps dead
+> textReports :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] ->[(DateTime, Minutes)] -> IO () 
+> textReports now execTime dt days "scheduleMinDuration" ss ps canceled gaps = do
+>     putStrLn $ report
+>     writeFile filename report
+>   where
+>     (year, month, day, hours, minutes, seconds) = toGregorian now
+>     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
+>     filename = "simulation_" ++ nowStr ++ ".txt"
+>     r1 = reportSimulationGeneralInfo now execTime dt days "scheduleMinDuration" ss ps
+>     r2 = reportScheduleChecks ps gaps
+>     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
+>     r4 = reportSemesterTimes ss ps 
+>     report = concat [r1, r2, r3, r4]
 
-> reportSemesterHrs :: String -> [Session] -> [Period] -> [(DateTime,Minutes)] ->  String
-> reportSemesterHrs sem ss ps dead = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f " sem total totalBackup totalObs totalBackupObs (deadtime :: Float) 
+> reportSimulationGeneralInfo :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
+> reportSimulationGeneralInfo now execTime start days strategyName ss ps =
+>   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3, l4])
+>     where
+>   heading = "General Simulation Info: \n"
+>   l0 = printf "Ran Simulations on: %s\n" (toSqlString now)
+>   l1 = printf "Simulation Execution Speed: %f seconds\n" execTime
+>   l2 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
+>   l3 = printf "Ran strategy %s\n" strategyName
+>   l4 = printf "Number of Sessions as input: %d\n" (length ss)
+
+> reportScheduleChecks :: [Period] -> [(DateTime, Minutes)] -> String
+> reportScheduleChecks ps gaps =
+>   heading ++ (concat $ map ("    "++) [overlaps, durs, scores, gs])
+>     where
+>   heading = "Schedule Checks: \n"
+>   error = "WARNING: "
+>   overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
+>   durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
+>   scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
+>   gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
+
+> reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
+> reportSimulationTimes ss dt dur observed canceled = 
+>     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4, l5])
+>   where
+>     heading = "Simulation Time Breakdown: \n"
+>     l1 = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "avSess" "avBckp" "scheduled" "observed" 
+>     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t4 t5 t6 t7
+>     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
+>     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
+>     l5 = crossCheckSimulationBreakdown t1 t6 t7 t8 t9 t10 t11 t12 
+>     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) = breakdownSimulationTimes ss dt dur observed canceled
+
+> reportSemesterTimes :: [Session] -> [Period] -> String 
+> reportSemesterTimes ss ps = do
+>     heading ++ (concat $ map ("    "++) [hdr, l1, l2, l3, l4])
+>   where
+>     heading = "Simulation By Semester: \n"
+>     hdr = printf "%s   %-9s %-9s %-9s %-9s\n" "Sem" "Total" "Backup" "Obs" "ObsBp" 
+>     l1 = reportSemesterHrs "05C" ss ps 
+>     l2 = reportSemesterHrs "06A" ss ps 
+>     l3 = reportSemesterHrs "06B" ss ps 
+>     l4 = reportSemesterHrs "06C" ss ps 
+
+> reportSemesterHrs :: String -> [Session] -> [Period] -> String
+> reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
 >   where
 >     total = totalHrs ss (\s -> isInSemester s sem) 
 >     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
->     deadtime = (fromIntegral . sum $ [dur | (start, dur) <- dead, dt2semester' start == sem]) / 60
 
-> findScheduleGaps :: [Period] -> [(DateTime, Minutes)]
-> findScheduleGaps []     = []
-> findScheduleGaps (p:[]) = []
-> findScheduleGaps (p:ps) | gap p ps > 1 = (endTime p, gap p ps) : findScheduleGaps ps
->                         | otherwise    = findScheduleGaps ps
->   where 
->     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
-
+> runSim days filepath = generatePlots scheduleMinDuration (statsPlotsToFile filepath) days

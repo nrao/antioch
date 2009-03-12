@@ -50,11 +50,31 @@ Reconstruct the factors that were used in scoring a given period.
 >   where
 >     dt = pForecast p
 
+> getCanceledPeriods :: [Trace] -> [Period]
+> getCanceledPeriods trace = canceled
+>   where
+>     canceled' = getCancellationHistory trace
+>     canceled  = [getCancellation c | c <- canceled']
+
 > getFreqPressureHistory :: [Trace] -> [Trace]
 > getFreqPressureHistory = filter isFreqPressureHistory
 
 > getRaPressureHistory :: [Trace] -> [Trace]
 > getRaPressureHistory = filter isRaPressureHistory
+
+> getTimestampHistory :: [Trace] -> [Trace]
+> getTimestampHistory = filter isTimestamp
+
+> getCancellationHistory :: [Trace] -> [Trace]
+> getCancellationHistory = filter isCancellation
+
+> getCancellation (Cancellation dt) = dt
+
+> getTimestamp (Timestamp dt) = dt
+
+> getFreqPressure (FreqPressureHistory dt) = dt
+
+> getRaPressure (RaPressureHistory dt) = dt
 
 > isTimestamp (Timestamp _) = True
 > isTimestamp _             = False
