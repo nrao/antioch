@@ -421,7 +421,7 @@ Simulator Harness
 > generatePlots sched sps days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
->     let projs = generate 0 g $ genProjects 230 
+>     let projs = generate 0 g $ genProjects 255 --230 
 >     let ss' = concatMap sessions projs
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
