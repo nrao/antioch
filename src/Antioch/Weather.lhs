@@ -29,6 +29,7 @@
 
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
+>   , w2_wind         :: DateTime -> IO (Maybe Float)  -- m/s
 >   , tatm            :: DateTime -> IO (Maybe Float)  -- Kelvin
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
@@ -46,13 +47,14 @@
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
 >     now' <- maybe getCurrentTime return now
->     (windf, tatmf)    <- getWindAndTAtm'
->     (opacityf, tsysf) <- getOpacityAndTSys'
->     stringencyf <- getTotalStringency'
->     minOpacityf <- getMinOpacity'
->     minTSysf    <- getMinTSysPrime'
+>     (windf, w2_windf, tatmf) <- getWindAndTAtm'
+>     (opacityf, tsysf)        <- getOpacityAndTSys'
+>     stringencyf              <- getTotalStringency'
+>     minOpacityf              <- getMinOpacity'
+>     minTSysf                 <- getMinTSysPrime'
 >     return Weather {
 >         wind            = pin now' $ windf conn
+>       , w2_wind         = pin now' $ w2_windf conn
 >       , tatm            = pin now' $ tatmf conn
 >       , opacity         = pin now' $ opacityf conn
 >       , tsys            = pin now' $ tsysf conn
@@ -82,21 +84,21 @@ Used for test to ensure the year is always 2006.
 > elev2Index :: Radians -> Int
 > elev2Index =  min 90 . max 5 . round . rad2deg
 
-Both wind speed and atmospheric temperature are values forecast independently
+Both wind speeds and atmospheric temperature are values forecast independently
 of frequency.
 
 > getWindAndTAtm' = do
 >     cache <- newIORef M.empty
->     return (getWind cache, getTAtm cache)
+>     return (getWind cache, getW2Wind cache, getTAtm cache)
 
 > fetchWindAndAtm :: Connection -> DateTime -> Int -> IO (Maybe Float, Maybe Float)
 > fetchWindAndAtm cnn dt ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[wind, tatm]] -> return (fromSql' wind, fromSql' tatm)
->       _              -> return (Nothing, Nothing)
+>       [[wind, w2_wind]] -> return (fromSql' wind, fromSql' w2_wind)
+>       _                 -> return (Nothing, Nothing)
 >   where
->     query = "SELECT wind_speed, tatm FROM forecasts WHERE date = ? AND forecast_type_id = ?"
+>     query = "SELECT wind_speed, w2_wind_speed FROM forecasts WHERE date = ? AND forecast_type_id = ?"
 >     xs    = [toSql' dt, toSql ftype]
 
 > getWind :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
@@ -106,12 +108,23 @@ of frequency.
 >     dt' = roundToHour dt
 >     key = (dt', ftype)
 
+> getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getW2Wind cache cnn ftype dt = liftM snd . withCache key cache $
+>     fetchWindAndAtm cnn dt' ftype
+>   where
+>     dt' = roundToHour dt
+>     key = (dt', ftype)
+
 > getTAtm :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getTAtm cache cnn ftype dt = return Nothing
+> {-
+> TBF - skipping this until Tatm is needed
 > getTAtm cache cnn ftype dt = liftM snd . withCache key cache $
 >     fetchWindAndAtm cnn dt' ftype
 >   where
 >     dt' = roundToHour dt
 >     key = (dt', ftype)
+> -}
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
@@ -231,6 +244,7 @@ Just some test functions to make sure things are working.
 > testWeather = do
 >     w <- getWeather now
 >     return ( wind w target
+>            , w2_wind w target
 >            , tatm w target
 >            , opacity w target frequency
 >            , tsys w target frequency
