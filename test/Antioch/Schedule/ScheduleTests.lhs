@@ -121,7 +121,7 @@ TBF: reveils bug.
 >   where
 >     sess = getOpenPSessions
 >     expSession = head sess
->     expScore = 10.177312
+>     expScore = 10.1773205 
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 
