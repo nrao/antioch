@@ -237,6 +237,8 @@ Helper function to get singular Float values out of the database.
 >         [[x]] -> return $ Just (fromSql x)
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
+>         -- TBF: This match can cause failures for legitimate querys, e.g.,
+>         -- "SELECT wind_speed FROM forecasts"
 >         x     -> fail "There is more than one forecast with that time stamp."
 
 Just some test functions to make sure things are working.
