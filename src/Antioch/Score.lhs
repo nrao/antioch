@@ -148,7 +148,7 @@ Ranking System from Memo 5.2, Section 3
 >      let minObs = minObservingEff (frequency s) 
 >      fs <- observingEfficiency dt s
 >      let obsEff' = eval fs
->      [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
+>      [(_, Just trkErrLimit)] <- trackingErrorLimitMOC dt s
 >      let obsEffOK = obsEff' >= minObs - 0.1
 >      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
@@ -242,6 +242,7 @@ Translates the total/used times pairs into pressure factors.
 > hourAngleLimit            :: ScoreFunc
 > zenithAngleLimit          :: ScoreFunc
 > trackingErrorLimit        :: ScoreFunc
+> trackingErrorLimitMOC     :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
 > observingEfficiencyLimit dt s = do
@@ -265,13 +266,22 @@ Translates the total/used times pairs into pressure factors.
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
 
+> trackingErrorLimitMOC dt s = do
+>     w <- weather
+>     wind' <- liftIO $ w2_wind w dt
+>     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
+
 > trackingErrorLimit dt s = do
 >     w <- weather
 >     wind' <- liftIO $ wind w dt
->     boolean "trackingErrorLimit" $ do
->         wind'' <- wind'
+>     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
+>     
+
+> calculateTRELimit :: Maybe Float -> DateTime -> Session -> Maybe Bool
+> calculateTRELimit wind dt s = do
+>         wind' <- wind
 >         -- Equation 26
->         let fv = rmsTrackingError wind'' / (theta . frequency $ s)
+>         let fv = rmsTrackingError wind' / (theta . frequency $ s)
 >         return $ fv <= maxErr
 >   where
 >     maxErr = 0.2 

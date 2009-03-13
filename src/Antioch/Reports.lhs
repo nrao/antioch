@@ -1,3 +1,4 @@
+
 > module Antioch.Reports where
 
 > import Antioch.DateTime
@@ -174,7 +175,7 @@ simScoreLST
 simBandPFTime
 
 > 
-> plotBandPressureTime fn trace = 
+> plotBandPressureTime fn _ trace = 
 >     linePlots (scatterAttrs t x y fn) $ zip titles $ bandPressuresByTime trace 
 >   where
 >     t = "Band Pressure Factor vs Time"
@@ -185,7 +186,7 @@ simBandPFTime
 
 simLSTPFTime1
 
-> plotRAPressureTime1 fn trace =
+> plotRAPressureTime1 fn _ trace =
 >     linePlots (scatterAttrs t x y fn) $ take 8 $ zip titles $ raPressuresByTime trace 
 >   where
 >     t = "LST Pressure Factor vs Time"
@@ -195,7 +196,7 @@ simLSTPFTime1
 
 simLSTPFTime2 - need pressure history
 
-> plotRAPressureTime2 fn trace =
+> plotRAPressureTime2 fn _ trace =
 >     linePlots (scatterAttrs t x y fn) $ zip titles $ radata
 >   where
 >     (_, radata) = splitAt 8 $ raPressuresByTime trace
@@ -206,7 +207,7 @@ simLSTPFTime2 - need pressure history
 
 simLSTPFTime3 - need pressure history
 
-> plotRAPressureTime3 fn trace =
+> plotRAPressureTime3 fn _ trace =
 >     linePlots (scatterAttrs t x y fn) $ zip titles $ radata
 >   where
 >     (_, radata) = splitAt 16 $ raPressuresByTime trace 
@@ -417,8 +418,17 @@ Simulator Harness
 >  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
 >   ]
 
-> generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> Int -> IO ()
-> generatePlots sched sps days = do
+> tracePlotsToFile rootPath = [
+>    histCanceledFreqRatio $ rootPath ++ "/simHistCanceledFreq.png"
+>  , plotBandPressureTime $ rootPath ++ "/simBandPFTime.png"
+>  , plotRAPressureTime1 $ rootPath ++ "/simLSTPFTime1.png"
+>  , plotRAPressureTime2 $ rootPath ++ "/simLSTPFTime2.png"
+>  , plotRAPressureTime3 $ rootPath ++ "/simLSTPFTime3.png"
+>    ]
+
+
+> generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> [[Period] -> [Trace] -> IO ()] -> Int -> IO ()
+> generatePlots sched sps trace_plots days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
 >     let projs = generate 0 g $ genProjects 255 --230 
@@ -443,11 +453,7 @@ Simulator Harness
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
->     histCanceledFreqRatio "./figures/simHistCanceledFreq.png" results trace
->     plotBandPressureTime "./figures/simBandPFTime.png" trace
->     plotRAPressureTime1 "./figures/simLSTPFTime1.png" trace
->     plotRAPressureTime2 "./figures/simLSTPFTime2.png" trace
->     plotRAPressureTime3 "./figures/simLSTPFTime3.png" trace
+>     mapM_ (\f -> f results trace) trace_plots
 >   where
 >     rs      = []
 >     dt      = fromGregorian 2006 2 1 0 0 0

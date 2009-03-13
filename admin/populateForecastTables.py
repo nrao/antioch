@@ -22,8 +22,8 @@ def fill(xs, forecast, date):
            INTO forecasts (forecast_type_id, date, wind_speed, w2_wind_speed, tatm)
            VALUES (%s, '%s', %s, %s, NULL)""" % (forecast_id
                                                , date
-                                               , w2_wind_speed
-                                               , wind_speed)
+                                               , wind_speed
+                                               , w2_wind_speed)
     c.query(q)
     r = c.query('SELECT id from forecasts ORDER BY id DESC LIMIT 1')
     id = r.dictresult()[0]["id"]
