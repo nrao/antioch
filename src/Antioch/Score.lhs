@@ -345,7 +345,7 @@ Scoring utilities
 
 Compute the average score for a given session over an interval, BUT:
    * modfiy the weather to start at the time given
-   * don't reject sessions that have quarters of score zero
+   * reject sessions that have quarters of score zero
 This is for use when determining best backups to run.
 
 > 
@@ -356,13 +356,16 @@ This is for use when determining best backups to run.
 >     scores <- mapM (scoreLocal w' sf s) times 
 >     case length scores of
 >       0 -> return 0.0
->       otherwise -> return $ (sum scores) / (fromIntegral $ length scores)
+>       otherwise -> return $ (sumScores scores) / (fromIntegral $ length scores)
 >   where
 >     scoreLocal w' sf s dt = local (\env -> env { envWeather = w'}) $ do
 >       fs <- sf dt s
 >       return $ eval fs 
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+>     sumScores scores = case dropWhile (>0.0) scores of
+>         [] -> sum scores
+>         otherwise -> 0.0 -- don't allow zero-scored quarters
 > 
 
 Compute the average score for a given session over an interval.
