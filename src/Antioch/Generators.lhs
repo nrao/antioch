@@ -354,7 +354,7 @@ Q      80     5.3%     3.2   6
 > genBand sem = fmap (read . str) . elements $ bands !! sem
 >   where
 >     bands = [ "KKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
->             , "KKKQQQAXUCCSSLLLLLLL"  -- 1
+>             , "KKKQQAAXUCCSSLLLLLLL"  -- 1
 >             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
 >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]

@@ -98,10 +98,14 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     dec' = dec s
 
+> observingEfficiencyMOC     :: ScoreFunc
 > observingEfficiency        :: ScoreFunc
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
+> trackingEfficiencyMOC      :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
+
+> observingEfficiencyMOC = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiencyMOC]
 
 > observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
@@ -133,11 +137,23 @@ Ranking System from Memo 5.2, Section 3
 >     sigmaDay = 3.3
 >     sigmaNight = 2.8
 
-> trackingEfficiency dt s = factor "trackingEfficiency" . Just $
+> trackingEfficiencyMOC dt s = do
+>   w <- weather
+>   wind' <- liftIO $ w2_wind w dt
+>   factor "trackingEfficiency" $ calculateTE wind' dt s
+
+> trackingEfficiency dt s = do
+>   w <- weather
+>   wind' <- liftIO $ wind w dt
+>   factor "trackingEfficiency" $ calculateTE wind' dt s
+
+> calculateTE :: Maybe Float -> DateTime -> Session -> Maybe Float
+> calculateTE wind dt s = do
+>     wind' <- wind
+>     let rmsTE' = rmsTrackingError dt wind'
 >     -- Equation 12
->     (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^^ (-2)
+>     return $ (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^^ (-2)
 >   where
->     rmsTE' = rmsTE dt
 >     theta' = theta . frequency $ s
 
 > minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
@@ -146,7 +162,7 @@ Ranking System from Memo 5.2, Section 3
 >    w' <- liftIO $ newWeather w (Just dt)
 >    local (\env -> env { envWeather = w'}) $ do
 >      let minObs = minObservingEff (frequency s) 
->      fs <- observingEfficiency dt s
+>      fs <- observingEfficiencyMOC dt s
 >      let obsEff' = eval fs
 >      [(_, Just trkErrLimit)] <- trackingErrorLimitMOC dt s
 >      let obsEffOK = obsEff' >= minObs - 0.1
@@ -281,12 +297,13 @@ Translates the total/used times pairs into pressure factors.
 > calculateTRELimit wind dt s = do
 >         wind' <- wind
 >         -- Equation 26
->         let fv = rmsTrackingError wind' / (theta . frequency $ s)
+>         let fv = rmsTrackingError dt wind' / (theta . frequency $ s)
 >         return $ fv <= maxErr
 >   where
 >     maxErr = 0.2 
->     -- Equation 11
->     rmsTrackingError w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
+
+>  -- Equation 11
+> rmsTrackingError dt w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
 
 > atmosphericStabilityLimit _ _ =
 >                            factor "atmosphericStabilityLimit" . Just $ 1.0
