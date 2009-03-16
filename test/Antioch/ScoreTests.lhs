@@ -184,7 +184,7 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] (observingEfficiency dt s)
 >     let result = eval fs
->     assertEqual "test_observingEfficiency" 0.86619097 result
+>     assertAlmostEqual "test_observingEfficiency" 4 0.857506 result
 
 Test against beta test code:
 
@@ -195,11 +195,11 @@ Test against beta test code:
 >     let sLP = head $ findPSessionByName "LP" 
 >     let sGB = head $ findPSessionByName "GB" 
 >     fs <- runScoring w [] (observingEfficiency dt1 sLP)
->     assertEqual "test_observingEfficiency2"  0.9798773 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2" 4 0.97984 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt2 sLP)
->     assertEqual "test_observingEfficiency2"  0.97485375 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2_2" 4 0.97567 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt1 sGB)
->     assertEqual "test_observingEfficiency2"  0.83010453 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2_3" 3 0.83052 (eval fs)
 
 > test_observingEfficiencyLimit = TestCase $ do
 >     -- pTestProjects session CV
@@ -209,7 +209,7 @@ Test against beta test code:
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     -- result <- runScoring w [] (observingEfficiencyLimit dt s)
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit" (1.5337046e-3) result
+>     assertEqual "test_observingEfficiencyLimit" (2.9231957e-4) result
 
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
@@ -324,7 +324,7 @@ TBF are these partitions stil useful?
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
->     assertEqual "test_trackingEfficiency" 0.99796414 result 
+>     assertAlmostEqual "test_trackingEfficiency" 3 0.9879579 result 
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
@@ -354,7 +354,7 @@ TBF are these partitions stil useful?
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV" (5.408132e-3) result  
+>     assertEqual "test_scoreCV" (1.0204386e-3) result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -366,7 +366,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 3.9875174 result  
+>     assertAlmostEqual "test_scoreCV2" 3 3.9704554 result  
 
 > test_avgScoreForTime = TestCase $ do
 >     -- score on top of weather
