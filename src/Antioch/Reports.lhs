@@ -57,7 +57,7 @@ simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 >     t     = "Observing Efficiency vs Frequency"
 >     x     = "Frequency [GHz]"
 >     y     = "Observing Efficiency"
->     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51)] ++ [YRange (-0.1, 1.1)]
+>     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
 
 > plotEffVsFreq fn effs ps =
@@ -105,7 +105,12 @@ simEffElev
 >     y = "Observing Efficiency"
 
 > plotMinObsEff        :: StatsPlot
-> plotMinObsEff fn _ _ = plotFunc [] (linearScale 1000 (0, 50)) minObservingEff
+> plotMinObsEff fn _ _ = plotFunc attrs (linearScale 1000 (0, 50)) minObservingEff
+>   where
+>     t     = "Observing Efficiency vs Frequency"
+>     x     = "Frequency [GHz]"
+>     y     = "Observing Efficiency"
+>     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
 simEffLST
 
@@ -384,6 +389,7 @@ Simulator Harness
 >  , plotFreqVsTime "" 
 >  , plotSatRatioVsFreq ""
 >  , plotEffElev' ""
+>  , plotMinObsEff ""
 >  , plotEffLst' ""
 >  , plotElevDec' ""
 >  --, plotScoreElev' ""
@@ -405,6 +411,7 @@ Simulator Harness
 >  , plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
+>  , plotMinObsEff      $ rootPath ++ "/simMinObsEff.png"
 >  , plotElevDec'       $ rootPath ++ "/simElevDec.png"
 >  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
 >  --, plotLstScore'      $ rootPath ++ "/simScoreLST.png"
