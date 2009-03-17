@@ -424,7 +424,7 @@ produce changes in the final result.
 >         fs <- genScore sess
 >         pack fs starttime duration [] sess
 >     -- TBF: how to use 
->     assertEqual "test_Pack2" (take 3 expPeriods) (take 3 periods'  )
+>     assertEqual "test_Pack2" expPeriods periods'
 >   where
 >     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
