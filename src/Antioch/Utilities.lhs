@@ -34,6 +34,9 @@
 > between :: Ord a => a -> a -> a -> Bool
 > between v min max = min <= v && v <= max
 
+> printList :: Show a => [a] -> IO ()
+> printList xs = putStrLn $ concatMap (++ "\n") $ map show xs
+
 > genDate :: Gen DateTime
 > genDate = do
 >     mon <- choose (1, 12)
