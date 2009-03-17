@@ -23,7 +23,7 @@
 > test_sim_schedMinDuration = TestCase $ do
 >     w <- getWeather $ Just dt
 >     (result, t) <- simulate scheduleMinDuration w rs dt dur int history cnl ss
->     assertEqual "SimulationTests_test_sim_schedMinDuration" (take 12 exp) (take 12 result)
+>     assertEqual "SimulationTests_test_sim_schedMinDuration" exp result
 >     --assertEqual "SimulationTests_test_sim_schedMinDuration_2" canceled c
 >   where
 >     --canceled = []
@@ -40,21 +40,22 @@
 >     va = head $ findPSessionByName "VA"
 >     tx = head $ findPSessionByName "TX"
 >     wv = head $ findPSessionByName "WV"
->     expSs = [gb, gb, va, cv, tx, tx, wv, gb, lp, cv, tx, tx]
+>     expSs = [gb, gb, gb, va, tx, tx, gb, wv, gb, lp, cv, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
 >           , fromGregorian 2006 2 1 5 30 0
->           , fromGregorian 2006 2 1 9 30 0
+>           , fromGregorian 2006 2 1 7 30 0
 >           , fromGregorian 2006 2 1 11 30 0
 >           , fromGregorian 2006 2 1 15 30 0
->           , fromGregorian 2006 2 2  1 15 0
->           , fromGregorian 2006 2 2  5 15 0
->           , fromGregorian 2006 2 2  7 15 0
->           , fromGregorian 2006 2 2 11 15 0
->           , fromGregorian 2006 2 2 13 15 0
->           , fromGregorian 2006 2 2 17 15 0 ]
->     durs = [120, 120, 240, 120, 240, 240, 240, 120, 240, 120, 240, 240]
->     scores = replicate 12 0.0
+>           , fromGregorian 2006 2 1 22 15 0
+>           , fromGregorian 2006 2 2  0 15 0
+>           , fromGregorian 2006 2 2  4 15 0
+>           , fromGregorian 2006 2 2  6 15 0
+>           , fromGregorian 2006 2 2 10 15 0
+>           , fromGregorian 2006 2 2 12 15 0
+>           , fromGregorian 2006 2 2 16 15 0 ]
+>     durs = [120, 120, 120, 240, 240, 240, 120, 240, 120, 240, 120, 240, 240]
+>     scores = replicate 13 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
 Test the case where a bady performing TP is replaced with a backup
@@ -109,14 +110,16 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >     ss = getOpenPSessions
 >     lp = head $ findPSessionByName "LP"
 >     cv = head $ findPSessionByName "CV"
->     expSs = [lp, cv, lp, lp, cv]
+>     as = head $ findPSessionByName "AS"
+>     expSs = [lp, cv, cv, as, cv, cv]
 >     dts = [ fromGregorian 2006 2 4 6  0 0
 >           , fromGregorian 2006 2 4 10 0 0
->           , fromGregorian 2006 2 5 4 30 0
->           , fromGregorian 2006 2 5 8 30 0
+>           , fromGregorian 2006 2 5 3 30 0
+>           , fromGregorian 2006 2 5 5 30 0
+>           , fromGregorian 2006 2 5 11 30 0
 >           , fromGregorian 2006 2 6 3 30 0]
->     durs = [240, 120, 240, 240, 120]
->     scores = replicate 5 0.0
+>     durs = [240, 120, 120, 360, 120, 120]
+>     scores = [4.5342355, 2.0002627, 3.4819984, 3.5047417, 3.4682279, 2.933338] 
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
 Make sure the simulation can handle running out of sessions to schedule, and
