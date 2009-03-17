@@ -98,14 +98,10 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     dec' = dec s
 
-> observingEfficiencyMOC     :: ScoreFunc
 > observingEfficiency        :: ScoreFunc
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
-> trackingEfficiencyMOC      :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
-
-> observingEfficiencyMOC = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiencyMOC]
 
 > observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
@@ -137,14 +133,12 @@ Ranking System from Memo 5.2, Section 3
 >     sigmaDay = 3.3
 >     sigmaNight = 2.8
 
-> trackingEfficiencyMOC dt s = do
->   w <- weather
->   wind' <- liftIO $ w2_wind w dt
->   factor "trackingEfficiency" $ calculateTE wind' dt s
-
 > trackingEfficiency dt s = do
->   w <- weather
->   wind' <- liftIO $ wind w dt
+>   w     <- weather
+>   meas  <- measuredWind 
+>   wind' <- if meas
+>            then liftIO $ w2_wind w dt
+>            else liftIO $ wind w dt 
 >   factor "trackingEfficiency" $ calculateTE wind' dt s
 
 > calculateTE :: Maybe Float -> DateTime -> Session -> Maybe Float
@@ -160,11 +154,11 @@ Ranking System from Memo 5.2, Section 3
 > minimumObservingConditions dt s = do
 >    w  <- weather
 >    w' <- liftIO $ newWeather w (Just dt)
->    local (\env -> env { envWeather = w'}) $ do
+>    local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
 >      let minObs = minObservingEff (frequency s) 
->      fs <- observingEfficiencyMOC dt s
+>      fs <- observingEfficiency dt s
 >      let obsEff' = eval fs
->      [(_, Just trkErrLimit)] <- trackingErrorLimitMOC dt s
+>      [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
 >      let obsEffOK = obsEff' >= minObs - 0.1
 >      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
@@ -258,7 +252,6 @@ Translates the total/used times pairs into pressure factors.
 > hourAngleLimit            :: ScoreFunc
 > zenithAngleLimit          :: ScoreFunc
 > trackingErrorLimit        :: ScoreFunc
-> trackingErrorLimitMOC     :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
 > observingEfficiencyLimit dt s = do
@@ -282,14 +275,12 @@ Translates the total/used times pairs into pressure factors.
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
 
-> trackingErrorLimitMOC dt s = do
->     w <- weather
->     wind' <- liftIO $ w2_wind w dt
->     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
-
 > trackingErrorLimit dt s = do
->     w <- weather
->     wind' <- liftIO $ wind w dt
+>     w     <- weather
+>     meas  <- measuredWind
+>     wind' <- if meas
+>              then liftIO $ w2_wind w dt
+>              else liftIO $ wind w dt
 >     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
 >     
 
@@ -343,7 +334,7 @@ Translates the total/used times pairs into pressure factors.
 
 Scoring utilities
 
-Compute the average score for a given session over an interval, BUT:
+Compute the average score for a given session over an interval:
    * modfiy the weather to start at the time given
    * reject sessions that have quarters of score zero
 This is for use when determining best backups to run.
@@ -358,7 +349,8 @@ This is for use when determining best backups to run.
 >       0 -> return 0.0
 >       otherwise -> return $ (sumScores scores) / (fromIntegral $ length scores)
 >   where
->     scoreLocal w' sf s dt = local (\env -> env { envWeather = w'}) $ do
+>     -- TBF:  Using the measured wind speed for scoring in the future is unrealistic, but damn convent!
+>     scoreLocal w' sf s dt = local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
 >       fs <- sf dt s
 >       return $ eval fs 
 >     numQtrs = dur `div` quarter
@@ -406,8 +398,9 @@ This is the environment that the Scoring Monad is carrying around
 to avoid long lists of repetitive parameters.
 
 > data ScoringEnv = ScoringEnv {
->     envWeather    :: Weather
->   , envReceivers  :: ReceiverSchedule
+>     envWeather      :: Weather
+>   , envReceivers    :: ReceiverSchedule
+>   , envMeasuredWind :: Bool
 >   }
 
 Just an easy way to pull the stuff like weather or the receiver schedule
@@ -419,6 +412,9 @@ the Scoring Monad, as in the action "w <- weather".
 
 > receiverSchedule :: Scoring ReceiverSchedule
 > receiverSchedule = asks envReceivers
+
+> measuredWind :: Scoring Bool
+> measuredWind = asks envMeasuredWind
 
 The Scoring monad encapsulates the concept of a scoring action,
 all the scoring functions live in the monad so they can
@@ -442,7 +438,7 @@ resulting in simple types rather than monadic types.
 > runScoring w rs = liftM fst . runScoring' w rs
 
 > runScoring'        :: Weather -> ReceiverSchedule -> Scoring t -> IO (t, [Trace])
-> runScoring' w rs f = evalRWST f (ScoringEnv w rs) ()
+> runScoring' w rs f = evalRWST f (ScoringEnv w rs False) ()
 
 This allows us to run scoring multiple times, all within the same trace.  Mainly
 useful for simulation.
