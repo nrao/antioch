@@ -302,7 +302,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
->              [0.0, 0.0, 3.1896837,3.1915457]
+>              [0.0, 0.0, 5.1309695,5.144102]
 >     expected = Item { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -411,8 +411,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
 >                                }
->     expStartTime = fromGregorian 2006 11 8 21 45 0
->     expPeriod = Period candidate expStartTime 135 34.97986 undefined False
+>     expStartTime = fromGregorian 2006 11 8 22 0 0
+>     expPeriod = Period candidate expStartTime 120 39.949707 undefined False
 
 Create a long schedule from a reproducable randomly created set of sessions.
 The main value of this test is to catch changes in the packing algorithm that 
@@ -434,10 +434,10 @@ produce changes in the final result.
 >         names = ["CV", "AS", "WV", "GB"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [210, 375, 360, 150]
+>         durs = [120, 450, 360, 150]
 >         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         times = [ starttime
->                 , fromGregorian 2006 11 8  15 30 0
+>                 , fromGregorian 2006 11 8  14  0 0
 >                 , fromGregorian 2006 11 9   3 30 0
 >                 , fromGregorian 2006 11 9   9 30 0 ]
 >         -- TBF
@@ -804,10 +804,10 @@ Session data to pack:
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs
 
-> defaultPackSessionScores = (replicate 39 0.0) ++ 
->                [3.2114944,3.2196305,3.2261546
->                ,2.8470442,3.0492089,3.1299076
->                ,3.140008,3.1896837,3.1915457]
+> defaultPackSessionScores = (replicate 40 0.0) ++ 
+>                [4.9454975,5.0226474,4.834392,
+>                 4.905203,4.965679,5.0012183,
+>                 5.1309695,5.144102]
 
 This is the list of random numbers generated on the python side:
 
