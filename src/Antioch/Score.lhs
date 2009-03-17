@@ -62,9 +62,9 @@ Ranking System from Memo 5.2, Section 3
 >         []      -> 60.0
 >   where 
 >         freq = fromIntegral . round . frequency $ s
->         freqBand =  [ (1.73, 10.0)
+>         freqBand =  [ (1.73,  6.0)
 >                     , (3.95, 10.0)
->                     , (5.85, 5.0)
+>                     , (5.85,  5.0)
 >                     , (10.0, 13.0)
 >                     , (15.4, 14.0)
 >                     , (26.5, 21.0)

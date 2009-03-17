@@ -214,23 +214,23 @@ Test against beta test code:
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertResult "test_efficiency" (Just wdt) 2 0.98215 (efficiency dt sessLP)  
->     assertResult "test_efficiencyHA" (Just wdt) 2 0.72034 (efficiencyHA dt sessLP) 
->     assertResult "test_efficiency" (Just wdt) 2 0.89721 (efficiency dt sessWV) 
->     assertResult "test_efficiencyHA" (Just wdt) 2 0.70341 (efficiencyHA dt sessWV) 
->     assertResult "test_efficiency" (Just wdt) 2 0.9614 (efficiency dt sessAS) 
->     assertResult "test_efficiencyHA" (Just wdt) 2 0.4548 (efficiencyHA dt sessAS)
->     assertResult "test_efficiency" (Just wdt) 2 0.93555 (efficiency dt sessBug)
->     assertResult "test_efficiency" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
+>     assertResult "test_efficiency 1" (Just wdt) 2 0.98215 (efficiency dt sessLP)  
+>     assertResult "test_efficiencyHA 2" (Just wdt) 2 0.72034 (efficiencyHA dt sessLP) 
+>     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sessWV) 
+>     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sessWV) 
+>     assertResult "test_efficiency 5" (Just wdt) 2 1.3530585 (efficiency dt sessAS) 
+>     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.3836436 (efficiencyHA dt sessAS)
+>     assertResult "test_efficiency 7" (Just wdt) 2 0.935551 (efficiency dt sessBug)
+>     assertResult "test_efficiency 8" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     Just result <- runScoring w [] (efficiency dt s) 
->     assertEqual "test_efficiency" 0.87132007 result
+>     assertEqual "test_efficiency 9" 0.87132007 result
 >     Just result <- runScoring w [] (efficiencyHA dt s) 
->     assertEqual "test_efficiencyHA" 0.783711 result
+>     assertEqual "test_efficiencyHA 10" 0.783711 result
 
 > test_zenithOpticalDepth = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
@@ -431,18 +431,18 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           }
->     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 23 0.0)
+>     expected = (replicate 40 0.0) ++ defaultScores ++ (replicate 24 0.0)
 
 For defaultSession w/ totalTime = 24*60; start time is  2006 11 8 12 0 0
-plus 39 quarters.
+plus 40 quarters.
 
-> defaultScores= [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
->                ,3.1299076,3.140008,3.1896837,3.1915457,3.1966023
->                ,3.1995883,3.2383318,3.239888,3.2477167,3.248886
->                ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
->                ,3.2787113,3.278528,3.2783365,3.2795804,3.2791758
->                ,3.2787383,3.27825,3.2757215,3.2750494,3.273897
->                ,3.273018,3.2730415,3.271333,3.2699947,3.2675872]
+> defaultScores= [4.9454975,5.0226474,4.834392,4.905203,4.965679,
+>                 5.0012183,5.1309695,5.144102,5.180014,5.201366,
+>                 5.2880096,5.30486,5.327419,5.341837,5.404956,
+>                 5.404956,5.410821,5.410821,5.4096427,5.4096427,
+>                 5.4035525,5.397189,5.387006,5.372202,5.35601,
+>                 5.3382564,5.3147116,5.2931466,5.2565713,5.22892,
+>                 5.184606,5.128878,5.0859]
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -490,10 +490,10 @@ Look at the scores over a range where none are zero.
 >     score' w sf dt = do
 >         fs <- runScoring w [] (sf dt sess)
 >         return $ eval fs
->     dt = (39*quarter) `addMinutes'` starttime -- start where scores /= 0
+>     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 25.0133826 :: Score 
+>     expectedTotal = 39.949707 :: Score 
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 Test utilities
