@@ -424,7 +424,7 @@ produce changes in the final result.
 >         fs <- genScore sess
 >         pack fs starttime duration [] sess
 >     -- TBF: how to use 
->     assertEqual "test_Pack2" expPeriods periods'  
+>     assertEqual "test_Pack2" (take 3 expPeriods) (take 3 periods'  )
 >   where
 >     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
@@ -434,10 +434,10 @@ produce changes in the final result.
 >         names = ["CV", "AS", "WV", "GB"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [225, 360, 360, 150]
+>         durs = [210, 375, 360, 150]
 >         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         times = [ starttime
->                 , fromGregorian 2006 11 8  15 45 0
+>                 , fromGregorian 2006 11 8  15 30 0
 >                 , fromGregorian 2006 11 9   3 30 0
 >                 , fromGregorian 2006 11 9   9 30 0 ]
 >         -- TBF
