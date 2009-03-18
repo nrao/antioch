@@ -438,7 +438,7 @@ Simulator Harness
 > generatePlots sched sps trace_plots days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
->     let projs = generate 0 g $ genProjects 255 --230 
+>     let projs = generate 0 g $ genProjects 255 
 >     let ss' = concatMap sessions projs
 >     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
@@ -480,7 +480,8 @@ Simulator Harness
 >     r2 = reportScheduleChecks ps gaps
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
->     report = concat [r1, r2, r3, r4]
+>     r5 = reportBandTimes ss ps 
+>     report = concat [r1, r2, r3, r4, r5]
 
 > reportSimulationGeneralInfo :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
 > reportSimulationGeneralInfo now execTime start days strategyName ss ps =
@@ -526,6 +527,23 @@ Simulator Harness
 >     l2 = reportSemesterHrs "06A" ss ps 
 >     l3 = reportSemesterHrs "06B" ss ps 
 >     l4 = reportSemesterHrs "06C" ss ps 
+
+ 
+> reportBandTimes :: [Session] -> [Period] -> String 
+> reportBandTimes ss ps = do
+>     heading ++ (concat $ map ("    "++) [hdr, l1, l2])
+>   where
+>     heading = "Simulation By Band    : \n"
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
+>     sessBandTimes = sessionAvBand ss
+>     periodBandTimes = periodBand ps
+>     l1 = toStr sessBandTimes
+>     l2 = toStr periodBandTimes
+>     --l1 = sessionFreqHrs ss
+>     --l2 = periodFreqHrs ps
+>     --l3 = periodFreqBackupHrs ps
+>     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
+
 
 > reportSemesterHrs :: String -> [Session] -> [Period] -> String
 > reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
