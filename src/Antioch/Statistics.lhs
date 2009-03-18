@@ -156,6 +156,11 @@ Compare allocated hours by frequency to observed hours by frequency.
 > periodBand :: [Period] -> [(Band, Float)]
 > periodBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . duration) `vs` (band . session))
 
+> sessionAvBand :: [Session] -> [(Band, Float)]
+> sessionAvBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . availableTime) `vs` (band))
+>   where
+>     availableTime s = if (minDuration s) == 0 then 0 else (minDuration s) * ((totalTime s) `div` (minDuration s))
+
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
 >     histogram bands . (effSchdMins `vs` (band . session . fst)) $ zip ps es
