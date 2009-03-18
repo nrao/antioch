@@ -2,6 +2,7 @@
 >     (
 >       pTestProjects
 >     , findPSessionByName
+>     , findPSessionsByName
 >     , getPSessionId
 >     , getOpenPSessions
 >     ) where
@@ -287,13 +288,17 @@
 
 Utilities:
 
-> findPSessionByName :: String -> [Session]
-> findPSessionByName name = filter (\s' -> (sName s')==name) (concatMap sessions pTestProjects) 
+> findPSessionByName :: String -> Session
+> --findPSessionByName name = head $ filter (\s' -> (sName s')==name) (concatMap sessions pTestProjects) 
+> findPSessionByName name = head $ findPSessionsByName name
+
+> findPSessionsByName :: String -> [Session]
+> findPSessionsByName name = filter (\s' -> (sName s')==name) (concatMap sessions pTestProjects) 
 
 Assumes we have unique names.  
 
 > getPSessionId :: String -> Int
-> getPSessionId name = sId . head $ findPSessionByName name
+> getPSessionId name = sId $ findPSessionByName name
 
 > getOpenPSessions :: [Session]
 > getOpenPSessions = (take 8 ss) ++ (drop ((length ss) - 2) ss)

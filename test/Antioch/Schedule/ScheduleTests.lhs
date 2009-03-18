@@ -36,9 +36,9 @@ similar test in SimulationTests.
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
 >     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s)
->     gb = head $ findPSessionByName "GB"
->     va = head $ findPSessionByName "VA"
->     tx = head $ findPSessionByName "TX"
+>     gb = findPSessionByName "GB"
+>     va = findPSessionByName "VA"
+>     tx = findPSessionByName "TX"
 >     expSs = [gb, va, va, tx, tx] 
 >     dts = [ fromGregorian 2006 2 1 2 30 0
 >           , fromGregorian 2006 2 1 4 30 0
@@ -67,9 +67,9 @@ TBF: don't run as a test yet - it fails, but we don't know its status.
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
 >     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s)
->     gb = head $ findPSessionByName "GB"
->     va = head $ findPSessionByName "VA"
->     tx = head $ findPSessionByName "TX"
+>     gb = findPSessionByName "GB"
+>     va = findPSessionByName "VA"
+>     tx = findPSessionByName "TX"
 >     expSs = [tx, va, va, tx, tx] 
 >     dts = [ fromGregorian 2006 2 1 2 30 0
 >           , fromGregorian 2006 2 1 4 30 0
@@ -145,7 +145,7 @@ TBF: constrain has not been fully implemented yet
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 1 0 0
 >     ss = getOpenPSessions
->     cv = head $ findPSessionByName "CV"
+>     cv = findPSessionByName "CV"
 >     ssMinusCV = ss \\ [cv]
 >     s' = defaultSession {sId = 1000, totalTime = 2, minDuration = 1}
 >     almostBookedSession = s' {periods = [Period s' dt 1 0.0 undefined False]}

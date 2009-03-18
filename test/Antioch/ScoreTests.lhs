@@ -69,8 +69,9 @@ tested time period
 >     scores <- mapM (score' w) times
 >     assertEqual "test_hourAngleLimit" expected scores
 >   where
+>     sess = findPSessionByName "LP"
 >     score' w dt = do
->         [(_, Just s)] <- runScoring w [] (hourAngleLimit dt sessLP)
+>         [(_, Just s)] <- runScoring w [] (hourAngleLimit dt sess)
 >         return s
 >     times = [(60*h) `addMinutes'` dtLP | h <- [0..23]]
 >     expected = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0,
@@ -93,11 +94,13 @@ tested time period
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
->     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sessLP)
+>     let sess = findPSessionByName "LP"
+>     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sess)
 >     let dt = fromGregorian 2006 6 25 12 0 0
->     assertScoringResult' "test_receiver" Nothing 1.0 (receiver dt sessLP)
+>     assertScoringResult' "test_receiver" Nothing 1.0 (receiver dt sess)
 >     let dt = fromGregorian 2006 8 1 12 0 0
->     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sessAS)
+>     let sess = findPSessionByName "AS"
+>     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sess)
 
 > test_getReceivers = TestCase $ do
 >     assertEqual "test_getReceivers" [Rcvr4_6, Rcvr12_18] result
@@ -108,7 +111,8 @@ BETA: TestAtmosphericOpacity.py testgetZenithAngle
 > test_zenithAngle = TestCase $ do
 >    -- BETA: beta gets 63.88534, diff between Float vs. Double
 >    let dt = fromGregorian 2006 10 15 12 0 0 
->    let result = zenithAngle dt sessLP
+>    let sess = findPSessionByName "LP"
+>    let result = zenithAngle dt sess
 >    assertAlmostEqual "test_zenithAngle" 5 (deg2rad 63.704613) result 
 >    let result = zenithAngle dt sessBug
 >    assertAlmostEqual "test_zenithAngle" 4 (deg2rad 40.5076) result 
@@ -120,7 +124,7 @@ BETA: TestAtmosphericOpacity.py testHaskell
 > test_zenithAngle2 = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
->     let sLP = head $ findPSessionByName "LP" 
+>     let sLP = findPSessionByName "LP" 
 >     let za = zenithAngle dt1 sLP
 >     -- BETA: difference due to Float vs. Double
 >     assertAlmostEqual "test_zenithAngle2" 2 (deg2rad 75.3003270409) za 
@@ -129,7 +133,8 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 
 > test_zenithAngleAtTransit = TestCase $ do
 >    -- BETA
->    let result = zenithAngleAtTransit sessLP
+>    let sess = findPSessionByName "LP"
+>    let result = zenithAngleAtTransit sess
 >    assertEqual "test_zenithAngleAtTransit" (deg2rad 33.03313) result 
 >    let result = zenithAngleAtTransit sessBug
 >    assertAlmostEqual "test_zenithAngleAtTransit" 5 (deg2rad 30.98467) result 
@@ -138,11 +143,13 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 
 > test_minTsysPrime = TestCase $ do
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
->    -- sessLP
->    Just result <- minTSysPrime w (frequency sessLP) (elevation sessLP)
+>    -- session LP
+>    let sess = findPSessionByName "LP"
+>    Just result <- minTSysPrime w (frequency sess) (elevation sess)
 >    assertAlmostEqual "test_minTsysPrime" 3 15.490067 result 
->    -- sessAS
->    Just result <- minTSysPrime w (frequency sessAS) (elevation sessAS)
+>    -- session AS
+>    let sess = findPSessionByName "AS"
+>    Just result <- minTSysPrime w (frequency sess) (elevation sess)
 >    assertAlmostEqual "test_minTsysPrime" 3 25.958 result 
 >    -- sessBug
 >    Just result <- minTSysPrime w (frequency sessBug) (elevation sessBug)
@@ -176,7 +183,7 @@ TBF: first part of this test passes, but match to python does not work.
 >       where    
 >         --names = ["GB","CV","LP","TX","VA","WV","AS"]
 >         --sess = concatMap (\name -> findPSessionByName name) names
->         sGB = head $ findPSessionByName "GB"
+>         sGB = findPSessionByName "GB"
 >     -}
 
 TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too. 
@@ -203,7 +210,7 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >         Just result <- runScoring w [] (minimumObservingConditions dt s)
 >         return result
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
->     sess = concatMap (\name -> findPSessionByName name) names
+>     sess = concatMap (\name -> findPSessionsByName name) names
 >     expected = [False, True, True, False, False, False, True]
 
 > test_observingEfficiency = TestCase $ do
@@ -211,7 +218,7 @@ TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too.
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     fs <- runScoring w [] (observingEfficiency dt s)
 >     let result = eval fs
 >     assertAlmostEqual "test_observingEfficiency" 4 0.857506 result
@@ -222,8 +229,8 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
 >     let dt1 = fromGregorian 2006 10 15 12 0 0
 >     let dt2 = fromGregorian 2006 10 15 11 0 0
->     let sLP = head $ findPSessionByName "LP" 
->     let sGB = head $ findPSessionByName "GB" 
+>     let sLP = findPSessionByName "LP" 
+>     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] (observingEfficiency dt1 sLP)
 >     assertAlmostEqual "test_observingEfficiency2" 4 0.97984 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt2 sLP)
@@ -238,9 +245,9 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     -- BETA: diff due to Float vs. Double ???
+>     -- BETA: diff probably due to Float vs. Double
 >     assertAlmostEqual "test_observingEfficiencyLimit" 4 (2.92284277214e-4) result
 
 BETA: TestAtmosphericOpacity.py testefficiency
@@ -248,13 +255,16 @@ BETA: TestAtmosphericOpacity.py testefficiency
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertResult "test_efficiency 1" (Just wdt) 2 0.98215 (efficiency dt sessLP)  
->     assertResult "test_efficiencyHA 2" (Just wdt) 2 0.72034 (efficiencyHA dt sessLP) 
->     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sessWV) 
->     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sessWV) 
+>     let sess = findPSessionByName "LP"
+>     assertResult "test_efficiency 1" (Just wdt) 2 0.98215 (efficiency dt sess)  
+>     assertResult "test_efficiencyHA 2" (Just wdt) 2 0.72034 (efficiencyHA dt sess) 
+>     let sess = findPSessionByName "WV"
+>     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sess) 
+>     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sess) 
 >     -- TBF: WTF??? eff > 1 ???  Because we aren't handling freq's < 2.0
->     assertResult "test_efficiency 5" (Just wdt) 2 1.3530585 (efficiency dt sessAS) 
->     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.3836436 (efficiencyHA dt sessAS)
+>     let sess = findPSessionByName "AS"
+>     assertResult "test_efficiency 5" (Just wdt) 2 1.3530585 (efficiency dt sess) 
+>     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.3836436 (efficiencyHA dt sess)
 >     assertResult "test_efficiency 7" (Just wdt) 2 0.935551 (efficiency dt sessBug)
 >     assertResult "test_efficiency 8" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
@@ -271,7 +281,8 @@ BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
 
 > test_zenithOpticalDepth = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
->     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.00798 (zenithOpticalDepth dtLP sessLP)
+>     let sess = findPSessionByName "LP"
+>     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.00798 (zenithOpticalDepth dtLP sess)
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.0661772 (zenithOpticalDepth dt sessBug)
 >     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.007394265 (zenithOpticalDepth dt sessBug2)
@@ -281,26 +292,27 @@ BETA: TestAtmosphericOpacity.py testHaskell
 > test_zenithOpticalDepth2 = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
->     let sLP = head $ findPSessionByName "LP" 
+>     let sLP = findPSessionByName "LP" 
 >     Just zod <- runScoring w [] (zenithOpticalDepth dt1 sLP)
 >     assertEqual "test_zenithOpticalDepth2" 0.007960711 zod 
 
 > test_receiverTemperature = TestCase $ do
->     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sessLP
+>     let sess = findPSessionByName "LP"
+>     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sess
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertEqual "test_receiverTemperature" 60.0 $ receiverTemperature dt sessBug
 >     assertEqual "test_receiverTemperature" 10.0 $ receiverTemperature dt sessBug2
 >     -- pTestProjects session CV
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     let result = receiverTemperature dt s 
 >     assertEqual "test_receiverTemperature" 5.0 result
 
 > test_minObservingEff = TestCase $ do
 >     -- pTestProjects session CV
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     let result = minObservingEff . frequency $ s
 >     assertEqual "test_minObservingEff" 0.93819135 result
 
@@ -308,14 +320,15 @@ BETA: TestAtmosphericOpacity.py testkineticTemperature
 
 > test_kineticTemperature = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 0
->     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.49832 (kineticTemperature dtLP sessLP) 
+>     let sess = findPSessionByName "LP"
+>     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.49832 (kineticTemperature dtLP sess) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.9823 (kineticTemperature dt sessBug2) 
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     Just result <- runScoring w [] (kineticTemperature dt s) 
 >     assertEqual "test_kineticTemperatureCV" 271.3523 result
 
@@ -324,14 +337,16 @@ BETA: TestAtmosphericOpacity.py testHaskell
 > test_kineticTemperature2 = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
->     let sLP = head $ findPSessionByName "LP" 
+>     let sLP = findPSessionByName "LP" 
 >     Just kt <- runScoring w [] (kineticTemperature dt1 sLP)
 >     assertEqual "test_kineticTemperature2" 257.41776 kt 
 
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
->     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sessLP)
->     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sessAS)
+>     let sess = findPSessionByName "LP"
+>     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sess)
+>     let sess = findPSessionByName "AS"
+>     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sess)
 
 > makeTestProject :: Minutes -> Minutes -> Project
 > makeTestProject tl tt = makeProject proj' tt ss'
@@ -349,7 +364,8 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
 >     let p = makeTestProject 28740 33812
->     let s = sessLP {project = p}
+>     let sess = findPSessionByName "LP"
+>     let s = sess {project = p}
 >     assertScoringResult "test_projectCompletion" Nothing 3 1.015 (projectCompletion dt s)
 
 TBF are these partitions stil useful?
@@ -372,14 +388,15 @@ TBF are these partitions stil useful?
 >     assertEqual "test_politicalFactors" 1.0024 result
 
 > test_trackingEfficiency = TestCase $ do
->     -- sessLP
+>     -- session LP
+>     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sessLP)
+>     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
 >     assertAlmostEqual "test_trackingEfficiency" 3 0.9879579 result 
 
@@ -387,12 +404,13 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sessLP)
+>     let sess = findPSessionByName "LP"
+>     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
 >     assertEqual "test_trackingErrorLimit" 1.0 result
 
@@ -400,15 +418,18 @@ BETA: TestZenithAngleLimit testScore
 
 > test_zenithAngleLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 0 0 0
->     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sessLP)
+>     let sess = findPSessionByName "LP"
+>     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sess)
 
 BETA: TestSurfaceObservingEfficiency testefficiency
 
 > test_surfaceObservingEfficiency = TestCase $ do
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
->     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sessLP)
->     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sessWV)
+>     let sess = findPSessionByName "LP"
+>     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sess)
+>     let sess = findPSessionByName "WV"
+>     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sess)
 
 > test_scoreCV = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
@@ -454,7 +475,7 @@ to use in conjunction with Pack tests.
 >     dt = fromGregorian 2006 10 1 18 0 0
 >     dt2 = fromGregorian 2006 10 1 0 0 0
 >     ss = getOpenPSessions
->     s = head $ findPSessionByName "CV"
+>     s = findPSessionByName "CV"
 > 
 
 > test_avgScoreForTime2 = TestCase $ do
@@ -598,37 +619,7 @@ Test utilities
 
 Test data generation
 
-BETA: From beta tests TestDB.py, but also can be found in PProjects.lhs:
-
-> sessLP = defaultSession {
->     sId       = 3
->   , sName     = "LP"
->   , ra        = hrs2rad 12.3
->   , dec       = deg2rad  5.4
->   , frequency = 5.4
->   , receivers = [Rcvr4_6]
->   }
-
-> sessWV = defaultSession {
->     sId       = 6
->   , sName     = "WV"
->   , ra        = hrs2rad 4.2 
->   , dec       = deg2rad 17.4
->   , frequency = 34.9
->   , receivers = [Rcvr26_40]
->   }
-
-> sessAS = defaultSession {
->     sId       = 7
->   , sName     = "AS"
->   , ra        = hrs2rad 14.3 
->   , dec       = deg2rad 18.4
->   , frequency = 0.5
->   , receivers = [Rcvr_450]
->   }
-
-*Not* from the beta test code - these are sessions that exposed bugs from the
-QuickCheck properties.
+These are sessions that exposed bugs from the QuickCheck properties.
 
 > bugSessions = zipWith5 genBugSessions names ras decs freqs rcvrs 
 >   where names  = ["bug1",   "bug2"]

@@ -34,12 +34,12 @@
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     lp = head $ findPSessionByName "LP"
->     cv = head $ findPSessionByName "CV"
->     gb = head $ findPSessionByName "GB"
->     va = head $ findPSessionByName "VA"
->     tx = head $ findPSessionByName "TX"
->     wv = head $ findPSessionByName "WV"
+>     lp = findPSessionByName "LP"
+>     cv = findPSessionByName "CV"
+>     gb = findPSessionByName "GB"
+>     va = findPSessionByName "VA"
+>     tx = findPSessionByName "TX"
+>     wv = findPSessionByName "WV"
 >     expSs = [gb, gb, gb, va, tx, tx, gb, wv, gb, lp, cv, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
@@ -72,10 +72,10 @@ Test the case where a bady performing TP is replaced with a backup
 >     int = 60 * 24 * 1
 >     history = []
 >     ss' = getOpenPSessions
->     lp = head $ findPSessionByName "LP"
->     cv = head $ findPSessionByName "CV"
->     gb = head $ findPSessionByName "GB"
->     as = head $ findPSessionByName "AS"
+>     lp = findPSessionByName "LP"
+>     cv = findPSessionByName "CV"
+>     gb = findPSessionByName "GB"
+>     as = findPSessionByName "AS"
 >     -- backup sessions aren't above 10 GHz, but in our example, we only
 >     -- want this to be scheduled when GB's MOC fails.  The other complication
 >     -- is that we want this 'backup' to score low enough so that it doesn't
@@ -108,9 +108,9 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >     int = 60 * 24 * 1
 >     history = []
 >     ss = getOpenPSessions
->     lp = head $ findPSessionByName "LP"
->     cv = head $ findPSessionByName "CV"
->     as = head $ findPSessionByName "AS"
+>     lp = findPSessionByName "LP"
+>     cv = findPSessionByName "CV"
+>     as = findPSessionByName "AS"
 >     expSs = [as, cv, cv, as, cv]
 >     dts = [ fromGregorian 2006 2 4  6  0 0
 >           , fromGregorian 2006 2 5  3 30 0
