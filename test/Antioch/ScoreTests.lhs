@@ -11,6 +11,13 @@
 > import Data.List            (zip4, zipWith4, zipWith5)
 > import Data.Maybe           (isJust)
 
+Note: the keyword BETA throughout the unit tests denotes tests whose main
+purpose is to cross check results between this haskell code and the 2008
+DSS summer beta test python code.  Specifically, the python code found here:
+/home/sandboxes/mclark/trunk/simulation/antioch
+The reason why this branch should be used is that a bug was found in this
+codes weather server used for unit tests (TWeather).  
+
 > tests = TestList [
 >     test_averageScore
 >   , test_averageScore2
@@ -53,6 +60,10 @@
 >     stop <- getCurrentTime
 >     putStrLn $ "Test Execution Speed: " ++ show (diffSeconds stop start) ++ " seconds"
 
+BETA: TestHourAngleLimit.py testcomputedScore
+for some reason, the two tests only overlap for the first half of the 
+tested time period
+
 > test_hourAngleLimit = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
 >     scores <- mapM (score' w) times
@@ -92,7 +103,10 @@
 >     assertEqual "test_getReceivers" [Rcvr4_6, Rcvr12_18] result
 >       where result = getReceivers (fromGregorian 2006 6 24 16 0 0) rSched
 
+BETA: TestAtmosphericOpacity.py testgetZenithAngle
+
 > test_zenithAngle = TestCase $ do
+>    -- BETA: beta gets 63.88534, diff between Float vs. Double
 >    let dt = fromGregorian 2006 10 15 12 0 0 
 >    let result = zenithAngle dt sessLP
 >    assertAlmostEqual "test_zenithAngle" 5 (deg2rad 63.704613) result 
@@ -111,7 +125,10 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     -- BETA: difference due to Float vs. Double
 >     assertAlmostEqual "test_zenithAngle2" 2 (deg2rad 75.3003270409) za 
 
+BETA: TestAtmosphericOpacity testgetZenithAngle
+
 > test_zenithAngleAtTransit = TestCase $ do
+>    -- BETA
 >    let result = zenithAngleAtTransit sessLP
 >    assertEqual "test_zenithAngleAtTransit" (deg2rad 33.03313) result 
 >    let result = zenithAngleAtTransit sessBug
@@ -215,15 +232,18 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     fs <- runScoring w [] (observingEfficiency dt1 sGB)
 >     assertAlmostEqual "test_observingEfficiency2_3" 2 0.83052 (eval fs)
 
+BETA: TestObservingEfficiencyLimit.testHaskell
+
 > test_observingEfficiencyLimit = TestCase $ do
->     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     -- result <- runScoring w [] (observingEfficiencyLimit dt s)
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit" (2.9231957e-4) result
+>     -- BETA: diff due to Float vs. Double ???
+>     assertAlmostEqual "test_observingEfficiencyLimit" 4 (2.92284277214e-4) result
+
+BETA: TestAtmosphericOpacity.py testefficiency
 
 > test_efficiency = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
@@ -232,6 +252,7 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     assertResult "test_efficiencyHA 2" (Just wdt) 2 0.72034 (efficiencyHA dt sessLP) 
 >     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sessWV) 
 >     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sessWV) 
+>     -- TBF: WTF??? eff > 1 ???  Because we aren't handling freq's < 2.0
 >     assertResult "test_efficiency 5" (Just wdt) 2 1.3530585 (efficiency dt sessAS) 
 >     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.3836436 (efficiencyHA dt sessAS)
 >     assertResult "test_efficiency 7" (Just wdt) 2 0.935551 (efficiency dt sessBug)
@@ -245,6 +266,8 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     assertEqual "test_efficiency 9" 0.87132007 result
 >     Just result <- runScoring w [] (efficiencyHA dt s) 
 >     assertEqual "test_efficiencyHA 10" 0.783711 result
+
+BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
 
 > test_zenithOpticalDepth = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 2
@@ -280,6 +303,8 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     let result = minObservingEff . frequency $ s
 >     assertEqual "test_minObservingEff" 0.93819135 result
+
+BETA: TestAtmosphericOpacity.py testkineticTemperature
 
 > test_kineticTemperature = TestCase $ do
 >     let wdt = fromGregorian 2006 10 14 9 15 0
@@ -358,6 +383,8 @@ TBF are these partitions stil useful?
 >     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
 >     assertAlmostEqual "test_trackingEfficiency" 3 0.9879579 result 
 
+BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
+
 > test_trackingErrorLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sessLP)
@@ -369,9 +396,13 @@ TBF are these partitions stil useful?
 >     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
 >     assertEqual "test_trackingErrorLimit" 1.0 result
 
+BETA: TestZenithAngleLimit testScore
+
 > test_zenithAngleLimit = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 0 0 0
 >     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sessLP)
+
+BETA: TestSurfaceObservingEfficiency testefficiency
 
 > test_surfaceObservingEfficiency = TestCase $ do
 >     let dt  = fromGregorian 2006 4 15 16 0 0
@@ -567,7 +598,7 @@ Test utilities
 
 Test data generation
 
-From beta tests:
+BETA: From beta tests TestDB.py, but also can be found in PProjects.lhs:
 
 > sessLP = defaultSession {
 >     sId       = 3
