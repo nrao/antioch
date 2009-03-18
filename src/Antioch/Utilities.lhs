@@ -6,7 +6,11 @@
 > import Test.QuickCheck hiding (frequency)
 
 > gbtLat, gbtLong, gbtAlt :: Float
+> --gbtLat should be:
+> --        0.67078447611528835
 > gbtLat  = 0.67078465065073467 -- radians
+> -- gbtLong should be:
+> --        -79.8398333 ...
 > gbtLong = -79.839839722222223 -- degrees
 > gbtAlt  = 855.0               -- meters
 
