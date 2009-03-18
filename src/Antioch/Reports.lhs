@@ -13,6 +13,7 @@
 > import Antioch.Weather
 > import Antioch.Debug
 > import Control.Monad      (liftM)
+> import Control.Monad.Trans (liftIO)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -44,21 +45,28 @@ simDecRA (stars, crosses)
 >     titles = [Just "Available", Just "Observed"]
 
 simEffFreq (error bars, crosses, line plot) - Need stats from Dana
+This plot is observing efficiency vs. frequency, where the obs. eff. is:
+   * calculated at the time of the start of the Period
+   * just for that one inital quarter (as oppsed to averaged over duration)
+   * uses weather 
 
 > plotEffVsFreq'         :: StatsPlot
 > plotEffVsFreq' fn _ ps = do
 >   w    <- getWeather Nothing
 >   effs <- historicalObsEff w ps
->   plotEffVsFreq'' fn effs ps
+>   let t = "Observed Observing Efficiency (at start) vs Frequency"
+>   let y = "Observing Efficiency"
+>   plotEffVsFreq'' fn effs ps t y
 
-> plotEffVsFreq'' fn effs ps =
+General purpose function for scatter plots of some kind of efficiency vs. freq
+
+> plotEffVsFreq'' fn effs ps t y =
 >     scatterPlot attrs $ zip (historicalFreq ps) effs
 >   where
->     t     = "Observing Efficiency vs Frequency"
 >     x     = "Frequency [GHz]"
->     y     = "Observing Efficiency"
 >     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
+TBF: plotEffVsFreq still not being used anywhere
 
 > plotEffVsFreq fn effs ps =
 >     errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
@@ -150,7 +158,6 @@ simScoreElev
 > plotScoreElev'         :: StatsPlot
 > plotScoreElev' fn _ ps = do
 >   w       <- getWeather Nothing
->   --sf <- genScore $ map session ps
 >   scores  <- historicalObsScore w ps
 >   plotScoreElev fn scores ps
 
@@ -166,7 +173,6 @@ simScoreLST
 > plotLstScore'         :: StatsPlot
 > plotLstScore' fn _ ps = do
 >   w       <- getWeather Nothing
->   --sf <- genScore $ map session ps
 >   scores  <- historicalObsScore w ps
 >   plotLstScore fn scores ps
 >
@@ -319,15 +325,13 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 Utilities
 
-> getEfficiency w p = do
+> getObservingEfficiency w p = do 
 >     let now' = (replaceYear 2006 (startTime p))
 >     w'     <- newWeather w $ Just now'
->     result <- runScoring w' [] (efficiency now' (session p))
->     case result of
->         Nothing     -> return 0.0
->         Just result -> return result
+>     result <- runScoring w' [] (observingEfficiency now' (session p))
+>     return $ eval result
 
-> historicalObsEff w = mapM (getEfficiency w)
+> historicalObsEff w = mapM (getObservingEfficiency w) 
 
 This function is only temporary until we get simulations integrated
 TBF: how does this give us the score at the time that a period ran?
@@ -339,7 +343,6 @@ will they be using?
 >   where
 >     dt = replaceYear 2006 . startTime $ p
 
-> --historicalObsScore :: Weather -> [Period] -> IO [Score]
 > historicalObsScore w ps = do
 >     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
 >     runScoring w' [] $ genScore (map session ps) >>= \sf -> mapM (getScore sf) ps
@@ -553,4 +556,4 @@ Simulator Harness
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
 
-> runSim days filepath = generatePlots scheduleMinDuration (statsPlotsToFile filepath) days
+> runSim days filepath = generatePlots scheduleMinDuration (statsPlotsToFile filepath) (tracePlotsToFile filepath) days

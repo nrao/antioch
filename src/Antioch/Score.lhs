@@ -105,6 +105,8 @@ Ranking System from Memo 5.2, Section 3
 
 > observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
 
+TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
+
 > atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
 > atmosphericOpacity' eff dt s = factor "atmosphericOpacity" eff
 
