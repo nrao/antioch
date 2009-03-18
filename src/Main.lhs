@@ -11,7 +11,6 @@
 >     -- print trace
 >   --generatePlots (scheduleFixedDuration 240) (statsPlotsToFile "~/figuresFD") 334  -- 76 Minutes
 >   --generatePlots (scheduleFixedDuration' 240) (statsPlotsToFile "~/figuresFD2") 334  -- 76 Minutes
->   generatePlots pack (statsPlotsToFile "../myplots_pack") (tracePlotsToFile "../myplots_pack") 330
->   --generatePlots scheduleMinDuration (statsPlotsToFile "../myplots") (tracePlotsToFile "../myplots") 330
+>   --generatePlots pack (statsPlotsToFile "~/figuresPack") 334  -- 96 Minutes
+>   generatePlots scheduleMinDuration (statsPlotsToFile "./figures") (tracePlotsToFile "./figures") 334
 >   --generatePlots scheduleMinDuration (statsPlots ++ (statsPlotsToFile "./figures")) 334  -- 76 Minutes
-
