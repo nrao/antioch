@@ -136,7 +136,8 @@ QuickCheck Properties:
 
 Make sure that the schedule produced by pack has no conlficts: no overlapping
 periods. 
-       
+TBF: failing after n tests!
+
 > prop_packValidSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
 >                      forAll genScheduleDuration $ \dur ->
@@ -148,6 +149,7 @@ periods.
 >      validScores sched
 
 Same as above, but now insert some pre-schedule periods into the problem.
+TBF: failing after 1 test!
 
 > prop_packValidMixedSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
