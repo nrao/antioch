@@ -36,9 +36,7 @@
 >   assertEqual "test_W2WindsAreReasonable" True (isNothing result)
 
 > test_WeatherIsJust = TestCase $ do
->   -- first success
 >   assertEqual "test_IsJust1" True (notNothing dt1) 
->   -- TBF: then failure
 >   assertEqual "test_IsJust2" True (notNothing dt2) 
 >     where
 >       dt1 = fromGregorian 2006 1 2 0 0 0
@@ -59,8 +57,6 @@
 >                  , minTSysPrime w f el
 >             ]
 
-These tests are meant to produce the same results as the Beta Test code:
-
 > test_dataFirstLine = TestCase $ do
 >   let now = fromGregorian 2006 1 1 0 0 0  
 >   let dt  = fromGregorian 2006 1 1 1 0 0 
@@ -70,7 +66,7 @@ These tests are meant to produce the same results as the Beta Test code:
 >   wind' <- w2_wind w dt
 >   assertEqual "test_dataFirstLine_w2_wind" 6.57004 (fromMaybe 0.0 wind')
 
-1. TestTWeather.testData0_11Night - uses 2007 in date, but server converts this
+BETA: TestTWeather.testData0_11Night - uses 2007 in date, but server converts this
 to 2006 date.  
 
 > test_data0_11Night = TestCase $ do
@@ -87,7 +83,7 @@ to 2006 date.
 >   assertEqual "test_data0_11Night_wind"  1.3301781 (fromMaybe 0.0 wind')
 >   assertEqual "test_data0_11Night_w2_wind"  1.564047 (fromMaybe 0.0 w2_wind')
 
-2. TestTWeather.testData0_11Day - uses 2007 in date, but server converts this
+BETA: TestTWeather.testData0_11Day - uses 2007 in date, but server converts this
 to 2006 date.  
 
 > test_data0_11Day = TestCase $ do
@@ -104,7 +100,7 @@ to 2006 date.
 >   assertEqual "test_data0_11Day_wind"  3.337157 (fromMaybe 0.0 wind')
 >   assertEqual "test_data0_11Day_w2_wind"  3.146323 (fromMaybe 0.0 w2_wind')
 
-3. TestTWeather.testData36_47Night - uses 2007 in date, but server converts this
+BETA: TestTWeather.testData36_47Night - uses 2007 in date, but server converts this
 to 2006 date.  
 
 > test_data36_47Night = TestCase $ do
@@ -121,7 +117,7 @@ to 2006 date.
 >   assertAlmostEqual "test_data36_47Night_wind" 4 3.2750 (fromMaybe 0.0 wind')
 >   assertAlmostEqual "test_data36_47Night_w2_wind" 4 3.296367 (fromMaybe 0.0 w2_wind')
 
-4. TestTWeather.testData36_47Day - uses 2007 in date, but server converts this
+BETA: TestTWeather.testData36_47Day - uses 2007 in date, but server converts this
 to 2006 date.  
 
 > test_data36_47Day = TestCase $ do
