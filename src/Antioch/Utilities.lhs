@@ -39,7 +39,10 @@
 > between v min max = min <= v && v <= max
 
 > printList :: Show a => [a] -> IO ()
-> printList xs = putStrLn $ concatMap (++ "\n") $ map show xs
+> printList xs = putStrLn $ showList' xs
+
+> showList' :: Show a => [a] -> String
+> showList' xs = concatMap (++ "\n") $ map show xs
 
 > genDate :: Gen DateTime
 > genDate = do
