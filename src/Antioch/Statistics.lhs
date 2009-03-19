@@ -12,6 +12,7 @@
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
+> import Data.Maybe         (fromMaybe)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
@@ -206,11 +207,24 @@ We may want to move this function to a different file.
 >     times = sort $ map startTime ps
 >     tzero = head times
 
+> historicalExactTime' :: [Period] -> Maybe DateTime -> [Float]
+> historicalExactTime' ps start = map ((/ (24 * 60)) . fromIntegral . flip diffMinutes' tzero) times
+>   where
+>     times = sort $ map startTime ps
+>     tzero = fromMaybe (head times) start
+
+
 > historicalTime'' :: [DateTime] -> [Int]
 > historicalTime'' dts = map ((`div` (24 * 60)) . flip diffMinutes' tzero) times
 >   where
 >     times = sort $ dts 
 >     tzero = head times
+
+> historicalExactTime'' :: [DateTime] -> Maybe DateTime -> [Float]
+> historicalExactTime'' dts start = map ((/ (24 * 60)) . fromIntegral . flip diffMinutes' tzero) times
+>   where
+>     times = sort $ dts 
+>     tzero = fromMaybe (head times) start
 
 > historicalLST :: [Period] -> [Float]
 > historicalLST ps = [utc2lstHours $ addMinutes' (duration p `div` 2) $ startTime p | p <- ps]
