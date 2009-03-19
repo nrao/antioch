@@ -5,7 +5,7 @@
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
-> import Antioch.Utilities    (between, rad2hr)
+> import Antioch.Utilities    (between, rad2hr, showList')
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List            (find, partition, nub)
@@ -72,6 +72,7 @@ TBF:  we probably want something smarter in DateTime
 >         | otherwise  = do
 >             w' <- liftIO $ newWeather w $ Just dt
 >             ((schedPeriods, obsPeriods), t1) <- runScoring' w' rs $ runSimStrategy sched start int' sessions history
+>             --liftIO $ putStrLn $ debugSimulation schedPeriods obsPeriods t1
 >             let sessions' = updateSessions sessions obsPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
@@ -98,6 +99,15 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups sf schedPeriods schedSessions
 >   return (schedPeriods, obsPeriods)
+
+> debugSimulation :: [Period] -> [Period] -> [Trace] -> String
+> debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
+>   where
+>     schd = "Scheduled: \n" ++ (showList' schdPs) ++ "\n"
+>     --freqs = show $ map (frequency . session) schedPeriods
+>     obs = "Observed: \n" ++ (showList' obsPs) ++ "\n"
+>     backups = [p | p <- obsPs, pBackup p]
+>     bcks = if length backups == 0 then "" else  "Backups: \n" ++ (showList' backups) ++ "\n"
 
 > forceSeq []     = []
 > forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
