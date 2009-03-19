@@ -41,7 +41,11 @@ Always schedules a session at its minimum duration.
 > scheduleMinDuration sf dt dur history sessions
 >     | [] <- candidates = return []
 >     | otherwise        = do
->         (s, score) <- best (averageScore sf dt) candidates
+>         -- originally we used averageScore here
+>         --(s, score) <- best (averageScore sf dt) candidates
+>         -- but to do things the Dana Way (Little Nell)
+>         -- we should use firstScore
+>         (s, score) <- best (firstScore sf dt) candidates
 >         if score > 0.0
 >           then do
 >             w <- weather
