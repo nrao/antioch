@@ -88,6 +88,32 @@ simFreqTime (circles, dt on x-axis)
 >     x = "Time [days]"
 >     y = "Frequency [GHz]"
 
+Same as above, but with scheduled periods, plus with backups & cancellations
+simFreqSchTime (circles, dt on x-axis)
+
+> plotSchdFreqVsTime fn ps trace = 
+>   scatterPlots (scatterAttrs t x y fn) $ zip titles $ [pl1, pl2, pl3, pl4]
+>     where
+>       t = "Frequency vs Start Time"
+>       x = "Time [fractional days]"
+>       y = "Frequency [GHz]"
+>       titles = [Just "Scheduled & Observed"
+>               , Just "Canceled"
+>               , Just "Backup"
+>               , Just "Scheduled Deadtime"]
+>       ps' = [p | p <- ps, not . pBackup $ p]
+>       backups = [p | p <- ps, pBackup p]
+>       canceled = getCanceledPeriods trace
+>       start = startTime . head $ ps
+>       lastPs = last ps
+>       end   = (duration lastPs) `addMinutes'` (startTime lastPs)
+>       deadtime = getScheduledDeadTime start (end `diffMinutes'` start) ps trace 
+>       pl1 = zip (historicalExactTime' ps' Nothing) (historicalFreq ps')
+>       pl2 = zip (historicalExactTime' canceled (Just start)) (historicalFreq canceled)
+>       pl3 = zip (historicalExactTime' backups (Just start)) (historicalFreq backups)
+>       pl4 = zip (historicalExactTime'' (map fst deadtime) (Just start)) (replicate (length deadtime) 0.0)
+
+
 simSatisfyFreq (error bars)
 
 > plotSatRatioVsFreq          :: StatsPlot
@@ -429,11 +455,12 @@ Simulator Harness
 >   ]
 
 > tracePlotsToFile rootPath = [
->    histCanceledFreqRatio $ rootPath ++ "/simHistCanceledFreq.png"
->  , plotBandPressureTime $ rootPath ++ "/simBandPFTime.png"
->  , plotRAPressureTime1 $ rootPath ++ "/simLSTPFTime1.png"
->  , plotRAPressureTime2 $ rootPath ++ "/simLSTPFTime2.png"
->  , plotRAPressureTime3 $ rootPath ++ "/simLSTPFTime3.png"
+>    plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
+>  , histCanceledFreqRatio $ rootPath ++ "/simHistCanceledFreq.png"
+>  , plotBandPressureTime  $ rootPath ++ "/simBandPFTime.png"
+>  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
+>  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
+>  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >    ]
 
 
@@ -456,10 +483,6 @@ Simulator Harness
 >     -- text reports 
 >     now <- getCurrentTime
 >     textReports now execTime dt days "scheduleMinDuration" ss results canceled gaps
->     --putStrLn $ reportSimulationGeneralInfo now dt days "scheduleMinDuration" ss results
->     --putStrLn $ reportScheduleChecks results gaps
->     --putStrLn $ reportSimulationTimes ss dt dur results canceled
->     --putStrLn $ reportSemesterTimes ss results 
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
