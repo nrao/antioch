@@ -29,7 +29,6 @@ codes weather server used for unit tests (TWeather).
 >   , test_kineticTemperature2
 >   , test_minObservingEff
 >   , test_minimumObservingConditions
->   , test_minObservingEff
 >   , test_minTsysPrime
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
@@ -158,54 +157,16 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    Just result <- minTSysPrime w (frequency sessBug2) (elevation sessBug2)
 >    assertAlmostEqual "test_minTsysPrime" 4 29.858517 result 
 >      where 
->        -- TBF: gaurd against elevations < 5.0 degrees
+>        -- Guard against elevations < 5.0 degrees
 >        elevation s = max (deg2rad 5.0)  (pi/2 - zenithAngle dt s)
 >        dt = fromGregorian 2006 10 15 12 0 0
-
-TBF: first part of this test passes, but match to python does not work.
-
-> {-
-> test_observingEfficiency = TestCase $ do
->     -- pTestProjects session CV
->     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
->     let dt = fromGregorian 2006 9 2 14 30 0
->     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     fs <- runScoring w [] (observingEfficiency dt s)
->     let result = eval fs
->     assertEqual "test_observingEfficiency" 0.8661948 result
->     -- match to python
->     let dt = fromGregorian 2006 10 13 16 0 0
->     w <- getWeather . Just $ dt
->     fs <- runScoring w [] (observingEfficiency dt sGB)
->     let result = eval fs
->     assertEqual "test_observingEfficiency" 0.100085918826 result
->       where    
->         --names = ["GB","CV","LP","TX","VA","WV","AS"]
->         --sess = concatMap (\name -> findPSessionByName name) names
->         sGB = findPSessionByName "GB"
->     -}
-
-TBF: trackingErrorLimit seems to work, but the minObsEff doesn't seem too. 
 
 > test_minimumObservingConditions = TestCase $ do
 >    let dt = fromGregorian 2006 10 13 16 0 0
 >    w <- getWeather . Just $ dt
->    -- effs <- mapM (eff w dt) sess
->    -- efls <- mapM (efl w dt) sess
 >    mocs <- mapM (moc w dt) sess
->    let minObsEff = map (minObservingEff . frequency) sess 
->    -- print $ zip4 names mocs minObsEff effs
 >    assertEqual "test_minimumObservingConditions" expected mocs
 >   where
->     {-
->     efl w dt s = do
->         [(_,Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->         return result
->     eff w dt s = do
->         fs <- runScoring w [] (observingEfficiency dt s)
->         return $ eval fs
->     -}
 >     moc w dt s = do
 >         Just result <- runScoring w [] (minimumObservingConditions dt s)
 >         return result
@@ -341,6 +302,8 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     Just kt <- runScoring w [] (kineticTemperature dt1 sLP)
 >     assertEqual "test_kineticTemperature2" 257.41776 kt 
 
+BETA: TestStringency.py testScore (first assert)
+
 > test_stringency = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0
 >     let sess = findPSessionByName "LP"
@@ -360,6 +323,8 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >       ]
 >     ss'   = [ makeSession s (periods s) | s <- ss'' ]
 
+BETA: TestProjectCompletion.py test_completion_score
+
 > test_projectCompletion = TestCase $ do
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
@@ -367,8 +332,6 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     let sess = findPSessionByName "LP"
 >     let s = sess {project = p}
 >     assertScoringResult "test_projectCompletion" Nothing 3 1.015 (projectCompletion dt s)
-
-TBF are these partitions stil useful?
 
 > test_politicalFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 13 22 0 0
@@ -379,26 +342,22 @@ TBF are these partitions stil useful?
 >                           , thesisProject
 >                           , projectCompletion]
 >     fs <- runScoring w [] (politicalFactors dt s)
->     -- TBF: how to check individual results as well?
->     -- let expFs = [("scienceGrade", Just 1.0)
->     --          , ("thesisProject", Just 1.0)
->     --          , ("projectCompletion", Just 1.015)]
->     -- assertEqual "test_politicalFactors" expFs fs
 >     let result = eval fs
 >     assertEqual "test_politicalFactors" 1.0024 result
+
+BETA: TestTrackingEfficiency.py testefficiencyHaskell
 
 > test_trackingEfficiency = TestCase $ do
 >     -- session LP
 >     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency" Nothing 4 0.99764 (trackingEfficiency dt sess)
+>     assertScoringResult "test_trackingEfficiency lp" Nothing 4 0.99764 (trackingEfficiency dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
->     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (trackingEfficiency dt s)
->     assertAlmostEqual "test_trackingEfficiency" 3 0.9879579 result 
+>     assertAlmostEqual "test_trackingEfficiency cv" 3 0.9879579 result 
 
 BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 
