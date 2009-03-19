@@ -336,6 +336,20 @@ Translates the total/used times pairs into pressure factors.
 
 Scoring utilities
 
+> scoreLocal :: Weather -> ScoreFunc -> Session -> DateTime -> Scoring Score
+> scoreLocal w' sf s dt = local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
+>       fs <- sf dt s
+>       return $ eval fs 
+
+Compute the score for a given session at given time, but replacing weather
+
+> scoreForTime  :: ScoreFunc -> DateTime -> Session -> Scoring Score 
+> scoreForTime sf dt s = do
+>     w  <- weather
+>     w' <- liftIO $ newWeather w (Just dt)
+>     sc <- scoreLocal w' sf s dt
+>     return sc
+
 Compute the average score for a given session over an interval:
    * modfiy the weather to start at the time given
    * reject sessions that have quarters of score zero
@@ -352,15 +366,17 @@ This is for use when determining best backups to run.
 >       otherwise -> return $ (sumScores scores) / (fromIntegral $ length scores)
 >   where
 >     -- TBF:  Using the measured wind speed for scoring in the future is unrealistic, but damn convent!
->     scoreLocal w' sf s dt = local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
->       fs <- sf dt s
->       return $ eval fs 
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
 >     sumScores scores = case dropWhile (>0.0) scores of
 >         [] -> sum scores
 >         otherwise -> 0.0 -- don't allow zero-scored quarters
 > 
+
+> firstScore :: ScoreFunc -> DateTime -> Session -> Scoring Score
+> firstScore sf dt s = do
+>     factors <- sf dt s
+>     return $ eval factors
 
 Compute the average score for a given session over an interval.
 
