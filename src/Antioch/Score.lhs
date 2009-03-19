@@ -373,14 +373,19 @@ This is for use when determining best backups to run.
 >         otherwise -> 0.0 -- don't allow zero-scored quarters
 > 
 
-> firstScore :: ScoreFunc -> DateTime -> Session -> Scoring Score
+These methods for scoring a session are to be used in conjunction with
+Schedule's 'best' function.
+
+> type BestScore = ScoreFunc -> DateTime -> Session -> Scoring Score
+
+> firstScore :: BestScore
 > firstScore sf dt s = do
 >     factors <- sf dt s
 >     return $ eval factors
 
 Compute the average score for a given session over an interval.
 
-> averageScore :: ScoreFunc -> DateTime -> Session -> Scoring Score
+> averageScore :: BestScore
 > averageScore sf dt s = do
 >     score <- totalScore sf dt dur s
 >     return $! score / fromIntegral (dur `div` quarter)
