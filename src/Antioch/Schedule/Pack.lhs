@@ -126,7 +126,7 @@ Given a filled list representing all partial solutions of size 1..N,
 return a list of only those solutions contributing to the solution of
 size N.  Assumes the existence of a sentinel at the end of the input list.
 What's going on here is the following: first the list of partial solutions
-is correctly unwound to the list of Candiates (w/ correct start's and durs).
+is correctly unwound to the list of Candidates (w/ correct start's and durs).
 Then the scores deltas are applied to these Candidates, since these scores
 were built up from multiple Candidates in the first place.
 Note that this does not honor for pre-scheduled periods, this value
@@ -166,6 +166,9 @@ minutes, etc.
 >     | length past' < min = []
 >     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ past')
 >   where
+>     -- TBF OVERHEAD: This computes the period's score ignoring
+>     -- the first quarter of the period, i.e., assumes a score of 0.0
+>     -- past' = acc . (0.0:) . takeWhile (>= epsilon) . tail . take max $ past
 >     past' = acc . takeWhile (>= epsilon) . take max $ past
 >     acc   = scanl1 (+)
 
@@ -218,10 +221,15 @@ to our sub-problems are represented by the 'past' param.
 >     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' future (b:past) $! map step sessions
 
 Given the sessions (items) to pack, and the 'past', which is the step n in our N step packing algorithm (15 minute steps):
-   * from each item, create a set of candidates starting w/ 0 duration up to the max duration of the session (item).  
-   * increase the scores of each candidate using the score from the 'past' candidate (if any).  Eventually, the 'past' will contain the best candidates from the previous sub-problems.
-   * find the best of each of these lists of candidates found from a single item
-   * now find the best from the collection of the best candidates for each item
+   * from each item, create a set of candidates starting w/ 0 duration up
+     to the max duration of the session (item).  
+   * increase the scores of each candidate using the score from the 'past'
+     candidate (if any).  Eventually, the 'past' will contain the best
+     candidates from the previous sub-problems.
+   * find the best of each of these lists of candidates found from a
+     single item
+   * now find the best from the collection of the best candidates for each
+     item
 
 > getBest ::  [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
 > getBest past sessions = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions    
