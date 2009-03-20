@@ -154,10 +154,7 @@ schedule deadtime.
 
 > replaceWithBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
 > replaceWithBackup sf backups p = do
->   -- this was for the old fashioned scheduleMinDuration
->   --(s, score) <- best (avgScoreForTime sf (startTime p) (duration p)) backups
->   -- but now we're doing things the Dana Way.
->   (s, score) <- best (scoreForTime sf (startTime p)) backups
+>   (s, score) <- best (avgScoreForTime sf (startTime p) (duration p)) backups
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc

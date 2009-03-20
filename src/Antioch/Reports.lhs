@@ -483,6 +483,7 @@ Simulator Harness
 >     let canceled = getCanceledPeriods trace
 >     -- text reports 
 >     now <- getCurrentTime
+>     -- TBF: how to avoid hard coding the name of the strategy here?
 >     textReports now execTime dt days "scheduleMinDuration" ss results canceled gaps
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps

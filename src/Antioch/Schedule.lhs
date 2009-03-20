@@ -6,6 +6,7 @@
 >   , scheduleFixedDuration
 >   , scheduleFixedDuration'
 >   , scheduleMinDuration
+>   , scheduleLittleNell
 >   , validPackScores
 >   , validScores
 >   , obeyDurations
@@ -28,33 +29,45 @@
 > import qualified Antioch.Schedule.Pack as P
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
+> import Control.Monad.Trans (liftIO)
 
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
 > pack             :: Strategy
 > pack sf dt dur _ = P.pack sf dt dur []
 
-Always schedules a session at its minimum duration.
+Little Nell was Dana's original simulator, and it scheduled sessions
+by simply scoring them at the begining of a Period.
+
+> scheduleLittleNell :: Strategy
+> scheduleLittleNell sf dt dur history sessions = 
+>   scheduleMinDurationWorker sf dt dur history sessions firstScore
+
+This is like 'Little Nell', but schedules sessions by scoring their average
+over a Period's duration.
 
 > scheduleMinDuration :: Strategy
-> scheduleMinDuration sf dt dur history [] = return []
-> scheduleMinDuration sf dt dur history sessions
+> scheduleMinDuration sf dt dur history sessions = 
+>   scheduleMinDurationWorker sf dt dur history sessions averageScore
+
+Always schedules a session at its minimum duration, but choose the best
+Session for scheduling w/ different methods.
+
+> scheduleMinDurationWorker :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> BestScore -> Scoring [Period]
+> scheduleMinDurationWorker sf dt dur history [] bestScorer = return []
+> scheduleMinDurationWorker sf dt dur history sessions bestScorer
 >     | [] <- candidates = return []
 >     | otherwise        = do
->         -- originally we used averageScore here
->         --(s, score) <- best (averageScore sf dt) candidates
->         -- but to do things the Dana Way (Little Nell)
->         -- we should use firstScore
->         (s, score) <- best (firstScore sf dt) candidates
+>         (s, score) <- best (bestScorer sf dt) candidates
 >         if score > 0.0
 >           then do
 >             w <- weather
 >             let d = minDuration s
 >             let p = Period s dt d score (forecast w) False
->             rest <- scheduleMinDuration sf (d `addMinutes'` dt) (dur - d) (p : history) sessions
+>             rest <- scheduleMinDurationWorker sf (d `addMinutes'` dt) (dur - d) (p : history) sessions bestScorer
 >             return $ p : rest
 >           else
->             scheduleMinDuration sf (quarter `addMinutes'` dt) (dur - quarter) history sessions
+>             scheduleMinDurationWorker sf (quarter `addMinutes'` dt) (dur - quarter) history sessions bestScorer
 >   where
 >     candidates = constrain history . filter (\s -> minDuration s <= dur) $ sessions
 
