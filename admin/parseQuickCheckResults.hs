@@ -5,6 +5,9 @@ import Text.ParserCombinators.Parsec
 import Text.Printf
 import Data.List
 
+-- TBF: this whole script is a shambles. Its using Parsec, but not taking 
+-- advantage of it, and could be refactored to be a lot smaller.
+
 main :: IO ()
 main = do 
   as <- getArgs
@@ -17,12 +20,13 @@ main = do
 -- TBF: should the parser be doing this work?
 
 reportErrors :: [[String]] -> String
-reportErrors lines = if errors == "" then "No Failing Quick Check Properties" else (show . length $ elemIndices '\n' errors) ++ " Failing Quick Check Properties:\n" ++ errors
+reportErrors lines = if errors == "" then "No Failing Quick Check Properties" else printf "%d Failing Quick Check Properties: \n%s\n" numErrors errors
   where
     errors = concat . reportErrors' $ lines
+    numErrors = length $ elemIndices '\n' errors
 
 reportTests :: [[String]] -> String
-reportTests lines = printf "%d Quick Check Properties: %s\n" numTests tests
+reportTests lines = printf "%d Quick Check Properties" numTests 
   where
     tests = concat . reportTests' $ lines
     numTests = length $ elemIndices '\n' tests
