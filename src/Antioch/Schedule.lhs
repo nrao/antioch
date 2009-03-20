@@ -36,7 +36,7 @@
 > pack             :: Strategy
 > pack sf dt dur _ = P.pack sf dt dur []
 
-'Little Nell' was Dana's original simulator, and it scheduled sessions
+Little Nell was Dana's original simulator, and it scheduled sessions
 by simply scoring them at the begining of a Period.
 
 > scheduleLittleNell :: Strategy
