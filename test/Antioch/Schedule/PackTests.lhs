@@ -1,3 +1,5 @@
+> {-# OPTIONS -XParallelListComp #-}
+
 > module Antioch.Schedule.PackTests where
 
 > import Antioch.Schedule.Pack
@@ -10,6 +12,7 @@
 > import Test.HUnit
 > import Control.Monad.Reader
 > import Data.List (sort, zipWith6)
+> import Data.Maybe (fromMaybe)
 
 > tests = TestList [
 >     test_NumSteps
@@ -17,6 +20,7 @@
 >   , test_Unwind2
 >   , test_Unwind3
 >   -- , test_Unwind4 -- TBF: scoring pre-scheduled periods wrong!
+>   , test_candidates
 >   , test_Candidates1
 >   , test_Candidates2
 >   , test_Best
@@ -53,6 +57,7 @@
 >   , test_TestPack_pack2
 >   , test_TestPack_pack3
 >   , test_TestPack_pack8
+>   , test_ToCandidate
 >   , test_ToItem
 >   , test_ToItem2
 >   , test_ToPeriod
@@ -77,7 +82,7 @@
 >     xs = [Candidate 1 0 4 4.0]
 >     ys = [Just (Candidate 1 0 4 4.0), Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
 
-TBF: this test may be exposing the bu wherein the fixed candiate gets a 
+TBF: this test may be exposing the bug wherein the fixed candiate gets a 
 negative score.
 
 > test_Unwind4 = TestCase . assertEqual "test_Unwind4" xs . unwind $ ys
@@ -344,6 +349,40 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >        before =  defaultPeriod { session = defaultSession { sId = 4 }
 >                                , pScore = before_score
 >                                }
+
+> test_ToCandidate = TestCase $ do
+>     assertEqual "test_ToCandidate" expected result
+>   where
+>     i = Item { iId = defaultSession
+>              , iMinDur = 2 -- quarters
+>              , iMaxDur = 6 -- quarters
+>              , iFuture = []
+>              , iPast   = []
+>              }
+>     ss = [10.0, 10.1 .. 11.6]
+>     ms = map Just ss
+>     result = toCandidate i ms
+>     expected = [Just defaultCandidate { cId = i
+>                                       , cDuration = d
+>                                       , cScore = s}
+>                 | d <- [1..]
+>                 | s <- ss]
+
+> test_candidates = TestCase $ do
+>     assertEqual "test_candidates" expected (map getCScore result)
+>   where
+>     i = Item { iId = defaultSession
+>              , iMinDur = 4 -- quarters
+>              , iMaxDur = 8 -- quarters
+>              , iFuture = []
+>              , iPast   = [0.5, 1.0 .. ]
+>              }
+>     result = candidates i
+>     -- TBF OVERHEAD: This is the expected result if candidates does not
+>     -- score the first quarter of a period, i.e., assumes a score of 0.0
+>     -- expected = [0.0,0.0,0.0,4.5,7.0,10.0,13.5,17.5]
+>     expected = [0.0,0.0,0.0,5.0,7.5,10.5,14.0,18.0]
+>     getCScore = cScore . fromMaybe defaultCandidate {cId = defaultSession}
 
 > test_ToPeriod = TestCase $ do
 >     assertEqual "test_ToPeriod" expected result
