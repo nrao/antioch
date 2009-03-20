@@ -153,12 +153,20 @@ Only 20 percent of the low freq. sessions are backups
 >                , dec            = dec
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
->                , totalTime      = round2quarter totalTime
+>                -- TBF: only for scheduleMinDuration; then go back
+>                , totalTime      = matchAvTime totalTime (round2quarter minD)
 >                , grade          = g
 >                , receivers      = [r]
 >                , backup         = bk
 >                }
 
+TBF: this is only for use with the scheduleMinDuration strategy.  We want
+to use this so that the totalTime of a session can be completely scheduled
+without leaving behind 'loose change'.  This can happen because this strategy
+only schedule Periods of length minDuration.
+
+> matchAvTime :: Int -> Int -> Int
+> matchAvTime totalTime minDuration = (totalTime `div` minDuration) * minDuration
 
 > genProjectSessions :: Gen [Session]
 > genProjectSessions = 
