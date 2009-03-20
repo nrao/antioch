@@ -24,7 +24,7 @@ simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
 > plotDecFreq fn ss ps =
->      scatterPlots (scatterAttrs t x y fn) $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
+>      scatterPlots (tail $ scatterAttrs t x y fn) $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
 >                                            , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
 >   where
 >     t   = "Dec vs Freq"
@@ -36,7 +36,7 @@ simDecRA (stars, crosses)
 
 > plotDecVsRA          :: StatsPlot
 > plotDecVsRA fn ss ps =
->     scatterPlots (scatterAttrs t x y fn) $ zip titles $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
+>     scatterPlots (tail $ scatterAttrs t x y fn) $ zip titles $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
 >                                           , [(rad2hr x, rad2deg y) | (x, y) <-  periodDecRA ps]]
 >   where
 >     t = "Dec vs RA"
@@ -64,12 +64,12 @@ General purpose function for scatter plots of some kind of efficiency vs. freq
 >     scatterPlot attrs $ zip (historicalFreq ps) effs
 >   where
 >     x     = "Frequency [GHz]"
->     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
 TBF: plotEffVsFreq still not being used anywhere
 
 > plotEffVsFreq fn effs ps =
->     errorBarPlot (scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
+>     errorBarPlot (tail $ scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
 >   where
 >     meanEffFreq = meanObsEffByBin $ zip effs (map (frequency . session) ps)
 >     sdomEffFreq = sdomObsEffByBin $ zip effs (map (frequency . session) ps)
@@ -82,7 +82,7 @@ simFreqTime (circles, dt on x-axis)
 
 > plotFreqVsTime         :: StatsPlot
 > plotFreqVsTime fn _ ps =
->     scatterPlot (scatterAttrs t x y fn) $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
+>     scatterPlot (tail $ scatterAttrs t x y fn) $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
 >   where
 >     t = "Frequency vs Time"
 >     x = "Time [days]"
@@ -92,7 +92,7 @@ Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
 
 > plotSchdFreqVsTime fn ps trace = 
->   scatterPlots (scatterAttrs t x y fn) $ zip titles $ [pl1, pl2, pl3, pl4]
+>   scatterPlots (tail $ scatterAttrs t x y fn) $ zip titles $ [pl1, pl2, pl3, pl4]
 >     where
 >       t = "Frequency vs Start Time"
 >       x = "Time [fractional days]"
@@ -118,7 +118,7 @@ simSatisfyFreq (error bars)
 
 > plotSatRatioVsFreq          :: StatsPlot
 > plotSatRatioVsFreq fn ss ps =
->     errorBarPlot (scatterAttrs t x y fn) $ satisfactionRatio ss ps
+>     errorBarPlot (tail $ scatterAttrs t x y fn) $ satisfactionRatio ss ps
 >   where
 >     t = "Satisfaction Ratio vs Frequency"
 >     x = "Frequency [GHz]"
@@ -132,7 +132,7 @@ simEffElev
 >   effs <- historicalObsEff w ps
 >   plotEffElev fn effs ps
 
-> plotEffElev fn effs ps = scatterPlot (scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) effs
+> plotEffElev fn effs ps = scatterPlot (tail $ scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) effs
 >   where
 >     t = "Observing Efficiency vs Elevation"
 >     x = "Elevation [deg]"
@@ -144,7 +144,7 @@ simEffElev
 >     t     = "Observing Efficiency vs Frequency"
 >     x     = "Frequency [GHz]"
 >     y     = "Observing Efficiency"
->     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
 simEffLST
 
@@ -155,7 +155,7 @@ simEffLST
 >   plotEffLst fn effs ps
 
 > plotEffLst fn effs ps =
->     scatterPlot (scatterAttrs t x y fn) $ zip (historicalLST ps) effs
+>     scatterPlot (tail $ scatterAttrs t x y fn) $ zip (historicalLST ps) effs
 >   where
 >     t = "Observing Efficiency vs LST"
 >     x = "LST [hours]"
@@ -170,7 +170,7 @@ simElevDec
 >   plotElevDec fn effs ps
 >
 > plotElevDec fn effs ps =
->     scatterPlot (scatterAttrs t x y fn) $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
+>     scatterPlot (tail $ scatterAttrs t x y fn) $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
 >   where
 >     t = "Dec vs Elevation"
 >     x = "Elevation [deg]"
@@ -188,7 +188,7 @@ simScoreElev
 >   plotScoreElev fn scores ps
 
 > plotScoreElev fn scores ps =
->     scatterPlot (scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) scores
+>     scatterPlot (tail $ scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) scores
 >   where
 >     t = "Score vs Elevation"
 >     x = "Elevation [deg]"
@@ -203,7 +203,7 @@ simScoreLST
 >   plotLstScore fn scores ps
 >
 > plotLstScore fn scores ps =
->     scatterPlot (scatterAttrs t x y fn) $ zip (historicalLST ps) scores
+>     scatterPlot (tail $ scatterAttrs t x y fn) $ zip (historicalLST ps) scores
 >   where
 >     t = "Score vs LST"
 >     x = "LST [hours]"
@@ -376,7 +376,8 @@ will they be using?
 Attributes
 
 > scatterAttrs title xlab ylab fpath =
->     [Title title
+>     [LogScale "y"
+>    , Title title
 >    , XLabel xlab
 >    , YLabel ylab
 >     ] ++ if fpath == "" then [] else [PNG fpath]
