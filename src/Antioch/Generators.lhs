@@ -155,6 +155,7 @@ Only 20 percent of the low freq. sessions are backups
 >                , maxDuration    = round2quarter maxD
 >                -- TBF: only for scheduleMinDuration; then go back
 >                , totalTime      = matchAvTime totalTime (round2quarter minD)
+>                --, totalTime      = round2quarter totalTime
 >                , grade          = g
 >                , receivers      = [r]
 >                , backup         = bk
