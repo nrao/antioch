@@ -34,7 +34,7 @@
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
 > pack             :: Strategy
-> pack sf dt dur _ = P.pack sf dt dur []
+> pack sf dt dur fixed = P.pack sf dt dur fixed 
 
 Little Nell was Dana's original simulator, and it scheduled sessions
 by simply scoring them at the begining of a Period.
@@ -204,17 +204,20 @@ Framework for quick checking startegies
 > runStrategy :: Strategy -> [Project] -> DateTime -> Minutes -> [Maybe Period] -> [Period]
 > runStrategy strategy ps starttime dur fixed = unsafePerformIO $ do
 >     let fixed' = concatMap maybeToList fixed
->     {-print "runStrategy: "
+>     {-
+>     print "runStrategy: "
 >     print . toSqlString $ starttime
 >     print dur 
 >     print "fixed:"
->     print fixed' -}
+>     print fixed' 
+>     -}
 >     w <- theWeather -- TBF: is this right?
 >     w' <- newWeather w (Just starttime)
 >     let sess = concatMap sessions ps
 >     runScoring w' [] $ do
 >         fs <- genScore sess
 >         strategy fs starttime dur fixed' sess
+
 
 Make sure the pre-scheduled periods are in the final schedule.
 
