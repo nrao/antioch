@@ -88,9 +88,17 @@ was observed, so the original schedule is the join of the non-backup observed
 periods with those that were canceled.
 
 > periodCanceledFreqRatio :: [Period] -> [Trace] ->  [(Float, Float)]
-> periodCanceledFreqRatio ps trace = zipWith canceledRatio (canceledFreqHrs trace freqBins) (scheduledFreqHrs ps trace freqBins)
+> periodCanceledFreqRatio ps trace = zipWith3 canceledRatio freqBinMidpoints (canceledFreqHrs trace freqBins) (scheduledFreqHrs ps trace freqBins)
 >   where
->     canceledRatio canceled scheduled = (fst canceled, ((snd canceled)/(snd scheduled) ))
+>     canceledRatio midPoint canceled scheduled = if snd scheduled == 0.0 then (midPoint, 0.0) else (midPoint, ((snd canceled)/(snd scheduled) ))
+
+> freqBinMidpoints :: [Float]
+> freqBinMidpoints = midPoints (0.0:freqBins)
+
+> midPoints :: [Float] -> [Float]
+> midPoints [] = []
+> midPoints (x:[]) = []
+> midPoints (x1:x2:xs) = (((x2-x1)/2.0)+x1):(midPoints (x2:xs))
 
 > scheduledFreqHrs :: [Period] -> [Trace] -> [Float] -> [(Float, Float)]
 > scheduledFreqHrs ps trace bins = histogram bins . (((/60) . fromIntegral . duration) `vs` (frequency . session)) $ getScheduledPeriods ps trace 
