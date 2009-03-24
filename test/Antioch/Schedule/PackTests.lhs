@@ -20,7 +20,8 @@
 >   , test_Unwind2
 >   , test_Unwind3
 >   -- , test_Unwind4 -- TBF: scoring pre-scheduled periods wrong!
->   , test_candidates
+>   , test_candidates1
+>   , test_candidates2
 >   , test_Candidates1
 >   , test_Candidates2
 >   , test_Best
@@ -368,7 +369,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                 | d <- [1..]
 >                 | s <- ss]
 
-> test_candidates = TestCase $ do
+> xtest_candidates1 = TestCase $ do
 >     assertEqual "test_candidates" expected (map getCScore result)
 >   where
 >     i = Item { iId = defaultSession
@@ -382,6 +383,62 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     -- score the first quarter of a period, i.e., assumes a score of 0.0
 >     -- expected = [0.0,0.0,0.0,4.5,7.0,10.0,13.5,17.5]
 >     expected = [0.0,0.0,0.0,5.0,7.5,10.5,14.0,18.0]
+>     getCScore = cScore . fromMaybe defaultCandidate {cId = defaultSession}
+
+> xtest_candidates2 = TestCase $ do
+>     assertEqual "test_candidates" expected (map getCScore result)
+>   where
+>     i = Item { iId = defaultSession
+>              , iMinDur = 4 -- quarters
+>              , iMaxDur = 8 -- quarters
+>              , iFuture = []
+>              , iPast   = [4.0,3.5,3.0,2.5,2.0,0.00001,1.0,0.5]
+>              }
+>     result = candidates i
+>     -- TBF OVERHEAD: This is the expected result if candidates does not
+>     -- score the first quarter of a period, i.e., assumes a score of 0.0
+>     -- expected = [0.0,0.0,0.0,9.0,11.0]
+>     expected = [0.0,0.0,0.0,13.0,15.0]
+>     getCScore = cScore . fromMaybe defaultCandidate {cId = defaultSession}
+
+> test_candidates1 = candidate_tests "test_candidates1" [0.5, 1.0 .. ] [0.0,0.0,0.0,5.0,7.5,10.5,14.0,18.0]
+
+> test_candidates2 = candidate_tests "test_candidates2" [4.0,3.5,3.0,2.5,2.0,0.00001,1.0,0.5] [0.0,0.0,0.0,13.0,15.0]
+
+> test_candidates3 = candidate_tests "test_candidates3" [4.0] []
+
+> test_candidates4 = candidate_tests "test_candidates4" [] []
+
+> {-
+
+-- TBF OVERHEAD: These tests are to be used in lieu of the above when
+-- candidates do not score the first quarter of a period, i.e., assumes
+-- a score of 0.0
+
+> test_candidates1 = candidate_tests "test_candidates1" [0.5, 1.0 .. ] [0.0,0.0,0.0,4.5,7.0,10.0,13.5,17.5]
+
+> test_candidates2 = candidate_tests "test_candidates2" [4.0,3.5,3.0,2.5,2.0,0.00001,1.0,0.5] [0.0,0.0,0.0,9.0,11.0]
+
+> test_candidates3 = candidate_tests "test_candidates3" [4.0] []
+
+> test_candidates4 = candidate_tests "test_candidates4" [] []
+
+> -}
+
+> candidate_tests name iPast expected = TestCase $ do
+>     assertEqual name expected (map getCScore result)
+>   where
+>     i = Item { iId = defaultSession
+>              , iMinDur = 4 -- quarters
+>              , iMaxDur = 8 -- quarters
+>              , iFuture = []
+>              , iPast   = iPast
+>              }
+>     result = candidates i
+>     -- TBF OVERHEAD: This is the expected result if candidates does not
+>     -- score the first quarter of a period, i.e., assumes a score of 0.0
+>     -- expected = [0.0,0.0,0.0,9.0,11.0]
+>     -- expected = [0.0,0.0,0.0,13.0,15.0]
 >     getCScore = cScore . fromMaybe defaultCandidate {cId = defaultSession}
 
 > test_ToPeriod = TestCase $ do
