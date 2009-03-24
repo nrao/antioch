@@ -321,7 +321,8 @@ simHistTP
 
 > histSessTP         :: StatsPlot
 > histSessTP fn _ ps =
->     histogramPlot (histAttrs t x y fn) $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
+> --     histogramPlot (histAttrs t x y fn) $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
+>      histogramPlot (histAttrs t x y fn) $ [(x, fromIntegral y) | (x, y) <- sessionTP ps]
 >   where
 >     t = "Telescope Period Histogram"
 >     x = "TP [Hours]"
