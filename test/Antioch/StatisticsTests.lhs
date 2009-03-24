@@ -7,6 +7,7 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.Generators (generateTestData)
+> import Antioch.PProjects
 > import Data.List
 > import Test.HUnit
 > import System.Random
@@ -110,6 +111,31 @@
 >   where
 >     (sessions, _) = generateTestData 100
 >     expected = [(1.0,0),(2.0,36675),(3.0,240),(4.0,1590),(5.0,1740),(6.0,1140),(7.0,0),(8.0,0),(9.0,6375),(10.0,3960),(11.0,0),(12.0,0),(13.0,2820),(14.0,4905),(15.0,1485),(16.0,0),(17.0,0),(18.0,0),(19.0,945),(20.0,540),(21.0,0),(22.0,0),(23.0,4545),(24.0,0),(25.0,1320),(26.0,0),(27.0,3495),(28.0,2685),(29.0,0),(30.0,0),(31.0,1500),(32.0,1320),(33.0,945),(34.0,495),(35.0,1530),(36.0,1890),(37.0,1440),(38.0,0),(39.0,810),(40.0,0),(41.0,0),(42.0,720),(43.0,720),(44.0,1020),(45.0,0),(46.0,1785),(47.0,3510),(48.0,0),(49.0,1080),(50.0,0)]
+
+> test_sessionFreq2 = TestCase $ do
+>     assertEqual "test_sessionFreq2_1" cnt4_5   (snd (freqHist!!4)) 
+>     assertEqual "test_sessionFreq2_2" cnt5_6   (snd (freqHist!!5)) 
+>     assertEqual "test_sessionFreq2_3" cnt22_23 (snd (freqHist!!22)) 
+>     assertEqual "test_sessionFreq2_4" cnt27_28 (snd (freqHist!!27)) 
+>  where
+>    ss = getOpenPSessions
+>    freqHist = sessionFreq ss
+>    cnt4_5 = 3600
+>    cnt5_6 = 2400
+>    cnt22_23 = 1800
+>    cnt27_28  = 4800 + 4800
+>     
+
+Test border affects in histograms - put a frequency right at 2.0 and see
+what bin it shows up in.
+
+> test_sessionFreqHrs = TestCase $ do
+>     assertEqual "test_sessionFreqHrs" 1.0 (snd (freqHist!!1))
+>     assertEqual "test_sessionFreqHrs" 1.0 (snd (freqHist!!2))
+>   where
+>     s1 = defaultSession { totalTime = 60, frequency = 2.0 }
+>     s2 = defaultSession { totalTime = 60, frequency = 2.2 }
+>     freqHist = sessionFreqHrs [s1, s2]
 
 > test_periodFreq = TestCase $ do
 >     assertEqual "test_periodFreq" expected (periodFreq periods)
