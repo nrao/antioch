@@ -147,7 +147,7 @@ what bin it shows up in.
 >     assertEqual "test_sessionTP" expected (sessionTP periods)
 >   where
 >     (_, periods) = generateTestData 100
->     expected = [(1,12),(2,13),(3,10),(4,10),(5,10),(6,10),(7,15)]
+>     expected = [(1.0,3),(2.0,10),(3.0,12),(4.0,14),(5.0,8),(6.0,10),(7.0,11)]
 
 > test_sessionTP2 = TestCase $ do
 >     assertEqual "test_sessionTP2" exp cnt
@@ -156,7 +156,7 @@ what bin it shows up in.
 >     ps = [p1, p2, p1, p2, p1]
 >     p1 = defaultPeriod {duration = 60}
 >     p2 = defaultPeriod {duration = 150}
->     exp = [(1,3),(2,2),(3,0),(4,0),(5,0),(6,0),(7,0)]
+>     exp = [(1,3),(2,0),(3,2),(4,0),(5,0),(6,0),(7,0)]
 
 > test_sessionTPQtrs = TestCase $ do
 >     assertEqual "test_sessionTPQtrs" exp cnt
