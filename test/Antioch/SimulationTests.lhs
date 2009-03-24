@@ -22,7 +22,7 @@
 
 > test_sim_schedMinDuration = TestCase $ do
 >     w <- getWeather $ Just dt
->     (result, t) <- simulate scheduleMinDuration w rs dt dur int history cnl ss
+>     (result, t) <- simulate ScheduleMinDuration w rs dt dur int history cnl ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration" exp result
 >     --assertEqual "SimulationTests_test_sim_schedMinDuration_2" canceled c
 >   where
@@ -62,7 +62,7 @@ Test the case where a bady performing TP is replaced with a backup
 
 > test_sim_schedMinDuration_backup = TestCase $ do
 >     w <- getWeather $ Just dt
->     (result, c) <- simulate scheduleMinDuration w rs dt dur int history [] ss
+>     (result, c) <- simulate ScheduleMinDuration w rs dt dur int history [] ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration_backup" exp result
 >     --assertEqual "SimulationTests_test_sim_schedMinDuration_backup_2" [canceled] c
 >   where
@@ -99,7 +99,7 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 
 > test_sim_schedMinDuration_fail_backup = TestCase $ do
 >     w <- getWeather $ Just dt
->     (result, _) <- simulate scheduleMinDuration w rs dt dur int history [] ss
+>     (result, _) <- simulate ScheduleMinDuration w rs dt dur int history [] ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration_fail_backup" exp result
 >   where
 >     rs  = []
@@ -126,7 +126,7 @@ that it does not over allocate periods to a session.
 
 > test_sim_schedMinDuration_starvation = TestCase $ do
 >     w <- getWeather $ Just dt
->     (result, c) <- simulate scheduleMinDuration w rs dt dur int history [] ss
+>     (result, c) <- simulate ScheduleMinDuration w rs dt dur int history [] ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration_starvation" exp result
 >     --assertEqual "SimulationTests_test_sim_schedMinDuration_starvation2" [] c 
 >   where

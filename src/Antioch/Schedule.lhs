@@ -1,5 +1,7 @@
 > {-# OPTIONS -XPatternGuards #-}
 
+> module Antioch.Schedule where
+> {- TBF: was there a good reason why we were hiding some things?
 > module Antioch.Schedule (
 >     Strategy
 >   , pack
@@ -16,6 +18,7 @@
 >   , timeLeftHistory
 >   , timeUsedHistory
 >   ) where
+> -}
 
 > import Antioch.DateTime  (DateTime, addMinutes', fromGregorian, toSqlString)
 > import Antioch.Score
@@ -30,6 +33,17 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
+
+We need to be able to pass down knowledge of what strategy is being run.
+One way to do this is through an enum that can, in turn, give us our
+desired Strategy.
+
+> data StrategyName = Pack | ScheduleMinDuration | ScheduleLittleNell deriving (Eq, Show, Read)
+
+> getStrategy :: StrategyName -> Strategy
+> getStrategy Pack = pack
+> getStrategy ScheduleMinDuration = scheduleMinDuration
+> getStrategy ScheduleLittleNell = scheduleLittleNell
 
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 

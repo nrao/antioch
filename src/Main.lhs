@@ -12,5 +12,5 @@
 >   --generatePlots (scheduleFixedDuration 240) (statsPlotsToFile "~/figuresFD") 334  -- 76 Minutes
 >   --generatePlots (scheduleFixedDuration' 240) (statsPlotsToFile "~/figuresFD2") 334  -- 76 Minutes
 >   --generatePlots pack (statsPlotsToFile "~/figuresPack") 334  -- 96 Minutes
->   generatePlots scheduleMinDuration (statsPlotsToFile "./figures") (tracePlotsToFile "./figures") 334
+>   generatePlots ScheduleMinDuration (statsPlotsToFile "./figures") (tracePlotsToFile "./figures") 3
 >   --generatePlots scheduleMinDuration (statsPlots ++ (statsPlotsToFile "./figures")) 334  -- 76 Minutes

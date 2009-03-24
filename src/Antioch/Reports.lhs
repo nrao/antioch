@@ -321,7 +321,6 @@ simHistTP
 
 > histSessTP         :: StatsPlot
 > histSessTP fn _ ps =
-> --     histogramPlot (histAttrs t x y fn) $ [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTP ps]
 >      histogramPlot (histAttrs t x y fn) $ [(x, fromIntegral y) | (x, y) <- sessionTP ps]
 >   where
 >     t = "Telescope Period Histogram"
@@ -467,9 +466,8 @@ Simulator Harness
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >    ]
 
-
-> generatePlots :: Strategy -> [[Session] -> [Period] -> IO ()] -> [[Period] -> [Trace] -> IO ()] -> Int -> IO ()
-> generatePlots sched sps trace_plots days = do
+> generatePlots :: StrategyName -> [[Session] -> [Period] -> IO ()] -> [[Period] -> [Trace] -> IO ()] -> Int -> IO ()
+> generatePlots strategyName sps trace_plots days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
 >     let projs = generate 0 g $ genProjects 255 
@@ -478,7 +476,7 @@ Simulator Harness
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     (results, trace) <- simulate sched w rs dt dur int history [] ss
+>     (results, trace) <- simulate strategyName w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     let execTime = fromIntegral (stop-start) / 1.0e12 
 >     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
@@ -486,8 +484,7 @@ Simulator Harness
 >     let canceled = getCanceledPeriods trace
 >     -- text reports 
 >     now <- getCurrentTime
->     -- TBF: how to avoid hard coding the name of the strategy here?
->     textReports now execTime dt days "scheduleMinDuration" ss results canceled gaps
+>     textReports now execTime dt days (show strategyName) ss results canceled gaps
 >     -- create plots
 >     mapM_ (\f -> f ss results) sps
 >     -- create plots from trace; TBF : fold these into above
@@ -500,14 +497,14 @@ Simulator Harness
 >     history = []
 
 > textReports :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] ->[(DateTime, Minutes)] -> IO () 
-> textReports now execTime dt days "scheduleMinDuration" ss ps canceled gaps = do
+> textReports now execTime dt days strategyName ss ps canceled gaps = do
 >     putStrLn $ report
 >     writeFile filename report
 >   where
 >     (year, month, day, hours, minutes, seconds) = toGregorian now
 >     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
 >     filename = "simulation_" ++ nowStr ++ ".txt"
->     r1 = reportSimulationGeneralInfo now execTime dt days "scheduleMinDuration" ss ps
+>     r1 = reportSimulationGeneralInfo now execTime dt days strategyName ss ps
 >     r2 = reportScheduleChecks ps gaps
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
@@ -584,4 +581,4 @@ Simulator Harness
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
 
-> runSim days filepath = generatePlots scheduleMinDuration (statsPlotsToFile filepath) (tracePlotsToFile filepath) days
+> runSim days filepath = generatePlots ScheduleMinDuration (statsPlotsToFile filepath) (tracePlotsToFile filepath) days

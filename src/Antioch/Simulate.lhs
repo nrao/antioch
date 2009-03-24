@@ -12,14 +12,14 @@
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
-> simulate06 :: Strategy -> IO ([Period], [Trace])
-> simulate06 sched = do
+> simulate06 :: StrategyName -> IO ([Period], [Trace])
+> simulate06 strategyName = do
 >     w  <- liftIO $ getWeather Nothing
 >     ps <- liftIO $ generateVec 400
 >     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
 >     liftIO $ print $ length ss
 >     start  <- liftIO getCPUTime
->     result <- simulate sched w rs dt dur int [] [] ss
+>     result <- simulate strategyName w rs dt dur int [] [] ss
 >     stop   <- liftIO getCPUTime
 >     liftIO $ putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
 >     return result
@@ -63,7 +63,7 @@ TBF:  we probably want something smarter in DateTime
 > filterSessions dt []       ss = ss
 > filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
 
-> simulate :: Strategy -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
+> simulate :: StrategyName -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
 > simulate sched w rs dt dur int history canceled sessions =
 >     simulate' w dt dur history sessions [] []
 >   where
@@ -91,13 +91,14 @@ TBF:  we probably want something smarter in DateTime
 
 Run the strategy to produce a schedule, then replace with backups where necessary.
 
-> runSimStrategy :: Strategy -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring ([Period], [Period])
-> runSimStrategy strategy dt dur sessions history = do
+> runSimStrategy :: StrategyName -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring ([Period], [Period])
+> runSimStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
+>   let strategy = getStrategy strategyName 
 >   let schedSessions = filterSessions dt [timeLeft, isMySemester] sessions
 >   sf <- genScore $ filterSessions dt [isMySemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
->   obsPeriods <-  scheduleBackups sf schedPeriods schedSessions
+>   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
@@ -121,10 +122,12 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 
 Replace any badly performing periods with either backups or deadtime.
 
-> scheduleBackups :: ScoreFunc -> [Period] -> [Session] -> Scoring [Period]
-> scheduleBackups _  [] _  = return []
-> scheduleBackups sf ps ss = do
->     sched' <- mapM (scheduleBackup sf ss) ps
+> type BackupStrategy = StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
+
+> scheduleBackups :: StrategyName -> ScoreFunc -> [Session] -> [Period] -> Scoring [Period]
+> scheduleBackups _  _  _  [] = return []
+> scheduleBackups sn sf ss ps = do
+>     sched' <- mapM (scheduleBackup sn sf ss) ps
 >     let sched = mapMaybe id sched'
 >     return sched
 
@@ -133,27 +136,27 @@ then try to replace it with the best backup that can (according to it's
 min and max duration limits).  If no suitable backup can be found, then
 schedule this as deadtime.
 
-> scheduleBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
-> scheduleBackup sf ss p = do 
+> scheduleBackup :: BackupStrategy
+> scheduleBackup sn sf ss p = do 
 >   moc <- minimumObservingConditions (startTime p) (session p)
->   if fromMaybe False moc then return $ Just p else cancelPeriod sf backupSessions p
+>   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
 >     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
 
-> cancelPeriod :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period)
-> cancelPeriod sf backups p = do
+> cancelPeriod :: BackupStrategy
+> cancelPeriod sn sf backups p = do
 >   tell [Cancellation p]
 >   if length backups == 0 
 >     then return Nothing
->     else replaceWithBackup sf backups p
+>     else replaceWithBackup sn sf backups p
 
 Find the best backup for a given period.  The backups are scored using the
 best forecast and *not* rejecting zero scored quarters.  If the backup in turn
 fails it's MOC, then, since it is likely all the others will as well, then 
 schedule deadtime.
 
-> replaceWithBackup :: ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
-> replaceWithBackup sf backups p = do
+> replaceWithBackup :: BackupStrategy
+> replaceWithBackup sn sf backups p = do
 >   (s, score) <- best (avgScoreForTime sf (startTime p) (duration p)) backups
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
