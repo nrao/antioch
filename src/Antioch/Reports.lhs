@@ -294,6 +294,7 @@ simHistFreq
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
 
 simHistCanceledFreq
+TBF: histograms currently not working correctly for irregularly spaced bins
 
 > histCanceledFreqRatio fn ps trace =
 >     histogramPlot (histAttrs t x y fn) $ periodCanceledFreqRatio ps trace
