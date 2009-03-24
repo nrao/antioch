@@ -127,8 +127,8 @@ periods with those that were canceled.
 > histogramToHours :: [(Float, Minutes)] -> [(Float, Float)]
 > histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
 
-> sessionTP :: [Period] -> [(Minutes, Int)]
-> sessionTP = count ((`div` 60) . duration) [1..7]
+> sessionTP :: [Period] -> [(Float, Int)]
+> sessionTP = count ((/60) . fromIntegral . duration) [1.0..7.0]
 
 > sessionTPQtrs :: [Period] -> [(Minutes, Int)]
 > sessionTPQtrs = count (duration) [0, quarter..(7*60)]
