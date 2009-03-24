@@ -275,7 +275,9 @@ simHistEffHr
 > histEffHrBand fn effs ps =
 >     histogramPlots (histAttrs t x y fn) $ zip titles [pBand, effByBand]
 >       where
->         pBand     = [(fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
+>         -- histogram data has to get shifted (in Plots.lhs)
+>         -- but this looks silly for an enumeration, so (+1) below
+>         pBand     = [((+1) . fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram"
 >         x = "Band [L, S, C, X, U, K, A, Q]"
@@ -293,15 +295,14 @@ simHistFreq
 >     y = "Counts [Hours]"
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
 
-simHistCanceledFreq
-TBF: histograms currently not working correctly for irregularly spaced bins
+simFracCanceledFreq
 
 > histCanceledFreqRatio fn ps trace =
->     histogramPlot (histAttrs t x y fn) $ periodCanceledFreqRatio ps trace
+>     scatterPlot (histAttrs t x y fn) $ periodCanceledFreqRatio ps trace
 >   where
->     t = "Canceled/Scheduled Frequency Histogram"
+>     t = "Canceled/Scheduled by Frequency"
 >     x = "Frequency [GHz]"
->     y = "Canceled/Scheduled [Hours]"
+>     y = "Canceled Hrs/Scheduled Hrs"
 
 simHistDec
 
@@ -458,7 +459,7 @@ Simulator Harness
 
 > tracePlotsToFile rootPath = [
 >    plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
->  , histCanceledFreqRatio $ rootPath ++ "/simHistCanceledFreq.png"
+>  , histCanceledFreqRatio $ rootPath ++ "/simFracCanceledFreq.png"
 >  , plotBandPressureTime  $ rootPath ++ "/simBandPFTime.png"
 >  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
 >  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
