@@ -131,6 +131,12 @@ Replace any badly performing periods with either backups or deadtime.
 >     let sched = mapMaybe id sched'
 >     return sched
 
+What backups are even condsidered when looking for one to fill a hole due to
+a cancelation may depend on the strategy being used.  For now it doesn't.
+
+> filterBackups :: StrategyName -> [Session] -> Period -> [Session]
+> filterBackups _ ss p = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
+
 If a scheduled period fails it's Minimum Observing Conditions criteria,
 then try to replace it with the best backup that can (according to it's
 min and max duration limits).  If no suitable backup can be found, then
@@ -141,7 +147,7 @@ schedule this as deadtime.
 >   moc <- minimumObservingConditions (startTime p) (session p)
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
->     backupSessions  = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
+>     backupSessions  = filterBackups sn ss p 
 
 > cancelPeriod :: BackupStrategy
 > cancelPeriod sn sf backups p = do
@@ -150,6 +156,16 @@ schedule this as deadtime.
 >     then return Nothing
 >     else replaceWithBackup sn sf backups p
 
+Find the best backup for a given period according to the strategy being used.
+
+> findBestBackup :: StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Session, Score)
+> findBestBackup sn sf backups p =
+>   case sn of
+>     Pack ->  best (avgScoreForTime sf (startTime p) (duration p)) backups
+>     ScheduleMinDuration ->  best (avgScoreForTime sf (startTime p) (duration p)) backups
+>     ScheduleLittleNell ->  best (scoreForTime sf (startTime p)) backups
+>     
+
 Find the best backup for a given period.  The backups are scored using the
 best forecast and *not* rejecting zero scored quarters.  If the backup in turn
 fails it's MOC, then, since it is likely all the others will as well, then 
@@ -157,7 +173,7 @@ schedule deadtime.
 
 > replaceWithBackup :: BackupStrategy
 > replaceWithBackup sn sf backups p = do
->   (s, score) <- best (avgScoreForTime sf (startTime p) (duration p)) backups
+>   (s, score) <- findBestBackup sn sf backups p
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
