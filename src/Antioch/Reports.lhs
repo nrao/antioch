@@ -278,7 +278,7 @@ simHistEffHr
 >         -- histogram data has to get shifted (in Plots.lhs)
 >         -- but this looks silly for an enumeration, so (+1) below
 >         pBand     = [((+1) . fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
->         effByBand = [(fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
+>         effByBand = [((+1) . fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram"
 >         x = "Band [L, S, C, X, U, K, A, Q]"
 >         y = "Counts [Scheduled Hours]"
