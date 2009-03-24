@@ -709,6 +709,10 @@ Same as above, but with even more fixed periods
 >         fs <- genScore sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack5" expPeriods periods'  
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore sess
+>         pack fs starttime duration unsortedFixed sess
+>     assertEqual "test_Pack5_2" expPeriods periods'  
 >   where
 >     sess = getOpenPSessions 
 >     ds = defaultSession
@@ -723,6 +727,7 @@ Same as above, but with even more fixed periods
 >     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0 undefined False
 >     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0 undefined False
 >     fixed = [fixed1, fixed2, fixed3]
+>     unsortedFixed = [fixed3, fixed1, fixed2]
 >     duration = 24*60
 >     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 240 0.0 undefined False
 >     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 4 0 0) 360 0.0 undefined False
