@@ -24,25 +24,27 @@ simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
 > plotDecFreq fn ss ps _ =
->      scatterPlots (tail $ scatterAttrs t x y fn) $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
+>      scatterPlots attrs $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
 >                                            , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
 >   where
 >     t   = "Dec vs Freq"
 >     x   = "Frequency [GHz]"
 >     y   = "Declination [deg]"
 >     titles = [Just "Available", Just "Observed"]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-40, 95)]
 
 simDecRA (stars, crosses)
 
 > plotDecVsRA          :: StatsPlot
 > plotDecVsRA fn ss ps _ =
->     scatterPlots (tail $ scatterAttrs t x y fn) $ zip titles $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
+>     scatterPlots attrs $ zip titles $ [[(rad2hr x, rad2deg y) | (x, y) <- sessionDecRA ss]
 >                                           , [(rad2hr x, rad2deg y) | (x, y) <-  periodDecRA ps]]
 >   where
 >     t = "Dec vs RA"
 >     x = "Right Ascension [hr]"
 >     y = "Declination [deg]"
 >     titles = [Just "Available", Just "Observed"]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (-1, 25), YRange (-40, 95)]
 
 simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 This plot is observing efficiency vs. frequency, where the obs. eff. is:
@@ -82,18 +84,18 @@ simFreqTime (circles, dt on x-axis)
 
 > plotFreqVsTime         :: StatsPlot
 > plotFreqVsTime fn _ ps _ =
->     scatterPlot (tail $ scatterAttrs t x y fn) $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
+>     scatterPlot attrs $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
 >   where
 >     t = "Frequency vs Time"
 >     x = "Time [days]"
 >     y = "Frequency [GHz]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
 
 Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
 
-> plotSchdFreqVsTime              :: StatsPlot 
 > plotSchdFreqVsTime fn _ ps trace = 
->   scatterPlots (tail $ scatterAttrs t x y fn) $ zip titles $ [pl1, pl2, pl3, pl4]
+>   scatterPlots attrs $ zip titles $ [pl1, pl2, pl3, pl4]
 >     where
 >       t = "Frequency vs Start Time"
 >       x = "Time [fractional days]"
@@ -102,6 +104,7 @@ simFreqSchTime (circles, dt on x-axis)
 >               , Just "Canceled"
 >               , Just "Backup"
 >               , Just "Scheduled Deadtime"]
+>       attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
 >       ps' = [p | p <- ps, not . pBackup $ p]
 >       backups = [p | p <- ps, pBackup p]
 >       canceled = getCanceledPeriods trace
@@ -117,13 +120,14 @@ simFreqSchTime (circles, dt on x-axis)
 
 simSatisfyFreq (error bars)
 
-> plotSatRatioVsFreq            :: StatsPlot
+> plotSatRatioVsFreq          :: StatsPlot
 > plotSatRatioVsFreq fn ss ps _ =
->     errorBarPlot (tail $ scatterAttrs t x y fn) $ satisfactionRatio ss ps
+>     errorBarPlot attrs $ satisfactionRatio ss ps
 >   where
 >     t = "Satisfaction Ratio vs Frequency"
 >     x = "Frequency [GHz]"
 >     y = "Satisfaction Ratio"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)]
 
 simEffElev
 
@@ -133,11 +137,13 @@ simEffElev
 >   effs <- historicalObsEff w ps
 >   plotEffElev fn effs ps
 
-> plotEffElev fn effs ps = scatterPlot (tail $ scatterAttrs t x y fn) $ zip (map elevationFromZenith ps) effs
+> plotEffElev fn effs ps = scatterPlot attrs $ zip (map elevationFromZenith ps) effs
 >   where
 >     t = "Observing Efficiency vs Elevation"
 >     x = "Elevation [deg]"
 >     y = "Observing Efficiency"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-0.1, 1.1)]
+
 
 > plotMinObsEff          :: StatsPlot
 > plotMinObsEff fn _ _ _ = plotFunc attrs (linearScale 1000 (0, 50)) minObservingEff
@@ -156,11 +162,12 @@ simEffLST
 >   plotEffLst fn effs ps
 
 > plotEffLst fn effs ps =
->     scatterPlot (tail $ scatterAttrs t x y fn) $ zip (historicalLST ps) effs
+>     scatterPlot attrs $ zip (historicalLST ps) effs
 >   where
 >     t = "Observing Efficiency vs LST"
 >     x = "LST [hours]"
 >     y = "Observing Efficiency"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-0.1, 1.1)]
 
 simElevDec
 
@@ -171,11 +178,12 @@ simElevDec
 >   plotElevDec fn effs ps
 >
 > plotElevDec fn effs ps =
->     scatterPlot (tail $ scatterAttrs t x y fn) $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
+>     scatterPlot attrs $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
 >   where
 >     t = "Dec vs Elevation"
 >     x = "Elevation [deg]"
 >     y = "Declination [deg]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-40, 95)]
 
 simPFLST - need pressure history
 
@@ -259,14 +267,15 @@ simLSTPFTime3 - need pressure history
 
 simHistRA
 
-> histSessRA            :: StatsPlot
+> histSessRA          :: StatsPlot
 > histSessRA fn ss ps _ =
->     histogramPlots (histAttrs t x y fn) $ zip titles [sessionRAHrs ss, periodRAHrs ps]
+>     histogramPlots attrs $ zip titles [sessionRAHrs ss, periodRAHrs ps]
 >   where
 >     t = "Right Ascension Histogram"
 >     x = "RA [hr]"
 >     y = "Counts [Hours]"
 >     titles = [Just "Available", Just "Observed"]
+>     attrs = (histAttrs t x y fn) ++ [XRange (-1, 25)]
 
 simHistEffHr
 
@@ -290,35 +299,38 @@ simHistEffHr
 
 simHistFreq
 
-> histSessFreq            :: StatsPlot
+> histSessFreq          :: StatsPlot
 > histSessFreq fn ss ps _ =
->     histogramPlots (histAttrs t x y fn) $ zip titles [sessionFreqHrs ss, periodFreqHrs ps, periodFreqBackupHrs ps]
+>     histogramPlots attrs $ zip titles [sessionFreqHrs ss, periodFreqHrs ps, periodFreqBackupHrs ps]
 >   where
 >     t = "Frequency Histogram"
 >     x = "Frequency [GHz]"
 >     y = "Counts [Hours]"
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
+>     attrs = (histAttrs t x y fn) ++ [XRange (0, 51)]
+
 
 simFracCanceledFreq
 
-> histCanceledFreqRatio               :: StatsPlot
 > histCanceledFreqRatio fn _ ps trace =
->     scatterPlot (histAttrs t x y fn) $ periodCanceledFreqRatio ps trace
+>     scatterPlot attrs $ periodCanceledFreqRatio ps trace
 >   where
 >     t = "Canceled/Scheduled by Frequency"
 >     x = "Frequency [GHz]"
 >     y = "Canceled Hrs/Scheduled Hrs"
+>     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 51)]
 
 simHistDec
 
-> histSessDec           :: StatsPlot
+> histSessDec            :: StatsPlot
 > histSessDec fn ss ps _ =
->     histogramPlots (histAttrs t x y fn) $ zip titles [sessionDecHrs ss, periodDecHrs ps]
+>     histogramPlots attrs $ zip titles [sessionDecHrs ss, periodDecHrs ps]
 >   where
 >     t = "Declination Histogram"
 >     x = "Declination [deg]"
 >     y = "Counts [Hours]"
 >     titles = [Just "Available", Just "Observed"]
+>     attrs = (histAttrs t x y fn) ++ [XRange (-40, 90)]
 
 simHistPFHours - need pressure history
 simHistPF - need pressure history
