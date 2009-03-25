@@ -40,9 +40,14 @@
 >   , forecast        :: DateTime
 >   }
 
+The "unsafePerformIO hack" is a way of emulating global variables in GHC.
+
+> {-# NOINLINE globalConnection #-}
+> globalConnection :: IORef Connection
+> globalConnection = unsafePerformIO $ connect >>= newIORef
+
 > getWeather     :: Maybe DateTime -> IO Weather
-> getWeather now = bracketOnError connect disconnect $ \conn ->
->     updateWeather conn now
+> getWeather now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
 
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
