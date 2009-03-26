@@ -192,8 +192,10 @@ simScoreElev
 
 > plotScoreElev'           :: StatsPlot
 > plotScoreElev' fn _ ps _ = do
->   w       <- getWeather Nothing
->   scores  <- historicalObsScore w ps
+>   -- TBF: historicalObsScore not working, so make this a simpler plot for now
+>   --w       <- getWeather Nothing
+>   --scores  <- historicalObsScore w ps
+>   let scores = map pScore ps
 >   plotScoreElev fn scores ps
 
 > plotScoreElev fn scores ps =
@@ -207,8 +209,10 @@ simScoreLST
 
 > plotLstScore'           :: StatsPlot
 > plotLstScore' fn _ ps _ = do
->   w       <- getWeather Nothing
->   scores  <- historicalObsScore w ps
+>   -- TBF: historicalObsScore not working, so make this a simpler plot for now
+>   --w       <- getWeather Nothing
+>   --scores  <- historicalObsScore w ps
+>   let scores = map pScore ps
 >   plotLstScore fn scores ps
 >
 > plotLstScore fn scores ps =
