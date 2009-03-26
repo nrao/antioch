@@ -232,9 +232,9 @@ attributes of the packing algorithm:
 > test_PackWorker4 =
 >     TestCase . assertEqual "test_PackWorker4" result . packWorker fixed $ open
 >   where
->     result = [ Candidate "A"  0 2 2.0
->              , Candidate "F1" 2 2 0.0
->              , Candidate "F2" 5 2 0.0
+>     result = [ Candidate "A"  0 2 2.0 
+>              , Candidate "F1" 2 2 0.0 -- unwind mangles this score
+>              , Candidate "F2" 5 2 2.0 -- these were wrong in beta!
 >              , Candidate "C"  7 2 2.0
 >              , Candidate "D"  9 2 2.0
 >              ]
