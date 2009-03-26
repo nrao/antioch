@@ -368,6 +368,19 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 >     y = "Counts [Minutes]"
 >     titles = [Just "Available", Just "Observed"]
 
+simScoreFreq
+
+> plotScoreFreq           :: StatsPlot
+> plotScoreFreq fn _ ps _ = do
+>     scatterPlot attrs $ zip (historicalFreq ps) (map pScore ps)
+>   where
+>     t = "Score vs Frequency"
+>     x = "Frequency [GHz]"
+>     y = "Score"
+>     attrs = tail (scatterAttrs t x y fn) -- ++ [XRange (0, 51), YRange (0.0, 20.0)]
+
+
+
 Utilities
 
 > getObservingEfficiency w p = do 
@@ -441,8 +454,9 @@ Simulator Harness
 >  , plotMinObsEff ""
 >  , plotEffLst' ""
 >  , plotElevDec' ""
->  --, plotScoreElev' ""
->  --, plotLstScore' ""
+>  , plotScoreElev' ""
+>  , plotScoreFreq ""
+>  , plotLstScore' ""
 >  , histSessRA "" 
 >  , histEffHrBand' ""
 >  , histSessFreq ""
@@ -469,8 +483,9 @@ Simulator Harness
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
 >  , plotMinObsEff      $ rootPath ++ "/simMinObsEff.png"
 >  , plotElevDec'       $ rootPath ++ "/simElevDec.png"
->  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
->  --, plotLstScore'      $ rootPath ++ "/simScoreLST.png"
+>  , plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
+>  , plotScoreFreq      $ rootPath ++ "/simScoreFreq.png"
+>  , plotLstScore'      $ rootPath ++ "/simScoreLST.png"
 >  , histSessRA         $ rootPath ++ "/simHistRA.png"
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
@@ -600,4 +615,4 @@ Simulator Harness
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
 
-> runSim days filepath = generatePlots ScheduleMinDuration (statsPlotsToFile filepath) days
+> runSim days filepath = generatePlots Pack (statsPlotsToFile filepath) days
