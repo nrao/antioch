@@ -128,27 +128,27 @@ periods with those that were canceled.
 > histogramToHours =  map (\(f,t) -> (f,(fromIntegral t) / 60))
 
 > sessionTP :: [Period] -> [(Float, Int)]
-> sessionTP = count ((/60) . fromIntegral . duration) [1.0..7.0]
+> sessionTP = count ((/60.0) . fromIntegral . duration) [1.0..13.0]
 
 > sessionTPQtrs :: [Period] -> [(Minutes, Int)]
-> sessionTPQtrs = count (duration) [0, quarter..(7*60)]
+> sessionTPQtrs = count (duration) [0, quarter..(13*60)]
 
 Counts how many sessions have a min duration for each quarter hour.
 For randomly generated data, this should be a flat distribution.
 
 > sessionMinDurationQtrs :: [Session] -> [(Minutes, Int)]
-> sessionMinDurationQtrs = count (minDuration) [0, quarter..(7*60)]
+> sessionMinDurationQtrs = count (minDuration) [0, quarter..(13*60)]
 
 > periodDuration :: [Period] -> [(Minutes, Minutes)]
-> periodDuration = histogram [0, quarter..(7*60)] . (duration `vs` duration)
+> periodDuration = histogram [0, quarter..(13*60)] . (duration `vs` duration)
 
 > sessionMinDuration :: [Session] -> [(Minutes, Minutes)]
-> sessionMinDuration = histogram [0, quarter..(7*60)] . (minDuration `vs` minDuration)
+> sessionMinDuration = histogram [0, quarter..(13*60)] . (minDuration `vs` minDuration)
 
 What is the maximum amount of time that can be scheduled using the min duration.
 
 > sessionMinDurMaxTime :: [Session] -> [(Minutes, Minutes)]
-> sessionMinDurMaxTime = histogram [0, quarter..(7*60)] . (maxNumTPTime `vs` minDuration)
+> sessionMinDurMaxTime = histogram [0, quarter..(13*60)] . (maxNumTPTime `vs` minDuration)
 >   where
 >     maxNumTPTime s = (maxNumTPs s) * (minDuration s)
 >     maxNumTPs s = (totalTime s) `div` (minDuration s)
@@ -164,6 +164,9 @@ Compare allocated hours by frequency to observed hours by frequency.
 
 > periodBand :: [Period] -> [(Band, Float)]
 > periodBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . duration) `vs` (band . session))
+
+> sessionBand :: [Session] -> [(Band, Float)]
+> sessionBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . totalTime) `vs` (band))
 
 > sessionAvBand :: [Session] -> [(Band, Float)]
 > sessionAvBand = histogram [L::Band .. Q::Band] . (((/60.0) . fromIntegral . availableTime) `vs` (band))
@@ -244,7 +247,8 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >           | otherwise    = n
 
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
-> satisfactionRatio ss ps = zip3 [frequency $ session p | p <- ps] sRatios sigmas
+> --satisfactionRatio ss ps = zip3 [frequency $ session p | p <- ps] sRatios sigmas
+> satisfactionRatio ss ps = zip3 [1.0..50.0] sRatios sigmas
 >   where 
 >     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
 >     sMinutes   = map (fromIntegral . snd) (sessionFreq ss)

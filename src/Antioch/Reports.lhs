@@ -222,6 +222,20 @@ simScoreLST
 >     x = "LST [hours]"
 >     y = "Score"
 
+
+simScoreFreq
+
+> plotScoreFreq           :: StatsPlot
+> plotScoreFreq fn _ ps _ = do
+>     scatterPlot attrs $ zip (historicalFreq ps) (map pScore ps)
+>   where
+>     t = "Score vs Frequency"
+>     x = "Frequency [GHz]"
+>     y = "Score"
+>     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (0.1, 20.0)]
+
+
+
 simBandPFTime
 
 > plotBandPressureTime              :: StatsPlot
@@ -322,7 +336,7 @@ simFracCanceledFreq
 >     t = "Canceled/Scheduled by Frequency"
 >     x = "Frequency [GHz]"
 >     y = "Canceled Hrs/Scheduled Hrs"
->     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 51), YRange (0, 0.5)]
 
 simHistDec
 
@@ -340,30 +354,32 @@ simHistPFHours - need pressure history
 simHistPF - need pressure history
 simHistTP
 
-> histSessTP           :: StatsPlot
+> histSessTP         :: StatsPlot
 > histSessTP fn _ ps _ =
->      histogramPlot (histAttrs t x y fn) $ [(x, fromIntegral y) | (x, y) <- sessionTP ps]
+>     histogramPlot attrs $ [(x, fromIntegral y) | (x, y) <- sessionTP ps]
 >   where
 >     t = "Telescope Period Histogram"
 >     x = "TP [Hours]"
 >     y = "Counts"
+>     attrs = (histAttrs t x y fn) ++ [XRange (0, 13), YRange (0.5, 1000.0)]
 
 simHistTPQtrs 
 
-> histSessTPQtrs            :: StatsPlot
+> histSessTPQtrs :: StatsPlot
 > histSessTPQtrs fn ss ps _ = 
->     histogramPlot (histAttrs t x y fn) tpDurs
+>     histogramPlot attrs tpDurs
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTPQtrs ps]
 >     t = "Telescope Period Historgram"
 >     x = "TP [Minutes]"
 >     y = "Counts"
+>     attrs = (histAttrs t x y fn) ++ [XRange (60, 780), YRange (0.5, 1000.0)]
 
 simHistTPDurs - how are Session minDuratin and Period duration distributed in terms of actual minutes?
 
-> histSessTPDurs            :: StatsPlot
+> histSessTPDurs :: StatsPlot
 > histSessTPDurs fn ss ps _ = 
->     histogramPlots (histAttrs t x y fn) $ zip titles [maxTPTime, tpDurs]
+>     histogramPlots attrs $ zip titles [maxTPTime, tpDurs]
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
 >     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
@@ -371,17 +387,7 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 >     x = "TP [Minutes]"
 >     y = "Counts [Minutes]"
 >     titles = [Just "Available", Just "Observed"]
-
-simScoreFreq
-
-> plotScoreFreq           :: StatsPlot
-> plotScoreFreq fn _ ps _ = do
->     scatterPlot attrs $ zip (historicalFreq ps) (map pScore ps)
->   where
->     t = "Score vs Frequency"
->     x = "Frequency [GHz]"
->     y = "Score"
->     attrs = tail (scatterAttrs t x y fn) -- ++ [XRange (0, 51), YRange (0.0, 20.0)]
+>     attrs = (histAttrs t x y fn) ++ [XRange (60, 780), YRange (0.5, 100000.0)]
 
 
 
@@ -482,18 +488,17 @@ Simulator Harness
 >  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
 >  , plotEffVsFreq'     $ rootPath ++ "/simEffFreq.png"
 >  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
->  , plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
+>  --, plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
 >  , plotMinObsEff      $ rootPath ++ "/simMinObsEff.png"
 >  , plotElevDec'       $ rootPath ++ "/simElevDec.png"
->  , plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
+>  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
 >  , plotScoreFreq      $ rootPath ++ "/simScoreFreq.png"
->  , plotLstScore'      $ rootPath ++ "/simScoreLST.png"
+>  --, plotLstScore'      $ rootPath ++ "/simScoreLST.png"
 >  , histSessRA         $ rootPath ++ "/simHistRA.png"
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
->  --, histSessBackupFreq $ rootPath ++ "/simHistBackupFreq.png"
 >  , histSessDec        $ rootPath ++ "/simHistDec.png"
 >  , histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
@@ -576,8 +581,8 @@ Simulator Harness
 >     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4, l5])
 >   where
 >     heading = "Simulation Time Breakdown: \n"
->     l1 = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "avSess" "avBckp" "scheduled" "observed" 
->     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t4 t5 t6 t7
+>     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
+>     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t6 t7
 >     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
 >     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
 >     l5 = crossCheckSimulationBreakdown t1 t6 t7 t8 t9 t10 t11 t12 
@@ -599,15 +604,12 @@ Simulator Harness
 > reportBandTimes ss ps = do
 >     heading ++ (concat $ map ("    "++) [hdr, l1, l2])
 >   where
->     heading = "Simulation By Band    : \n"
->     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
->     sessBandTimes = sessionAvBand ss
+>     heading = "Simulation By Band: \n"
+>     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
+>     sessBandTimes = sessionBand ss
 >     periodBandTimes = periodBand ps
->     l1 = toStr sessBandTimes
->     l2 = toStr periodBandTimes
->     --l1 = sessionFreqHrs ss
->     --l2 = periodFreqHrs ps
->     --l3 = periodFreqBackupHrs ps
+>     l1 = "Sessions: " ++ toStr sessBandTimes
+>     l2 = "Periods : " ++ toStr periodBandTimes
 >     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
 
 

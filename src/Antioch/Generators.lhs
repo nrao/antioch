@@ -143,7 +143,7 @@ Only 20 percent of the low freq. sessions are backups
 >     (ra, dec)  <- genRaDec s
 >     totalTime  <- choose (6*60, 30*60)
 >     minD       <- choose (2*60, 6*60)
->     maxD       <- choose (6*60, 8*60)
+>     maxD       <- choose (11*60, 12*60)
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []
@@ -154,8 +154,8 @@ Only 20 percent of the low freq. sessions are backups
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
 >                -- TBF: only for scheduleMinDuration; then go back
->                , totalTime      = matchAvTime totalTime (round2quarter minD)
->                --, totalTime      = round2quarter totalTime
+>                --, totalTime      = matchAvTime totalTime (round2quarter minD)
+>                , totalTime      = round2quarter totalTime
 >                , grade          = g
 >                , receivers      = [r]
 >                , backup         = bk
