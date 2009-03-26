@@ -7,10 +7,12 @@
 > import Antioch.Types
 > import Antioch.Weather
 > import Antioch.Generators
+> import Antioch.Utilities
 > import Data.List   (foldl', sort, delete, find)
 > import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
+> import Control.Monad.Trans (liftIO)
 
 > epsilon  =  1.0e-4 :: Score
 
@@ -129,17 +131,23 @@ were built up from multiple Candidates in the first place.
 Note that this does not honor for pre-scheduled periods, this value
 is restored later in pack.
 
-> unwind    :: [Maybe (Candidate a)] -> [Candidate a]
-> unwind xs = [ x { cScore = y } | x <- xs' | y <- ys' ]
+TBF: when scheduling is sparse, and there are lots of Nothing's in the input to this
+function, the optimal schedule is not being picked because we are always picking
+the last candidate, which may NOT necessarily have the largest accumulated score!
+
+> unwind :: [Maybe (Candidate a)] -> [Candidate a]
+> unwind = unwind' []
 >   where
->     xs' = unwind' [] xs
->     ys  = map cScore xs'
->     ys' = [ y' - y | y' <- ys | y <- 0 : ys]
 >     unwind' acc []             = acc
 >     unwind' acc (Nothing : xs) = unwind' acc xs
->     unwind' acc (Just x  : xs) = unwind' (x { cStart = length rest - 1} : acc) rest
+>     unwind' acc (Just x  : xs) =
+>         unwind' (x { cStart = length rest - 1, cScore = cScore x - rscore} : acc) rest
 >       where
->         rest = drop (cDuration x - 1) xs
+>         rest   = drop (cDuration x - 1) xs
+>         rscore = case rest of
+>             []            -> 0.0
+>             (Nothing : _) -> 0.0
+>             (Just y  : _) -> cScore y
 
 An Item is a "value-added" session where the additional information
 is used for scheduling. Namely: min and max durations in units of
