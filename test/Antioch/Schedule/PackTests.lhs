@@ -721,7 +721,8 @@ Same as above, but with even more fixed periods
 >         fs <- sf dt sCV
 >         return $ eval fs
 >     expScores <- mapM scoreAt dts
->     let epsilon = abs $ (sum expScores) - (pScore . head $ periods')
+>     let expScore = (sum expScores) / (fromIntegral $ length dts)
+>     let epsilon = abs $ expScore - (pScore . head $ periods')
 >     assertEqual "test_Pack5_score" True (epsilon < 1.0e-4)
 >   where
 >     sess = getOpenPSessions 
