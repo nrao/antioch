@@ -1,4 +1,3 @@
-
 > module Antioch.Reports where
 
 > import Antioch.DateTime
