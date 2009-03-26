@@ -157,3 +157,39 @@ that it does not over allocate periods to a session.
 >   p1 = Period defaultSession dt1 1 0.0 undefined False
 >   p2 = Period defaultSession dt2 1 0.0 undefined False
 >   p3 = Period defaultSession dt3 1 0.0 undefined False
+
+> test_sim_pack = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (result, t) <- simulate Pack w rs dt dur int history cnl ss
+>     assertEqual "SimulationTests_test_sim_pack" exp result
+>     --assertEqual "SimulationTests_test_sim_schedMinDuration_2" canceled c
+>   where
+>     --canceled = []
+>     rs  = []
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 2
+>     int = 60 * 24 * 1
+>     history = []
+>     cnl = []
+>     ss = getOpenPSessions
+>     lp = findPSessionByName "LP"
+>     as = findPSessionByName "AS"
+>     gb = findPSessionByName "GB"
+>     va = findPSessionByName "VA"
+>     tx = findPSessionByName "TX"
+>     wv = findPSessionByName "WV"
+>     expSs = [gb, va, tx, tx, wv, gb, as, tx, tx]
+>     dts = [ fromGregorian 2006 2 1 1 30 0
+>           , fromGregorian 2006 2 1 7 30 0
+>           , fromGregorian 2006 2 1 11 30 0
+>           , fromGregorian 2006 2 1 15 30 0
+>           , fromGregorian 2006 2 1 22 30 0
+>           , fromGregorian 2006 2 2  4  0 0
+>           , fromGregorian 2006 2 2  6  0 0
+>           , fromGregorian 2006 2 2 12  0 0
+>           , fromGregorian 2006 2 2 16  0 0 ]
+>     durs = [360, 240, 240, 360, 330, 120, 360, 240, 270]
+>     scores = replicate 9 0.0
+>     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
+
+
