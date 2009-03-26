@@ -279,12 +279,12 @@ more then 100 tests.
 >     where
 >       noneAreNothing values = dropWhile (==True) (map (isJust . unsafePerformIO) values) == []
 >       windIsPositive values = 0.0 <= fromMaybe (-1.0) (head (map unsafePerformIO values))
->       windIsReasonable values = 200.0 >= fromMaybe (201.0) (head (map unsafePerformIO values))
+>       windIsReasonable values = 200.0 >= fromMaybe 201.0 (head (map unsafePerformIO values))
 >       getValues dt f el = unsafePerformIO $ do
 >         let target = dt
 >         w' <- theWeather
 >         w <- newWeather w' (Just dt)
->         return $ [wind w target
+>         return [wind w target
 >         -- TBF: this does not work & is not being used: , tatm w target
 >             , opacity w target f
 >             , tsys w target f

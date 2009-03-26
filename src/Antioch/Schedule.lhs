@@ -48,7 +48,7 @@ desired Strategy.
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
 > pack             :: Strategy
-> pack sf dt dur fixed = P.pack sf dt dur fixed 
+> pack sf dt dur _ = P.pack sf dt dur [] 
 
 Little Nell was Dana's original simulator, and it scheduled sessions
 by simply scoring them at the begining of a Period.
@@ -135,19 +135,19 @@ strategy as well.  Examples are:
    * TBF: what else?
 
 > constrain :: [Period] -> [Session] -> [Session]
-> constrain ps ss = filter (timeLeftHistory ps) ss
+> constrain = filter . timeLeftHistory 
 
 Is there time for this session?  Taking into account both the session's periods
 and the periods in the history?
 
 > timeLeftHistory :: [Period] -> Session -> Bool
-> timeLeftHistory history s = (totalTime s) - (timeUsedHistory history s) >= minDuration s
+> timeLeftHistory history s = totalTime s - timeUsedHistory history s >= minDuration s
 
 The list of periods (ps) may contain redundant versions of the
 sessions' periods list.  
 
 > timeUsedHistory :: [Period] -> Session -> Minutes
-> timeUsedHistory ps s = (sum [duration p | p <- uniquePeriods ps s]) + (totalUsed s) 
+> timeUsedHistory ps s = sum [duration p | p <- uniquePeriods ps s] + totalUsed s 
 >   where
 >     uniquePeriods ps s = [p | p <- ps, s == session p] \\ periods s
 > 

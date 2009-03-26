@@ -347,8 +347,7 @@ Compute the score for a given session at given time, but replacing weather
 > scoreForTime sf dt s = do
 >     w  <- weather
 >     w' <- liftIO $ newWeather w (Just dt)
->     sc <- scoreLocal w' sf s dt
->     return sc
+>     scoreLocal w' sf s dt
 
 Compute the average score for a given session over an interval:
    * modfiy the weather to start at the time given
@@ -363,7 +362,7 @@ This is for use when determining best backups to run.
 >     scores <- mapM (scoreLocal w' sf s) times 
 >     case length scores of
 >       0 -> return 0.0
->       otherwise -> return $ (sumScores scores) / (fromIntegral $ length scores)
+>       otherwise -> return $ sumScores scores / (fromIntegral . length $ scores)
 >   where
 >     -- TBF:  Using the measured wind speed for scoring in the future is unrealistic, but damn convent!
 >     numQtrs = dur `div` quarter
