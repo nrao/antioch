@@ -40,6 +40,7 @@
 >   , test_Pack3
 >   , test_Pack4
 >   , test_Pack5
+>   , test_Pack6
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker'5
@@ -709,10 +710,19 @@ Same as above, but with even more fixed periods
 >         fs <- genScore sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack5" expPeriods periods'  
+>     -- check that unsorted fixed periods are not a problem
 >     periods' <- runScoring w [] $ do
 >         fs <- genScore sess
 >         pack fs starttime duration unsortedFixed sess
->     assertEqual "test_Pack5_2" expPeriods periods'  
+>     assertEqual "test_Pack5_unsorted" expPeriods periods'  
+>     -- check that the score is an accurate accumulation
+>     let scoreAt dt =  runScoring w [] $ do
+>         sf <- genScore sess
+>         fs <- sf dt sCV
+>         return $ eval fs
+>     expScores <- mapM scoreAt dts
+>     let epsilon = abs $ (sum expScores) - (pScore . head $ periods')
+>     assertEqual "test_Pack5_score" True (epsilon < 1.0e-4)
 >   where
 >     sess = getOpenPSessions 
 >     ds = defaultSession
@@ -732,7 +742,24 @@ Same as above, but with even more fixed periods
 >     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 240 0.0 undefined False
 >     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 4 0 0) 360 0.0 undefined False
 >     expPeriods = [open1, fixed1, fixed2, open2, fixed3]
+>     sCV = findPSessionByName "CV"
+>     dts = [(i*quarter) `addMinutes'` starttime | i <- [0..((240 `div` quarter)-1)]]
 
+TBF: reveals a bug where scores are turning negative in pact.
+
+> test_Pack6 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore ss
+>         pack fs starttime duration [] ss
+>     let negScores = [p | p <- periods', pScore p < 0.0]
+>     assertEqual "test_Pack6" [] negScores --expPeriods periods'  
+>   where
+>     starttime = fromGregorian 2006 1 1 0 0 0
+>     duration = 24*60
+>     s19 = defaultSession {sId = 19, sName = "19", periods = [], totalTime = 690, minDuration = 345, maxDuration = 435, timeBetween = 0, frequency = 8.378224, ra = 1.2237936, dec = 0.81245035, backup = False, receivers = [Rcvr8_10], enabled = False, authorized = False, grade = GradeA, band = X}
+>     s3 =  defaultSession {sId = 3, sName = "3", periods = [], totalTime = 630, minDuration = 315, maxDuration = 450, timeBetween = 0, frequency = 14.540758, ra = 4.53959, dec = 3.422137e-2, backup = False, receivers = [Rcvr12_18], enabled = False, authorized = False, grade = GradeC, band = U}
+>     ss = [s3, s19]
 
 Test against python unit tests from beta test code:
 
