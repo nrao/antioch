@@ -13,6 +13,9 @@
 
 > tests = TestList [
 >      test_findCanceledPeriods
+>    , test_sim_pack
+>    , test_sim_pack_starvation
+>    , test_sim_pack_starvation2
 >    , test_sim_schedMinDuration
 >    -- test_sim_schedMinDuration_backup TBF: broken
 >    , test_sim_schedMinDuration_fail_backup
@@ -191,5 +194,42 @@ that it does not over allocate periods to a session.
 >     durs = [360, 240, 240, 360, 330, 120, 360, 240, 270]
 >     scores = replicate 9 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
+>     
 
+TBF: this test shows we aren't constraining withing pack: see how the allotted
+time exceeds the sessions total time
+
+> test_sim_pack_starvation = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (result, c) <- simulate Pack w rs dt dur int history [] ss
+>     assertEqual "SimulationTests_test_sim_pack_starvation" exp result
+>   where
+>     rs  = []
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 10
+>     int = 60 * 24 * 1
+>     history = []
+>     s = defaultSession {minDuration = 120
+>                       , maxDuration = 120
+>                       , totalTime   = 240
+>                       , project     = defaultProject {semester = "06A"}
+>                        }
+>     ss = [s]
+>     exp = [Period s (fromGregorian 2006 2 1 18 0 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 20 0 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 22 0 0) 120 0.0 undefined False]
+
+> test_sim_pack_starvation2 = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (result, c) <- simulate Pack w rs dt dur int history [] ss
+>     let negScores = [p | p <- result, pScore p < 0.0]
+>     assertEqual "SimulationTests_test_sim_pack_starvation2" [] negScores
+>   where
+>     rs  = []
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 40
+>     int = 60 * 24 * 1
+>     history = []
+>     -- induce starvation by shortening everybody's time
+>     ss = map (\s -> s {totalTime = 10*60}) getOpenPSessions
 
