@@ -93,13 +93,16 @@ Convert an open session `s` into a schedulable item by scoring it with
 >       }
 
 Convert candidates to telescope periods relative to a given startime.
+Remember: Candidates have unitless times, and their scores are cumulative.  Our 
+Periods need to have Minutes, and average scores.
+
 
 > toPeriod              :: DateTime -> Candidate Session -> Period
 > toPeriod dt candidate = defaultPeriod {
 >     session   = cId candidate
 >   , startTime = (quarter * cStart candidate) `addMinutes` dt
 >   , duration  = quarter * cDuration candidate
->   , pScore    = cScore candidate
+>   , pScore    = (cScore candidate)/(fromIntegral $ cDuration candidate)
 >   , pForecast = dt
 >   , pBackup   = False
 >   }
