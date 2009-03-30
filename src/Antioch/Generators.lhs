@@ -186,6 +186,13 @@ only schedule Periods of length minDuration.
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
 
+> prop_Ra2 s = validRA s
+
+> validRA :: Session -> Bool
+> validRA s = 0.0 <= ra' && ra' <= 24.0
+>   where 
+>     ra' = rad2hr . ra $ s
+
 Make sure that the total time used up by the periods is correct:
 
 > prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
@@ -197,6 +204,13 @@ Make sure that the total time used up by the periods is correct:
 > prop_maxDurationQuarter s = maxDuration s `mod` quarter == 0
 
 > prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
+
+> prop_Dec2 s = validDec s
+
+> validDec :: Session -> Bool
+> validDec s = -40.0 <= dec' && dec' <= 90.0
+>   where
+>     dec' = rad2deg . dec $ s
 
 TBF: thing is, this is in degrees, and it doesn't pass either!
 
