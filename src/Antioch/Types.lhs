@@ -186,6 +186,11 @@ ignores their numerical scores.
 >     eqStarts = (==) `on` startTime
 >     eqDurs   = (==) `on` duration
 
+Simple Functions for Periods:
+
+> periodHalfTime :: Period -> DateTime
+> periodHalfTime p = addMinutes' (duration p `div` 2) $ startTime p
+
 
 > defaultSession = defaultOpen
 
