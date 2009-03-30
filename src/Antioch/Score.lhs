@@ -98,6 +98,14 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     dec' = dec s
 
+TBF: this was moved from Statistic to here, but it needs a better home.
+
+> elevationFromZenith :: Period -> Float
+> elevationFromZenith p =
+>     90 - rad2deg (zenithAngle dt (session p))
+>   where 
+>     dt = periodHalfTime p
+
 > observingEfficiency        :: ScoreFunc
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
