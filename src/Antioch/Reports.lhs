@@ -548,7 +548,7 @@ Simulator Harness
 >     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
 >     filename = "simulation_" ++ nowStr ++ ".txt"
 >     r1 = reportSimulationGeneralInfo now execTime dt days strategyName ss ps
->     r2 = reportScheduleChecks ps gaps
+>     r2 = reportScheduleChecks ss ps gaps
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
 >     r5 = reportBandTimes ss ps 
@@ -565,9 +565,9 @@ Simulator Harness
 >   l3 = printf "Ran strategy %s\n" strategyName
 >   l4 = printf "Number of Sessions as input: %d\n" (length ss)
 
-> reportScheduleChecks :: [Period] -> [(DateTime, Minutes)] -> String
-> reportScheduleChecks ps gaps =
->   heading ++ (concat $ map ("    "++) [overlaps, durs, scores, gs])
+> reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
+> reportScheduleChecks ss ps gaps =
+>   heading ++ (concat $ map ("    "++) [overlaps, durs, scores, gs, ras, decs, elevs])
 >     where
 >   heading = "Schedule Checks: \n"
 >   error = "WARNING: "
@@ -575,6 +575,9 @@ Simulator Harness
 >   durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
 >   scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
 >   gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
+>   ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
+>   decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
+>   elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
