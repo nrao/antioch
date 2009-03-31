@@ -138,9 +138,13 @@ the last candidate, which may NOT necessarily have the largest accumulated score
 > unwind :: [Maybe (Candidate a)] -> [Candidate a]
 > unwind = unwind' []
 >   where
->     unwind' acc []             = acc
->     unwind' acc (Nothing : xs) = unwind' acc xs
->     unwind' acc (Just x  : xs) =
+>     unwind' acc []              = acc
+>     unwind' acc (Nothing : xs)  = unwind' acc xs
+>     unwind' acc xs@(Just x : xs'@(Just x' : _))
+>         | cScore x' >= cScore x = unwind' acc xs'
+>         | otherwise             = step acc xs
+>     unwind' acc xs@(Just x : _) = step acc xs
+>     step acc (Just x : xs)      =
 >         unwind' (x { cStart = length rest - 1, cScore = cScore x - rscore} : acc) rest
 >       where
 >         rest   = drop (cDuration x - 1) xs
