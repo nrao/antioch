@@ -232,14 +232,6 @@ Compare allocated hours by frequency to observed hours by frequency.
 > etaFn :: [(Frequency, Float)]
 > etaFn = [(f, minObservingEff f) | f <- [2.0 .. 60.0]]
 
-We may want to move this function to a different file.
-
-> elevationFromZenith :: Period -> Float
-> elevationFromZenith p =
->     90 - rad2deg (zenithAngle dt . session $ p)
->   where
->     dt = addMinutes' (duration p `div` 2) $ startTime p
-
 > efficiencyVsFrequency :: [Session] -> [Float] -> [(Float, Float)]
 > efficiencyVsFrequency sessions =
 >     (snd `vs` (frequency . fst)) . zip sessions
