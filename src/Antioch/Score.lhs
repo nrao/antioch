@@ -98,6 +98,14 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     dec' = dec s
 
+TBF: this was moved from Statistic to here, but it needs a better home.
+
+> elevationFromZenith :: Period -> Float
+> elevationFromZenith p =
+>     90 - rad2deg (zenithAngle dt (session p))
+>   where 
+>     dt = periodHalfTime p
+
 > observingEfficiency        :: ScoreFunc
 > atmosphericOpacity         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
@@ -534,6 +542,18 @@ Convenience function for translating go/no-go into a factor.
 
 > boolean :: String -> Maybe Bool -> Scoring Factors
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
+
+Convenience function for scoring a Session over it's Period's duration
+Note: The score recorded in the period (pScore) is the average over it's 
+duration.  So, we should be able to reprodcue that using this function, 
+the original pool of sessions (for the correct pressures), and the forecast 
+used to generate pScore (using the time pScore was calculated for, pForecast).
+
+> scorePeriod :: Period -> ScoreFunc -> Scoring [Factors]
+> scorePeriod p sf = mapM (scorePeriod' sf) dts
+>   where
+>     scorePeriod' sf dt = sf dt (session p)
+>     dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
 Quick Check properties:
 

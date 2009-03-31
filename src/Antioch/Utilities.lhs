@@ -44,6 +44,8 @@
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
 
+QuickCheck Properties:
+
 > genDate :: Gen DateTime
 > genDate = do
 >     mon <- choose (1, 12)

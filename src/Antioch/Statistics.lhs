@@ -4,8 +4,10 @@
 > import Antioch.DateTime   (toGregorian')
 > import Antioch.Generators
 > import Antioch.Types
-> import Antioch.Score      (Trace, zenithAngle, minObservingEff)
-> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours)
+> -- import Antioch.Score      (Trace, zenithAngle, minObservingEff, elevationFromZenith)
+> import Antioch.Score
+> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours) 
+> import Antioch.Weather
 > import Antioch.Debug
 > import Control.Arrow      ((&&&), second)
 > import Data.Array
@@ -30,6 +32,40 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
   
+> historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
+> historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericOpacity
+> historicalSchdTrkEffs ps = historicalSchdFactors ps trackingEfficiency
+> historicalSchdSrfEffs ps = historicalSchdFactors ps surfaceObservingEfficiency
+
+> historicalSchdMeanObsEffs ps = historicalSchdMeanFactors ps observingEfficiency
+> historicalSchdMeanAtmEffs ps = historicalSchdMeanFactors ps atmosphericOpacity
+> historicalSchdMeanTrkEffs ps = historicalSchdMeanFactors ps trackingEfficiency
+> historicalSchdMeanSrfEffs ps = historicalSchdMeanFactors ps surfaceObservingEfficiency
+
+> historicalSchdFactors :: [Period] -> ScoreFunc -> IO [Float]
+> historicalSchdFactors ps sf = do
+>   w <- getWeather Nothing
+>   fs <- mapM (periodSchdFactors' w) ps
+>   return $ concat fs
+>     where
+>       periodSchdFactors' w p = periodSchdFactors p sf w
+
+> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> IO [Float]
+> historicalSchdMeanFactors ps sf = do
+>   w <- getWeather Nothing
+>   fs <- mapM (periodSchdFactors' w) ps
+>   return $ map mean' fs
+>     where
+>       periodSchdFactors' w p = periodSchdFactors p sf w
+
+> periodSchdFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
+> periodSchdFactors p sf w = do
+>   w' <- newWeather w $ Just $ pForecast p
+>   fs <- runScoring w rs $ scorePeriod p sf  
+>   return $ map eval fs
+>     where
+>   rs = [] -- TBF: how to pass this down?
+
 > sessionDecFreq :: [Session] -> [(Float, Radians)]
 > sessionDecFreq = dec `vs` frequency
 

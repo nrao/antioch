@@ -21,6 +21,7 @@
 > -}
 
 > import Antioch.DateTime  (DateTime, addMinutes', fromGregorian, toSqlString)
+> import Antioch.Utilities
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
@@ -177,7 +178,8 @@ TBF: failing after n tests!
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      --validPackScores sched
->      validScores sched
+>      validScores sched &&
+>      validSchdPositions ps sched
 
 Same as above, but now insert some pre-schedule periods into the problem.
 TBF: failing after 1 test!
@@ -190,7 +192,8 @@ TBF: failing after 1 test!
 >      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
->      honorsFixed fixed sched
+>      honorsFixed fixed sched &&
+>      validSchdPositions ps sched
 >      -- validScores sched -- TBF: periods getting neg. scores!
 
 > prop_minDurValidSchedule = forAll genScheduleProjects $ \ps ->
@@ -200,7 +203,8 @@ TBF: failing after 1 test!
 >      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
->      validScores sched  -- TBF: allows scores of zero
+>      validScores sched && -- TBF: allows scores of zero
+>      validSchdPositions ps sched
 
 > prop_minDurValidMixedSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
@@ -211,7 +215,8 @@ TBF: failing after 1 test!
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      --honorsFixed fixed sched && -- TBF: fails, by design?  
->      validScores sched -- TBF: allows scores of zero
+>      validScores sched && -- TBF: allows scores of zero
+>      validSchdPositions ps sched
 
 Framework for quick checking startegies
 
@@ -268,4 +273,24 @@ Thus, if there are no pre-scheduled periods that pack has to work around,
 > validScores :: [Period] -> Bool
 > validScores ps = dropWhile (>=0.0) (map pScore ps) == []
 
+> validSchdPositions :: [Project] -> [Period] -> Bool
+> validSchdPositions projs ps = validPositions projs && validElevs ps
 
+> validPositions :: [Project] -> Bool
+> validPositions projs = validRAs ss && validDecs ss
+>   where 
+>     ss = concatMap sessions projs
+
+> validRAs :: [Session] -> Bool
+> validRAs ss = dropWhile validRA ss == []
+
+> validDecs :: [Session] -> Bool
+> validDecs ss = dropWhile validDec ss == []
+
+> validElevs :: [Period] -> Bool
+> validElevs ps = dropWhile validElev ps == []
+
+> validElev :: Period -> Bool
+> validElev p = 5 <= el && el <= 90 
+>   where
+>     el = elevationFromZenith p

@@ -4,12 +4,16 @@
 > import Antioch.Score
 > import Antioch.Simulate
 > import Antioch.Reports
+> import SimulateOpts
+
+> import System.Environment
+> import Text.Printf
 
 > main = do 
->     --(_, trace) <- simulate06 (scheduleFixedDuration $ 4*60)
->     --return ()
->     -- print trace
->   --generatePlots (scheduleFixedDuration 240) (statsPlotsToFile "~/figuresFD") 334  -- 76 Minutes
->   --generatePlots (scheduleFixedDuration' 240) (statsPlotsToFile "~/figuresFD2") 334  -- 76 Minutes
->   --generatePlots pack (statsPlotsToFile "~/figuresPack") 334  -- 96 Minutes
->   generatePlots Pack (statsPlotsToFile "./figures") 334
+>   args <- getArgs
+>   (stgStr, dir, numDaysStr) <- simulateOpts args
+>   putStrLn $ printf "Running simulation using strategy %s for %s days, output to directory %s\n" stgStr numDaysStr dir
+>   -- TBF: error checking on these values
+>   let numDays = read numDaysStr::Int
+>   let stg = read stgStr::StrategyName
+>   generatePlots stg (statsPlotsToFile dir) numDays
