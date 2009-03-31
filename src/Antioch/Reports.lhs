@@ -74,7 +74,7 @@ Break down the above plot into the three factors that make up observing eff.
 
 > plotMeanSrfEffVsFreq  :: StatsPlot
 > plotMeanSrfEffVsFreq fn _ ps _ = do
->   effs <- historicalSchdMeanTrkEffs ps
+>   effs <- historicalSchdMeanSrfEffs ps
 >   let t = "Scheduled Mean Surface Obs. Efficiency vs Frequency"
 >   let y = "Mean Surface Obs. Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
