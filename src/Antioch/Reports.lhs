@@ -46,11 +46,44 @@ simDecRA (stars, crosses)
 >     titles = [Just "Available", Just "Observed"]
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (-1, 25), YRange (-40, 95)]
 
+simMeanEffFreq (error bars, crosses, line plot) - TBF: no error bars & line
+However, this IS a correct plot of the mean scheduled obs. eff.
+
+> plotMeanObsEffVsFreq  :: StatsPlot
+> plotMeanObsEffVsFreq fn _ ps _ = do
+>   effs <- historicalSchdMeanObsEffs ps
+>   let t = "Scheduled Mean Observing Efficiency vs Frequency"
+>   let y = "Mean Observing Efficiency"
+>   plotEffVsFreq'' fn effs ps t y
+
+Break down the above plot into the three factors that make up observing eff.
+
+> plotMeanAtmEffVsFreq  :: StatsPlot
+> plotMeanAtmEffVsFreq fn _ ps _ = do
+>   effs <- historicalSchdMeanAtmEffs ps
+>   let t = "Scheduled Mean Atmospheric Opacity vs Frequency"
+>   let y = "Mean Atmospheric Opacity"
+>   plotEffVsFreq'' fn effs ps t y
+
+> plotMeanTrkEffVsFreq  :: StatsPlot
+> plotMeanTrkEffVsFreq fn _ ps _ = do
+>   effs <- historicalSchdMeanTrkEffs ps
+>   let t = "Scheduled Mean Tracking Efficiency vs Frequency"
+>   let y = "Mean Tracking Efficiency"
+>   plotEffVsFreq'' fn effs ps t y
+
+> plotMeanSrfEffVsFreq  :: StatsPlot
+> plotMeanSrfEffVsFreq fn _ ps _ = do
+>   effs <- historicalSchdMeanTrkEffs ps
+>   let t = "Scheduled Mean Surface Obs. Efficiency vs Frequency"
+>   let y = "Mean Surface Obs. Efficiency"
+>   plotEffVsFreq'' fn effs ps t y
+
 simEffFreq (error bars, crosses, line plot) - Need stats from Dana
 This plot is observing efficiency vs. frequency, where the obs. eff. is:
    * calculated at the time of the start of the Period
    * just for that one inital quarter (as oppsed to averaged over duration)
-   * uses weather 
+   * uses WRONG weather 
 
 > plotEffVsFreq'         :: StatsPlot
 > plotEffVsFreq' fn _ ps _ = do
@@ -79,7 +112,6 @@ TBF: plotEffVsFreq still not being used anywhere
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
 
-simMeanEffFreq (error bars, crosses, line plot) - Need stats from Dana
 simFreqTime (circles, dt on x-axis)
 
 > plotFreqVsTime         :: StatsPlot
@@ -487,6 +519,10 @@ Simulator Harness
 >    plotDecFreq        $ rootPath ++ "/simDecFreq.png"
 >  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
 >  , plotEffVsFreq'     $ rootPath ++ "/simEffFreq.png"
+>  , plotMeanObsEffVsFreq $ rootPath ++ "/simSchdMeanEffFreq.png"
+>  , plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
+>  , plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
+>  , plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
 >  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
 >  --, plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
@@ -525,11 +561,20 @@ Simulator Harness
 >     stop <- getCPUTime
 >     let execTime = fromIntegral (stop-start) / 1.0e12 
 >     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
+>     -- post simulation analysis
 >     let gaps = findScheduleGaps dt dur results
 >     let canceled = getCanceledPeriods trace
+>     schdObsEffs <- historicalSchdObsEffs results
+>     schdAtmEffs <- historicalSchdAtmEffs results
+>     schdTrkEffs <- historicalSchdTrkEffs results
+>     schdSrfEffs <- historicalSchdSrfEffs results
+>     let scores = [("obsEff", schdObsEffs)
+>                 , ("atmEff", schdAtmEffs)
+>                 , ("trkEff", schdTrkEffs)
+>                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports now execTime dt days (show strategyName) ss results canceled gaps
+>     textReports now execTime dt days (show strategyName) ss results canceled gaps scores
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
@@ -539,8 +584,8 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> textReports :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] ->[(DateTime, Minutes)] -> IO () 
-> textReports now execTime dt days strategyName ss ps canceled gaps = do
+> textReports :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
+> textReports now execTime dt days strategyName ss ps canceled gaps scores = do
 >     putStrLn $ report
 >     writeFile filename report
 >   where
@@ -548,11 +593,12 @@ Simulator Harness
 >     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
 >     filename = "simulation_" ++ nowStr ++ ".txt"
 >     r1 = reportSimulationGeneralInfo now execTime dt days strategyName ss ps
->     r2 = reportScheduleChecks ss ps gaps
+>     r2 = reportScheduleChecks ss ps gaps 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
 >     r5 = reportBandTimes ss ps 
->     report = concat [r1, r2, r3, r4, r5]
+>     r6 = reportScheduleScores scores
+>     report = concat [r1, r2, r3, r4, r5, r6]
 
 > reportSimulationGeneralInfo :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
 > reportSimulationGeneralInfo now execTime start days strategyName ss ps =
@@ -623,5 +669,18 @@ Simulator Harness
 >     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
+
+> reportScheduleScores :: [(String, [Score])] -> String
+> reportScheduleScores scores =
+>   heading ++ (concat $ map ("    "++) [obsEff, atmEff, trkEff, srfEff])
+>     where
+>   heading = "Schedule Score Checks: \n"
+>   error = "WARNING: "
+>   getScores name s = snd . head $ filter (\x -> fst x == name) s
+>   checkNormalized scores key name = if not . normalized $ getScores key scores then error ++ name ++ " not Normalized!\n" else "0.0 <= " ++ name ++ " <= 1.0\n"
+>   obsEff = checkNormalized scores "obsEff" "Observing Efficiency"
+>   atmEff = checkNormalized scores "atmEff" "Atmospheric Opacity"
+>   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
+>   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
 
 > runSim days filepath = generatePlots Pack (statsPlotsToFile filepath) days
