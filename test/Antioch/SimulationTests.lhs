@@ -216,9 +216,9 @@ time exceeds the sessions total time
 >                       , project     = defaultProject {semester = "06A"}
 >                        }
 >     ss = [s]
->     exp = [Period s (fromGregorian 2006 2 1 18 0 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 20 0 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 22 0 0) 120 0.0 undefined False]
+>     exp = [Period s (fromGregorian 2006 2 1 17 45 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 19 45 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 21 45 0) 120 0.0 undefined False]
 
 > test_sim_pack_starvation2 = TestCase $ do
 >     w <- getWeather $ Just dt
