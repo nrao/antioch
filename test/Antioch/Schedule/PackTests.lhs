@@ -748,7 +748,7 @@ Same as above, but with even more fixed periods
 >     sCV = findPSessionByName "CV"
 >     dts = [(i*quarter) `addMinutes'` starttime | i <- [0..((240 `div` quarter)-1)]]
 
-TBF: reveals a bug where scores are turning negative in pact.
+revealed a bug where scores are turning negative in pact.
 
 > test_Pack6 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -763,6 +763,24 @@ TBF: reveals a bug where scores are turning negative in pact.
 >     s19 = defaultSession {sId = 19, sName = "19", periods = [], totalTime = 690, minDuration = 345, maxDuration = 435, timeBetween = 0, frequency = 8.378224, ra = 1.2237936, dec = 0.81245035, backup = False, receivers = [Rcvr8_10], enabled = False, authorized = False, grade = GradeA, band = X}
 >     s3 =  defaultSession {sId = 3, sName = "3", periods = [], totalTime = 630, minDuration = 315, maxDuration = 450, timeBetween = 0, frequency = 14.540758, ra = 4.53959, dec = 3.422137e-2, backup = False, receivers = [Rcvr12_18], enabled = False, authorized = False, grade = GradeC, band = U}
 >     ss = [s3, s19]
+
+> test_Pack7 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore ss
+>         pack fs starttime duration fixed ss
+>     printList periods'
+>     assertEqual "test_Pack6" 3 (numFixed periods') --expPeriods periods'  
+>   where
+>     starttime = fromGregorian 2006 10 6 3 0 0
+>     duration = (20*60) + 30
+>     ds = defaultSession {sId = 0, sName = "fixed"}
+>     ss = getOpenPSessions
+>     fixed1 = Period ds (fromGregorian 2006 10  6  3 0 0) 255 0.0 undefined False
+>     fixed2 = Period ds (fromGregorian 2006 10  9 45 0 0) 270 0.0 undefined False
+>     fixed3 = Period ds (fromGregorian 2006 10 16 30 0 0) 255 0.0 undefined False
+>     fixed = [fixed1, fixed2, fixed3]
+>     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
 
 Test against python unit tests from beta test code:
 
