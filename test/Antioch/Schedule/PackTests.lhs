@@ -704,6 +704,7 @@ around fixed periods.
 
 Same as above, but with even more fixed periods
 
+> -- Failing, but seems to be producing a better result than expected.
 > test_Pack5 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do

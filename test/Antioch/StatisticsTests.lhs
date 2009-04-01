@@ -143,12 +143,14 @@ what bin it shows up in.
 >     (_, periods) = generateTestData 100
 >     expected = [(1.0,0),(2.0,13605),(3.0,1815),(4.0,1755),(5.0,1140),(6.0,1260),(7.0,0),(8.0,0),(9.0,465),(10.0,645),(11.0,0),(12.0,0),(13.0,690),(14.0,960),(15.0,0),(16.0,0),(17.0,0),(18.0,0),(19.0,150),(20.0,0),(21.0,600),(22.0,0),(23.0,2565),(24.0,0),(25.0,0),(26.0,0),(27.0,225),(28.0,0),(29.0,0),(30.0,1140),(31.0,0),(32.0,0),(33.0,375),(34.0,150),(35.0,0),(36.0,0),(37.0,315),(38.0,660),(39.0,525),(40.0,600),(41.0,1335),(42.0,0),(43.0,375),(44.0,0),(45.0,150),(46.0,540),(47.0,0),(48.0,60),(49.0,0),(50.0,0)]
 
+> -- This test is failing because auto-generated report range only needs to go to 11.
 > test_sessionTP = TestCase $ do
 >     assertEqual "test_sessionTP" expected (sessionTP periods)
 >   where
 >     (_, periods) = generateTestData 100
 >     expected = [(1.0,3),(2.0,10),(3.0,12),(4.0,14),(5.0,8),(6.0,10),(7.0,11),(8.0,12),(9.0,13),(10.0,7),(11.0,0),(12.0,0),(13.0,0)] 
 
+> -- This test is failing because auto-generated report range only needs to go to 3.
 > test_sessionTP2 = TestCase $ do
 >     assertEqual "test_sessionTP2" exp cnt
 >   where

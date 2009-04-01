@@ -127,6 +127,7 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 Make sure the simulation can handle running out of sessions to schedule, and
 that it does not over allocate periods to a session.
 
+> -- Producing new, better results.  As desired?
 > test_sim_schedMinDuration_starvation = TestCase $ do
 >     w <- getWeather $ Just dt
 >     (result, c) <- simulate ScheduleMinDuration w rs dt dur int history [] ss

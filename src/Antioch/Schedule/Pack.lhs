@@ -144,7 +144,7 @@ the last candidate, which may NOT necessarily have the largest accumulated score
 >     unwind' acc []              = acc
 >     unwind' acc (Nothing : xs)  = unwind' acc xs
 >     unwind' acc xs@(Just x : xs'@(Just x' : _))
->         | cScore x' >= cScore x = unwind' acc xs'
+>         | cScore x' > cScore x  = unwind' acc xs'
 >         | otherwise             = step acc xs
 >     unwind' acc xs@(Just x : _) = step acc xs
 >     step acc (Just x : xs)      =
