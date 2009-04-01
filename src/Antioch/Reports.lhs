@@ -203,14 +203,9 @@ simEffLST
 
 simElevDec
 
-> plotElevDec'           :: StatsPlot
-> plotElevDec' fn _ ps _ = do
->   w    <- getWeather Nothing
->   effs <- historicalObsEff w ps
->   plotElevDec fn effs ps
->
-> plotElevDec fn effs ps =
->     scatterPlot attrs $ [(x, rad2deg y) | (x, y) <- decVsElevation ps effs]
+> plotElevDec           :: StatsPlot
+> plotElevDec fn _ ps _ = do
+>     scatterPlot attrs $ [(x, rad2deg y) | (x, y) <- decVsElevation ps]
 >   where
 >     t = "Dec vs Elevation"
 >     x = "Elevation [deg]"
@@ -495,7 +490,7 @@ Simulator Harness
 >  , plotEffElev' ""
 >  , plotMinObsEff ""
 >  , plotEffLst' ""
->  , plotElevDec' ""
+>  , plotElevDec ""
 >  , plotScoreElev' ""
 >  , plotScoreFreq ""
 >  , plotLstScore' ""
@@ -528,7 +523,7 @@ Simulator Harness
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
 >  , plotMinObsEff      $ rootPath ++ "/simMinObsEff.png"
->  , plotElevDec'       $ rootPath ++ "/simElevDec.png"
+>  , plotElevDec        $ rootPath ++ "/simElevDec.png"
 >  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
 >  , plotScoreFreq      $ rootPath ++ "/simScoreFreq.png"
 >  --, plotLstScore'      $ rootPath ++ "/simScoreLST.png"
