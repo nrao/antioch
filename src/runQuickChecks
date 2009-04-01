@@ -1,0 +1,10 @@
+#!/bin/bash
+echo Running Quick Check Properties
+runhaskell quickCheck.hs +names Antioch/*.lhs Antioch/Schedule/*.lhs > ../admin/dss_quick_check.out
+cd ../admin
+echo
+echo ______________________________ 
+echo Summarizing Quick Check Results
+echo ______________________________ 
+echo
+runhaskell parseQuickCheckResults.hs dss_quick_check.out
