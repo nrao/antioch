@@ -9,6 +9,7 @@
 > import Antioch.Weather
 > import Antioch.Generators (generateTestSessions)
 > import Antioch.PProjects
+> import Antioch.Utilities
 > import Test.HUnit
 > import Control.Monad.Reader
 > import Data.List (sort, zipWith6)
@@ -742,7 +743,7 @@ Same as above, but with even more fixed periods
 >     unsortedFixed = [fixed3, fixed1, fixed2]
 >     duration = 24*60
 >     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 240 0.0 undefined False
->     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 4 0 0) 360 0.0 undefined False
+>     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 30 0) 360 0.0 undefined False
 >     expPeriods = [open1, fixed1, fixed2, open2, fixed3]
 >     sCV = findPSessionByName "CV"
 >     dts = [(i*quarter) `addMinutes'` starttime | i <- [0..((240 `div` quarter)-1)]]
