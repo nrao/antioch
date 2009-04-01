@@ -365,23 +365,14 @@ original slot (this will be overwritting a backup period, or a blank).
 > getScheduledDeadTimeHrs start dur obs = fractionalHours . sum . map (\dt -> snd dt) . getScheduledDeadTime start dur obs
 
 > findScheduleGaps :: DateTime -> Minutes -> [Period] -> [(DateTime, Minutes)]
-> findScheduleGaps start dur [] = [(start, dur)]
-> findScheduleGaps start dur ps = startGap ++ findScheduleGaps' ps ++ endGap
+> findScheduleGaps start dur ps = findScheduleGaps' $
+>     begin : [(startTime p, duration p) | p <- ps] ++ [end]
 >   where
->     startDiff = startTime (head ps) `diffMinutes'` start
->     startGap = if startDiff == 0 then [] else [(start, startDiff)]
->     end = dur `addMinutes'` start
->     realEnd = duration (last ps) `addMinutes'` startTime (last ps) 
->     endDiff = end `diffMinutes'` realEnd
->     endGap = if endDiff == 0 then [] else [(realEnd, endDiff)]
+>     begin = (start, 0)
+>     end   = (dur `addMinutes` start, 0)
 
-> findScheduleGaps' :: [Period] -> [(DateTime, Minutes)]
-> findScheduleGaps' []     = []
-> findScheduleGaps' (p:[]) = []
-> findScheduleGaps' (p:ps) | gap p ps > 1 = (endTime p, gap p ps) : findScheduleGaps' ps
->                          | otherwise    = findScheduleGaps' ps
->   where 
->     gap p ps = diffMinutes' (startTime (head ps)) (endTime p)
+> findScheduleGaps' ps = [(d1 `addMinutes` s1, gap) |
+>     ((s1,d1), (s2,d2)) <- zip ps (tail ps), gap <- [(s2 `diffMinutes` s1) - d1], gap > 0]
 
 > getTotalHours :: [Period] -> Float
 > getTotalHours = fractionalHours . sum . map duration

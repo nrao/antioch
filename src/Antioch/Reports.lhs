@@ -602,33 +602,33 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps =
->   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3, l4, l5])
->     where
->   heading = "General Simulation Info: \n"
->   l0 = printf "Simulation Name: %s\n" name
->   l1 = printf "Ran Simulations on: %s\n" (toSqlString now)
->   l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
->   l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
->   l4 = printf "Ran strategy %s\n" strategyName
->   l5 = printf "Number of Sessions as input: %d\n" (length ss)
+>     heading ++ intercalate "    " [l0, l1, l2, l3, l4, l5])
+>   where
+>     heading = "General Simulation Info: \n"
+>     l0 = printf "Simulation Name: %s\n" name
+>     l1 = printf "Ran Simulations on: %s\n" (toSqlString now)
+>     l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
+>     l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
+>     l4 = printf "Ran strategy %s\n" strategyName
+>     l5 = printf "Number of Sessions as input: %d\n" (length ss)
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
 > reportScheduleChecks ss ps gaps =
->   heading ++ (concat $ map ("    "++) [overlaps, durs, scores, gs, ras, decs, elevs])
->     where
->   heading = "Schedule Checks: \n"
->   error = "WARNING: "
->   overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
->   durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
->   scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
->   gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
->   ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
->   decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
->   elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
+>     heading ++ intercalate "    " [overlaps, durs, scores, gs, ras, decs, elevs]
+>   where
+>     heading = "Schedule Checks: \n"
+>     error = "WARNING: "
+>     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
+>     durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
+>     scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
+>     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
+>     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
+>     decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
+>     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
->     heading ++ (concat $ map ("    "++) [l1, l2, l3, l4, l5])
+>     heading ++ intercalate "    " [l1, l2, l3, l4, l5])
 >   where
 >     heading = "Simulation Time Breakdown: \n"
 >     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
@@ -640,7 +640,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
->     heading ++ (concat $ map ("    "++) [hdr, l1, l2, l3, l4])
+>     heading ++ intercalate "    " [hdr, l1, l2, l3, l4])
 >   where
 >     heading = "Simulation By Semester: \n"
 >     hdr = printf "%s   %-9s %-9s %-9s %-9s\n" "Sem" "Total" "Backup" "Obs" "ObsBp" 
@@ -652,7 +652,7 @@ TBF: combine this list with the statsPlotsToFile fnc
  
 > reportBandTimes :: [Session] -> [Period] -> String 
 > reportBandTimes ss ps = do
->     heading ++ (concat $ map ("    "++) [hdr, l1, l2])
+>     heading ++ intercalate "    " [hdr, l1, l2])
 >   where
 >     heading = "Simulation By Band: \n"
 >     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
@@ -673,7 +673,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportScheduleScores :: [(String, [Score])] -> String
 > reportScheduleScores scores =
->   heading ++ (concat $ map ("    "++) [obsEff, atmEff, trkEff, srfEff])
+>   heading ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff])
 >     where
 >   heading = "Schedule Score Checks: \n"
 >   error = "WARNING: "
