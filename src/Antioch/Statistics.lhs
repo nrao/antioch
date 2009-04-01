@@ -224,10 +224,8 @@ Compare allocated hours by frequency to observed hours by frequency.
 >     bands = [L .. Q]
 >     effSchdMins (p, e) = e * (fractionalHours . duration $ p)
 
-> decVsElevation :: [Period] -> [Float] -> [(Float, Radians)]
-> decVsElevation ps es = (dec . session) `vs` elevationFromZenith $ highEffPeriods
->   where
->     highEffPeriods = [p | (p, e) <- zip ps es, e > 0.85]
+> decVsElevation :: [Period] -> [(Float, Radians)]
+> decVsElevation ps = (dec . session) `vs` elevationFromZenith $ ps 
 
 > etaFn :: [(Frequency, Float)]
 > etaFn = [(f, minObservingEff f) | f <- [2.0 .. 60.0]]

@@ -10,7 +10,7 @@
 > import System.Environment
 > import Text.Printf
 
-> data Flag = StrategyFlag String | Output String | Days String 
+> data Flag = StrategyFlag String | Output String | Days String | Name String
 >       deriving Show
     
 > options :: [OptDescr Flag]
@@ -18,6 +18,7 @@
 >   [ Option ['s'] ["strategy"] (OptArg strategy "STRATEGY")  "Scheduling Strategy"
 >   , Option ['o'] ["output"]   (OptArg outp "DIR") "Output Directory"
 >   , Option ['d'] ["days"]     (OptArg days "DAYS") "Number of Days"
+>   , Option ['n'] ["name"]     (OptArg name "NAME") "Simulation Name"
 >   ]
 
 TBF: why must I specify a default value, when they don't show up in the return
@@ -26,11 +27,13 @@ vlaue of getOpt?
 > defaultStrategy = "Pack"
 > defaultDir = "figures"
 > defaultDays = "334"
+> defaultName = ""
 
 > strategy, outp, days :: Maybe String -> Flag
 > strategy = StrategyFlag . fromMaybe defaultStrategy
-> outp  = Output  . fromMaybe defaultDir
-> days  = Days  . fromMaybe defaultDays
+> outp     = Output  . fromMaybe defaultDir
+> days     = Days  . fromMaybe defaultDays
+> name     = Name . fromMaybe defaultName
     
 > simulateOpts' :: [String] -> IO ([Flag], [String])
 > simulateOpts' argv = 
@@ -54,10 +57,14 @@ vlaue of getOpt?
 > getDays (Days days) = Just (tail days)
 > getDays _ = Nothing
 
-> simulateOpts :: [String] -> IO (String, String, String)
+> getName (Name name) = Just (tail name)
+> getName _ = Nothing
+
+> simulateOpts :: [String] -> IO (String, String, String, String)
 > simulateOpts args = do
 >   (flags, msgs) <- simulateOpts' args
->   let dir = (getFlagValue flags getOutput defaultDir)
->   let stgStr = (getFlagValue flags getStrategyFlag defaultStrategy)
+>   let dir        = (getFlagValue flags getOutput defaultDir)
+>   let stgStr     = (getFlagValue flags getStrategyFlag defaultStrategy)
 >   let numDaysStr = (getFlagValue flags getDays defaultDays)
->   return (stgStr, dir, numDaysStr)
+>   let name       = (getFlagValue flags getName defaultName)
+>   return (stgStr, dir, numDaysStr, name)
