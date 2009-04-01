@@ -542,8 +542,8 @@ Simulator Harness
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >   ]
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> IO ()
-> generatePlots strategyName outdir sps days = do
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> IO ()
+> generatePlots strategyName outdir sps days name = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
 >     let projs = generate 0 g $ genProjects 255 
@@ -569,7 +569,7 @@ Simulator Harness
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports outdir now execTime dt days (show strategyName) ss results canceled gaps scores
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
@@ -579,8 +579,8 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> textReports :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
-> textReports outdir now execTime dt days strategyName ss ps canceled gaps scores = do
+> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores = do
 >     putStrLn $ report
 >     writeFile filepath report
 >   where
@@ -588,7 +588,7 @@ Simulator Harness
 >     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
 >     filename = "simulation_" ++ nowStr ++ ".txt"
 >     filepath = if last outdir == '/' then outdir ++ filename else outdir ++ "/" ++ filename
->     r1 = reportSimulationGeneralInfo now execTime dt days strategyName ss ps
+>     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps
 >     r2 = reportScheduleChecks ss ps gaps 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
@@ -596,16 +596,17 @@ Simulator Harness
 >     r6 = reportScheduleScores scores
 >     report = concat [r1, r2, r3, r4, r5, r6]
 
-> reportSimulationGeneralInfo :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
-> reportSimulationGeneralInfo now execTime start days strategyName ss ps =
->   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3, l4])
+> reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
+> reportSimulationGeneralInfo name now execTime start days strategyName ss ps =
+>   heading ++ (concat $ map ("    "++) [l0, l1, l2, l3, l4, l5])
 >     where
 >   heading = "General Simulation Info: \n"
->   l0 = printf "Ran Simulations on: %s\n" (toSqlString now)
->   l1 = printf "Simulation Execution Speed: %f seconds\n" execTime
->   l2 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
->   l3 = printf "Ran strategy %s\n" strategyName
->   l4 = printf "Number of Sessions as input: %d\n" (length ss)
+>   l0 = printf "Simulation Name: %s\n" name
+>   l1 = printf "Ran Simulations on: %s\n" (toSqlString now)
+>   l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
+>   l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
+>   l4 = printf "Ran strategy %s\n" strategyName
+>   l5 = printf "Number of Sessions as input: %d\n" (length ss)
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
 > reportScheduleChecks ss ps gaps =
@@ -679,4 +680,4 @@ Simulator Harness
 >   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
 >   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
 
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath) days
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath) days "default"
