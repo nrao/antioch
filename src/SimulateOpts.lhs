@@ -27,7 +27,7 @@ vlaue of getOpt?
 > defaultStrategy = "Pack"
 > defaultDir = "figures"
 > defaultDays = "334"
-> defaultName = "default"
+> defaultName = ""
 
 > strategy, outp, days :: Maybe String -> Flag
 > strategy = StrategyFlag . fromMaybe defaultStrategy
