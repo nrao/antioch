@@ -13,6 +13,7 @@
 > import Antioch.Debug
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
+> import Data.List (intercalate)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -602,7 +603,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps =
->     heading ++ intercalate "    " [l0, l1, l2, l3, l4, l5])
+>     heading ++ intercalate "    " [l0, l1, l2, l3, l4, l5]
 >   where
 >     heading = "General Simulation Info: \n"
 >     l0 = printf "Simulation Name: %s\n" name
@@ -628,7 +629,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
->     heading ++ intercalate "    " [l1, l2, l3, l4, l5])
+>     heading ++ intercalate "    " [l1, l2, l3, l4, l5]
 >   where
 >     heading = "Simulation Time Breakdown: \n"
 >     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
@@ -640,7 +641,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
->     heading ++ intercalate "    " [hdr, l1, l2, l3, l4])
+>     heading ++ intercalate "    " [hdr, l1, l2, l3, l4]
 >   where
 >     heading = "Simulation By Semester: \n"
 >     hdr = printf "%s   %-9s %-9s %-9s %-9s\n" "Sem" "Total" "Backup" "Obs" "ObsBp" 
@@ -652,7 +653,7 @@ TBF: combine this list with the statsPlotsToFile fnc
  
 > reportBandTimes :: [Session] -> [Period] -> String 
 > reportBandTimes ss ps = do
->     heading ++ intercalate "    " [hdr, l1, l2])
+>     heading ++ intercalate "    " [hdr, l1, l2]
 >   where
 >     heading = "Simulation By Band: \n"
 >     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
@@ -673,7 +674,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportScheduleScores :: [(String, [Score])] -> String
 > reportScheduleScores scores =
->   heading ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff])
+>   heading ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff]
 >     where
 >   heading = "Schedule Score Checks: \n"
 >   error = "WARNING: "
