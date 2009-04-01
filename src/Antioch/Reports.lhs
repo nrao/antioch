@@ -685,4 +685,4 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
 >   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
 
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "g") days "default"
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") days ""
