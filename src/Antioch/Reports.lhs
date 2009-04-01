@@ -542,8 +542,8 @@ Simulator Harness
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >   ]
 
-> generatePlots :: StrategyName -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> IO ()
-> generatePlots strategyName sps days = do
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> IO ()
+> generatePlots strategyName outdir sps days = do
 >     w <- getWeather Nothing
 >     let g   = mkStdGen 1
 >     let projs = generate 0 g $ genProjects 255 
@@ -569,7 +569,7 @@ Simulator Harness
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports now execTime dt days (show strategyName) ss results canceled gaps scores
+>     textReports outdir now execTime dt days (show strategyName) ss results canceled gaps scores
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
@@ -579,14 +579,15 @@ Simulator Harness
 >     int     = 60 * 24 * 2
 >     history = []
 
-> textReports :: DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
-> textReports now execTime dt days strategyName ss ps canceled gaps scores = do
+> textReports :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
+> textReports outdir now execTime dt days strategyName ss ps canceled gaps scores = do
 >     putStrLn $ report
->     writeFile filename report
+>     writeFile filepath report
 >   where
 >     (year, month, day, hours, minutes, seconds) = toGregorian now
 >     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
 >     filename = "simulation_" ++ nowStr ++ ".txt"
+>     filepath = if last outdir == '/' then outdir ++ filename else outdir ++ "/" ++ filename
 >     r1 = reportSimulationGeneralInfo now execTime dt days strategyName ss ps
 >     r2 = reportScheduleChecks ss ps gaps 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
@@ -678,4 +679,4 @@ Simulator Harness
 >   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
 >   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
 
-> runSim days filepath = generatePlots Pack (statsPlotsToFile filepath) days
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath) days

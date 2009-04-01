@@ -16,4 +16,4 @@
 >   -- TBF: error checking on these values
 >   let numDays = read numDaysStr::Int
 >   let stg = read stgStr::StrategyName
->   generatePlots stg (statsPlotsToFile dir) numDays
+>   generatePlots stg dir (statsPlotsToFile dir) numDays
