@@ -60,10 +60,11 @@ vlaue of getOpt?
 > getName (Name name) = Just (tail name)
 > getName _ = Nothing
 
-> simulateOpts :: [String] -> IO (String, String, String)
+> simulateOpts :: [String] -> IO (String, String, String, String)
 > simulateOpts args = do
 >   (flags, msgs) <- simulateOpts' args
->   let dir = (getFlagValue flags getOutput defaultDir)
->   let stgStr = (getFlagValue flags getStrategyFlag defaultStrategy)
+>   let dir        = (getFlagValue flags getOutput defaultDir)
+>   let stgStr     = (getFlagValue flags getStrategyFlag defaultStrategy)
 >   let numDaysStr = (getFlagValue flags getDays defaultDays)
->   return (stgStr, dir, numDaysStr)
+>   let name       = (getFlagValue flags getName defaultName)
+>   return (stgStr, dir, numDaysStr, name)
