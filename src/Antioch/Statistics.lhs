@@ -369,10 +369,10 @@ original slot (this will be overwritting a backup period, or a blank).
 >     begin : [(startTime p, duration p) | p <- ps] ++ [end]
 >   where
 >     begin = (start, 0)
->     end   = (dur `addMinutes` start, 0)
+>     end   = (dur `addMinutes'` start, 0)
 
-> findScheduleGaps' ps = [(d1 `addMinutes` s1, gap) |
->     ((s1,d1), (s2,d2)) <- zip ps (tail ps), gap <- [(s2 `diffMinutes` s1) - d1], gap > 0]
+> findScheduleGaps' ps = [(d1 `addMinutes'` s1, gap) |
+>     ((s1,d1), (s2,d2)) <- zip ps (tail ps), gap <- [(s2 `diffMinutes'` s1) - d1], gap > 0]
 
 > getTotalHours :: [Period] -> Float
 > getTotalHours = fractionalHours . sum . map duration
