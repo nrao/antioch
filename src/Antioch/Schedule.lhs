@@ -193,7 +193,7 @@ TBF: failing after 1 test!
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      honorsFixed fixed sched &&
->      validSchdPositions ps sched
+>      validSchdPositions' ps sched fixed
 >      -- validScores sched -- TBF: periods getting neg. scores!
 
 > prop_minDurValidSchedule = forAll genScheduleProjects $ \ps ->
@@ -223,7 +223,7 @@ Framework for quick checking startegies
 > runStrategy :: Strategy -> [Project] -> DateTime -> Minutes -> [Maybe Period] -> [Period]
 > runStrategy strategy ps starttime dur fixed = unsafePerformIO $ do
 >     let fixed' = concatMap maybeToList fixed
->     {-
+>     {- 
 >     print "runStrategy: "
 >     print . toSqlString $ starttime
 >     print dur 
@@ -233,9 +233,12 @@ Framework for quick checking startegies
 >     w <- theWeather -- TBF: is this right?
 >     w' <- newWeather w (Just starttime)
 >     let sess = concatMap sessions ps
->     runScoring w' [] $ do
+>     ps <- runScoring w' [] $ do
 >         fs <- genScore sess
 >         strategy fs starttime dur fixed' sess
+>     --print "schedule: "
+>     --print ps
+>     return ps
 
 
 Make sure the pre-scheduled periods are in the final schedule.
@@ -273,8 +276,19 @@ Thus, if there are no pre-scheduled periods that pack has to work around,
 > validScores :: [Period] -> Bool
 > validScores ps = dropWhile (>=0.0) (map pScore ps) == []
 
+Check to make sure positions, such as elevation, RA & Dec are valid
+
 > validSchdPositions :: [Project] -> [Period] -> Bool
 > validSchdPositions projs ps = validPositions projs && validElevs ps
+
+Same as above, but because the fixed periods may have been created arbitrarily,
+causing invalid elevations, don't check them
+
+> validSchdPositions' :: [Project] -> [Period] -> [Maybe Period] -> Bool
+> validSchdPositions' projs ps fixed = validSchdPositions projs ps'
+>   where
+>     fixed' = concatMap maybeToList fixed
+>     ps' = ps \\ fixed'
 
 > validPositions :: [Project] -> Bool
 > validPositions projs = validRAs ss && validDecs ss
