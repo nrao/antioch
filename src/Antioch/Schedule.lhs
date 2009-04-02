@@ -49,7 +49,7 @@ desired Strategy.
 > type Strategy = ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 
 > pack             :: Strategy
-> pack sf dt dur _ = P.pack sf dt dur [] 
+> pack sf dt dur fixed = P.pack sf dt dur fixed 
 
 Little Nell was Dana's original simulator, and it scheduled sessions
 by simply scoring them at the begining of a Period.
