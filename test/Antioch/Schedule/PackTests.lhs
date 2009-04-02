@@ -776,9 +776,9 @@ revealed a bug where scores are turning negative in pact.
 >     duration = (20*60) + 30
 >     ds = defaultSession {sId = 0, sName = "fixed"}
 >     ss = getOpenPSessions
->     fixed1 = Period ds (fromGregorian 2006 10  6  3 0 0) 255 0.0 undefined False
->     fixed2 = Period ds (fromGregorian 2006 10  9 45 0 0) 270 0.0 undefined False
->     fixed3 = Period ds (fromGregorian 2006 10 16 30 0 0) 255 0.0 undefined False
+>     fixed1 = Period ds (fromGregorian 2006 10 6  3  0 0) 255 0.0 undefined False
+>     fixed2 = Period ds (fromGregorian 2006 10 6  9 45 0) 270 0.0 undefined False
+>     fixed3 = Period ds (fromGregorian 2006 10 6 16 30 0) 255 0.0 undefined False
 >     fixed = [fixed1, fixed2, fixed3]
 >     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
 
