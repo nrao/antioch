@@ -170,6 +170,7 @@ periods with those that were canceled.
 > sessionTPQtrs :: [Period] -> [(Minutes, Int)]
 > sessionTPQtrs = count (duration) [0, quarter..(13*60)]
 
+
 Counts how many sessions have a min duration for each quarter hour.
 For randomly generated data, this should be a flat distribution.
 
@@ -178,6 +179,7 @@ For randomly generated data, this should be a flat distribution.
 
 > periodDuration :: [Period] -> [(Minutes, Minutes)]
 > periodDuration = histogram [0, quarter..(13*60)] . (duration `vs` duration)
+
 
 > sessionMinDuration :: [Session] -> [(Minutes, Minutes)]
 > sessionMinDuration = histogram [0, quarter..(13*60)] . (minDuration `vs` minDuration)
@@ -274,7 +276,6 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >           | otherwise    = n
 
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
-> --satisfactionRatio ss ps = zip3 [frequency $ session p | p <- ps] sRatios sigmas
 > satisfactionRatio ss ps = zip3 [1.0..50.0] sRatios sigmas
 >   where 
 >     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
@@ -452,11 +453,18 @@ Produces list of (x, y) coordinate pairs.
 > meanFreqsByBin       :: [Float] -> [Float]
 > meanFreqsByBin freqs = mean frequencyBins [(x, x) | x <- freqs]
 
-> meanObsEffByBin :: [(Float, Float)] -> [Float]
-> meanObsEffByBin = mean frequencyBins
+> medianByBin :: [(Float, Float)] -> [Float]
+> medianByBin  = median frequencyBins
 
-> sdomObsEffByBin :: [(Float, Float)] -> [Float]
-> sdomObsEffByBin = sdom frequencyBins
+> meanByBin :: [(Float, Float)] -> [Float]
+> meanByBin  = mean frequencyBins
+
+> stddevByBin :: [(Float, Float)] -> [Float]
+> stddevByBin  = stddev frequencyBins
+
+> sdomByBin :: [(Float, Float)] -> [Float]
+> sdomByBin  = sdom frequencyBins
+
 
 > mean, median, stddev, sdom :: [Float] -> [(Float, Float)] -> [Float]
 > mean   = simpleStat mean'
@@ -464,7 +472,17 @@ Produces list of (x, y) coordinate pairs.
 > stddev = simpleStat stddev'
 > sdom   = simpleStat sdom'
 
+simpleStat provides a way to perform statistics on binned data
+
 > simpleStat f buckets = map (f . snd) . allocate buckets
+
+histStat provides a way to perform statistics on historgram data
+f is a function like mean', etc.
+
+> histStat :: ([Float] -> Float) -> [(Float, Float)] -> Float
+> histStat f histData = f newData
+>   where
+>     newData = concat $ map (\x -> replicate (round . snd $ x) (fst x)) histData
 
 > mean' xs = sum xs / (fromIntegral . length $ xs)
 
