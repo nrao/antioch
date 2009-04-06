@@ -61,8 +61,8 @@ Break down the above plot into the three factors that make up observing eff.
 > plotMeanAtmEffVsFreq  :: StatsPlot
 > plotMeanAtmEffVsFreq fn n _ ps _ = do
 >   effs <- historicalSchdMeanAtmEffs ps
->   let t = "Scheduled Mean Atmospheric Opacity vs Frequency" ++ n
->   let y = "Mean Atmospheric Opacity"
+>   let t = "Scheduled Mean Atmospheric Efficiency vs Frequency" ++ n
+>   let y = "Mean Atmospheric Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
 
 > plotMeanTrkEffVsFreq  :: StatsPlot
@@ -101,16 +101,54 @@ General purpose function for scatter plots of some kind of efficiency vs. freq
 >     x     = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
-TBF: plotEffVsFreq still not being used anywhere
 
-> plotEffVsFreq fn effs ps =
->     errorBarPlot (tail $ scatterAttrs t x y fn) $ zip3 meanEffFreq frequencyBins sdomEffFreq
+simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
+
+> plotEffVsFreqBin  :: StatsPlot
+> plotEffVsFreqBin fn n _ ps _ = do
+>     effs <- historicalSchdMeanObsEffs ps
+>     plotEffVsFreq fn n effs ps
+
+
+> plotEffVsFreq fn n effs ps =
+>     errorBarPlot attrs $ zip3 meanFreq meanEffFreq sdomEffFreq
 >   where
->     meanEffFreq = meanObsEffByBin $ zip effs (map (frequency . session) ps)
->     sdomEffFreq = sdomObsEffByBin $ zip effs (map (frequency . session) ps)
->     t = "Observing Efficiency vs Frequency"
+>     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
+>     meanEffFreq = meanByBin $ zip (map (frequency . session) ps) effs
+>     sdomEffFreq = sdomByBin $ zip (map (frequency . session) ps) effs
+>     t = "Observing Efficiency vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+
+simMinObsEff - minimum observing efficiency (stand alone plot for now)
+
+> plotMinObsEff          :: StatsPlot
+> plotMinObsEff fn n _ _ _ = plotFunc attrs (linearScale 1000 (0, 50)) minObservingEff
+>   where
+>     t     = "Observing Efficiency vs Frequency" ++ n
+>     x     = "Frequency [GHz]"
+>     y     = "Observing Efficiency"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+
+
+simTPVsFreq - this does not yet work
+
+
+> {-
+> plotTPVsFreq           :: StatsPlot    
+> plotTPVsFreq fn _ ps =
+>     errorBarPlot attrs $ zip3 meanFreq meanTPFreq stddevTPFreq
+>   where
+>     meanFreq = meanFreqsByBin $ (map (frequency . session) ps) 
+>     meanTPFreq = meanByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
+>     stddevTPFreq = stddevByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
+>     t = "Telescope Period Length vs Frequency"
+>     x = "Frequency [GHz]"
+>     y = "Telescope Period Length [min]"
+>     attrs = (tail $ scatterAttrs t x y fn)
+> -}
+
 
 simFreqTime (circles, dt on x-axis)
 
@@ -177,13 +215,6 @@ simEffElev
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-0.1, 1.1)]
 
 
-> plotMinObsEff          :: StatsPlot
-> plotMinObsEff fn n _ _ _ = plotFunc attrs (linearScale 1000 (0, 50)) minObservingEff
->   where
->     t     = "Observing Efficiency vs Frequency" ++ n
->     x     = "Frequency [GHz]"
->     y     = "Observing Efficiency"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
 simEffLST
 
@@ -259,7 +290,7 @@ simScoreFreq
 >     t = "Score vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Score"
->     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (0.1, 20.0)]
+>     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51)]
 
 
 
@@ -397,7 +428,10 @@ simHistTPQtrs
 >     histogramPlot attrs tpDurs
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionTPQtrs ps]
->     t = "Telescope Period Historgram" ++ n
+>     totalNumTPs = sum $ map snd tpDurs
+>     meanTimes = histStat mean' tpDurs
+>     stdTimes = histStat stddev' tpDurs
+>     t = printf "Telescope Period Historgram (%f, %f, %f) %s" totalNumTPs meanTimes stdTimes n
 >     x = "TP [Minutes]"
 >     y = "Counts"
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780), YRange (0.5, 1000.0)]
@@ -406,17 +440,16 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn n ss ps _ = 
->     histogramPlots attrs $ zip titles [maxTPTime, tpDurs]
+>     --histogramPlots attrs $ zip titles [maxTPTime, tpDurs]
+>     histogramPlot attrs tpDurs
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
->     maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
+>     --maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
 >     t = "Telescope Period Historgram" ++ n
 >     x = "TP [Minutes]"
 >     y = "Counts [Minutes]"
->     titles = [Just "Available", Just "Observed"]
->     attrs = (histAttrs t x y fn) ++ [XRange (60, 780), YRange (0.5, 100000.0)]
-
-
+>     --titles = [Just "Available", Just "Observed"]
+>     attrs = (histAttrs t x y fn) ++ [XRange (60, 780)]
 
 Utilities
 
@@ -526,6 +559,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
 >  , plotMinObsEff      $ rootPath ++ "/simMinObsEff.png"
+>  , plotEffVsFreqBin   $ rootPath ++ "/simMeanObsEff.png"
 >  , plotElevDec        $ rootPath ++ "/simElevDec.png"
 >  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
 >  , plotScoreFreq      $ rootPath ++ "/simScoreFreq.png"
@@ -534,7 +568,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
 >  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
 >  , histSessDec        $ rootPath ++ "/simHistDec.png"
->  , histSessTP         $ rootPath ++ "/simHistTP.png"
+>  --, histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
 >  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
 >  , plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
@@ -599,7 +633,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r4 = reportSemesterTimes ss ps 
 >     r5 = reportBandTimes ss ps 
 >     r6 = reportScheduleScores scores
->     report = concat [r1, r2, r3, r4, r5, r6]
+>     report = concat [r1, r2, r6, r3, r4, r5]
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps =

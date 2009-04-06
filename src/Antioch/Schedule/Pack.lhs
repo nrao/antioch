@@ -178,16 +178,14 @@ minutes, etc.
 >     | length past' < min = []
 >     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ past')
 >   where
->     {-
 >     -- TBF OVERHEAD: This computes the period's score ignoring
 >     -- the first quarter of the period, i.e., assumes a score of 0.0
 >     past' = case takeWhile (>= epsilon) . take max $ past of
 >         []     -> []
 >         (_:ss) -> scanl (+) 0.0 ss
->     -}
 >     -- These functions score all quarters, i.e., no overhead
->     past' = acc . takeWhile (>= epsilon) . take max $ past
->     acc   = scanl1 (+)
+>     --past' = acc . takeWhile (>= epsilon) . take max $ past
+>     --acc   = scanl1 (+)
 
 Given possible scores (using Maybe) over a range of a session's durations,
 generate a list of possible candidates corresponding to the scores.

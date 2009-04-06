@@ -169,7 +169,11 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >      fs <- observingEfficiency dt s
 >      let obsEff' = eval fs
 >      [(_, Just trkErrLimit)] <- trackingErrorLimit dt s
->      let obsEffOK = obsEff' >= minObs - 0.1
+>      -- new MOC
+>      let minObs' = exp(-0.05 + 1.5*log(minObs))
+>      let obsEffOK = obsEff' >= minObs'
+>      -- old MOC
+>      --let obsEffOK = obsEff' >= minObs - 0.1
 >      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
 
