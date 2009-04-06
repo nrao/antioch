@@ -130,6 +130,14 @@ Only 20 percent of the low freq. sessions are backups
 >   if freq > 10.0 then T.frequency [(100, return False)] 
 >            else T.frequency [(25, return True), (75, return False)]
 
+> genMinTP freq = 
+>   if freq > 18.0 then choose (2*60, 2*60)
+>            else choose (2*60, 6*60)
+
+> genMaxTP freq = 
+>   if freq > 18.0 then choose (12*60, 12*60)
+>            else choose (11*60, 12*60)
+
 > genSession :: Gen Session
 > genSession = do
 >     project    <- genProject
@@ -142,8 +150,10 @@ Only 20 percent of the low freq. sessions are backups
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
 >     totalTime  <- choose (6*60, 30*60)
->     minD       <- choose (2*60, 6*60)
->     maxD       <- choose (11*60, 12*60)
+>     minD       <- genMinTP f
+>     maxD       <- genMaxTP f
+>     --minD       <- choose (2*60, 6*60)
+>     --maxD       <- choose (11*60, 12*60)
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []
