@@ -102,8 +102,11 @@ tested time period
 >     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sess)
 
 > test_getReceivers = TestCase $ do
->     assertEqual "test_getReceivers" [Rcvr4_6, Rcvr12_18] result
->       where result = getReceivers (fromGregorian 2006 6 24 16 0 0) rSched
+>     assertEqual "test_getReceivers1" [Rcvr4_6, Rcvr12_18] result1
+>     assertEqual "test_getReceivers2" [Rcvr1_2, Rcvr12_18] result2
+>       where 
+>         result1 = getReceivers (fromGregorian 2006 6 24 16 0 0) rSched
+>         result2 = getReceivers (fromGregorian 2006 6 22 16 0 0) rSched
 
 BETA: TestAtmosphericOpacity.py testgetZenithAngle
 
