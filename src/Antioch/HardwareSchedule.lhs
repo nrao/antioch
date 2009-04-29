@@ -12,24 +12,33 @@
 Get the DB connection, and use it to fetch the dates, from the DB, then 
 convert to a ReceiverSchedule.
 
-> getReceiverSchedule :: DateTime -> IO ReceiverSchedule
+> getReceiverSchedule :: Maybe DateTime -> IO ReceiverSchedule
 > getReceiverSchedule dt = do
 >     cnn <- connect
->     dates <- fetchReceiverDates cnn dt
->     return $ receiverDates2Schedule dates
+>     dates <- fetchReceiverDates cnn 
+>     return $ receiverDates2Schedule dt dates
 
-> receiverDates2Schedule :: [(DateTime, Receiver)] -> ReceiverSchedule
-> receiverDates2Schedule = map collapse . groupBy (\x y -> fst x == fst y) 
+> receiverDates2Schedule :: Maybe DateTime -> [(DateTime, Receiver)] -> ReceiverSchedule
+> receiverDates2Schedule dt = trimSchedule dt . map collapse . groupBy (\x y -> fst x == fst y) 
 >   where
->     collapse rcvrGroup = (fst . head $ rcvrGroup, map (\(dt, rcvr) -> rcvr) rcvrGroup) 
+>     collapse rcvrGroup = (fst . head $ rcvrGroup, map (\(_, rcvr) -> rcvr) rcvrGroup) 
 
-> fetchReceiverDates :: Connection -> DateTime -> IO [(DateTime, Receiver)]
-> fetchReceiverDates cnn dt = handleSqlError $ do
+> trimSchedule dt schd = case dt of 
+>                          Nothing -> schd
+>                          Just dt -> let (first, second) = trimSchedule' dt schd in (last' first) ++ second
+>   where 
+>     last' xs = case xs of
+>                  [] -> []
+>                  xs -> [last xs]
+
+> trimSchedule' dt = span (\(x, _) -> x < dt)
+
+> fetchReceiverDates :: Connection -> IO [(DateTime, Receiver)]
+> fetchReceiverDates cnn = handleSqlError $ do
 >   result <- quickQuery' cnn query []
 >   return $ toRcvrDates result
 >     where
 >       query = "SELECT name, start_date FROM receiver_schedule, receivers WHERE receiver_schedule.receiver_id = receivers.id ORDER BY start_date"
->       xs = [toSql' dt]
 >       toRcvrDates = map toRcvrElement 
 >       toRcvrElement (rcvr:start:[]) = (fromSql start, read . fromSql $ rcvr)
 
