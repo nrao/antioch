@@ -30,7 +30,7 @@
 >               | Rcvr_PAR
 >               | Zpectrometer
 >               | Holography
->               deriving (Eq, Show)
+>               deriving (Eq, Show, Read)
 
 > data Grade = GradeA | GradeB | GradeC deriving (Eq, Show, Read)
 > data Band = L | S | C | X | U | K | A | Q | W
