@@ -3,11 +3,12 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Weather
 > import Data.List (groupBy)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
-> import Control.Monad.Trans (liftIO)
+
+> connect :: IO Connection
+> connect = handleSqlError $ connectPostgreSQL "dbname=dss user=dss"
 
 Get the DB connection, and use it to fetch the dates, from the DB, then 
 convert to a ReceiverSchedule.
