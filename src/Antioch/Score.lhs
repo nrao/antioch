@@ -334,16 +334,21 @@ Translates the total/used times pairs into pressure factors.
 >         GradeB -> 0.9
 >         GradeC -> 0.1
 
+Checks that all receivers needed by the given session will be available
+at the given time./
+
 > receiver                                  :: ScoreFunc
 > receiver dt Open { receivers = rcvrs } = do
 >     scheduled <- fmap (getReceivers dt) receiverSchedule
 >     boolean "receiver" . Just $ all (`elem` scheduled) rcvrs
 
+Returns list of receivers that will be up at the given time.
+
 > getReceivers :: DateTime -> ReceiverSchedule -> [Receiver]
 > getReceivers dt rsched =
->     case dropWhile (\(x, _) -> x < dt) rsched of
->         (x : _) -> snd x
->         []      -> []
+>     case takeWhile (\(x, _) -> x <= dt) rsched of
+>         [] -> []
+>         xs -> snd $ last xs 
 
 
 Scoring utilities
