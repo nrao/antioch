@@ -25,8 +25,6 @@
 
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
->     print . head $ ps
->     print . head . sessions . head $ ps
 >     assertEqual "test_getProjects1" 104 (length ps)  
 >     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
