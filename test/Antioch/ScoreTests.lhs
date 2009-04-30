@@ -319,7 +319,7 @@ BETA: TestStringency.py testScore (first assert)
 >   where
 >     proj' = defaultProject { pName = "time use test" }
 >     ss''  = [
->         defaultOpen {
+>         defaultSession {
 >             periods = [defaultPeriod {duration = tt - tl}]
 >           , totalTime = tt
 >           }

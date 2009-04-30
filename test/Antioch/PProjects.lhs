@@ -23,7 +23,7 @@
 > }
 
 > p1sessions' = [
->     defaultOpen {
+>     defaultSession {
 >         sId = 1
 >       , sName = "GB"
 >       , periods = []
@@ -37,7 +37,7 @@
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 2
 >       , sName = "CV"
 >       , periods = []
@@ -51,7 +51,7 @@
 >       , band = C
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 3
 >       , sName = "LP"
 >       , periods = [
@@ -69,7 +69,7 @@
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 4
 >       , sName = "TX"
 >       , totalTime = 40*60
@@ -82,7 +82,7 @@
 >       , band = K
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 5
 >       , sName = "VA"
 >       , totalTime = 30*60
@@ -95,7 +95,7 @@
 >       , band = K
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 6
 >       , sName = "WV"
 >       , totalTime = 120*60
@@ -108,7 +108,7 @@
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 7
 >       , sName = "AS"
 >       , totalTime = 40*60
@@ -121,7 +121,7 @@
 >       , band = L
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 8
 >       , sName = "MH"
 >       , periods = [
@@ -252,7 +252,7 @@
 > }
 
 > p2sessions' = [
->     defaultOpen {
+>     defaultSession {
 >         sId = 15
 >       , sName = "GB_thesis"
 >       , periods = []
@@ -267,7 +267,7 @@
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 16
 >       , sName = "WV_thesis"
 >       , periods = []

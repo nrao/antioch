@@ -338,7 +338,7 @@ Checks that all receivers needed by the given session will be available
 at the given time./
 
 > receiver                                  :: ScoreFunc
-> receiver dt Open { receivers = rcvrs } = do
+> receiver dt Session { receivers = rcvrs } = do
 >     scheduled <- fmap (getReceivers dt) receiverSchedule
 >     boolean "receiver" . Just $ all (`elem` scheduled) rcvrs
 

@@ -35,12 +35,14 @@
 > data Grade = GradeA | GradeB | GradeC deriving (Eq, Show, Read)
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
+> data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
 
 TBF: Initially, Open, Fixed, and Windowed all share the same contents.
 Ideally, we need to evolve these as we go and add new items and remove
-useless items.
+useless items. Until the need arises to use different types, we will
+use a single data structure for all sessions.
 
-> data Session = Open {
+> data Session = Session {
 >     sId         :: Int
 >   , sName       :: String
 >   , project     :: Project
@@ -58,45 +60,8 @@ useless items.
 >   , authorized  :: Bool
 >   , grade       :: Grade
 >   , band        :: Band
->   }
->              | Fixed {
->     sId         :: Int
->   , sName       :: String
->   , project     :: Project
->   , period      :: Period
->   , totalTime   :: Minutes
->   , minDuration :: Minutes
->   , maxDuration :: Minutes
->   , timeBetween :: Minutes
->   , frequency   :: Float
->   , ra          :: Radians
->   , dec         :: Radians
->   , backup      :: Bool
->   , receivers   :: [Receiver]
->   , enabled     :: Bool
->   , authorized  :: Bool
->   , grade       :: Grade
->   , band        :: Band
->   }
->              | Windowed {
->     sId         :: Int
->   , sName       :: String
->   , project     :: Project
->   , periods     :: [Period]
->   , totalTime   :: !Minutes
->   , minDuration :: !Minutes
->   , maxDuration :: !Minutes
->   , timeBetween :: !Minutes
->   , frequency   :: !Float
->   , ra          :: !Radians
->   , dec         :: !Radians
->   , backup      :: !Bool
->   , receivers   :: [Receiver]
->   , enabled     :: !Bool
->   , authorized  :: !Bool
->   , grade       :: !Grade
->   , band        :: !Band
->   } deriving (Show)
+>   , sType       :: SessionType
+>   } deriving Show
 
 > totalUsed :: Session -> Minutes
 > totalUsed = sum . map duration . periods
@@ -107,7 +72,7 @@ useless items.
 > instance Ord Session where
 >     compare = compare `on` sId
 
-> periods' s@(Fixed { }) = [period s]
+> --periods' s@(Fixed { }) = [period s]
 > periods' s             = periods s
 
 Need to calculate a windowed session's opportunities from its observation details.
@@ -118,10 +83,10 @@ Need to calculate a windowed session's opportunities from its observation detail
 Tying the knot.
 
 > makeSession      :: Session -> [Period] -> Session
-> makeSession s@(Fixed { }) [p] = s'
->   where
->     s' = s { period = p { session = s' } }
->     t  = duration p
+> --makeSession s@(Fixed { }) [p] = s'
+> --  where
+> --    s' = s { period = p { session = s' } }
+> --    t  = duration p
 > makeSession s ps = s'
 >   where
 >     s' = s { periods = map (\p -> p { session = s' }) ps }
@@ -191,10 +156,7 @@ Simple Functions for Periods:
 > periodHalfTime :: Period -> DateTime
 > periodHalfTime p = addMinutes' (duration p `div` 2) $ startTime p
 
-
-> defaultSession = defaultOpen
-
-> defaultOpen = Open {
+> defaultSession = Session {
 >     sId         = 0
 >   , sName       = ""
 >   , project     = defaultProject 
@@ -212,46 +174,7 @@ Simple Functions for Periods:
 >   , authorized  = False
 >   , grade       = GradeA
 >   , band        = L
->   }
-
-> defaultFixed = Fixed {
->     sId         = 0
->   , sName       = ""
->   , project     = defaultProject 
->   , period      = defaultPeriod
->   , totalTime   = 0
->   , minDuration = 0
->   , maxDuration = 0
->   , timeBetween = 0
->   , frequency   = 0.0
->   , ra          = 0.0
->   , dec         = 0.0
->   , backup      = False
->   , receivers   = [Rcvr12_18]
->   , enabled     = False
->   , authorized  = False
->   , grade       = GradeA
->   , band        = L
->   }
-
-> defaultWindowed = Windowed {
->     sId         = 0
->   , sName       = ""
->   , project     = defaultProject 
->   , periods     = [defaultPeriod]
->   , totalTime   = 0
->   , minDuration = 0
->   , maxDuration = 0
->   , timeBetween = 0
->   , frequency   = 0.0
->   , ra          = 0.0
->   , dec         = 0.0
->   , backup      = False
->   , receivers   = [Rcvr12_18]
->   , enabled     = False
->   , authorized  = False
->   , grade       = GradeA
->   , band        = L
+>   , sType       = Open
 >   }
 
 > defaultProject = Project {
