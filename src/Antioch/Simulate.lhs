@@ -51,8 +51,14 @@ TBF:  we probably want something smarter in DateTime
 
 > type SelectionCriteria = DateTime -> Session -> Bool
 
+TBF: > instead of >= below is bad because Carls data is often set with
+minDuration == totalTime (and totalUsed == 0).
+
 > timeLeft :: SelectionCriteria
 > timeLeft _ s     = ((totalTime s) - (totalUsed s)) > (minDuration s)
+
+TBF: we need to be using 'isScheduableSemester', that looks at past semesters
+dependeing on grade.
 
 > isMySemester :: SelectionCriteria 
 > isMySemester dt s = (semester $ project s) <= current_semester
