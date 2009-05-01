@@ -43,6 +43,9 @@ TBF: only have implemented time left so far ...
 > timeLeft :: SelectionCriteria
 > timeLeft _ s     = ((totalTime s) - (totalUsed s)) >= (minDuration s)
 
+> isTypeOpen :: SelectionCriteria
+> isTypeOpen _ s = sType s == Open
+
 TBF: we need to be using 'isScheduableSemester', that looks at past semesters
 dependeing on grade.
 
@@ -87,7 +90,7 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > runSimStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [timeLeft, isMySemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isMySemester] sessions
 >   sf <- genScore $ filterSessions dt [isMySemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
