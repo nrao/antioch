@@ -25,13 +25,15 @@
 
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
+>     let ss = sessions . head $ ps
 >     assertEqual "test_getProjects1" 104 (length ps)  
 >     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 48480 (timeTotal . head $ ps)  
 >     assertEqual "test_getProjects4" 16 (length . sessions . head $ ps)  
->     assertEqual "test_getProjects6" 2 (pId . project . head . sessions . head $ ps)  
->     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ sessions . head $ ps)  
+>     assertEqual "test_getProjects8" Windowed (sType . head $ ss)
+>     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
+>     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
