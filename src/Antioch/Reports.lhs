@@ -622,7 +622,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
@@ -630,8 +630,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     int     = 60 * 24 * 2
 >     history = []
 
-> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput = do
+> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs = do
 >     putStrLn $ report
 >     writeFile filepath report
 >   where
@@ -646,7 +646,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r5 = reportBandTimes ss ps 
 >     r6 = reportScheduleScores scores
 >     r7 = reportSessionTypes ss ps
->     report = concat [r1, r2, r6, r3, r4, r5, r7]
+>     r8 = reportRcvrSchedule rs
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8]
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps simInput =
@@ -752,6 +753,12 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   atmEff = checkNormalized scores "atmEff" "Atmospheric Opacity"
 >   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
 >   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
+
+> reportRcvrSchedule :: ReceiverSchedule -> String
+> reportRcvrSchedule rs = hdr ++ (dates rs)
+>   where
+>     hdr = "Receiver Schedule:\n"
+>     dates rs = concatMap (\(dt, rcvrs) -> (show . toSqlString $ dt) ++ " : " ++ (show rcvrs) ++ "\n") rs
 
 > runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True
 >   where
