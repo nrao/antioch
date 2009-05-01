@@ -1,5 +1,6 @@
 > module Main where
 
+> import Antioch.DateTime
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Simulate
@@ -16,4 +17,6 @@
 >   -- TBF: error checking on these values
 >   let numDays = read numDaysStr::Int
 >   let stg = read stgStr::StrategyName
->   generatePlots stg dir (statsPlotsToFile dir name) numDays name True
+>   -- TBF: get this to be an option
+>   let start = fromGregorian 2006 2 1 0 0 0
+>   generatePlots stg dir (statsPlotsToFile dir name) start numDays name True

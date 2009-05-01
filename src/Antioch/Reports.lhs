@@ -598,8 +598,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> Bool -> IO ()
-> generatePlots strategyName outdir sps days name simInput = do
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
+> generatePlots strategyName outdir sps dt days name simInput = do
 >     w <- getWeather Nothing
 >     (rs, ss, projs) <- if simInput then simulatedInput else dbInput dt
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
@@ -626,7 +626,6 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
->     dt      = fromGregorian 2006 2 1 0 0 0
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 >     history = []
@@ -754,4 +753,6 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
 >   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
 
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") days "" True
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True
+>   where
+>     start      = fromGregorian 2006 2 1 0 0 0
