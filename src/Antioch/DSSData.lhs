@@ -63,7 +63,7 @@
 >           , periods = [] -- TBF, no history in Carl's DB
 >           , enabled = fromSql e
 >           , authorized = fromSql a
->           , backup = fromSql a
+>           , backup = fromSql b
 >           , sType = toSessionType sty
 >         }
 >        -- TBF: need to cover any other types?
