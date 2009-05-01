@@ -622,7 +622,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
@@ -631,8 +631,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     int     = 60 * 24 * 2
 >     history = []
 
-> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores = do
+> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput = do
 >     putStrLn $ report
 >     writeFile filepath report
 >   where
@@ -640,7 +640,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
 >     filename = "simulation_" ++ nowStr ++ ".txt"
 >     filepath = if last outdir == '/' then outdir ++ filename else outdir ++ "/" ++ filename
->     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps
+>     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps simInput
 >     r2 = reportScheduleChecks ss ps gaps 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
@@ -649,9 +649,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r7 = reportSessionTypes ss ps
 >     report = concat [r1, r2, r6, r3, r4, r5, r7]
 
-> reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
-> reportSimulationGeneralInfo name now execTime start days strategyName ss ps =
->     heading ++ "    " ++ intercalate "    " [l0, l1, l2, l3, l4, l5]
+> reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
+> reportSimulationGeneralInfo name now execTime start days strategyName ss ps simInput =
+>     heading ++ "    " ++ intercalate "    " [l0, l1, l2, l3, l4, l5, l6]
 >   where
 >     heading = "General Simulation Info: \n"
 >     l0 = printf "Simulation Name: %s\n" name
@@ -659,7 +659,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
 >     l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
 >     l4 = printf "Ran strategy %s\n" strategyName
->     l5 = printf "Number of Sessions as input: %d\n" (length ss)
+>     l5 = if simInput then printf "Using simulated data.\n" else "Using real data.\n"
+>     l6 = printf "Number of Sessions as input: %d\n" (length ss)
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
 > reportScheduleChecks ss ps gaps =
@@ -689,14 +690,12 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
->     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3, l4]
+>     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
 >   where
 >     heading = "Simulation By Semester: \n"
->     hdr = printf "%-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "Obs" "ObsBp" 
->     l1 = reportSemesterHrs "05C" ss ps 
->     l2 = reportSemesterHrs "06A" ss ps 
->     l3 = reportSemesterHrs "06B" ss ps 
->     l4 = reportSemesterHrs "06C" ss ps 
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "ObsInSem" "ObsBpIn" "ObsFrSem" "ObsBpFr" 
+>     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
+>     lines = map (reportSemesterHrs ss ps) semesters
 
 > reportSessionTypes :: [Session] -> [Period] -> String
 > reportSessionTypes ss ps = do
@@ -732,13 +731,15 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
 
 
-> reportSemesterHrs :: String -> [Session] -> [Period] -> String
-> reportSemesterHrs sem ss ps  = printf "%-7s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
+> reportSemesterHrs :: [Session] -> [Period] -> String -> String
+> reportSemesterHrs ss ps sem = printf "%-7s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs totalObsFrom totalBackupObsFrom 
 >   where
 >     total = totalHrs ss (\s -> isInSemester s sem) 
 >     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
 >     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
 >     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
+>     totalObsFrom = totalPeriodHrs ps (\p -> isPeriodFromSemester p sem)
+>     totalBackupObsFrom = totalPeriodHrs ps (\p -> isPeriodFromSemester p sem && pBackup p)
 
 > reportScheduleScores :: [(String, [Score])] -> String
 > reportScheduleScores scores =
