@@ -5,7 +5,7 @@
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
-> import Antioch.Utilities    (between, rad2hr, showList')
+> import Antioch.Utilities    (between, rad2hr, showList', dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List            (find, partition, nub)
@@ -37,17 +37,6 @@ Sessions that:
    * have been marked as complete
    * more ...
 TBF: only have implemented time left so far ...
-
-trimesterStartDate = [1,2,6,10]
-TBF:  we probably want something smarter in DateTime
-
-> dt2semester :: DateTime -> String
-> dt2semester dt | month < 2                  = "O5C"
->                | 2  <= month && month < 6   = "06A"
->                | 6  <= month && month < 10  = "06B"
->                | 10 <= month && month <= 12 = "06C"
->   where
->     (_, month, _) = toGregorian' dt
 
 > type SelectionCriteria = DateTime -> Session -> Bool
 

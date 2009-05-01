@@ -6,7 +6,7 @@
 > import Antioch.Types
 > -- import Antioch.Score      (Trace, zenithAngle, minObservingEff, elevationFromZenith)
 > import Antioch.Score
-> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours) 
+> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours, dt2semester) 
 > import Antioch.Weather
 > import Antioch.Debug
 > import Control.Arrow      ((&&&), second)
@@ -303,20 +303,10 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > isInSemester s sem = (semester . project $ s) == sem
 
 > isPeriodInSemester :: Period -> String -> Bool
-> isPeriodInSemester p sem = (dt2semester' . startTime $ p) == sem
+> isPeriodInSemester p sem = (dt2semester . startTime $ p) == sem
 
 > isPeriodFromSemester :: Period -> String -> Bool
 > isPeriodFromSemester p sem = (semester . project . session $ p) == sem
-
-TBF: code duplication!  where to put this?
-
-> dt2semester' :: DateTime -> String
-> dt2semester' dt | month <   2 = "O5C"
->                 | month <   6 = "06A"
->                 | month <  10 = "06B"
->                 | month <= 12 = "06C"
->   where
->     (_, month, _) = toGregorian' dt
 
 > bandPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > bandPressuresByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
