@@ -581,13 +581,22 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> IO ()
-> generatePlots strategyName outdir sps days name = do
+> simulatedInput :: (ReceiverSchedule, [Session], [Project])
+> simulatedInput = ([], ss, projs)
+>   where
+>     g = mkStdGen 1
+>     projs = generate 0 g $ genProjects 255
+>     ss' = concatMap sessions projs
+>     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> IO () --Bool -> IO ()
+> generatePlots strategyName outdir sps days name = do --simInput = do
 >     w <- getWeather Nothing
->     let g   = mkStdGen 1
->     let projs = generate 0 g $ genProjects 255 
->     let ss' = concatMap sessions projs
->     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     let (rs, ss, projs) = simulatedInput 
+>     --let g   = mkStdGen 1
+>     --let projs = generate 0 g $ genProjects 255 
+>     --let ss' = concatMap sessions projs
+>     --let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
@@ -612,7 +621,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
->     rs      = []
+>     --rs      = []
 >     dt      = fromGregorian 2006 2 1 0 0 0
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
@@ -633,11 +642,12 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r4 = reportSemesterTimes ss ps 
 >     r5 = reportBandTimes ss ps 
 >     r6 = reportScheduleScores scores
->     report = concat [r1, r2, r6, r3, r4, r5]
+>     r7 = reportSessionTypes ss ps
+>     report = concat [r1, r2, r6, r3, r4, r5, r7]
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps =
->     heading ++ intercalate "    " [l0, l1, l2, l3, l4, l5]
+>     heading ++ "    " ++ intercalate "    " [l0, l1, l2, l3, l4, l5]
 >   where
 >     heading = "General Simulation Info: \n"
 >     l0 = printf "Simulation Name: %s\n" name
@@ -649,7 +659,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
 > reportScheduleChecks ss ps gaps =
->     heading ++ intercalate "    " [overlaps, durs, scores, gs, ras, decs, elevs]
+>     heading ++ "    " ++ intercalate "    " [overlaps, durs, scores, gs, ras, decs, elevs]
 >   where
 >     heading = "Schedule Checks: \n"
 >     error = "WARNING: "
@@ -663,7 +673,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
->     heading ++ intercalate "    " [l1, l2, l3, l4, l5]
+>     heading ++ "    " ++ intercalate "    " [l1, l2, l3, l4, l5]
 >   where
 >     heading = "Simulation Time Breakdown: \n"
 >     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
@@ -675,19 +685,39 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
->     heading ++ intercalate "    " [hdr, l1, l2, l3, l4]
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3, l4]
 >   where
 >     heading = "Simulation By Semester: \n"
->     hdr = printf "%s   %-9s %-9s %-9s %-9s\n" "Sem" "Total" "Backup" "Obs" "ObsBp" 
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "Obs" "ObsBp" 
 >     l1 = reportSemesterHrs "05C" ss ps 
 >     l2 = reportSemesterHrs "06A" ss ps 
 >     l3 = reportSemesterHrs "06B" ss ps 
 >     l4 = reportSemesterHrs "06C" ss ps 
 
+> reportSessionTypes :: [Session] -> [Period] -> String
+> reportSessionTypes ss ps = do
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3]
+>   where
+>     heading = "Simulation By Session Type: \n"
+>     hdr = printf "%-11s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
+>     l1 = reportSessionTypeHrs Open ss ps 
+>     l2 = reportSessionTypeHrs Fixed ss ps 
+>     l3 = reportSessionTypeHrs Windowed ss ps 
+
+> reportSessionTypeHrs :: SessionType -> [Session] -> [Period] -> String
+> reportSessionTypeHrs st ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
+>   where
+>     ssTyped = filter (\s -> sType s == st) ss 
+>     psTyped = filter (\p -> (sType . session $ p) == st) ps 
+>     stCnt = length ssTyped
+>     stHrs =  totalHrs ss (\s -> sType s == st) 
+>     pstCnt = length psTyped
+>     pstHrs =  totalPeriodHrs ps (\p -> (sType . session $ p) == st) 
+
  
 > reportBandTimes :: [Session] -> [Period] -> String 
 > reportBandTimes ss ps = do
->     heading ++ intercalate "    " [hdr, l1, l2]
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2]
 >   where
 >     heading = "Simulation By Band: \n"
 >     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
@@ -699,7 +729,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 
 > reportSemesterHrs :: String -> [Session] -> [Period] -> String
-> reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
+> reportSemesterHrs sem ss ps  = printf "%-7s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
 >   where
 >     total = totalHrs ss (\s -> isInSemester s sem) 
 >     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
@@ -708,7 +738,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportScheduleScores :: [(String, [Score])] -> String
 > reportScheduleScores scores =
->   heading ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff]
+>   heading ++ "    " ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff]
 >     where
 >   heading = "Schedule Score Checks: \n"
 >   error = "WARNING: "
