@@ -50,6 +50,17 @@ To Do List (port from Statistics.py):
 >     where
 >       periodSchdFactors' w p = periodSchdFactors p sf w
 
+This function can be useful if invalid scores are encountered, and the 
+offending period/session/project needs to be revealed.
+
+> historicalSchdFactorsDebug :: [Period] -> ScoreFunc -> IO [(Float,Period)]
+> historicalSchdFactorsDebug ps sf = do
+>   w <- getWeather Nothing
+>   fs <- mapM (periodSchdFactors' w) ps
+>   return $ concat $ zipWith (\x y -> map (\y' -> (y', x)) y) ps fs --concat fs
+>     where
+>       periodSchdFactors' w p = periodSchdFactors p sf w
+
 > historicalSchdMeanFactors :: [Period] -> ScoreFunc -> IO [Float]
 > historicalSchdMeanFactors ps sf = do
 >   w <- getWeather Nothing
