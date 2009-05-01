@@ -305,6 +305,9 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > isPeriodInSemester :: Period -> String -> Bool
 > isPeriodInSemester p sem = (dt2semester' . startTime $ p) == sem
 
+> isPeriodFromSemester :: Period -> String -> Bool
+> isPeriodFromSemester p sem = (semester . project . session $ p) == sem
+
 TBF: code duplication!  where to put this?
 
 > dt2semester' :: DateTime -> String
