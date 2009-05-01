@@ -34,6 +34,7 @@
 >     assertEqual "test_getProjects8" Windowed (sType . head $ ss)
 >     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
+>     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
