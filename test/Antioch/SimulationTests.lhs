@@ -114,14 +114,15 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >     lp = findPSessionByName "LP"
 >     cv = findPSessionByName "CV"
 >     as = findPSessionByName "AS"
->     expSs = [as, cv, cv, as, cv]
+>     expSs = [lp, cv, cv, as, cv, cv]
 >     dts = [ fromGregorian 2006 2 4  6  0 0
+>           , fromGregorian 2006 2 4 10  0 0
 >           , fromGregorian 2006 2 5  3 30 0
 >           , fromGregorian 2006 2 5  5 30 0
->           , fromGregorian 2006 2 5  7 30 0
+>           , fromGregorian 2006 2 5 11 30 0
 >           , fromGregorian 2006 2 6  3 30 0]
->     durs = [360, 120, 120, 360, 120]
->     scores = [5.7547455, 3.8890452, 2.928565, 3.9593077, 3.2085283]
+>     durs = [240, 120, 120, 360, 120, 120]
+>     scores = [5.7547455, 3.8890452, 2.928565, 3.9593077, 3.2085283, 2.933338]
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
 Make sure the simulation can handle running out of sessions to schedule, and
@@ -166,9 +167,7 @@ that it does not over allocate periods to a session.
 >     w <- getWeather $ Just dt
 >     (result, t) <- simulate Pack w rs dt dur int history cnl ss
 >     assertEqual "SimulationTests_test_sim_pack" exp result
->     --assertEqual "SimulationTests_test_sim_schedMinDuration_2" canceled c
 >   where
->     --canceled = []
 >     rs  = []
 >     dt = fromGregorian 2006 2 1 0 0 0
 >     dur = 60 * 24 * 2
@@ -182,17 +181,17 @@ that it does not over allocate periods to a session.
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
 >     wv = findPSessionByName "WV"
->     expSs = [gb, va, tx, tx, wv, gb, as, tx, tx]
+>     expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 7 30 0
 >           , fromGregorian 2006 2 1 11 30 0
 >           , fromGregorian 2006 2 1 15 30 0
 >           , fromGregorian 2006 2 1 22 30 0
->           , fromGregorian 2006 2 2  4  0 0
->           , fromGregorian 2006 2 2  6  0 0
+>           , fromGregorian 2006 2 2  4 30 0
+>           , fromGregorian 2006 2 2  7 30 0
 >           , fromGregorian 2006 2 2 12  0 0
 >           , fromGregorian 2006 2 2 16  0 0 ]
->     durs = [360, 240, 240, 360, 330, 120, 360, 240, 270]
+>     durs = [360, 240, 240, 360, 360, 180, 270, 240, 270]
 >     scores = replicate 9 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 >     
@@ -216,9 +215,9 @@ time exceeds the sessions total time
 >                       , project     = defaultProject {semester = "06A"}
 >                        }
 >     ss = [s]
->     exp = [Period s (fromGregorian 2006 2 1 17 45 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 19 45 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 21 45 0) 120 0.0 undefined False]
+>     exp = [Period s (fromGregorian 2006 2 1 18 0 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 20 0 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 22 0 0) 120 0.0 undefined False]
 
 > test_sim_pack_starvation2 = TestCase $ do
 >     w <- getWeather $ Just dt

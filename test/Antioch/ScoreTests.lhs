@@ -225,10 +225,9 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     let sess = findPSessionByName "WV"
 >     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sess) 
 >     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sess) 
->     -- TBF: WTF??? eff > 1 ???  Because we aren't handling freq's < 2.0
 >     let sess = findPSessionByName "AS"
->     assertResult "test_efficiency 5" (Just wdt) 2 1.3530585 (efficiency dt sess) 
->     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.3836436 (efficiencyHA dt sess)
+>     assertResult "test_efficiency 5" (Just wdt) 2 0.9614152 (efficiency dt sess) 
+>     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.45480406 (efficiencyHA dt sess)
 >     assertResult "test_efficiency 7" (Just wdt) 2 0.935551 (efficiency dt sessBug)
 >     assertResult "test_efficiency 8" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
@@ -477,18 +476,18 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           }
->     expected = (replicate 40 0.0) ++ defaultScores ++ (replicate 24 0.0)
+>     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 23 0.0)
 
 For defaultSession w/ totalTime = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores= [4.9454975,5.0226474,4.834392,4.905203,4.965679,
->                 5.0012183,5.1309695,5.144102,5.180014,5.201366,
->                 5.2880096,5.30486,5.327419,5.341837,5.404956,
->                 5.404956,5.410821,5.410821,5.4096427,5.4096427,
->                 5.4035525,5.397189,5.387006,5.372202,5.35601,
->                 5.3382564,5.3147116,5.2931466,5.2565713,5.22892,
->                 5.184606,5.128878,5.0859]
+> defaultScores = [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
+>                 ,3.1299076,3.140008,3.1896837,3.1915457,3.1966023
+>                 ,3.1995883,3.2383318,3.239888,3.2477167,3.248886
+>                 ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
+>                 ,3.2787113,3.278528,3.2783365,3.2795804,3.2791758
+>                 ,3.2787383,3.27825,3.2757215,3.2750494,3.273897
+>                 ,3.273018,3.2730415,3.271333,3.2699947,3.2675872]
 
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -523,7 +522,8 @@ Look at the scores over a range where none are zero.
 >         scoreTotal' <- totalScore sf dt dur sess
 >         avgScore <- averageScore sf dt sess
 >         return (scoreTotal, scoreTotal', avgScore)
->     assertAlmostEqual "test_averageScore2_addScores" 3 expectedTotal scoreTotal
+>     --assertAlmostEqual "test_averageScore2_addScores" 3 expectedTotal scoreTotal
+>     assertEqual "test_averageScore2_addScores" expectedTotal scoreTotal
 >     assertAlmostEqual "test_averageScore2_totalScore" 3  expectedTotal scoreTotal'
 >     assertAlmostEqual "test_averageScore2_avgScore" 3 expectedAvg avgScore
 >   where
@@ -539,7 +539,7 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 39.949707 :: Score 
+>     expectedTotal = 24.993183 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 Test utilities
