@@ -11,6 +11,8 @@
 > import Antioch.Utilities (rad2deg, rad2hr)
 > import Antioch.Weather
 > import Antioch.Debug
+> import Antioch.HardwareSchedule
+> import Antioch.DSSData
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate)
@@ -581,22 +583,25 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> simulatedInput :: (ReceiverSchedule, [Session], [Project])
-> simulatedInput = ([], ss, projs)
+> dbInput :: DateTime -> IO (ReceiverSchedule, [Session], [Project])
+> dbInput dt = do
+>     rs <- getReceiverSchedule $ Just dt
+>     projs <- getProjects
+>     let ss = concatMap sessions projs
+>     return $ (rs, ss, projs)
+
+> simulatedInput :: IO (ReceiverSchedule, [Session], [Project])
+> simulatedInput = return $ ([], ss, projs)
 >   where
 >     g = mkStdGen 1
 >     projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> IO () --Bool -> IO ()
-> generatePlots strategyName outdir sps days name = do --simInput = do
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> Bool -> IO ()
+> generatePlots strategyName outdir sps days name simInput = do
 >     w <- getWeather Nothing
->     let (rs, ss, projs) = simulatedInput 
->     --let g   = mkStdGen 1
->     --let projs = generate 0 g $ genProjects 255 
->     --let ss' = concatMap sessions projs
->     --let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     (rs, ss, projs) <- if simInput then simulatedInput else dbInput dt
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
@@ -621,7 +626,6 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
->     --rs      = []
 >     dt      = fromGregorian 2006 2 1 0 0 0
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
@@ -749,4 +753,4 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
 >   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
 
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") days ""
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") days "" True
