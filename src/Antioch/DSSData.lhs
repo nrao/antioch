@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
+> import Antioch.Utilities (hrs2rad, deg2rad)
 > import Data.List (groupBy)
 > import Data.Char (toUpper)
 > import Database.HDBC
@@ -56,8 +57,8 @@
 >           , maxDuration = (*60) $ fromSqlInt maxd
 >           , timeBetween = (*60) $ fromSqlInt between
 >           , totalTime   = (*60) $ fromSql time 
->           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
->           , dec = fromSql v -- TBF: any other conversions?
+>           , ra = hrs2rad . fromSql $ h -- TBF: assume all J200? For Carl's DB, YES!
+>           , dec = deg2rad . fromSql $ v 
 >           , grade = toGradeType fltGrade 
 >           , receivers = [] -- TBF: does scoring support the logic structure!
 >           , periods = [] -- TBF, no history in Carl's DB
