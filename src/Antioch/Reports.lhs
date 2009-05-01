@@ -693,7 +693,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
 >   where
 >     heading = "Simulation By Semester: \n"
->     hdr = printf "%-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "ObsInSem" "ObsBpIn" "ObsFrSem" "ObsBpFr" 
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "ObsInSem" "ObsBpIn" "ObsFrSem" "ObsBpFr" 
 >     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterHrs ss ps) semesters
 
