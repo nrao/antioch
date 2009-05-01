@@ -55,13 +55,19 @@ Ranking System from Memo 5.2, Section 3
 >
 >         tsys' = exp opticalDepth * tsys
 
+> --getFrequency :: Session -> Float
+> --getFrequency s = if frequency s < 2.0 then 2.0 else frequency s
+
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
 >     case dropWhile (\(x, _) -> x <= freq) freqBand of
 >         (x : _) -> snd x
 >         []      -> 60.0
 >   where 
->         freq = fromIntegral . round . frequency $ s
+>         -- in real data, freqs can be < 2.0; the DB data is gaurded against
+>         -- this, but not this function.
+>         getFrequency s = if frequency s < 2.0 then 2.0 else frequency s
+>         freq = fromIntegral . round . getFrequency $ s
 >         freqBand =  [ (1.73,  6.0)
 >                     , (3.95, 10.0)
 >                     , (5.85,  5.0)
