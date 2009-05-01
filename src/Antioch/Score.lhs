@@ -55,9 +55,6 @@ Ranking System from Memo 5.2, Section 3
 >
 >         tsys' = exp opticalDepth * tsys
 
-> --getFrequency :: Session -> Float
-> --getFrequency s = if frequency s < 2.0 then 2.0 else frequency s
-
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
 >     case dropWhile (\(x, _) -> x <= freq) freqBand of
