@@ -217,8 +217,11 @@ Make sure that the total time used up by the periods is correct:
 
 > prop_Dec2 s = validDec s
 
+TBF: originally, Dana had us set the lower limit to -40.0, but Carl's data
+has some decs at -44.0.
+
 > validDec :: Session -> Bool
-> validDec s = -40.0 <= dec' && dec' <= 90.0
+> validDec s = -45.0 <= dec' && dec' <= 90.0
 >   where
 >     dec' = rad2deg . dec $ s
 
