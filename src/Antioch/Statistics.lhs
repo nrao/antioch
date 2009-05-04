@@ -15,7 +15,7 @@
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
-> import Data.Maybe         (fromMaybe)
+> import Data.Maybe         (fromMaybe, isJust)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
@@ -426,6 +426,12 @@ time could you really schedule with these sessions?
 >     obsBackupHrs     = getTotalHours . filter pBackup $ observed
 >     observedGaps     = findScheduleGaps start dur observed
 >     scheduledGaps    = findScheduleGaps start dur originalSchedule
+
+> scheduleHonorsFixed :: [Period] -> [Period] -> Bool
+> scheduleHonorsFixed [] _ = True
+> scheduleHonorsFixed fixed schedule =  dropWhile (==True) (findFixed fixed schedule) == []
+>   where
+>     findFixed fs schedule = [isJust (find (==f) schedule) | f <- fs]
 
 Read Y versus X as you would expect with normal plotting nomenclature.
 Produces list of (x, y) coordinate pairs.
