@@ -624,15 +624,15 @@ TBF: combine this list with the statsPlotsToFile fnc
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 
-> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs = do
+> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history = do
 >     putStrLn $ report
 >     writeFile filepath report
 >   where
@@ -641,7 +641,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     filename = "simulation_" ++ nowStr ++ ".txt"
 >     filepath = if last outdir == '/' then outdir ++ filename else outdir ++ "/" ++ filename
 >     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps simInput
->     r2 = reportScheduleChecks ss ps gaps 
+>     r2 = reportScheduleChecks ss ps gaps history 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
 >     r5 = reportBandTimes ss ps 
@@ -663,13 +663,14 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     l5 = if simInput then printf "Using simulated data.\n" else "Using real data.\n"
 >     l6 = printf "Number of Sessions as input: %d\n" (length ss)
 
-> reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
-> reportScheduleChecks ss ps gaps =
->     heading ++ "    " ++ intercalate "    " [overlaps, durs, scores, gs, ras, decs, elevs]
+> reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> [Period] -> String
+> reportScheduleChecks ss ps gaps history =
+>     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, scores, gs, ras, decs, elevs]
 >   where
 >     heading = "Schedule Checks: \n"
 >     error = "WARNING: "
 >     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
+>     fixed = if (not $ scheduleHonorsFixed history ps) then error ++ "Schedule does not honor pre-scheduled Periods!\n" else "Pre-scheduled Periods Honored\n"
 >     durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
 >     scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
 >     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
