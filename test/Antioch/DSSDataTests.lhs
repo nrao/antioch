@@ -6,14 +6,16 @@
 > import Antioch.Score
 > import Antioch.DSSData
 > import Antioch.Utilities
+> import Antioch.Generators (internalConflicts, validRA, validDec)
 > import Maybe
 > import List (nub, sort)
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 
 > tests = TestList [
->       test_getProjectData
->     , test_getProjects
+>       test_getProjects
+>     , test_getProjectData
+>     , test_getProjectsProperties
 >     , test_scoreDSSData
 >     ]
 
@@ -61,4 +63,24 @@ session scores zero through out a 24 hr period.
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+
+Perhaps these should be Quick Check properities, but the input is not 
+generated: it's the input we want to test, really.
+
+> test_getProjectsProperties = TestCase $ do
+>   ps <- getProjects
+>   let ss = concatMap sessions ps
+>   let allPeriods = sort $ concatMap periods ss 
+>   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
+>   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
+>   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
+>     where
+>       validProject proj = "0" == (take 1 $ semester proj)
+>       validSession s = (maxDuration s) >= (minDuration s)
+>                    -- TBF!! &&  (totalTime s)     >= (minDuration s)
+>                     &&  (validRA s) && (validDec s)
+>       validPeriods allPeriods = not . internalConflicts $ allPeriods
+>   
+>     
+ 
 
