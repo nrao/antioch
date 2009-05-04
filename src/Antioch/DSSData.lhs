@@ -116,5 +116,23 @@ TBF: no Period table in the DB yet.
 > fetchPeriods :: Connection -> Session -> IO [Period]
 > fetchPeriods cnn s = return []
 
+Opportunities for Fixed Sessions should be honored via Periods
+
 > periodsFromOpts :: Connection -> Session -> IO [Period]
-> periodsFromOpts cnn s = return [] 
+> periodsFromOpts cnn s | sType s == Open = return [] 
+>                       | sType s == Windowed = return [] 
+>                       | sType s == Fixed = periodsFromOpts' cnn s
+
+> periodsFromOpts' :: Connection -> Session -> IO [Period]
+> periodsFromOpts' cnn s = do
+>   result <- quickQuery' cnn query xs 
+>   return $ toPeriodList result
+>   where
+>     xs = [toSql . sId $ s]
+>     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities where windows.id = opportunities.window_id and windows.session_id = ?"
+>     toPeriodList = map toPeriod
+>     toPeriod (wid:wreq:start:durHrs:[]) = 
+>       defaultPeriod { startTime = fromSql start
+>                     , duration = (*60) . fromSql $ durHrs
+>                     }
+
