@@ -583,25 +583,27 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> dbInput :: DateTime -> IO (ReceiverSchedule, [Session], [Project])
+> dbInput :: DateTime -> IO (ReceiverSchedule, [Session], [Project], [Period])
 > dbInput dt = do
 >     rs <- getReceiverSchedule $ Just dt
 >     projs <- getProjects
 >     let ss = concatMap sessions projs
->     return $ (rs, ss, projs)
+>     let history = concatMap periods ss
+>     return $ (rs, ss, projs, history)
 
-> simulatedInput :: IO (ReceiverSchedule, [Session], [Project])
-> simulatedInput = return $ ([], ss, projs)
+> simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
+> simulatedInput = return $ ([], ss, projs, history)
 >   where
 >     g = mkStdGen 1
 >     projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     history = []
 
 > generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
 > generatePlots strategyName outdir sps dt days name simInput = do
 >     w <- getWeather Nothing
->     (rs, ss, projs) <- if simInput then simulatedInput else dbInput dt
+>     (rs, ss, projs, history) <- if simInput then simulatedInput else dbInput dt
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
@@ -628,7 +630,6 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
->     history = []
 
 > textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> IO () 
 > textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs = do
