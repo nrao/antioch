@@ -7,7 +7,8 @@
 > import Antioch.PProjects
 > import Antioch.Schedule
 > import Antioch.Simulate
-> import Data.List (zipWith6)
+> import Antioch.Statistics (scheduleHonorsFixed)
+> import Data.List (zipWith6, sort)
 > import Test.HUnit
 > import System.Random
 
@@ -16,6 +17,8 @@
 >    , test_sim_pack
 >    , test_sim_pack_starvation
 >    , test_sim_pack_starvation2
+>    , test_sim_schd_pack
+>    , test_sim_schd_pack_around_history
 >    , test_sim_schedMinDuration
 >    -- test_sim_schedMinDuration_backup TBF: broken
 >    , test_sim_schedMinDuration_fail_backup
@@ -232,4 +235,136 @@ time exceeds the sessions total time
 >     history = []
 >     -- induce starvation by shortening everybody's time
 >     ss = map (\s -> s {totalTime = 10*60}) getOpenPSessions
+
+TBF: the simulate function currently cannot handle scheduling around 
+pre-scheduled periods
+
+> test_sim_pack_around_history = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (result, t) <- simulate Pack w rs dt dur int history cnl ss
+>     assertEqual "SimulationTests_test_sim_pack_1" True (scheduleHonorsFixed history result)
+>     assertEqual "SimulationTests_test_sim_pack_2" exp result
+>   where
+>     rs  = []
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 2
+>     int = 60 * 24 * 1
+>     cnl = []
+>     ss = getOpenPSessions
+>     lp = findPSessionByName "LP"
+>     as = findPSessionByName "AS"
+>     gb = findPSessionByName "GB"
+>     va = findPSessionByName "VA"
+>     tx = findPSessionByName "TX"
+>     wv = findPSessionByName "WV"
+>     fixed1 = Period lp (fromGregorian 2006 2 1 7 30 0) 240 0.0 undefined False
+>     history = [fixed1]
+>     --expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
+>     expSs = [gb, lp, tx, tx, wv, gb, lp, tx, tx]
+>     dts = [ fromGregorian 2006 2 1 1 30 0
+>           , fromGregorian 2006 2 1 7 30 0
+>           , fromGregorian 2006 2 1 11 30 0
+>           , fromGregorian 2006 2 1 15 30 0
+>           , fromGregorian 2006 2 1 22 30 0
+>           , fromGregorian 2006 2 2  4 30 0
+>           , fromGregorian 2006 2 2  7 30 0
+>           , fromGregorian 2006 2 2 12  0 0
+>           , fromGregorian 2006 2 2 16  0 0 ]
+>     durs = [360, 240, 240, 360, 360, 180, 270, 240, 270]
+>     scores = replicate 9 0.0
+>     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
+>     
+
+> test_sim_schd_pack = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (result, t) <- simulateScheduling Pack w rs dt dur int history cnl ss
+>     printList result
+>     assertEqual "SimulationTests_test_sim_schd_pack_1" True (scheduleHonorsFixed history result)
+>     assertEqual "SimulationTests_test_sim_schd_pack_2" exp (take 6 result)
+>   where
+>     rs  = []
+>     -- set it up to be like production 08B beta test scheduling
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 4
+>     int = 60 * 24 * 2
+>     history = []
+>     cnl = []
+>     ss = getOpenPSessions
+>     lp = findPSessionByName "LP"
+>     as = findPSessionByName "AS"
+>     gb = findPSessionByName "GB"
+>     va = findPSessionByName "VA"
+>     tx = findPSessionByName "TX"
+>     wv = findPSessionByName "WV"
+>     expSs = [gb, va, tx, tx, wv, gb]
+>     expDts = [fromGregorian 2006 2 1  1 30 0
+>             , fromGregorian 2006 2 1  7 30 0
+>             , fromGregorian 2006 2 1 11 30 0
+>             , fromGregorian 2006 2 1 15 30 0
+>             , fromGregorian 2006 2 1 22 15 0
+>             , fromGregorian 2006 2 2  4 15 0
+>               ]
+>     expDurs = [360, 240, 240, 360, 360, 135]
+>     exp = zipWith3 mkPeriod expSs expDts expDurs
+>     mkPeriod s dt dur = Period s dt dur 0.0 undefined False
+
+> test_sim_schd_pack_around_history = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (result, t) <- simulateScheduling Pack w rs dt dur int history1 cnl ss
+>     assertEqual "SimulationTests_test_sim_schd_pack_1" True (scheduleHonorsFixed history1 result)
+>     assertEqual "SimulationTests_test_sim_schd_pack_2" exp1 (take 10 result)
+>     (result, t) <- simulateScheduling Pack w rs dt dur int history2 cnl ss
+>     assertEqual "SimulationTests_test_sim_schd_pack_3" True (scheduleHonorsFixed history2 result)
+>     assertEqual "SimulationTests_test_sim_schd_pack_4" exp2 (take 11 result)
+>   where
+>     rs  = []
+>     -- set it up to be like production 08B beta test scheduling
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 4
+>     int = 60 * 24 * 2
+>     cnl = []
+>     ss = getOpenPSessions
+>     ds = defaultSession
+>     --lp = findPSessionByName "LP"
+>     --cv = findPSessionByName "CV"
+>     --as = findPSessionByName "AS"
+>     --gb = findPSessionByName "GB"
+>     --va = findPSessionByName "VA"
+>     --tx = findPSessionByName "TX"
+>     --wv = findPSessionByName "WV"
+>     expSs = [gb, va, tx, wv, gb, lp, cv, tx]
+>     expDts = [fromGregorian 2006 2 1  1 30 0
+>             , fromGregorian 2006 2 1  7 30 0
+>             --, fromGregorian 2006 2 1 11 30 0
+>             , fromGregorian 2006 2 1 14 00 0
+>             , fromGregorian 2006 2 1 22 15 0
+>             , fromGregorian 2006 2 2  4 15 0
+>             , fromGregorian 2006 2 2  6 30 0
+>             , fromGregorian 2006 2 2 11  0 0
+>             , fromGregorian 2006 2 2 13  0 0
+>               ]
+>     expDurs = [360, 270, 360, 360, 135, 270, 120, 270]
+>     exp' = zipWith3 mkPeriod expSs expDts expDurs
+>     mkPeriod s dt dur = Period s dt dur 0.0 undefined False
+>     -- outside of the simulation range
+>     fixed0 = Period ds {sId = 1000} (fromGregorian 2006 1 30 0 0 0) 60 0.0 undefined False
+>     -- within the simulation range
+>     fixed1 = Period ds {sId = 1001} (fromGregorian 2006 2 1 12 0 0) 120 0.0 undefined False
+>     -- w/ in the sim range, and spaning a strategy boundry (midnight)
+>     fixed2 = Period ds {sId = 1002} (fromGregorian 2006 2 2 22 0 0) 240 0.0 undefined False
+>     -- outside sim range
+>     fixed3 = Period ds {sId = 1003} (fromGregorian 2006 3 1 0 0 0) 60 0.0 undefined False
+>     history1 = [fixed1, fixed2]
+>     exp1 = sort $ history1 ++ exp'
+>     history2 = [fixed0, fixed1, fixed2, fixed3]
+>     exp2 = sort $ (init history2) ++ exp'
+>     
+
+> lp = findPSessionByName "LP"
+> cv = findPSessionByName "CV"
+> as = findPSessionByName "AS"
+> gb = findPSessionByName "GB"
+> va = findPSessionByName "VA"
+> tx = findPSessionByName "TX"
+> wv = findPSessionByName "WV"
 
