@@ -34,10 +34,43 @@ to generate `items` for input to the `packWorker` function.
 >     let dts = quarterDateTimes dt dur
 >     let sched = toSchedule dts . sort $ fixed
 >     items <- mapM (toItem sf (mask dts sched)) sessions
->     return $! map (restoreFixedScore fixed) $ map (toPeriod dt) . packWorker sched $ items
+>     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker sched $ items
+
+Some things have to be corrected before this 'schedule' can be returned:
+   * pre-scheduled Periods on the time boundraries have been cut off
+   * pre-schedule Periods w/ in the time boundraries have had their scores 
+     mangled up.
+
+> restoreFixed :: [Period] -> DateTime -> Minutes -> [Period] -> [Period] 
+> restoreFixed fs dt dur ps = restoreFixedBoundraies fs dt dur $ map (restoreFixedScore fs) ps
+
+Fixed periods that overlap the start and end of the time range over which
+we are packing must be restored.
+
+> restoreFixedBoundraies :: [Period] -> DateTime -> Minutes -> [Period] -> [Period]
+> restoreFixedBoundraies fs dt dur ps = restoreBnd end False fs $ restoreBnd start True fs ps
+>   where
+>     start = dt
+>     end = dur `addMinutes'` dt
+
+Checks the boundry of the time range that we are packing for 
+('hd' == True is for the start of the packing time range) to see if one of the
+fixed periods initially passed in overlaps it.  If so, this original fixed
+period is used to replaced the truncated period in the schedule.
+
+> restoreBnd :: DateTime -> Bool -> [Period] -> [Period] -> [Period]
+> restoreBnd dt hd fs ps | inFixed dt fs == [] = ps
+> restoreBnd dt hd fs ps | otherwise           = if hd then [head $ inFixed dt fs] ++ tail ps else init ps ++ [head $ inFixed dt fs]
+
+Does the given datetime fall within the bounds of one of the telescope periods?
+If so, which ones?
+
+> inFixed :: DateTime -> [Period] -> [Period]
+> inFixed dt fs = filter (\f -> startTime f < dt && dt < periodEndTime f ) fs 
 
 Using a list 'fs' of pre-scheduled (fixed) periods, return a period 'p'
-with its original pre-packing score.
+with its original pre-packing score.  Only works for those periods that
+were not on the time range boundraries.
 
 > restoreFixedScore :: [Period] -> Period -> Period
 > restoreFixedScore fs p = case find (\f -> f == p) fs of
