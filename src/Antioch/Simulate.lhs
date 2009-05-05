@@ -8,7 +8,7 @@
 > import Antioch.Utilities    (between, rad2hr, showList', dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
-> import Data.List            (find, partition, nub)
+> import Data.List            (find, partition, nub, sort)
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
@@ -57,6 +57,20 @@ dependeing on grade.
 > filterSessions :: DateTime -> [SelectionCriteria] -> [Session] -> [Session]
 > filterSessions dt []       ss = ss
 > filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
+
+TBF: this does not work properly in serveral ways:
+   * each point in time should be 'scheduled' only once.  This works most of
+     the time; for example, if a period is scheduled, but then canceled due 
+     to MOC and not replaced w/ a backup, this 'gap' in the schedule will not
+     be filled again by the scheduling strategy.  This example does not apply,
+     however, when the period that is canceled, was the last (by date) to be
+     scheduled.  This is because the head of the history is used to determine
+     when we should start scheduling next.
+   * when the 'history' contains not just periods from the past, but 
+     pre-scheduled periods (ex: maintanence), it will start scheduling at the
+     end of the latest history, even if that is far in the future!.
+   * not all scheduling strategies even handle the 'history'!  Currently, only
+     Pack seems too ...
 
 > simulate :: StrategyName -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
 > simulate sched w rs dt dur int history canceled sessions =
@@ -188,3 +202,62 @@ schedule deadtime.
 > partitionWith f xs@(x:_) = as : partitionWith f bs
 >   where
 >     (as, bs) = partition (\t -> f t == f x) xs
+
+simulateScheduling is a simplification of 'simulate', in that it does not
+simulate scheduling *and* observing.  That is, it does not evaluate
+scheduled periods' MOC's and attempt to find backups for cancelations.  It's
+current purpose is for building a schedule for the 09B trimester.
+
+We will take an approach as close as possible to what was done in production
+for the 08B beta test: 
+   * attempt to schedule a 48 hour time range
+   * the first 24 hrs of this time range may have been scheduled already by
+     preveious calls to simulate'
+   * we will not attempt to do anything with the schedule as it is built up; 
+     instead, we simply pass it along to the strategy, making it the strategy's
+     responsibility for honoring pre-scheduled Periods.
+
+This also exists because it attempts to solve the bugs involving the 'history':
+that is, pre-scheduled periods that can appear any where in time.  
+
+TBF: for the purposes of building a schedule, is this acceptable?
+TBF: are we introducing an effect of cutting off periods at the simulation
+boundary?  
+
+> simulateScheduling :: StrategyName -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
+> simulateScheduling sched w rs dt dur int history canceled sessions =
+>     simulate' w dt dur history sessions [] []
+>   where
+>     simulate' w dt dur history sessions pAcc tAcc
+>         | dur < int  = return (pAcc, tAcc)
+>         | otherwise  = do
+>             w' <- liftIO $ newWeather w $ Just dt
+>             -- schedPeriods only includes those periods from the history that
+>             -- are contained in or overlap (dt - (dt + int)).
+>             (schedPeriods, t1) <- runScoring' w' rs $ runSimSchedStrategy sched dt int sessions history
+>             let sessions' = updateSessions sessions schedPeriods
+>             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
+>             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>             liftIO $ writeFile "/dev/null" (show t1)
+>             -- We must always pass on the whole history, because Periods
+>             -- not covered in the time range we are simulating would be
+>             -- other wise lost.
+>             -- Note: by using nub, we aren't catching geniune bugs involving 
+>             -- the creation of identical Periods.
+>             simulate' w' (hint `addMinutes'` dt) (dur - hint) (nub . sort $ schedPeriods ++ history) sessions' (nub . sort $ schedPeriods ++ history) $! (tAcc ++ t1)
+>       where
+>         -- move forward next simulation by half the sim. interval
+>         hint   = int `div` 2 
+
+The main diff between this and runSimStrategy is that we aren't simulating
+observing: not checking MOC, not trying to replace cancelations w/ backups.
+
+> runSimSchedStrategy :: StrategyName -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring [Period]
+> runSimSchedStrategy strategyName dt dur sessions history = do
+>   tell [Timestamp dt]
+>   let strategy = getStrategy strategyName 
+>   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isMySemester] sessions
+>   sf <- genScore $ filterSessions dt [isMySemester] sessions
+>   schedPeriods <- strategy sf dt dur history schedSessions
+>   return schedPeriods
+
