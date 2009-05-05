@@ -34,8 +34,10 @@
 >   , test_GetBest3'
 >   , test_GetBest4
 >   , test_GetBest4' 
+>   , test_inFixed
 >   , test_Madd1
 >   , test_Madd2
+>   , test_Pack_overlapped_fixed
 >   , test_Pack1
 >   , test_Pack2
 >   , test_Pack3
@@ -56,6 +58,7 @@
 >   , test_PackWorkerSimple
 >   , test_RandomScore
 >   , test_RandomScore2
+>   , test_restoreBnd
 >   , test_TestPack_pack1
 >   , test_TestPack_pack2
 >   , test_TestPack_pack3
@@ -67,6 +70,45 @@
 >   , test_ToSchedule
 >   , test_ToSchedule2
 >   ]
+
+> test_inFixed = TestCase $ do
+>   assertEqual "test_inFixed_1" 0 (length $ inFixed dt1 fixed)
+>   assertEqual "test_inFixed_2" 0 (length $ inFixed dt2 fixed)
+>   assertEqual "test_inFixed_3" 1 (length $ inFixed dt3 fixed)
+>   assertEqual "test_inFixed_4" 0 (length $ inFixed dt4 fixed)
+>     where
+>       dt1 = fromGregorian 2006 1 1 0 0 0
+>       dt2 = fromGregorian 2006 1 1 3 0 0
+>       dt3 = fromGregorian 2006 1 1 1 0 0
+>       dt4 = fromGregorian 2006 1 1 9 0 0
+>       f1 = defaultPeriod {startTime = dt1, duration = 2*60}
+>       f2 = defaultPeriod {startTime = dt2, duration = 2*60}
+>       fixed = [f1, f2]
+>       rst = inFixed dt1 fixed
+
+> test_restoreBnd = TestCase $ do
+>   assertEqual "test_restoreBnd_0" [f1] (inFixed dt1 fixed)
+>   assertEqual "test_restoreBnd_1" [f1, p2, p3, p4] (restoreBnd dt1 True fixed ps)
+>   assertEqual "test_restoreBnd_2" [f3] (inFixed dt5 fixed)
+>   assertEqual "test_restoreBnd_3" [p1, p2, p3, f3] (restoreBnd dt5 False fixed ps)
+>   assertEqual "test_restoreBnd_4" ps (restoreBnd dt5 False [f1, p2] ps)
+>     where
+>       dt0 = fromGregorian 2006 1 1 0 0 0 
+>       dt1 = fromGregorian 2006 1 1 1 0 0 -- start
+>       dt2 = fromGregorian 2006 1 1 3 0 0
+>       dt3 = fromGregorian 2006 1 1 5 0 0
+>       dt4 = fromGregorian 2006 1 1 9 0 0 
+>       dt5 = fromGregorian 2006 1 1 11 0 0 -- end
+>       -- schedule produced by PackWorker
+>       p1 = defaultPeriod {startTime = dt1, duration = 2*60}
+>       p2 = defaultPeriod {startTime = dt2, duration = 2*60}
+>       p3 = defaultPeriod {startTime = dt3, duration = 4*60}
+>       p4 = defaultPeriod {startTime = dt4, duration = 2*60}
+>       ps = [p1, p2, p3, p4]
+>       -- what the original 
+>       f1 = defaultPeriod {startTime = dt0, duration = 3*60} -- before start!
+>       f3 = defaultPeriod {startTime = dt4, duration = 6*60} -- after end!
+>       fixed = [f1, p2, f3]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
 
@@ -647,10 +689,6 @@ TBF: Scores not right due to negative score for F1 !!!
 >              ]
 >     sessions = map step open
 
-TBF: Here we have taken the original complicated test of 'pack' that is failing,
-and reduced it to a smaller problem for debugging.  Fails because of fixed
-period's negative score in the result.
-
 > test_Pack3 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods <- runScoring w [] $ do
@@ -705,7 +743,6 @@ around fixed periods.
 
 Same as above, but with even more fixed periods
 
-> -- Failing, but seems to be producing a better result than expected.
 > test_Pack5 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
@@ -781,6 +818,32 @@ revealed a bug where scores are turning negative in pact.
 >     fixed3 = Period ds (fromGregorian 2006 10 6 16 30 0) 255 0.0 undefined False
 >     fixed = [fixed1, fixed2, fixed3]
 >     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
+
+> test_Pack_overlapped_fixed = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore sess
+>         pack fs starttime duration fixed sess
+>     assertEqual "test_Pack" expPeriods periods'  
+>   where
+>     sess = getOpenPSessions 
+>     ds = defaultSession
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 24*60
+>     ft1 = ((-4)*60)  `addMinutes'` starttime -- -outside range
+>     ft2 = (10*60) `addMinutes'` starttime -- inside range
+>     ft3 = (22*60) `addMinutes'` starttime -- overlaps end boundary
+>     ft4 = (24*60*3) `addMinutes'` starttime -- outside range
+>     d = (4*60)
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d 0.0 undefined False
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d 0.0 undefined False
+>     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d 0.0 undefined False
+>     fixed4 = Period ds {sId = 1003, sName = "1003"} ft4 d 0.0 undefined False
+>     fixed = [fixed1, fixed2, fixed3, fixed4]
+>     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 210 0.0 undefined False
+>     open2 = Period (ds {sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 375 0.0 undefined False
+>     open3 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 30 0) 360 0.0 undefined False
+>     expPeriods = [open1, open2, fixed2, open3, fixed3]
 
 Test against python unit tests from beta test code:
 
