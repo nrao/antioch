@@ -156,6 +156,9 @@ Simple Functions for Periods:
 > periodHalfTime :: Period -> DateTime
 > periodHalfTime p = addMinutes' (duration p `div` 2) $ startTime p
 
+> periodEndTime :: Period -> DateTime
+> periodEndTime p = addMinutes' (duration p) $ startTime p
+
 > defaultSession = Session {
 >     sId         = 0
 >   , sName       = ""
