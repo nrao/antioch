@@ -2,6 +2,8 @@
 
 > import qualified Antioch.DateTimeTests as DateTimeT
 > import qualified Antioch.DebugTests as DebugT
+> import qualified Antioch.DSSDataTests as DSSDataT
+> import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
 > import qualified Antioch.ReportsTests as ReportT
 > import qualified Antioch.ScoreTests as ScoreT
 > import qualified Antioch.SLAlibTests as SLAlibT
@@ -16,6 +18,8 @@
 > tests = TestList [
 >     DateTimeT.tests
 >   , DebugT.tests
+>   , DSSDataT.tests
+>   , HardwareScheduleT.tests
 >   , ScoreT.tests
 >   , SLAlibT.tests
 >   , StatsT.tests
