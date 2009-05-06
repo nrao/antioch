@@ -8,7 +8,7 @@
 > import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg, rad2hr)
+> import Antioch.Utilities (rad2deg, rad2hr, printList)
 > import Antioch.Weather
 > import Antioch.Debug
 > import Antioch.HardwareSchedule
@@ -600,36 +600,17 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     history = []
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
-> generatePlots strategyName outdir sps dt days name simInput = do
->     w <- getWeather Nothing
->     (rs, ss, projs, history) <- if simInput then simulatedInput else dbInput dt
->     putStrLn $ "Number of sessions: " ++ show (length ss)
->     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
->     start <- getCPUTime
->     (results, trace) <- simulate strategyName w rs dt dur int history [] ss
->     stop <- getCPUTime
->     let execTime = fromIntegral (stop-start) / 1.0e12 
->     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
->     -- post simulation analysis
->     let gaps = findScheduleGaps dt dur results
->     let canceled = getCanceledPeriods trace
->     schdObsEffs <- historicalSchdObsEffs results
->     schdAtmEffs <- historicalSchdAtmEffs results
->     schdTrkEffs <- historicalSchdTrkEffs results
->     schdSrfEffs <- historicalSchdSrfEffs results
->     let scores = [("obsEff", schdObsEffs)
->                 , ("atmEff", schdAtmEffs)
->                 , ("trkEff", schdTrkEffs)
->                 , ("srfEff", schdSrfEffs)]
->     -- text reports 
->     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
->     -- create plots
->     mapM_ (\f -> f ss results trace) sps
+Pass on to the simulation only the history of pre-scheduled periods that 
+we care about: those that fall in between the dates we are simulating for.
+We do this, because otherwise the reports at the end of the simulations will
+be confused and raise false alarams.
+
+> filterHistory :: [Period] -> DateTime -> Int -> [Period]
+> filterHistory ps start dur = filter inWindow ps
 >   where
->     dur     = 60 * 24 * days
->     int     = 60 * 24 * 2
+>     end = (dur*24*60) `addMinutes'` start
+>     endTime p = (duration p) `addMinutes'` (startTime p)
+>     inWindow p = startTime p >= start && endTime p <= end 
 
 > textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> IO () 
 > textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history = do
@@ -648,7 +629,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r6 = reportScheduleScores scores
 >     r7 = reportSessionTypes ss ps
 >     r8 = reportRcvrSchedule rs
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8]
+>     r9 = reportPreScheduled history
+>     r10 = reportFinalSchedule ps
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10]
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps simInput =
@@ -761,6 +744,51 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     hdr = "Receiver Schedule:\n"
 >     dates rs = concatMap (\(dt, rcvrs) -> (show . toSqlString $ dt) ++ " : " ++ (show rcvrs) ++ "\n") rs
+
+> reportPreScheduled :: [Period] -> String
+> reportPreScheduled ps = hdr ++ (printPeriods ps)
+>   where
+>     hdr = "Pre-Schedule Periods:\n"
+>     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
+
+> reportFinalSchedule :: [Period] -> String
+> reportFinalSchedule ps = hdr ++ (printPeriods ps)
+>   where
+>     hdr = "Final Schedule:\n"
+>     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
+
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
+> generatePlots strategyName outdir sps dt days name simInput = do
+>     w <- getWeather Nothing
+>     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
+>     let history = filterHistory history' dt days 
+>     putStrLn $ "Number of sessions: " ++ show (length ss)
+>     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
+>     start <- getCPUTime
+>     --(results, trace) <- simulate strategyName w rs dt dur int history [] ss
+>     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
+>     stop <- getCPUTime
+>     let execTime = fromIntegral (stop-start) / 1.0e12 
+>     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
+>     -- post simulation analysis
+>     let gaps = findScheduleGaps dt dur results
+>     let canceled = getCanceledPeriods trace
+>     schdObsEffs <- historicalSchdObsEffs results
+>     schdAtmEffs <- historicalSchdAtmEffs results
+>     schdTrkEffs <- historicalSchdTrkEffs results
+>     schdSrfEffs <- historicalSchdSrfEffs results
+>     let scores = [("obsEff", schdObsEffs)
+>                 , ("atmEff", schdAtmEffs)
+>                 , ("trkEff", schdTrkEffs)
+>                 , ("srfEff", schdSrfEffs)]
+>     -- text reports 
+>     now <- getCurrentTime
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
+>     -- create plots
+>     mapM_ (\f -> f ss results trace) sps
+>   where
+>     dur     = 60 * 24 * days
+>     int     = 60 * 24 * 2
 
 > runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True
 >   where
