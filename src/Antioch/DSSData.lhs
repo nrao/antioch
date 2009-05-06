@@ -48,7 +48,7 @@ get picked up!!!
 > getSessions projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   let ss' = toSessionDataList result
->   ss <- updateRcvrs cnn ss'
+>   ss <- mapM (updateRcvrs cnn) ss'
 >   return ss
 >     where
 >       query = "SELECT sessions.id, sessions.name, sessions.min_duration, sessions.max_duration, sessions.time_between, sessions.frequency, allotment.total_time, allotment.grade, targets.horizontal, targets.vertical, status.enabled, status.authorized, status.backup, session_types.type FROM sessions, allotment, targets, status, session_types WHERE allotment.id = sessions.allotment_id AND targets.session_id = sessions.id AND sessions.status_id = status.id AND sessions.session_type_id = session_types.id AND sessions.project_id = ?"
@@ -105,14 +105,43 @@ TBF: is this totaly legit?  and should it be somewhere else?
 > toGradeType :: SqlValue -> Grade
 > toGradeType val = if (fromSql val) == (3.0 :: Float) then GradeA else GradeB 
 
-Given a list of Sessions, find the Rcvrs for each one.
+Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions
 in part because if there are *no* rcvrs, that larger SQL would not return
 *any* result (TBF: this bug is still there w/ the tragets)
-TBF: finish this!
 
-> updateRcvrs :: Connection -> [Session] -> IO [Session]
-> updateRcvrs cnn ss = return ss
+> updateRcvrs :: Connection -> Session -> IO Session
+> updateRcvrs cnn s = do
+>   rcvrGroups <- getRcvrGroups cnn s
+>   cnfRcvrs <- mapM (getRcvrs cnn s) rcvrGroups
+>   return $ s {receivers = cnfRcvrs}
+
+> getRcvrGroups :: Connection -> Session -> IO [Int]
+> getRcvrGroups cnn s = do
+>   result <- quickQuery' cnn query xs 
+>   return $ toRcvrGrpIds result
+>   where
+>     xs = [toSql . sId $ s]
+>     query = "SELECT rg.id FROM receiver_groups AS rg WHERE rg.session_id = ?"
+>     toRcvrGrpIds = map toRcvrGrpId 
+>     toRcvrGrpId [x] = fromSql x
+
+> getRcvrs :: Connection -> Session -> Int -> IO ReceiverGroup
+> getRcvrs cnn s id = do
+>   result <- quickQuery' cnn query xs 
+>   return $ toRcvrList s result
+>   where
+>     xs = [toSql id]
+>     query = "SELECT r.name FROM receivers as r, receiver_groups_receivers as rgr WHERE rgr.receiver_id = r.id AND rgr.receiver_group_id = ?"
+>     toRcvrList s = map (toRcvr s)
+>     toRcvr s [x] = toRcvrType s x
+
+TBF: is what we'ere doing here w/ the rcvr and frequency legal?
+
+> toRcvrType :: Session -> SqlValue -> Receiver
+> toRcvrType s val = if (fromSql val) == ("Rcvr18_26" :: String) then findRcvr18_26 s else read . fromSql $ val
+>   where
+>     findRcvr18_26 s = if frequency s < 22.0 then Rcvr18_22 else Rcvr22_26 
 
 > populateSession :: Connection -> Session -> IO Session
 > populateSession cnn s = do

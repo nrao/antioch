@@ -12,6 +12,8 @@
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 
+TBF: all these tests are based off a DB that could change; we need to set up a framework so that the unit tests don't break so easy.
+
 > tests = TestList [
 >       test_getProjects
 >     , test_getProjectData
@@ -44,6 +46,7 @@
 >     assertEqual "test_getProjects11" 60 (duration . head $ allPeriods)    
 >     assertEqual "test_getProjects12" 1 (length . nub $ map (sType . session) allPeriods) 
 >     assertEqual "test_getProjects12" Fixed (sType . session . head $ allPeriods) 
+>     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head . tail $ ss)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
