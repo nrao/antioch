@@ -3,7 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Utilities (hrs2rad, deg2rad)
+> import Antioch.Utilities (hrs2rad, deg2rad, printList)
 > import Data.List (groupBy, sort)
 > import Data.Char (toUpper)
 > import Database.HDBC
@@ -41,10 +41,15 @@
 >     sessions <- mapM (populateSession cnn) sessions'
 >     return $ makeProject project (timeTotal project) sessions
 
+TBF: if a session is missing any of the tables in the below query, it won't
+get picked up!!!
+
 > getSessions :: Int -> Connection -> IO [Session]
 > getSessions projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
->   return $ toSessionDataList result
+>   let ss' = toSessionDataList result
+>   ss <- updateRcvrs cnn ss'
+>   return ss
 >     where
 >       query = "SELECT sessions.id, sessions.name, sessions.min_duration, sessions.max_duration, sessions.time_between, sessions.frequency, allotment.total_time, allotment.grade, targets.horizontal, targets.vertical, status.enabled, status.authorized, status.backup, session_types.type FROM sessions, allotment, targets, status, session_types WHERE allotment.id = sessions.allotment_id AND targets.session_id = sessions.id AND sessions.status_id = status.id AND sessions.session_type_id = session_types.id AND sessions.project_id = ?"
 >       xs = [toSql projId]
@@ -99,6 +104,15 @@ TBF: is this totaly legit?  and should it be somewhere else?
 
 > toGradeType :: SqlValue -> Grade
 > toGradeType val = if (fromSql val) == (3.0 :: Float) then GradeA else GradeB 
+
+Given a list of Sessions, find the Rcvrs for each one.
+This is a separate func, and not part of the larger SQL in getSessions
+in part because if there are *no* rcvrs, that larger SQL would not return
+*any* result (TBF: this bug is still there w/ the tragets)
+TBF: finish this!
+
+> updateRcvrs :: Connection -> [Session] -> IO [Session]
+> updateRcvrs cnn ss = return ss
 
 > populateSession :: Connection -> Session -> IO Session
 > populateSession cnn s = do
