@@ -34,8 +34,10 @@
 >   , test_GetBest3'
 >   , test_GetBest4
 >   , test_GetBest4' 
+>   , test_inFixed
 >   , test_Madd1
 >   , test_Madd2
+>   , test_Pack_overlapped_fixed
 >   , test_Pack1
 >   , test_Pack2
 >   , test_Pack3
@@ -56,6 +58,7 @@
 >   , test_PackWorkerSimple
 >   , test_RandomScore
 >   , test_RandomScore2
+>   , test_restoreBnd
 >   , test_TestPack_pack1
 >   , test_TestPack_pack2
 >   , test_TestPack_pack3
@@ -67,6 +70,45 @@
 >   , test_ToSchedule
 >   , test_ToSchedule2
 >   ]
+
+> test_inFixed = TestCase $ do
+>   assertEqual "test_inFixed_1" 0 (length $ inFixed dt1 fixed)
+>   assertEqual "test_inFixed_2" 0 (length $ inFixed dt2 fixed)
+>   assertEqual "test_inFixed_3" 1 (length $ inFixed dt3 fixed)
+>   assertEqual "test_inFixed_4" 0 (length $ inFixed dt4 fixed)
+>     where
+>       dt1 = fromGregorian 2006 1 1 0 0 0
+>       dt2 = fromGregorian 2006 1 1 3 0 0
+>       dt3 = fromGregorian 2006 1 1 1 0 0
+>       dt4 = fromGregorian 2006 1 1 9 0 0
+>       f1 = defaultPeriod {startTime = dt1, duration = 2*60}
+>       f2 = defaultPeriod {startTime = dt2, duration = 2*60}
+>       fixed = [f1, f2]
+>       rst = inFixed dt1 fixed
+
+> test_restoreBnd = TestCase $ do
+>   assertEqual "test_restoreBnd_0" [f1] (inFixed dt1 fixed)
+>   assertEqual "test_restoreBnd_1" [f1, p2, p3, p4] (restoreBnd dt1 True fixed ps)
+>   assertEqual "test_restoreBnd_2" [f3] (inFixed dt5 fixed)
+>   assertEqual "test_restoreBnd_3" [p1, p2, p3, f3] (restoreBnd dt5 False fixed ps)
+>   assertEqual "test_restoreBnd_4" ps (restoreBnd dt5 False [f1, p2] ps)
+>     where
+>       dt0 = fromGregorian 2006 1 1 0 0 0 
+>       dt1 = fromGregorian 2006 1 1 1 0 0 -- start
+>       dt2 = fromGregorian 2006 1 1 3 0 0
+>       dt3 = fromGregorian 2006 1 1 5 0 0
+>       dt4 = fromGregorian 2006 1 1 9 0 0 
+>       dt5 = fromGregorian 2006 1 1 11 0 0 -- end
+>       -- schedule produced by PackWorker
+>       p1 = defaultPeriod {startTime = dt1, duration = 2*60}
+>       p2 = defaultPeriod {startTime = dt2, duration = 2*60}
+>       p3 = defaultPeriod {startTime = dt3, duration = 4*60}
+>       p4 = defaultPeriod {startTime = dt4, duration = 2*60}
+>       ps = [p1, p2, p3, p4]
+>       -- what the original 
+>       f1 = defaultPeriod {startTime = dt0, duration = 3*60} -- before start!
+>       f3 = defaultPeriod {startTime = dt4, duration = 6*60} -- after end!
+>       fixed = [f1, p2, f3]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
 
@@ -310,7 +352,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
->              [0.0, 0.0, 5.1309695,5.144102]
+>              [0.0, 0.0, 3.1896837, 3.1915457]
 >     expected = Item { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -509,8 +551,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
 >                                }
->     expStartTime = fromGregorian 2006 11 8 22 0 0
->     expPeriod = Period candidate expStartTime 120 39.949707 undefined False
+>     expStartTime = fromGregorian 2006 11 8 21 45 0
+>     expPeriod = Period candidate expStartTime 135 39.949707 undefined False
 
 Create a long schedule from a reproducable randomly created set of sessions.
 The main value of this test is to catch changes in the packing algorithm that 
@@ -532,10 +574,10 @@ produce changes in the final result.
 >         names = ["CV", "AS", "WV", "GB"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [120, 450, 360, 150]
+>         durs = [210, 375, 360, 150]
 >         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         times = [ starttime
->                 , fromGregorian 2006 11 8  14  0 0
+>                 , fromGregorian 2006 11 8  15 30 0
 >                 , fromGregorian 2006 11 9   3 30 0
 >                 , fromGregorian 2006 11 9   9 30 0 ]
 >         -- TBF
@@ -647,10 +689,6 @@ TBF: Scores not right due to negative score for F1 !!!
 >              ]
 >     sessions = map step open
 
-TBF: Here we have taken the original complicated test of 'pack' that is failing,
-and reduced it to a smaller problem for debugging.  Fails because of fixed
-period's negative score in the result.
-
 > test_Pack3 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods <- runScoring w [] $ do
@@ -705,7 +743,6 @@ around fixed periods.
 
 Same as above, but with even more fixed periods
 
-> -- Failing, but seems to be producing a better result than expected.
 > test_Pack5 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
@@ -760,8 +797,8 @@ revealed a bug where scores are turning negative in pact.
 >   where
 >     starttime = fromGregorian 2006 1 1 0 0 0
 >     duration = 24*60
->     s19 = defaultSession {sId = 19, sName = "19", periods = [], totalTime = 690, minDuration = 345, maxDuration = 435, timeBetween = 0, frequency = 8.378224, ra = 1.2237936, dec = 0.81245035, backup = False, receivers = [Rcvr8_10], enabled = False, authorized = False, grade = GradeA, band = X}
->     s3 =  defaultSession {sId = 3, sName = "3", periods = [], totalTime = 630, minDuration = 315, maxDuration = 450, timeBetween = 0, frequency = 14.540758, ra = 4.53959, dec = 3.422137e-2, backup = False, receivers = [Rcvr12_18], enabled = False, authorized = False, grade = GradeC, band = U}
+>     s19 = defaultSession {sId = 19, sName = "19", periods = [], totalTime = 690, minDuration = 345, maxDuration = 435, timeBetween = 0, frequency = 8.378224, ra = 1.2237936, dec = 0.81245035, backup = False, receivers = [[Rcvr8_10]], enabled = False, authorized = False, grade = GradeA, band = X}
+>     s3 =  defaultSession {sId = 3, sName = "3", periods = [], totalTime = 630, minDuration = 315, maxDuration = 450, timeBetween = 0, frequency = 14.540758, ra = 4.53959, dec = 3.422137e-2, backup = False, receivers = [[Rcvr12_18]], enabled = False, authorized = False, grade = GradeC, band = U}
 >     ss = [s3, s19]
 
 > test_Pack7 = TestCase $ do
@@ -781,6 +818,32 @@ revealed a bug where scores are turning negative in pact.
 >     fixed3 = Period ds (fromGregorian 2006 10 6 16 30 0) 255 0.0 undefined False
 >     fixed = [fixed1, fixed2, fixed3]
 >     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
+
+> test_Pack_overlapped_fixed = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore sess
+>         pack fs starttime duration fixed sess
+>     assertEqual "test_Pack" expPeriods periods'  
+>   where
+>     sess = getOpenPSessions 
+>     ds = defaultSession
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 24*60
+>     ft1 = ((-4)*60)  `addMinutes'` starttime -- -outside range
+>     ft2 = (10*60) `addMinutes'` starttime -- inside range
+>     ft3 = (22*60) `addMinutes'` starttime -- overlaps end boundary
+>     ft4 = (24*60*3) `addMinutes'` starttime -- outside range
+>     d = (4*60)
+>     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d 0.0 undefined False
+>     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d 0.0 undefined False
+>     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d 0.0 undefined False
+>     fixed4 = Period ds {sId = 1003, sName = "1003"} ft4 d 0.0 undefined False
+>     fixed = [fixed1, fixed2, fixed3, fixed4]
+>     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 210 0.0 undefined False
+>     open2 = Period (ds {sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 375 0.0 undefined False
+>     open3 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 30 0) 360 0.0 undefined False
+>     expPeriods = [open1, open2, fixed2, open3, fixed3]
 
 Test against python unit tests from beta test code:
 
@@ -953,10 +1016,9 @@ Session data to pack:
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs
 
-> defaultPackSessionScores = (replicate 40 0.0) ++ 
->                [4.9454975,5.0226474,4.834392,
->                 4.905203,4.965679,5.0012183,
->                 5.1309695,5.144102]
+> defaultPackSessionScores = (replicate 39 0.0) ++ 
+>                 [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
+>                 ,3.1299076,3.140008,3.1896837,3.1915457]
 
 This is the list of random numbers generated on the python side:
 

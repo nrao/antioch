@@ -167,7 +167,7 @@ Only 20 percent of the low freq. sessions are backups
 >                --, totalTime      = matchAvTime totalTime (round2quarter minD)
 >                , totalTime      = round2quarter totalTime
 >                , grade          = g
->                , receivers      = [r]
+>                , receivers      = [[r]]
 >                , backup         = bk
 >                }
 
@@ -192,7 +192,10 @@ only schedule Periods of length minDuration.
 >     return $ s : ss
 
 > prop_Grade s = grade s `elem` [GradeA, GradeB, GradeC]
-> prop_Receiver s = head (receivers s) == band2Receiver (band s)
+
+Assumes a single scalar rcvr group
+
+> prop_Receiver s = (head . head . receivers $ s) == band2Receiver (band s)
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
 
@@ -217,8 +220,11 @@ Make sure that the total time used up by the periods is correct:
 
 > prop_Dec2 s = validDec s
 
+TBF: originally, Dana had us set the lower limit to -40.0, but Carl's data
+has some decs at -44.0.
+
 > validDec :: Session -> Bool
-> validDec s = -40.0 <= dec' && dec' <= 90.0
+> validDec s = -45.0 <= dec' && dec' <= 90.0
 >   where
 >     dec' = rad2deg . dec $ s
 

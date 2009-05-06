@@ -6,7 +6,7 @@
 > import Antioch.Types
 > -- import Antioch.Score      (Trace, zenithAngle, minObservingEff, elevationFromZenith)
 > import Antioch.Score
-> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours) 
+> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours, dt2semester) 
 > import Antioch.Weather
 > import Antioch.Debug
 > import Control.Arrow      ((&&&), second)
@@ -15,7 +15,7 @@
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
-> import Data.Maybe         (fromMaybe)
+> import Data.Maybe         (fromMaybe, isJust)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
@@ -47,6 +47,17 @@ To Do List (port from Statistics.py):
 >   w <- getWeather Nothing
 >   fs <- mapM (periodSchdFactors' w) ps
 >   return $ concat fs
+>     where
+>       periodSchdFactors' w p = periodSchdFactors p sf w
+
+This function can be useful if invalid scores are encountered, and the 
+offending period/session/project needs to be revealed.
+
+> historicalSchdFactorsDebug :: [Period] -> ScoreFunc -> IO [(Float,Period)]
+> historicalSchdFactorsDebug ps sf = do
+>   w <- getWeather Nothing
+>   fs <- mapM (periodSchdFactors' w) ps
+>   return $ concat $ zipWith (\x y -> map (\y' -> (y', x)) y) ps fs --concat fs
 >     where
 >       periodSchdFactors' w p = periodSchdFactors p sf w
 
@@ -303,17 +314,10 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > isInSemester s sem = (semester . project $ s) == sem
 
 > isPeriodInSemester :: Period -> String -> Bool
-> isPeriodInSemester p sem = (dt2semester' . startTime $ p) == sem
+> isPeriodInSemester p sem = (dt2semester . startTime $ p) == sem
 
-TBF: code duplication!  where to put this?
-
-> dt2semester' :: DateTime -> String
-> dt2semester' dt | month <   2 = "O5C"
->                 | month <   6 = "06A"
->                 | month <  10 = "06B"
->                 | month <= 12 = "06C"
->   where
->     (_, month, _) = toGregorian' dt
+> isPeriodFromSemester :: Period -> String -> Bool
+> isPeriodFromSemester p sem = (semester . project . session $ p) == sem
 
 > bandPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > bandPressuresByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
@@ -422,6 +426,12 @@ time could you really schedule with these sessions?
 >     obsBackupHrs     = getTotalHours . filter pBackup $ observed
 >     observedGaps     = findScheduleGaps start dur observed
 >     scheduledGaps    = findScheduleGaps start dur originalSchedule
+
+> scheduleHonorsFixed :: [Period] -> [Period] -> Bool
+> scheduleHonorsFixed [] _ = True
+> scheduleHonorsFixed fixed schedule =  dropWhile (==True) (findFixed fixed schedule) == []
+>   where
+>     findFixed fs schedule = [isJust (find (==f) schedule) | f <- fs]
 
 Read Y versus X as you would expect with normal plotting nomenclature.
 Produces list of (x, y) coordinate pairs.

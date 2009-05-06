@@ -8,9 +8,11 @@
 > import Antioch.Simulate
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg, rad2hr)
+> import Antioch.Utilities (rad2deg, rad2hr, printList)
 > import Antioch.Weather
 > import Antioch.Debug
+> import Antioch.HardwareSchedule
+> import Antioch.DSSData
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate)
@@ -581,17 +583,191 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> Int -> String -> IO ()
-> generatePlots strategyName outdir sps days name = do
+> dbInput :: DateTime -> IO (ReceiverSchedule, [Session], [Project], [Period])
+> dbInput dt = do
+>     rs <- getReceiverSchedule $ Just dt
+>     projs <- getProjects
+>     let ss = concatMap sessions projs
+>     let history = concatMap periods ss
+>     return $ (rs, ss, projs, history)
+
+> simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
+> simulatedInput = return $ ([], ss, projs, history)
+>   where
+>     g = mkStdGen 1
+>     projs = generate 0 g $ genProjects 255
+>     ss' = concatMap sessions projs
+>     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     history = []
+
+Pass on to the simulation only the history of pre-scheduled periods that 
+we care about: those that fall in between the dates we are simulating for.
+We do this, because otherwise the reports at the end of the simulations will
+be confused and raise false alarams.
+
+> filterHistory :: [Period] -> DateTime -> Int -> [Period]
+> filterHistory ps start dur = filter inWindow ps
+>   where
+>     end = (dur*24*60) `addMinutes'` start
+>     endTime p = (duration p) `addMinutes'` (startTime p)
+>     inWindow p = startTime p >= start && endTime p <= end 
+
+> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history = do
+>     putStrLn $ report
+>     writeFile filepath report
+>   where
+>     (year, month, day, hours, minutes, seconds) = toGregorian now
+>     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
+>     filename = "simulation_" ++ nowStr ++ ".txt"
+>     filepath = if last outdir == '/' then outdir ++ filename else outdir ++ "/" ++ filename
+>     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps simInput
+>     r2 = reportScheduleChecks ss ps gaps history 
+>     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
+>     r4 = reportSemesterTimes ss ps 
+>     r5 = reportBandTimes ss ps 
+>     r6 = reportScheduleScores scores
+>     r7 = reportSessionTypes ss ps
+>     r8 = reportRcvrSchedule rs
+>     r9 = reportPreScheduled history
+>     r10 = reportFinalSchedule ps
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10]
+
+> reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
+> reportSimulationGeneralInfo name now execTime start days strategyName ss ps simInput =
+>     heading ++ "    " ++ intercalate "    " [l0, l1, l2, l3, l4, l5, l6]
+>   where
+>     heading = "General Simulation Info: \n"
+>     l0 = printf "Simulation Name: %s\n" name
+>     l1 = printf "Ran Simulations on: %s\n" (toSqlString now)
+>     l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
+>     l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
+>     l4 = printf "Ran strategy %s\n" strategyName
+>     l5 = if simInput then printf "Using simulated data.\n" else "Using real data.\n"
+>     l6 = printf "Number of Sessions as input: %d\n" (length ss)
+
+> reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> [Period] -> String
+> reportScheduleChecks ss ps gaps history =
+>     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, scores, gs, ras, decs, elevs]
+>   where
+>     heading = "Schedule Checks: \n"
+>     error = "WARNING: "
+>     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
+>     fixed = if (not $ scheduleHonorsFixed history ps) then error ++ "Schedule does not honor pre-scheduled Periods!\n" else "Pre-scheduled Periods Honored\n"
+>     durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
+>     scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
+>     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
+>     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
+>     decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
+>     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
+
+> reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
+> reportSimulationTimes ss dt dur observed canceled = 
+>     heading ++ "    " ++ intercalate "    " [l1, l2, l3, l4, l5]
+>   where
+>     heading = "Simulation Time Breakdown: \n"
+>     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
+>     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t6 t7
+>     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
+>     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
+>     l5 = crossCheckSimulationBreakdown t1 t6 t7 t8 t9 t10 t11 t12 
+>     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) = breakdownSimulationTimes ss dt dur observed canceled
+
+> reportSemesterTimes :: [Session] -> [Period] -> String 
+> reportSemesterTimes ss ps = do
+>     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
+>   where
+>     heading = "Simulation By Semester: \n"
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "ObsInSem" "ObsBpIn" "ObsFrSem" "ObsBpFr" 
+>     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
+>     lines = map (reportSemesterHrs ss ps) semesters
+
+> reportSessionTypes :: [Session] -> [Period] -> String
+> reportSessionTypes ss ps = do
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3]
+>   where
+>     heading = "Simulation By Session Type: \n"
+>     hdr = printf "%-11s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
+>     l1 = reportSessionTypeHrs Open ss ps 
+>     l2 = reportSessionTypeHrs Fixed ss ps 
+>     l3 = reportSessionTypeHrs Windowed ss ps 
+
+> reportSessionTypeHrs :: SessionType -> [Session] -> [Period] -> String
+> reportSessionTypeHrs st ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
+>   where
+>     ssTyped = filter (\s -> sType s == st) ss 
+>     psTyped = filter (\p -> (sType . session $ p) == st) ps 
+>     stCnt = length ssTyped
+>     stHrs =  totalHrs ss (\s -> sType s == st) 
+>     pstCnt = length psTyped
+>     pstHrs =  totalPeriodHrs ps (\p -> (sType . session $ p) == st) 
+
+ 
+> reportBandTimes :: [Session] -> [Period] -> String 
+> reportBandTimes ss ps = do
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2]
+>   where
+>     heading = "Simulation By Band: \n"
+>     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
+>     sessBandTimes = sessionBand ss
+>     periodBandTimes = periodBand ps
+>     l1 = "Sessions: " ++ toStr sessBandTimes
+>     l2 = "Periods : " ++ toStr periodBandTimes
+>     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
+
+
+> reportSemesterHrs :: [Session] -> [Period] -> String -> String
+> reportSemesterHrs ss ps sem = printf "%-7s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs totalObsFrom totalBackupObsFrom 
+>   where
+>     total = totalHrs ss (\s -> isInSemester s sem) 
+>     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
+>     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
+>     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
+>     totalObsFrom = totalPeriodHrs ps (\p -> isPeriodFromSemester p sem)
+>     totalBackupObsFrom = totalPeriodHrs ps (\p -> isPeriodFromSemester p sem && pBackup p)
+
+> reportScheduleScores :: [(String, [Score])] -> String
+> reportScheduleScores scores =
+>   heading ++ "    " ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff]
+>     where
+>   heading = "Schedule Score Checks: \n"
+>   error = "WARNING: "
+>   getScores name s = snd . head $ filter (\x -> fst x == name) s
+>   checkNormalized scores key name = if not . normalized $ getScores key scores then error ++ name ++ " not Normalized!\n" else "0.0 <= " ++ name ++ " <= 1.0\n"
+>   obsEff = checkNormalized scores "obsEff" "Observing Efficiency"
+>   atmEff = checkNormalized scores "atmEff" "Atmospheric Opacity"
+>   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
+>   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
+
+> reportRcvrSchedule :: ReceiverSchedule -> String
+> reportRcvrSchedule rs = hdr ++ (dates rs)
+>   where
+>     hdr = "Receiver Schedule:\n"
+>     dates rs = concatMap (\(dt, rcvrs) -> (show . toSqlString $ dt) ++ " : " ++ (show rcvrs) ++ "\n") rs
+
+> reportPreScheduled :: [Period] -> String
+> reportPreScheduled ps = hdr ++ (printPeriods ps)
+>   where
+>     hdr = "Pre-Schedule Periods:\n"
+>     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
+
+> reportFinalSchedule :: [Period] -> String
+> reportFinalSchedule ps = hdr ++ (printPeriods ps)
+>   where
+>     hdr = "Final Schedule:\n"
+>     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
+
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
+> generatePlots strategyName outdir sps dt days name simInput = do
 >     w <- getWeather Nothing
->     let g   = mkStdGen 1
->     let projs = generate 0 g $ genProjects 255 
->     let ss' = concatMap sessions projs
->     let ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
+>     let history = filterHistory history' dt days 
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
+>     -- TBF: better way of switching between the two types of simulations?
 >     (results, trace) <- simulate strategyName w rs dt dur int history [] ss
+>     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     let execTime = fromIntegral (stop-start) / 1.0e12 
 >     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
@@ -608,115 +784,13 @@ TBF: combine this list with the statsPlotsToFile fnc
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >   where
->     rs      = []
->     dt      = fromGregorian 2006 2 1 0 0 0
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
->     history = []
 
-> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores = do
->     putStrLn $ report
->     writeFile filepath report
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True
 >   where
->     (year, month, day, hours, minutes, seconds) = toGregorian now
->     nowStr = printf "%04d_%02d_%02d_%02d_%02d_%02d" year month day hours minutes seconds
->     filename = "simulation_" ++ nowStr ++ ".txt"
->     filepath = if last outdir == '/' then outdir ++ filename else outdir ++ "/" ++ filename
->     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps
->     r2 = reportScheduleChecks ss ps gaps 
->     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
->     r4 = reportSemesterTimes ss ps 
->     r5 = reportBandTimes ss ps 
->     r6 = reportScheduleScores scores
->     report = concat [r1, r2, r6, r3, r4, r5]
-
-> reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> String
-> reportSimulationGeneralInfo name now execTime start days strategyName ss ps =
->     heading ++ intercalate "    " [l0, l1, l2, l3, l4, l5]
->   where
->     heading = "General Simulation Info: \n"
->     l0 = printf "Simulation Name: %s\n" name
->     l1 = printf "Ran Simulations on: %s\n" (toSqlString now)
->     l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
->     l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
->     l4 = printf "Ran strategy %s\n" strategyName
->     l5 = printf "Number of Sessions as input: %d\n" (length ss)
-
-> reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> String
-> reportScheduleChecks ss ps gaps =
->     heading ++ intercalate "    " [overlaps, durs, scores, gs, ras, decs, elevs]
->   where
->     heading = "Schedule Checks: \n"
->     error = "WARNING: "
->     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
->     durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
->     scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
->     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
->     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
->     decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
->     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
-
-> reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
-> reportSimulationTimes ss dt dur observed canceled = 
->     heading ++ intercalate "    " [l1, l2, l3, l4, l5]
->   where
->     heading = "Simulation Time Breakdown: \n"
->     l1 = printf "%-9s %-9s %-9s %-9s %-9s\n" "simulated" "session" "backup" "scheduled" "observed" 
->     l2 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t1 t2 t3 t6 t7
->     l3 = printf "%-9s %-9s %-9s %-9s %-9s\n"  "canceled" "obsBackup" "totalDead" "schedDead" "failedBckp"
->     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
->     l5 = crossCheckSimulationBreakdown t1 t6 t7 t8 t9 t10 t11 t12 
->     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) = breakdownSimulationTimes ss dt dur observed canceled
-
-> reportSemesterTimes :: [Session] -> [Period] -> String 
-> reportSemesterTimes ss ps = do
->     heading ++ intercalate "    " [hdr, l1, l2, l3, l4]
->   where
->     heading = "Simulation By Semester: \n"
->     hdr = printf "%s   %-9s %-9s %-9s %-9s\n" "Sem" "Total" "Backup" "Obs" "ObsBp" 
->     l1 = reportSemesterHrs "05C" ss ps 
->     l2 = reportSemesterHrs "06A" ss ps 
->     l3 = reportSemesterHrs "06B" ss ps 
->     l4 = reportSemesterHrs "06C" ss ps 
-
- 
-> reportBandTimes :: [Session] -> [Period] -> String 
-> reportBandTimes ss ps = do
->     heading ++ intercalate "    " [hdr, l1, l2]
->   where
->     heading = "Simulation By Band: \n"
->     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
->     sessBandTimes = sessionBand ss
->     periodBandTimes = periodBand ps
->     l1 = "Sessions: " ++ toStr sessBandTimes
->     l2 = "Periods : " ++ toStr periodBandTimes
->     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
-
-
-> reportSemesterHrs :: String -> [Session] -> [Period] -> String
-> reportSemesterHrs sem ss ps  = printf "%s : %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs  
->   where
->     total = totalHrs ss (\s -> isInSemester s sem) 
->     totalBackup = totalHrs ss (\s -> isInSemester s sem && backup s)
->     totalObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem)
->     totalBackupObs = totalPeriodHrs ps (\p -> isPeriodInSemester p sem && pBackup p)
-
-> reportScheduleScores :: [(String, [Score])] -> String
-> reportScheduleScores scores =
->   heading ++ intercalate "    " [obsEff, atmEff, trkEff, srfEff]
->     where
->   heading = "Schedule Score Checks: \n"
->   error = "WARNING: "
->   getScores name s = snd . head $ filter (\x -> fst x == name) s
->   checkNormalized scores key name = if not . normalized $ getScores key scores then error ++ name ++ " not Normalized!\n" else "0.0 <= " ++ name ++ " <= 1.0\n"
->   obsEff = checkNormalized scores "obsEff" "Observing Efficiency"
->   atmEff = checkNormalized scores "atmEff" "Atmospheric Opacity"
->   trkEff = checkNormalized scores "trkEff" "Tracking Efficiency"
->   srfEff = checkNormalized scores "srfEff" "Surface Observing Efficiency"
-
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") days ""
+>     start      = fromGregorian 2006 2 1 0 0 0

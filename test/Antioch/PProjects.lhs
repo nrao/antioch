@@ -23,7 +23,7 @@
 > }
 
 > p1sessions' = [
->     defaultOpen {
+>     defaultSession {
 >         sId = 1
 >       , sName = "GB"
 >       , periods = []
@@ -33,11 +33,11 @@
 >       , frequency = 27.5
 >       , ra = hrs2rad 6.4
 >       , dec = deg2rad 10.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 2
 >       , sName = "CV"
 >       , periods = []
@@ -47,11 +47,11 @@
 >       , frequency = 4.3
 >       , ra = hrs2rad 12.3
 >       , dec = deg2rad 30.2
->       , receivers = [Rcvr4_6]
+>       , receivers = [[Rcvr4_6]]
 >       , band = C
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 3
 >       , sName = "LP"
 >       , periods = [
@@ -65,11 +65,11 @@
 >       , frequency = 5.4
 >       , ra = hrs2rad 12.3
 >       , dec = deg2rad 5.4
->       , receivers = [Rcvr4_6]
+>       , receivers = [[Rcvr4_6]]
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 4
 >       , sName = "TX"
 >       , totalTime = 40*60
@@ -78,11 +78,11 @@
 >       , frequency = 17.8
 >       , ra = hrs2rad 19.9
 >       , dec = deg2rad 15.5
->       , receivers = [Rcvr18_22]
+>       , receivers = [[Rcvr18_22]]
 >       , band = K
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 5
 >       , sName = "VA"
 >       , totalTime = 30*60
@@ -91,11 +91,11 @@
 >       , frequency = 22.7
 >       , ra = hrs2rad 12.9
 >       , dec = deg2rad 29.2
->       , receivers = [Rcvr22_26]
+>       , receivers = [[Rcvr22_26]]
 >       , band = K
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 6
 >       , sName = "WV"
 >       , totalTime = 120*60
@@ -104,11 +104,11 @@
 >       , frequency = 34.9
 >       , ra = hrs2rad 4.2
 >       , dec = deg2rad 17.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 7
 >       , sName = "AS"
 >       , totalTime = 40*60
@@ -117,11 +117,11 @@
 >       , frequency = 0.5
 >       , ra = hrs2rad 14.3
 >       , dec = deg2rad 18.4
->       , receivers = [Rcvr_450]
+>       , receivers = [[Rcvr_450]]
 >       , band = L
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 8
 >       , sName = "MH"
 >       , periods = [
@@ -140,7 +140,7 @@
 >       , frequency = 67.8
 >       , ra = hrs2rad 12.3
 >       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
+>       , receivers = [[Rcvr_PAR]]
 >       , band = W
 >       }
 >
@@ -252,7 +252,7 @@
 > }
 
 > p2sessions' = [
->     defaultOpen {
+>     defaultSession {
 >         sId = 15
 >       , sName = "GB_thesis"
 >       , periods = []
@@ -262,12 +262,12 @@
 >       , frequency = 27.5
 >       , ra = hrs2rad 6.4
 >       , dec = deg2rad 10.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , grade = GradeB
 >       , band = A
 >       }
 >
->   , defaultOpen {
+>   , defaultSession {
 >         sId = 16
 >       , sName = "WV_thesis"
 >       , periods = []
@@ -277,7 +277,7 @@
 >       , frequency = 34.9
 >       , ra = hrs2rad 4.2
 >       , dec = deg2rad 17.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , grade = GradeB
 >       , band = A
 >       }

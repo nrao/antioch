@@ -44,6 +44,17 @@
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
 
+> dt2semester :: DateTime -> String
+> dt2semester dt = yearStr ++ (drop 1 sem)
+>   where
+>     (year, month, _) = toGregorian' dt
+>     sem   | month <   2 = "0C"
+>           | month <   6 = "1A"
+>           | month <  10 = "1B"
+>           | month <= 12 = "1C"
+>     year' = if (take 1 sem) == "0" then year - 1 else year
+>     yearStr = drop 2 $ show year'
+
 QuickCheck Properties:
 
 > genDate :: Gen DateTime

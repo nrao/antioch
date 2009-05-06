@@ -44,7 +44,29 @@
 >   , test_historicalTime'
 >   , test_historicalLST
 >   , test_satisfactionRatio
+>   , test_scheduleHonorsFixed
 >     ]
+
+> test_scheduleHonorsFixed = TestCase $ do
+>     assertEqual "StatisticsTests_test_scheduleHonorsFixed_1" True (scheduleHonorsFixed fixed1 schd)
+>     assertEqual "StatisticsTests_test_scheduleHonorsFixed_2" False (scheduleHonorsFixed fixed2 schd)
+>     assertEqual "StatisticsTests_test_scheduleHonorsFixed_3" True (scheduleHonorsFixed [] schd)
+>   where
+>     s1 = defaultSession { sId = 1 }
+>     s2 = defaultSession { sId = 2 }
+>     s3 = defaultSession { sId = 3 }
+>     s4 = defaultSession { sId = 4 }
+>     ss = [s1, s2, s3, s4]
+>     dts = [ fromGregorian 2006 1 1 0 0 0 
+>           , fromGregorian 2006 1 2 0 0 0 
+>           , fromGregorian 2006 1 4 0 0 0 
+>           , fromGregorian 2006 1 5 0 0 0 
+>           ]
+>     durs = [60, 120, 60, 120]
+>     schd = zipWith3 mkPeriod ss dts durs 
+>     mkPeriod s start dur = Period s start dur 0.0 undefined False
+>     fixed1 = [(schd!!1)]
+>     fixed2 = [Period s2 (dts!!1) 30 0.0 undefined False]
 
 > test_count = TestCase $ do
 >     assertEqual "StatisticsTests_test_count1" exp1 cnt1
