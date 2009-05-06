@@ -167,7 +167,7 @@ Only 20 percent of the low freq. sessions are backups
 >                --, totalTime      = matchAvTime totalTime (round2quarter minD)
 >                , totalTime      = round2quarter totalTime
 >                , grade          = g
->                , receivers      = [r]
+>                , receivers      = [[r]]
 >                , backup         = bk
 >                }
 
@@ -192,7 +192,10 @@ only schedule Periods of length minDuration.
 >     return $ s : ss
 
 > prop_Grade s = grade s `elem` [GradeA, GradeB, GradeC]
-> prop_Receiver s = head (receivers s) == band2Receiver (band s)
+
+Assumes a single scalar rcvr group
+
+> prop_Receiver s = (head . head . receivers $ s) == band2Receiver (band s)
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
 

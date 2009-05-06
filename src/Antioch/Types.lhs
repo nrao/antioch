@@ -32,6 +32,12 @@
 >               | Holography
 >               deriving (Eq, Show, Read)
 
+Sessions store their desired Rcvrs in Conjugate Normal Form (CNF).
+Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
+'or' receiver groups must evaluate as True.
+
+> type ReceiverGroup = [Receiver]
+
 > data Grade = GradeA | GradeB | GradeC deriving (Eq, Show, Read)
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
@@ -55,7 +61,7 @@ use a single data structure for all sessions.
 >   , ra          :: Radians
 >   , dec         :: Radians
 >   , backup      :: Bool
->   , receivers   :: [Receiver]
+>   , receivers   :: [ReceiverGroup]
 >   , enabled     :: Bool
 >   , authorized  :: Bool
 >   , grade       :: Grade
@@ -172,7 +178,7 @@ Simple Functions for Periods:
 >   , ra          = 0.0
 >   , dec         = 0.0
 >   , backup      = False
->   , receivers   = [Rcvr12_18]
+>   , receivers   = [[Rcvr12_18]]
 >   , enabled     = False
 >   , authorized  = False
 >   , grade       = GradeA

@@ -588,7 +588,8 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         ras    = [ 2.67,  0.873562]
 >         decs   = [ 0.13, -0.108025]
 >         freqs  = [39.76,       2.0]
->         rcvrs  = [[Rcvr26_40],[Rcvr1_2]]
+>         --rcvrs  = [[Rcvr26_40],[Rcvr1_2]]
+>         rcvrs  = [[[Rcvr26_40]],[[Rcvr1_2]]]
 >         genBugSessions n r d f rcvr = defaultSession {
 >             sName = n, ra = r, dec = d, frequency = f, receivers = rcvr
 >         }

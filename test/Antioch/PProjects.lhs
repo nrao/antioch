@@ -33,7 +33,7 @@
 >       , frequency = 27.5
 >       , ra = hrs2rad 6.4
 >       , dec = deg2rad 10.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , band = A
 >       }
 >
@@ -47,7 +47,7 @@
 >       , frequency = 4.3
 >       , ra = hrs2rad 12.3
 >       , dec = deg2rad 30.2
->       , receivers = [Rcvr4_6]
+>       , receivers = [[Rcvr4_6]]
 >       , band = C
 >       }
 >
@@ -65,7 +65,7 @@
 >       , frequency = 5.4
 >       , ra = hrs2rad 12.3
 >       , dec = deg2rad 5.4
->       , receivers = [Rcvr4_6]
+>       , receivers = [[Rcvr4_6]]
 >       , band = A
 >       }
 >
@@ -78,7 +78,7 @@
 >       , frequency = 17.8
 >       , ra = hrs2rad 19.9
 >       , dec = deg2rad 15.5
->       , receivers = [Rcvr18_22]
+>       , receivers = [[Rcvr18_22]]
 >       , band = K
 >       }
 >
@@ -91,7 +91,7 @@
 >       , frequency = 22.7
 >       , ra = hrs2rad 12.9
 >       , dec = deg2rad 29.2
->       , receivers = [Rcvr22_26]
+>       , receivers = [[Rcvr22_26]]
 >       , band = K
 >       }
 >
@@ -104,7 +104,7 @@
 >       , frequency = 34.9
 >       , ra = hrs2rad 4.2
 >       , dec = deg2rad 17.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , band = A
 >       }
 >
@@ -117,7 +117,7 @@
 >       , frequency = 0.5
 >       , ra = hrs2rad 14.3
 >       , dec = deg2rad 18.4
->       , receivers = [Rcvr_450]
+>       , receivers = [[Rcvr_450]]
 >       , band = L
 >       }
 >
@@ -140,7 +140,7 @@
 >       , frequency = 67.8
 >       , ra = hrs2rad 12.3
 >       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
+>       , receivers = [[Rcvr_PAR]]
 >       , band = W
 >       }
 >
@@ -262,7 +262,7 @@
 >       , frequency = 27.5
 >       , ra = hrs2rad 6.4
 >       , dec = deg2rad 10.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , grade = GradeB
 >       , band = A
 >       }
@@ -277,7 +277,7 @@
 >       , frequency = 34.9
 >       , ra = hrs2rad 4.2
 >       , dec = deg2rad 17.4
->       , receivers = [Rcvr26_40]
+>       , receivers = [[Rcvr26_40]]
 >       , grade = GradeB
 >       , band = A
 >       }

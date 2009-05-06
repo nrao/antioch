@@ -797,8 +797,8 @@ revealed a bug where scores are turning negative in pact.
 >   where
 >     starttime = fromGregorian 2006 1 1 0 0 0
 >     duration = 24*60
->     s19 = defaultSession {sId = 19, sName = "19", periods = [], totalTime = 690, minDuration = 345, maxDuration = 435, timeBetween = 0, frequency = 8.378224, ra = 1.2237936, dec = 0.81245035, backup = False, receivers = [Rcvr8_10], enabled = False, authorized = False, grade = GradeA, band = X}
->     s3 =  defaultSession {sId = 3, sName = "3", periods = [], totalTime = 630, minDuration = 315, maxDuration = 450, timeBetween = 0, frequency = 14.540758, ra = 4.53959, dec = 3.422137e-2, backup = False, receivers = [Rcvr12_18], enabled = False, authorized = False, grade = GradeC, band = U}
+>     s19 = defaultSession {sId = 19, sName = "19", periods = [], totalTime = 690, minDuration = 345, maxDuration = 435, timeBetween = 0, frequency = 8.378224, ra = 1.2237936, dec = 0.81245035, backup = False, receivers = [[Rcvr8_10]], enabled = False, authorized = False, grade = GradeA, band = X}
+>     s3 =  defaultSession {sId = 3, sName = "3", periods = [], totalTime = 630, minDuration = 315, maxDuration = 450, timeBetween = 0, frequency = 14.540758, ra = 4.53959, dec = 3.422137e-2, backup = False, receivers = [[Rcvr12_18]], enabled = False, authorized = False, grade = GradeC, band = U}
 >     ss = [s3, s19]
 
 > test_Pack7 = TestCase $ do

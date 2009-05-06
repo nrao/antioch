@@ -337,13 +337,23 @@ Translates the total/used times pairs into pressure factors.
 >         GradeB -> 0.9
 >         GradeC -> 0.1
 
-Checks that all receivers needed by the given session will be available
-at the given time./
+Checks that all receiver groups needed by the given session will be available
+at the given time.  Sessions store their desired receivers in Conjugate 
+Normal Form (CNF).  For example: receivers = [K OR L] AND [K OR S] is CNF for
+saying, "This Session needs to be run w/ the Ka receiver, or, if that's not
+available, the L *and* S receivers".
+
+In CNF, each reciever group (AND'd []'s) must be evaluated as true for a 
+given point in time for this score factor to evaluate as True.  For example,
+if for a given point in time, K is not up, but L and S are, then this score
+factor will be True.
 
 > receiver                                  :: ScoreFunc
 > receiver dt Session { receivers = rcvrs } = do
 >     scheduled <- fmap (getReceivers dt) receiverSchedule
->     boolean "receiver" . Just $ all (`elem` scheduled) rcvrs
+>     boolean "receiver" . Just $  evalCNF scheduled rcvrs
+>   where
+>     evalCNF av rs = all (==True) $ map (\rg -> any (==True) $ map (\r -> elem r av) rg) rs
 
 Returns list of receivers that will be up at the given time.
 
