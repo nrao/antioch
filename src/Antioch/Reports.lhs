@@ -765,8 +765,9 @@ be confused and raise false alarams.
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
 >     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
 >     start <- getCPUTime
->     --(results, trace) <- simulate strategyName w rs dt dur int history [] ss
->     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
+>     -- TBF: better way of switching between the two types of simulations?
+>     (results, trace) <- simulate strategyName w rs dt dur int history [] ss
+>     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     stop <- getCPUTime
 >     let execTime = fromIntegral (stop-start) / 1.0e12 
 >     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
