@@ -350,9 +350,18 @@ factor will be True.
 
 > receiver                                  :: ScoreFunc
 > receiver dt Session { receivers = rcvrs } = do
->     scheduled <- fmap (getReceivers dt) receiverSchedule
->     boolean "receiver" . Just $  evalCNF scheduled rcvrs
+>     rs <- receiverSchedule
+>     boolean "receiver" . Just $ receiver' dt rcvrs rs 
+
+Interpret an empty ReceiverSchedule, not as an accident, but as meaning
+that we don't really care about receivers - effectively, all receivers are
+up, all the time.
+
+> receiver' :: DateTime -> [ReceiverGroup] -> ReceiverSchedule -> Bool
+> receiver' _   _    [] = True
+> receiver' dt rcvrs rs = evalCNF scheduled rcvrs 
 >   where
+>     scheduled = getReceivers dt rs
 >     evalCNF av rs = all (==True) $ map (\rg -> any (==True) $ map (\r -> elem r av) rg) rs
 
 Returns list of receivers that will be up at the given time.
@@ -558,6 +567,7 @@ Need to translate a session's factors into the final product score.
 >       , zenithAngleLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
+>       , receiver
 >       ] dt s
 
 Convenience function for translating go/no-go into a factor.
