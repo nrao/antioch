@@ -592,8 +592,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     return $ (rs, ss, projs, history)
 
 > simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput = return $ ([], ss, projs, history)
+> simulatedInput = return $ (rs, ss, projs, history)
 >   where
+>     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
 >     projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
