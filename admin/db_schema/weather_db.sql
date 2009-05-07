@@ -311,6 +311,39 @@ CREATE INDEX forecasts_date ON forecasts USING btree (date);
 
 CREATE INDEX forecasts_date_and_type ON forecasts USING btree (date, forecast_type_id);
 
+--
+-- Name: hour_angle_boundaries; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE TABLE hour_angle_boundaries (
+    id integer NOT NULL,
+    frequency integer NOT NULL,
+    declination integer NOT NULL,
+    boundary double precision
+);
+
+
+ALTER TABLE public.hour_angle_boundaries OWNER TO dss;
+
+--
+-- Name: hour_angle_boundaries_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE hour_angle_boundaries_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+ALTER TABLE public.hour_angle_boundaries_id_seq OWNER TO dss;
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dss
+--
+
+ALTER TABLE hour_angle_boundaries ALTER COLUMN id SET DEFAULT nextval('hour_angle_boundaries_id_seq'::regclass);
+
 
 --
 -- Name: forecast_by_frequency_forecast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
