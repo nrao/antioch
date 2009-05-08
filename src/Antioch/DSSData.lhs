@@ -39,7 +39,23 @@
 > populateProject cnn project = do
 >     sessions' <- getSessions (pId project) cnn
 >     sessions <- mapM (populateSession cnn) sessions'
->     return $ makeProject project (timeTotal project) sessions
+>     -- TBF: only for 09B! Then get observer blackouts!
+>     blackouts <- getProjectBlackouts (pId project) cnn 
+>     let project' = project { pBlackouts = blackouts }
+>     return $ makeProject project' (timeTotal project') sessions --blackouts
+
+TBF: Let's say it again.  This is only for scheduling 09B.  Then we'll
+want to ditch this, and get the observer blackouts.
+
+> getProjectBlackouts :: Int -> Connection -> IO [DateRange]
+> getProjectBlackouts projId cnn = handleSqlError $ do 
+>   result <- quickQuery' cnn query xs 
+>   return $ toBlackoutList result 
+>     where
+>       query = "SELECT pb.start, pb.end FROM project_blackouts_09b AS pb WHERE pb.project_id = ?"
+>       xs = [toSql projId]
+>       toBlackoutList = map toDateRange
+>       toDateRange (start:end:[]) = (fromSql start, fromSql end)
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!
