@@ -108,6 +108,7 @@ Tying the knot.
 >   , thesis    :: !Bool
 >   , timeTotal :: !Minutes
 >   , observers :: [Observer]
+>   , pBlackouts :: [DateRange] -- TBF: only needed for 09B.  delete me!!!
 >   } deriving Eq
 
 > timeUsed :: Project -> Minutes
@@ -215,6 +216,7 @@ Simple Functions for Periods:
 >   , thesis    = False
 >   , timeTotal = 0
 >   , observers = [defaultObserver]
+>   , pBlackouts = []
 >   }
 
 > defaultPeriod = Period {

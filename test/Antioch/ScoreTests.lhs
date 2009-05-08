@@ -30,10 +30,13 @@ codes weather server used for unit tests (TWeather).
 >   , test_minObservingEff
 >   , test_minimumObservingConditions
 >   , test_minTsysPrime
+>   , test_obsAvailable
+>   , test_observerAvailable
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
 >   , test_politicalFactors
+>   , test_projectAvailable
 >   , test_projectCompletion
 >   , test_receiver
 >   , test_receiverTemperature
@@ -541,6 +544,34 @@ Look at the scores over a range where none are zero.
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
 >     expectedTotal = 24.993183 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
+
+> test_projectAvailable = TestCase $ do
+>   w <- getWeather Nothing
+>   fs <- runScoring w [] (projectAvailable dt s)
+>   assertEqual "test_projectAvailable_1" expTrue (eval fs)
+>   fs <- runScoring w [] (projectAvailable dt s2)
+>   assertEqual "test_projectAvailable_2" expFalse (eval fs)
+>   fs <- runScoring w [] (projectAvailable dt2 s2)
+>   assertEqual "test_projectAvailable_3" expTrue (eval fs)
+>   fs <- runScoring w [] (projectAvailable dt s3)
+>   assertEqual "test_projectAvailable_4" expFalse (eval fs)
+>   fs <- runScoring w [] (projectAvailable dt2 s3)
+>   assertEqual "test_projectAvailable_5" expTrue (eval fs)
+>   fs <- runScoring w [] (projectAvailable dt3 s3)
+>   assertEqual "test_projectAvailable_6" expFalse (eval fs)
+>     where
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       s   = defaultSession
+>       s2  = defaultSession { project = p }
+>       p   = defaultProject { pBlackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       p2  = defaultProject { pBlackouts = bs ++ bs2 }
+>       s3  = defaultSession { project = p2}
+>       expTrue = 1.0
+>       expFalse = 0.0
 
 > test_obsAvailable = TestCase $ do
 >   assertEqual "test_obsAvailable_1" True (obsAvailable dt s)
