@@ -107,6 +107,7 @@ Tying the knot.
 >   , sessions  :: [Session]
 >   , thesis    :: !Bool
 >   , timeTotal :: !Minutes
+>   , observers :: [Observer]
 >   } deriving Eq
 
 > timeUsed :: Project -> Minutes
@@ -120,6 +121,20 @@ Tying the knot.
 
 > instance Show Project where
 >     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeUsed $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
+
+> type DateRange = (DateTime, DateTime)
+
+> inDateRange :: DateTime -> DateRange -> Bool
+> inDateRange dt r = start < dt && dt < end
+>   where
+>     start = fst r
+>     end   = snd r
+
+> data Observer = Observer {
+>     sancioned    :: Bool
+>   , reservations :: [DateRange]
+>   , blackouts    :: [DateRange]
+> } deriving (Eq, Show, Read)
 
 > data Period  = Period  {
 >     session   :: Session
@@ -186,6 +201,12 @@ Simple Functions for Periods:
 >   , sType       = Open
 >   }
 
+> defaultObserver = Observer {
+>     sancioned    = True
+>   , reservations = []
+>   , blackouts    = []
+> }
+
 > defaultProject = Project {
 >     pId       = 0
 >   , pName     = ""
@@ -193,6 +214,7 @@ Simple Functions for Periods:
 >   , sessions  = [defaultSession]
 >   , thesis    = False
 >   , timeTotal = 0
+>   , observers = [defaultObserver]
 >   }
 
 > defaultPeriod = Period {
