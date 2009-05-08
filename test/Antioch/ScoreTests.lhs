@@ -542,6 +542,50 @@ Look at the scores over a range where none are zero.
 >     expectedTotal = 24.993183 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
+> test_obsAvailable = TestCase $ do
+>   assertEqual "test_obsAvailable_1" True (obsAvailable dt s)
+>   assertEqual "test_obsAvailable_2" False (obsAvailable dt s2)
+>   assertEqual "test_obsAvailable_3" True (obsAvailable dt2 s2)
+>     where
+>       dt  = fromGregorian 2006 2 1 0 0 0
+>       dt2 = fromGregorian 2006 2 7 0 0 0
+>       s   = defaultSession
+>       s2  = defaultSession { project = p }
+>       p   = defaultProject { observers = [o] }
+>       o   = defaultObserver { blackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+
+> test_observerAvailable = TestCase $ do
+>   w <- getWeather Nothing
+>   fs <- runScoring w [] (observerAvailable dt s)
+>   assertEqual "test_observerAvailable_1" expTrue (eval fs)
+>   fs <- runScoring w [] (observerAvailable dt s2)
+>   assertEqual "test_observerAvailable_2" expFalse (eval fs)
+>   fs <- runScoring w [] (observerAvailable dt2 s2)
+>   assertEqual "test_observerAvailable_3" expTrue (eval fs)
+>   fs <- runScoring w [] (observerAvailable dt s3)
+>   assertEqual "test_observerAvailable_4" expFalse (eval fs)
+>   fs <- runScoring w [] (observerAvailable dt2 s3)
+>   assertEqual "test_observerAvailable_5" expTrue (eval fs)
+>   fs <- runScoring w [] (observerAvailable dt3 s3)
+>   assertEqual "test_observerAvailable_6" expTrue (eval fs)
+>     where
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       s   = defaultSession
+>       s2  = defaultSession { project = p }
+>       p   = defaultProject { observers = [o] }
+>       o   = defaultObserver { blackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       o2  = defaultObserver { blackouts = bs ++ bs2 }
+>       p2  = defaultProject { observers = [o, o2] }
+>       s3  = defaultSession { project = p2}
+>       expTrue = 1.0
+>       expFalse = 0.0
+
+
 Test utilities
 
 > assertAlmostEqual :: String -> Int -> Float -> Float -> IO ()

@@ -372,6 +372,19 @@ Returns list of receivers that will be up at the given time.
 >         [] -> []
 >         xs -> snd $ last xs 
 
+Scoring Factors not covered in Memo 5.2
+
+Is there an observer available for this time and session?
+
+> observerAvailable :: ScoreFunc
+> observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
+
+> obsAvailable :: DateTime -> Session -> Bool
+> obsAvailable dt s = not $ all (==True) $ map (isBlackedOut dt) (obs s)
+>   where 
+>     obs s = observers . project $ s
+>     isBlackedOut dt obs = any (==True) $ map (inDateRange dt) (blackouts obs)
+
 
 Scoring utilities
 
@@ -568,6 +581,7 @@ Need to translate a session's factors into the final product score.
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , receiver
+>       , observerAvailable
 >       ] dt s
 
 Convenience function for translating go/no-go into a factor.
