@@ -14,9 +14,24 @@
 > tests = TestList [
 >     test_best
 >   , test_constrain
+>   , test_obeyProjectBlackouts
 >   , test_schedMinDuration
 >   , test_schedMinDuration_starvation
 >   ]
+
+> test_obeyProjectBlackouts = TestCase $ do
+>     assertEqual "test_obeyProjectBlackouts" [] (obeyProjectBlackouts [per])
+>     assertEqual "test_obeyProjectBlackouts" [(per2, bo)] (obeyProjectBlackouts [per, per2])
+>   where
+>     bo = (fromGregorian 2006 1 1 0 0 0, fromGregorian 2006 1 7 0 0 0)
+>     proj = defaultProject { pBlackouts = [bo] }
+>     s = defaultSession { project = proj }
+>     dt  = fromGregorian 2006 1 9 0 0 0
+>     dt2 = fromGregorian 2006 1 2 0 0 0
+>     per = defaultPeriod { session = s
+>                         , startTime = dt
+>                         , duration = 180 }
+>     per2 = per { startTime = dt2 } 
 
 This test of this strategy should have results that are a subset of the
 similar test in SimulationTests.
