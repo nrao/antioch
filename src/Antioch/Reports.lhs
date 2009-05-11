@@ -15,7 +15,7 @@
 > import Antioch.DSSData
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate)
+> import Data.List (intercalate, sort)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -588,7 +588,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     rs <- getReceiverSchedule $ Just dt
 >     projs <- getProjects
 >     let ss = concatMap sessions projs
->     let history = concatMap periods ss
+>     let history = sort $ concatMap periods ss
 >     return $ (rs, ss, projs, history)
 
 > simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
@@ -748,7 +748,7 @@ be confused and raise false alarams.
 >     dates rs = concatMap (\(dt, rcvrs) -> (show . toSqlString $ dt) ++ " : " ++ (show rcvrs) ++ "\n") rs
 
 > reportPreScheduled :: [Period] -> String
-> reportPreScheduled ps = hdr ++ (printPeriods ps)
+> reportPreScheduled ps = hdr ++ (printPeriods . sort $ ps)
 >   where
 >     hdr = "Pre-Schedule Periods:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
@@ -789,6 +789,11 @@ be confused and raise false alarams.
 >     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
+>     -- TBF: Here's what you need to call if you the new TP's should be 
+>     -- written to the DB.  Problem: results contains the schedule, which
+>     -- is a combo of the history (pre-scheduled periods) and newly 
+>     -- scheduled periods.  We need to write only the new ones to the DB.
+>     -- putPeriods results
 >   where
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
