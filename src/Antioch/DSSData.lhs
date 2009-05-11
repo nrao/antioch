@@ -170,10 +170,21 @@ TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 >     optPeriods <- periodsFromOpts cnn s
 >     return $ sort $ dbPeriods ++ optPeriods
 
-TBF: no Period table in the DB yet.
-
 > fetchPeriods :: Connection -> Session -> IO [Period]
-> fetchPeriods cnn s = return []
+> fetchPeriods cnn s = do 
+>   result <- quickQuery' cnn query xs 
+>   return $ toPeriodList result
+>   where
+>     xs = [toSql . sId $ s]
+>     query = "SELECT id, session_id, start, duration, score, forecast, backup FROM periods WHERE session_id = ?"
+>     toPeriodList = map toPeriod
+>     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
+>       defaultPeriod { startTime = fromSql start
+>                     , duration = (*60) . fromSql $ durHrs
+>                     , pScore = fromSql score
+>                     , pForecast = fromSql forecast
+>                     , pBackup = fromSql backup
+>                     }
 
 Opportunities for Fixed Sessions should be honored via Periods
 
@@ -195,3 +206,28 @@ Opportunities for Fixed Sessions should be honored via Periods
 >                     , duration = (*60) . fromSql $ durHrs
 >                     }
 
+Write Telescope Periods to the database.
+TBF: there are no checks here to make sure we aren't adding periods that
+are already in the DB.
+
+> putPeriods :: [Period] -> IO ()
+> putPeriods ps = do
+>   cnn <- connect
+>   result <- mapM (putPeriod cnn) ps
+>   commit cnn
+
+> putPeriod :: Connection -> Period -> IO [[SqlValue]] 
+> putPeriod cnn p = do
+>   quickQuery' cnn query xs 
+>     where
+>       xs = [toSql . sId . session $ p
+>           , toSql $ (toSqlString . startTime $ p) ++ "-00" -- UTC time zone
+>           , minutesToSqlHrs . duration $ p
+>           , toSql . pScore $ p
+>           , toSql . toSqlString . pForecast $ p
+>           , toSql . pBackup $ p
+>             ]
+>       query = "INSERT INTO periods VALUES (DEFAULT, ?, ?, ?, ?, ?, ?);"
+
+> minutesToSqlHrs :: Minutes -> SqlValue
+> minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
