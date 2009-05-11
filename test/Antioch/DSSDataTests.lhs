@@ -11,13 +11,19 @@
 > import List (nub, sort)
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
+> import Database.HDBC
 
 TBF: all these tests are based off a DB that could change; we need to set up a framework so that the unit tests don't break so easy.
 
+TBF: tests hang when all are run togethor - I don't think I'm handling the 
+connection to the DB correctly.
+
 > tests = TestList [
+>       --test_fetchPeriods
 >       test_getProjects
 >     , test_getProjectData
 >     , test_getProjectsProperties
+>     --, test_putPeriods
 >     , test_scoreDSSData
 >     ]
 
@@ -84,7 +90,55 @@ generated: it's the input we want to test, really.
 >                    -- TBF!! &&  (totalTime s)     >= (minDuration s)
 >                     &&  (validRA s) && (validDec s)
 >       validPeriods allPeriods = not . internalConflicts $ allPeriods
->   
->     
  
+> test_putPeriods = TestCase $ do
+>   r1 <- getNumRows "periods"
+>   putPeriods [p1]
+>   r2 <- getNumRows "periods"
+>   cleanup "periods"
+>   assertEqual "test_putPeriods" True (r2 == (r1 + 1)) 
+>     where
+>       dt = fromGregorian 2006 1 1 0 0 0
+>       p1 = defaultPeriod { session = defaultSession { sId = 1 }
+>                          , startTime = dt
+>                          , pForecast = dt }
 
+TBF: this fails because there is something going on with our datetimes in
+the DB regarding the time zone - our times are off by ~5 hrs.  So a datetime
+written to the DB doesn't come back as your wrote it ...
+Need to straighten all this shit out.
+
+> test_fetchPeriods = TestCase $ do
+>   putPeriods [p1]
+>   cnn <- connect
+>   ps' <- fetchPeriods cnn s
+>   -- fetchPeriods doesn't set the period's session, so we'l do that
+>   let ps = map (\p -> p { session = s }) ps'
+>   print [p1]
+>   print ps
+>   disconnect cnn
+>   cleanup "periods"
+>   assertEqual "test_fetchPeriods" [p1] ps 
+>     where
+>       dt = fromGregorian 2006 1 1 0 0 0
+>       s  = defaultSession { sId = 1 }
+>       p1 = defaultPeriod { session = s
+>                          , startTime = dt
+>                          , pForecast = dt }
+
+
+Test Utilities: 
+
+> getNumRows :: String -> IO Int
+> getNumRows tableName = do 
+>     cnn <- connect
+>     r <- quickQuery' cnn ("SELECT * FROM " ++ tableName) []
+>     disconnect cnn
+>     return $ length r
+
+> cleanup :: String -> IO () 
+> cleanup tableName = do
+>     cnn <- connect
+>     run cnn ("TRUNCATE TABLE " ++ tableName) []
+>     commit cnn
+>     disconnect cnn
