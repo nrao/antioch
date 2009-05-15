@@ -65,7 +65,7 @@ get picked up!!!
 > getSessions projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   let ss' = toSessionDataList result
->   ss <- mapM (updateRcvrs cnn) ss'
+>   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
 >       query = "SELECT sessions.id, sessions.name, sessions.min_duration, sessions.max_duration, sessions.time_between, sessions.frequency, allotment.total_time, allotment.grade, targets.horizontal, targets.vertical, status.enabled, status.authorized, status.backup, session_types.type FROM sessions, allotment, targets, status, session_types WHERE allotment.id = sessions.allotment_id AND targets.session_id = sessions.id AND sessions.status_id = status.id AND sessions.session_type_id = session_types.id AND sessions.project_id = ?"
@@ -207,14 +207,20 @@ TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 Opportunities for Fixed Sessions should be honored via Periods
 
 > periodsFromOpts :: Connection -> Session -> IO [Period]
+> periodsFromOpts cnn s = periodsFromOpts' cnn s -- TBF: ignore types for now!!!
+> {-
 > periodsFromOpts cnn s | sType s == Open = return [] 
 >                       | sType s == Windowed = return [] 
 >                       | sType s == Fixed = periodsFromOpts' cnn s
+> -}
 
 > periodsFromOpts' :: Connection -> Session -> IO [Period]
 > periodsFromOpts' cnn s = do
 >   result <- quickQuery' cnn query xs 
 >   return $ toPeriodList result
+>   --let r = toPeriodList result
+>   --print r
+>   --return r
 >   where
 >     xs = [toSql . sId $ s]
 >     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities where windows.id = opportunities.window_id and windows.session_id = ?"
