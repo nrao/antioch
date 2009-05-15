@@ -222,6 +222,7 @@ Opportunities for Fixed Sessions should be honored via Periods
 >     toPeriod (wid:wreq:start:durHrs:[]) = 
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
+>                     , pForecast = sqlToDateTime start -- undefined is bad!
 >                     }
 
 Write Telescope Periods to the database.
@@ -239,7 +240,7 @@ are already in the DB.
 >   quickQuery' cnn query xs 
 >     where
 >       xs = [toSql . sId . session $ p
->           , toSql $ (toSqlString . startTime $ p) ++ "-00" -- UTC time zone
+>           , toSql $ (toSqlString . startTime $ p) 
 >           , minutesToSqlHrs . duration $ p
 >           , toSql . pScore $ p
 >           , toSql . toSqlString . pForecast $ p
