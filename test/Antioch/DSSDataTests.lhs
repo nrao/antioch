@@ -49,7 +49,7 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 9 (length allPeriods)    
 >     assertEqual "test_getProjects11" (fromGregorian 2009 6 9 13 30 0) (startTime . head $ allPeriods)    
->     assertEqual "test_getProjects12" 60 (duration . head $ allPeriods)    
+>     assertEqual "test_getProjects12" 90 (duration . head $ allPeriods)    
 >     assertEqual "test_getProjects13" 1 (length . nub $ map (sType . session) allPeriods) 
 >     assertEqual "test_getProjects14" Fixed (sType . session . head $ allPeriods) 
 >     assertEqual "test_getProjects15" True ((length $ concatMap pBlackouts ps) > 0) 

@@ -76,10 +76,10 @@ get picked up!!!
 >             sId = fromSql id 
 >           , sName = fromSql name
 >           , frequency   = fromSql freq
->           , minDuration = (*60) $ fromSqlInt mind
->           , maxDuration = (*60) $ fromSqlInt maxd
->           , timeBetween = (*60) $ fromSqlInt between
->           , totalTime   = (*60) $ fromSql time 
+>           , minDuration = fromSqlMinutes mind
+>           , maxDuration = fromSqlMinutes maxd
+>           , timeBetween = fromSqlMinutes between
+>           , totalTime   = fromSqlMinutes time 
 >           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
 >           , dec = fromSql v  
 >           , grade = toGradeType fltGrade 
@@ -99,6 +99,20 @@ value of the right type.
 
 > fromSqlInt SqlNull = 0
 > fromSqlInt x       = fromSql x
+
+> fromSqlMinutes         :: SqlValue -> Minutes
+> fromSqlMinutes SqlNull = 0
+> fromSqlMinutes x       = sqlHrsToMinutes x
+
+> sqlHrsToHrs' :: SqlValue -> Float
+> sqlHrsToHrs' hrs = fromSql hrs
+
+> hrsToMinutes :: Float -> Minutes
+> hrsToMinutes hrs = floor $ 60.0 * hrs
+
+> sqlHrsToMinutes :: SqlValue -> Minutes
+> sqlHrsToMinutes hrs = hrsToMinutes . sqlHrsToHrs' $ hrs
+
 
 TBF: is this totaly legit?  and should it be somewhere else?
 
@@ -181,7 +195,7 @@ TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 >     toPeriodList = map toPeriod
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
->                     , duration = (*60) . fromSql $ durHrs
+>                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
 >                     , pForecast = fromSql forecast
 >                     , pBackup = fromSql backup
@@ -207,7 +221,7 @@ Opportunities for Fixed Sessions should be honored via Periods
 >     toPeriodList = map toPeriod
 >     toPeriod (wid:wreq:start:durHrs:[]) = 
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
->                     , duration = (*60) . fromSql $ durHrs
+>                     , duration = fromSqlMinutes durHrs
 >                     }
 
 Write Telescope Periods to the database.
