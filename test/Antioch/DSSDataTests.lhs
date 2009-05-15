@@ -6,14 +6,15 @@
 > import Antioch.Score
 > import Antioch.DSSData
 > import Antioch.Utilities
-> import Antioch.Generators (internalConflicts, validRA, validDec)
+> import Antioch.Generators (internalConflicts, internalConflicts', validRA, validDec)
 > import Maybe
 > import List (nub, sort)
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
 
-TBF: all these tests are based off a DB that could change; we need to set up a framework so that the unit tests don't break so easy.
+The DB used for these unit tests is the DB used for the simulation of the
+first two weeks of 09B, *w/ out* the resultant periods.
 
 TBF: tests hang when all are run togethor - I don't think I'm handling the 
 connection to the DB correctly.
@@ -30,7 +31,7 @@ connection to the DB correctly.
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
 >     d <- fetchProjectData cnn
->     assertEqual "test_getProjectData1" 104 (length d)  
+>     assertEqual "test_getProjectData1" 106 (length d)  
 >     assertEqual "test_getProjectData2" "BB240" (pName . head $ d)  
 >     assertEqual "test_getProjectData3" 48480 (timeTotal . head $ d)  
 
@@ -38,7 +39,7 @@ connection to the DB correctly.
 >     ps <- getProjects 
 >     let ss = sessions . head $ ps
 >     let allPeriods = sort $ concatMap periods $ concatMap sessions ps
->     assertEqual "test_getProjects1" 104 (length ps)  
+>     assertEqual "test_getProjects1" 106 (length ps)  
 >     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 48480 (timeTotal . head $ ps)  
@@ -47,10 +48,10 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
->     assertEqual "test_getProjects10" 9 (length allPeriods)    
->     assertEqual "test_getProjects11" (fromGregorian 2009 6 9 13 30 0) (startTime . head $ allPeriods)    
->     assertEqual "test_getProjects12" 90 (duration . head $ allPeriods)    
->     assertEqual "test_getProjects13" 1 (length . nub $ map (sType . session) allPeriods) 
+>     assertEqual "test_getProjects10" 137 (length allPeriods)    
+>     assertEqual "test_getProjects11" (fromGregorian 2009 6 1 11 0 0) (startTime . head $ allPeriods)    
+>     assertEqual "test_getProjects12" 630 (duration . head $ allPeriods)    
+>     assertEqual "test_getProjects13" 3 (length . nub $ map (sType . session) allPeriods) 
 >     assertEqual "test_getProjects14" Fixed (sType . session . head $ allPeriods) 
 >     assertEqual "test_getProjects15" True ((length $ concatMap pBlackouts ps) > 0) 
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head . tail $ ss)
