@@ -3,13 +3,16 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
+> import Antioch.Settings (hardwareScheduleDB)
 > import Maybe (fromJust)
 > import Data.List (groupBy)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
 > connect :: IO Connection
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani user=dss"
+> connect = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ hardwareScheduleDB ++ " user=dss" 
 
 Get the DB connection, and use it to fetch the dates, from the DB, then 
 convert to a ReceiverSchedule.

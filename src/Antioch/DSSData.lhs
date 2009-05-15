@@ -4,6 +4,7 @@
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Utilities (hrs2rad, deg2rad, printList)
+> import Antioch.Settings (dssDataDB)
 > import Data.List (groupBy, sort)
 > import Data.Char (toUpper)
 > import Maybe (fromJust)
@@ -11,7 +12,9 @@
 > import Database.HDBC.PostgreSQL
 
 > connect :: IO Connection
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani user=dss"
+> connect = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
 
 > getProjects :: IO [Project]
 > getProjects = do
