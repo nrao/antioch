@@ -3,12 +3,16 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
+> import Antioch.Settings (hardwareScheduleDB)
+> import Maybe (fromJust)
 > import Data.List (groupBy)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
 > connect :: IO Connection
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss user=dss"
+> connect = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ hardwareScheduleDB ++ " user=dss" 
 
 Get the DB connection, and use it to fetch the dates, from the DB, then 
 convert to a ReceiverSchedule.
@@ -41,5 +45,9 @@ convert to a ReceiverSchedule.
 >     where
 >       query = "SELECT name, start_date FROM receiver_schedule, receivers WHERE receiver_schedule.receiver_id = receivers.id ORDER BY start_date"
 >       toRcvrDates = map toRcvrElement 
->       toRcvrElement (rcvr:start:[]) = (fromSql start, read . fromSql $ rcvr)
+>       toRcvrElement (rcvr:start:[]) = (sqlToDateTime start, read . fromSql $ rcvr)
+
+> sqlToDateTime :: SqlValue -> DateTime
+> sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
+
 

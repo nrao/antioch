@@ -335,6 +335,8 @@ instance Ord t => Span (Interval t) where
 
 > internalConflicts xs = or [x `overlaps` (xs \\ [x]) | x <- xs]
 
+> internalConflicts' xs = [x | x <- xs, x `overlaps` (xs \\ [x])]
+
 > conflicts :: [Period] -> [Period] -> Bool
 > conflicts [] ys = False
 > conflicts (x:xs) ys | overlaps x (delete x ys) = True
