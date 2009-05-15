@@ -6,6 +6,7 @@
 > import Antioch.Utilities (hrs2rad, deg2rad, printList)
 > import Data.List (groupBy, sort)
 > import Data.Char (toUpper)
+> import Maybe (fromJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
@@ -52,10 +53,10 @@ want to ditch this, and get the observer blackouts.
 >   result <- quickQuery' cnn query xs 
 >   return $ toBlackoutList result 
 >     where
->       query = "SELECT pb.start, pb.end FROM project_blackouts_09b AS pb WHERE pb.project_id = ?"
+>       query = "SELECT pb.start_date, pb.end_date FROM project_blackouts_09b AS pb WHERE pb.project_id = ?"
 >       xs = [toSql projId]
 >       toBlackoutList = map toDateRange
->       toDateRange (start:end:[]) = (fromSql start, fromSql end)
+>       toDateRange (start:end:[]) = (sqlToDateTime start, sqlToDateTime end)
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!
@@ -79,8 +80,8 @@ get picked up!!!
 >           , maxDuration = (*60) $ fromSqlInt maxd
 >           , timeBetween = (*60) $ fromSqlInt between
 >           , totalTime   = (*60) $ fromSql time 
->           , ra = hrs2rad . fromSql $ h -- TBF: assume all J200? For Carl's DB, YES!
->           , dec = deg2rad . fromSql $ v 
+>           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
+>           , dec = fromSql v  
 >           , grade = toGradeType fltGrade 
 >           , receivers = [] -- TBF: does scoring support the logic structure!
 >           , periods = [] -- TBF, no history in Carl's DB
@@ -179,12 +180,15 @@ TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 >     query = "SELECT id, session_id, start, duration, score, forecast, backup FROM periods WHERE session_id = ?"
 >     toPeriodList = map toPeriod
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
->       defaultPeriod { startTime = fromSql start
+>       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = (*60) . fromSql $ durHrs
 >                     , pScore = fromSql score
 >                     , pForecast = fromSql forecast
 >                     , pBackup = fromSql backup
 >                     }
+
+> sqlToDateTime :: SqlValue -> DateTime
+> sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
 
 Opportunities for Fixed Sessions should be honored via Periods
 
@@ -202,7 +206,7 @@ Opportunities for Fixed Sessions should be honored via Periods
 >     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities where windows.id = opportunities.window_id and windows.session_id = ?"
 >     toPeriodList = map toPeriod
 >     toPeriod (wid:wreq:start:durHrs:[]) = 
->       defaultPeriod { startTime = fromSql start
+>       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = (*60) . fromSql $ durHrs
 >                     }
 
