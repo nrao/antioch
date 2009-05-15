@@ -3,24 +3,27 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.Weather
+> import Database.HDBC
+> import Database.HDBC.PostgreSQL
 
 > minutesPerDay = 60 * 24
 > secondsPerDay = fromIntegral $ 60 * minutesPerDay
 
-> genOpportunities :: Session -> DateTime -> Minutes -> [(DateTime, Minutes)]
-> genOpportunities session start duration
->     | duration <= 0 = []
->     | otherwise     =
->         genOppts session start' duration' ++
->         genOpportunities session (minutesPerDay `addMinutes` start) (duration - minutesPerDay)
+> genOpportunities :: Connection -> Session -> DateTime -> Minutes -> IO [(DateTime, Minutes)]
+> genOpportunities cnn session start duration
+>     | duration <= 0 = return []
+>     | otherwise     = do
+>         ha   <- lookupHourAngle cnn session
+>         let ha'    = floor $ ha * secondsPerDay
+>         let start' = max start $ -ha' `addSeconds` transit
+>         let end'   = min end $ ha' `addSeconds` transit
+>         let duration' = end' `diffMinutes` start'
+>         rest <- genOpportunities cnn session (minutesPerDay `addMinutes` start) (duration - minutesPerDay)
+>         return $ genOppts session start' duration' ++ rest
 >   where
->     end       = duration `addMinutes` start
->     transit   = lst2utc start $ ra session
->     ha        = hourAngle session
->     ha'       = floor $ ha * secondsPerDay
->     start'    = max start $ -ha' `addSeconds` transit
->     end'      = min end $ ha' `addSeconds` transit
->     duration' = end' `diffMinutes` start'
+>     end     = duration `addMinutes` start
+>     transit = lst2utc start $ ra session
 
 > genOppts :: Session -> DateTime -> Minutes -> [(DateTime, Minutes)]
 > genOppts session start duration =
@@ -37,6 +40,17 @@
 >   where
 >     now      = utc2lstHours utc
 >     solarDay = 24.0 * (365.25 / 366.25)
+
+> lookupHourAngle :: Connection -> Session -> IO Float
+> lookupHourAngle cnn session = do
+>     result <- quickQuery' cnn query [toSql freqIdx, toSql decIdx]
+>     return $ case result of
+>       [[x]] -> fromSql x
+>       _     -> hourAngle session
+>   where
+>     query   = "SELECT boundary FROM hour_angle_boundaries WHERE frequency = ? AND declination = ?"
+>     freqIdx = freq2Index . frequency $ session
+>     decIdx  = elev2Index . dec $ session
 
 > hourAngle :: Session -> Float
 > hourAngle session
