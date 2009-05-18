@@ -26,6 +26,8 @@ connection to the DB correctly.
 >     , test_getProjectsProperties
 >     --, test_putPeriods
 >     , test_scoreDSSData
+>     , test_session2
+>     , test_session_scores
 >     ]
 
 > test_getProjectData = TestCase $ do
@@ -75,6 +77,52 @@ session scores zero through out a 24 hr period.
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 
+How a session scores can also reveal errors in how it was imported
+from the database.
+
+> test_session_scores = TestCase $ do
+>     w <- getWeather $ Just start
+>     ps <- getProjects
+>     let ss = concatMap sessions ps
+>     let s = head $ filter (\s -> (sName s) == name) ss
+>     let score' w dt = runScoring w [] $ do
+>         fs <- genScore ss 
+>         sf <- fs dt s
+>         return $ eval sf
+>     scores <- mapM (score' w) times
+>     assertEqual "test_session_scores" expScores scores
+>     where
+>       name = "GBT09B-010-02"
+>       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
+>       --start = fromGregorian 2009 6 5 12 0 0 -- 11 PM ET
+>       times = [(15*q) `addMinutes'` start | q <- [0..16]]
+>       expScores = [4.896624,5.0632706,5.120554,5.138654
+>                   ,5.15567,5.1716776,5.181927,5.181927
+>                   ,5.181927,5.181927,5.1857715,5.1857715
+>                   ,5.169486,5.152158,5.1498766,5.1305795,5.087766]
+
+Test a specific session's attributes:
+
+> test_session2 = TestCase $ do
+>   ps <- getProjects 
+>   let ss = concatMap sessions ps
+>   let s = head $ filter (\s -> (sName s == "GBT09A-081-02")) ss
+>   assertEqual "test_session2_1" GradeB (grade s)
+>   assertEqual "test_session2_2" Open (sType s)
+>   assertEqual "test_session2_3" 124 (sId s)
+>   assertEqual "test_session2_4" "GBT09A-081-02" (sName s)
+>   assertEqual "test_session2_5" "GBT09A-081" (pName . project $ s)
+>   assertEqual "test_session2_6" "09A" (semester . project $ s)
+>   assertEqual "test_session2_7" 210 (totalTime s)
+>   assertEqual "test_session2_8" 180 (minDuration s)
+>   assertEqual "test_session2_9" 210 (maxDuration s)
+>   assertEqual "test_session2_10" 0 (timeBetween s)
+>   assertEqual "test_session2_11" 0.34 (frequency s)
+>   assertEqual "test_session2_12" 5.861688  (ra s)
+>   assertEqual "test_session2_13" (-0.11362094) (dec s)
+>   assertEqual "test_session2_14" [[Rcvr_342]] (receivers s)
+>   assertEqual "test_session2_15" L (band s)
+
 Perhaps these should be Quick Check properities, but the input is not 
 generated: it's the input we want to test, really.
 
@@ -85,6 +133,7 @@ generated: it's the input we want to test, really.
 >   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
 >   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
 >   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
+>   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == GradeB) ss) )
 >     where
 >       validProject proj = "0" == (take 1 $ semester proj)
 >       validSession s = (maxDuration s) >= (minDuration s)
@@ -126,6 +175,8 @@ Need to straighten all this shit out.
 >       p1 = defaultPeriod { session = s
 >                          , startTime = dt
 >                          , pForecast = dt }
+
+
 
 
 Test Utilities: 
