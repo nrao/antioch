@@ -19,6 +19,10 @@
 > numSteps :: Minutes -> Int
 > numSteps = (`div` quarter)
 
+TBF: we are not honoring the following session attributes as we pack:
+   * time between
+   * schedule time <= allotted time
+
 `Pack` is the top-level driver function.  It is primarily concerned
 with converting between our internal data structures and the external
 representation of sessions and telescope periods.  Given a start time
