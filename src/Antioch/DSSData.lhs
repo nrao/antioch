@@ -5,7 +5,7 @@
 > import Antioch.Score
 > import Antioch.Utilities (hrs2rad, deg2rad, printList)
 > import Antioch.Settings (dssDataDB)
-> import Data.List (groupBy, sort)
+> import Data.List (groupBy, sort, nub)
 > import Data.Char (toUpper)
 > import Maybe (fromJust)
 > import Database.HDBC
@@ -137,7 +137,7 @@ TBF: is this totaly legit?  and should it be somewhere else?
 >     toUpperFirst x = [toUpper . head $ x] ++ tail x
 
 > toGradeType :: SqlValue -> Grade
-> toGradeType val = if (fromSql val) == (3.0 :: Float) then GradeA else GradeB 
+> toGradeType val = if (fromSql val) == (3.0 :: Float) then GradeB else GradeA 
 
 Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions
@@ -182,11 +182,23 @@ TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 >     ps <- getPeriods cnn s
 >     return $ makeSession s ps
 
+Two ways to get Periods from the DB:
+   * The Periods Table: this is a history of what ever has been scheduled 
+   * The Opportunities Table: this is currently how a fixed session's period
+     "to be scheduled" is saved - as a single opportunity in a single window.
+     However, if we run overlapping simulations, we may have opportunities
+     that have already been created into period table records.  So, we'll
+     need to ignore these.
+
 > getPeriods :: Connection -> Session -> IO [Period]
 > getPeriods cnn s = do
 >     dbPeriods <- fetchPeriods cnn s 
 >     optPeriods <- periodsFromOpts cnn s
->     return $ sort $ dbPeriods ++ optPeriods
+>     -- the 'nub' removes opportunities that may alreay have been represented
+>     -- in the period table
+>     -- NOTE: remember that equality between Periods only relies on 
+>     -- Session ID, start, and duration.
+>     return $ sort . nub $ dbPeriods ++ optPeriods
 
 > fetchPeriods :: Connection -> Session -> IO [Period]
 > fetchPeriods cnn s = do 
