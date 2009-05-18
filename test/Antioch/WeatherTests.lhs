@@ -17,6 +17,24 @@
 >   , test_WindsAreReasonable
 >      ]
 
+> test_years = TestCase $ do 
+>   test_year dt05
+>   test_year dt06
+>   test_year dt07
+>   test_year dt08
+>   test_year dt09
+>     where
+>       test_year dt = do
+>          w <- getWeather $ Just dt
+>          wind' <- wind w (60 `addMinutes'` dt07)
+>          assertEqual ("test_years_" ++ (toSqlString dt)) val06 (fromMaybe (-1.0) wind')
+>       val06 = 5.8049664
+>       dt05  = fromGregorian 2005 2 1 0 0 0 
+>       dt06  = fromGregorian 2006 2 1 0 0 0 
+>       dt07  = fromGregorian 2007 2 1 0 0 0 
+>       dt08  = fromGregorian 2008 2 1 0 0 0 
+>       dt09  = fromGregorian 2009 2 1 0 0 0 
+
 > test_WindsArePositive = TestCase $ do
 >   cnn <- connect
 >   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed < 0.0"
