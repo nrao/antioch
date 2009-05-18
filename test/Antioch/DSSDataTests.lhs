@@ -58,6 +58,31 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects15" True ((length $ concatMap pBlackouts ps) > 0) 
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head . tail $ ss)
 
+TBF: cant' run this one automatically because it doesn't clean up yet, 
+so, clean up by hand for now.
+
+> test_numPeriods = TestCase $ do
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   let numPs = length ps
+>   assertEqual "test_numPeriods_1" 137 numPs
+>   --  now create a new period identical to an existing period
+>   -- and make sure it doesn't get translated to a period
+>   assertEqual "test_numPeriods_2" [identicalToOpt] (filter (==identicalToOpt) ps)
+>   -- TBF: Oops!  We're supposed to put in a new opportunity, not a window!
+>   --putPeriods [identicalToOpt]
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   assertEqual "test_numPeriods_3" numPs (length ps)
+>   -- need to clean up!
+>     where
+>       identicalToOpt = defaultPeriod { session = defaultSession { sId = 48 }
+>                             , startTime = fromGregorian 2009 7 15 4 0 0
+>                             , duration = hrsToMinutes 3.75 
+>                             , pForecast = fromGregorian 2009 7 15 4 0 0
+>                                      }
+>   
+
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
 
@@ -153,11 +178,6 @@ generated: it's the input we want to test, really.
 >                          , startTime = dt
 >                          , pForecast = dt }
 
-TBF: this fails because there is something going on with our datetimes in
-the DB regarding the time zone - our times are off by ~5 hrs.  So a datetime
-written to the DB doesn't come back as your wrote it ...
-Need to straighten all this shit out.
-
 > test_fetchPeriods = TestCase $ do
 >   putPeriods [p1]
 >   cnn <- connect
@@ -194,3 +214,4 @@ Test Utilities:
 >     run cnn ("TRUNCATE TABLE " ++ tableName) []
 >     commit cnn
 >     disconnect cnn
+
