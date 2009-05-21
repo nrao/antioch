@@ -12,22 +12,25 @@
 >   , test_data0_11Night
 >   , test_data36_47Day
 >   , test_data36_47Night
+>   , test_years
 >   , test_WeatherIsJust
 >   , test_WindsArePositive
 >   , test_WindsAreReasonable
 >      ]
 
+TBF: only 2006 in our Weather DB still!
+
 > test_years = TestCase $ do 
->   test_year dt05
->   test_year dt06
->   test_year dt07
->   test_year dt08
->   test_year dt09
+>   test_year dt05 val06
+>   test_year dt06 val06
+>   test_year dt07 val06
+>   test_year dt08 val06
+>   test_year dt09 val06
 >     where
->       test_year dt = do
+>       test_year dt val = do
 >          w <- getWeather $ Just dt
->          wind' <- wind w (60 `addMinutes'` dt07)
->          assertEqual ("test_years_" ++ (toSqlString dt)) val06 (fromMaybe (-1.0) wind')
+>          wind' <- wind w (60 `addMinutes'` dt)
+>          assertEqual ("test_years_" ++ (toSqlString dt)) val (fromMaybe (-1.0) wind')
 >       val06 = 5.8049664
 >       dt05  = fromGregorian 2005 2 1 0 0 0 
 >       dt06  = fromGregorian 2006 2 1 0 0 0 
