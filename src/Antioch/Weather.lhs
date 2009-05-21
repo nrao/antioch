@@ -46,12 +46,41 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 > globalConnection :: IORef Connection
 > globalConnection = unsafePerformIO $ connect >>= newIORef
 
-> getWeather     :: Maybe DateTime -> IO Weather
-> getWeather now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
+This interface method makes sure that dates don't get passed in
+that the DB has no data for.  Currently all modules are using this.
+
+> getWeather dt = do
+>     now <- maybe getCurrentTimeSafe return dt
+>     case dt of
+>       Nothing -> getWeatherSafe now
+>       Just x  -> getWeatherSafe x
+
+Used for simulations/tests to ensure that we always get data, no matter what
+year's worth of weather is in the database, by modifiying the date.
+
+> getWeatherSafe :: DateTime -> IO Weather
+> getWeatherSafe = getWeather' . Just . dateSafe 
+
+Right now, we only have 2006 in the DB.
+TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
+
+> dateSafe :: DateTime -> DateTime
+> dateSafe dt = if (year == 2006) then dt else replaceYear 2006 dt
+>   where
+>     (year, _, _, _, _, _) = toGregorian dt
+> -- TBF: do this when you have more then one year:
+> --dateSafe dt = if (any (==year) [2006, 2007, 2008]) then dt else replaceYear 2006 dt
+
+> getCurrentTimeSafe = do
+>   dt <- getCurrentTime
+>   return $ dateSafe dt
+
+> getWeather'     :: Maybe DateTime -> IO Weather
+> getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
 
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
->     now' <- maybe getCurrentTime return now
+>     now' <- maybe getCurrentTimeSafe return now
 >     (windf, w2_windf, tatmf) <- getWindAndTAtm'
 >     (opacityf, tsysf)        <- getOpacityAndTSys'
 >     stringencyf              <- getTotalStringency'
@@ -70,13 +99,11 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >       , forecast        = now'
 >       }
 
-Used for test to ensure the year is always 2006.
-
-> getWeather' :: DateTime -> IO Weather
-> getWeather' = getWeather . Just . replaceYear 2006
 
 > pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
-> pin now f target = f (forecastType target now) target
+> pin now f target = f (forecastType target' now) target'
+>   where
+>     target' = dateSafe target
 
 > toSql' = toSql . toSqlString
 
