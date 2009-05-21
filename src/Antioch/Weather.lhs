@@ -6,6 +6,7 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
+> import Antioch.Settings (weatherDB)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
 > import Data.Convertible
@@ -244,7 +245,10 @@ on frequency.
 Creates a connection to the weather forecast database.
 
 > connect :: IO Connection
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss user=dss"
+> connect = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
+
 
 Helper function to determine the desired forecast type given two DateTimes.
 
