@@ -294,7 +294,6 @@ Scores the named session for the interval spanned.
 
 > scoreThisSession' :: Session -> DateTime -> Minutes -> [Session] -> Scoring [Score]
 > scoreThisSession' s dt dur ss = do
->     --s = head $ filter (\s-> (sName s) == name) ss
 >     sf <- genScore ss
 >     let score' s dt = do
 >         fs <- genScore ss 
@@ -303,10 +302,6 @@ Scores the named session for the interval spanned.
 >     scores <- mapM (score' s) times
 >     return scores
 >   where
->     --ss' = filter (\s-> (sName s) == name) ss
 >     times = [(15*q) `addMinutes'` dt | q <- [0..(dur `div` 15)]]
->     --times = [(quarter * m) `addMinutes` dt | m <- [0 .. (dur `div` quarter) - 1]]
->     --scores sf s = mapM (eval $ flip . sf $ s) times
->     --sf' s dt = sf dt s
 > 
 
