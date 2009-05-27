@@ -8,7 +8,7 @@
 > import Antioch.Utilities    (between, rad2hr, showList', dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
-> import Data.List            (find, partition, nub, sort)
+> import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
@@ -235,7 +235,10 @@ boundary?
 >             -- schedPeriods only includes those periods from the history that
 >             -- are contained in or overlap (dt - (dt + int)).
 >             (schedPeriods, t1) <- runScoring' w' rs $ runSimSchedStrategy sched dt int sessions history
->             let sessions' = updateSessions sessions schedPeriods
+>             -- take out the 'history' out of the result from the strategy
+>             let newlyScheduledPeriods = schedPeriods \\ history
+>             --liftIO $ print $ "newly scheduled periods: " ++ (show newlyScheduledPeriods)
+>             let sessions' = updateSessions sessions newlyScheduledPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
 >             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
 >             liftIO $ writeFile "/dev/null" (show t1)
@@ -249,6 +252,7 @@ boundary?
 >         -- move forward next simulation by half the sim. interval
 >         hint   = int `div` 2 
 
+
 The main diff between this and runSimStrategy is that we aren't simulating
 observing: not checking MOC, not trying to replace cancelations w/ backups.
 
@@ -260,4 +264,25 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 >   sf <- genScore $ filterSessions dt [isMySemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   return schedPeriods
+
+Utilities:
+
+> debugThisSessionHistory :: String -> [Period] -> String
+> debugThisSessionHistory name ps = "Num periods in history for " ++ name ++ " : " ++ (show . length $ ps')
+>   where
+>     ps' = filter (\p-> (sName . session $ p) == name) ps
+
+> debugThisSessionPeriod :: String -> [Period] -> String
+> debugThisSessionPeriod name ps = report ps' 
+>   where
+>     ps' = filter (\p-> (sName . session $ p) == name) ps
+>     report ps' = if length ps' > 0 then concatMap show ps' else "No Periods for: " ++ name
+
+> debugThisSession :: String -> [Session] -> String
+> debugThisSession name ss = report ss'
+>   where
+>     ss' = filter (\s-> (sName s) == name) ss
+>     report ss' = if (length ss') == 1 then report' . head $ ss' else name ++ " is not present!!!!!!!!!!"
+>     report' s = (sName s) ++ ": " ++ (show . totalTime $ s) ++ ", " ++ (show . totalUsed $ s) ++ ", " ++ (show $ (totalTime s) - (totalUsed s))
+
 
