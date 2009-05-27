@@ -19,6 +19,7 @@
 >    , test_sim_pack_starvation2
 >    , test_sim_schd_pack
 >    , test_sim_schd_pack_around_history
+>    , test_sim_schd_pack_exhaustive_history
 >    , test_sim_schedMinDuration
 >    -- test_sim_schedMinDuration_backup TBF: broken
 >    , test_sim_schedMinDuration_fail_backup
@@ -359,6 +360,42 @@ pre-scheduled periods
 >     history2 = [fixed0, fixed1, fixed2, fixed3]
 >     exp2 = sort $ (init history2) ++ exp'
 >     
+
+Test to make sure that our time accounting isn't screwed up by the precence 
+of pre-scheduled periods (history)
+
+> test_sim_schd_pack_exhaustive_history = TestCase $ do
+>     w <- getWeather $ Just dt
+>     -- first, a test where the history uses up all the time
+>     (result, t) <- simulateScheduling Pack w rs dt dur int h1 cnl ss1
+>     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_1" True (scheduleHonorsFixed h1 result)
+>     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_2" h1 result
+>     -- now, if history only takes some of the time, make sure 
+>     -- that the session's time still gets used up
+>     (result, t) <- simulateScheduling Pack w rs dt dur int h2 cnl ss2
+>     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_3" True (scheduleHonorsFixed h2 result)
+>     let observedTime = sum $ map duration result
+>     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_4" True (abs (observedTime - (totalTime s2)) <= (minDuration s2))
+>   where
+>     rs  = []
+>     -- set it up to be like production 08B beta test scheduling
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 7
+>     int = 60 * 24 * 2
+>     cnl = []
+>     ds = defaultSession
+>     -- a period that uses up all the sessions' time!
+>     f1 = Period ds {sId = sId cv} (dt) (totalTime cv) 0.0 undefined False
+>     h1 = [f1]
+>     -- make sure that this session knows it's used up it's time
+>     s1 = cv {periods = h1}
+>     ss1 = [s1]
+>     -- a period that uses MOST of the sessions' time!
+>     f2 = Period ds {sId = sId cv} (dt) (45*60) 0.0 undefined False
+>     h2 = [f2]
+>     -- make sure that this session knows it's used up MOST of it's time
+>     s2 = cv {periods = h2}
+>     ss2 = [s2]
 
 > lp = findPSessionByName "LP"
 > cv = findPSessionByName "CV"
