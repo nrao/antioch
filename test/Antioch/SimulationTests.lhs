@@ -41,12 +41,6 @@
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     lp = findPSessionByName "LP"
->     cv = findPSessionByName "CV"
->     gb = findPSessionByName "GB"
->     va = findPSessionByName "VA"
->     tx = findPSessionByName "TX"
->     wv = findPSessionByName "WV"
 >     expSs = [gb, gb, gb, va, tx, tx, gb, wv, gb, lp, cv, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
@@ -79,10 +73,6 @@ Test the case where a bady performing TP is replaced with a backup
 >     int = 60 * 24 * 1
 >     history = []
 >     ss' = getOpenPSessions
->     lp = findPSessionByName "LP"
->     cv = findPSessionByName "CV"
->     gb = findPSessionByName "GB"
->     as = findPSessionByName "AS"
 >     -- backup sessions aren't above 10 GHz, but in our example, we only
 >     -- want this to be scheduled when GB's MOC fails.  The other complication
 >     -- is that we want this 'backup' to score low enough so that it doesn't
@@ -115,9 +105,6 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >     int = 60 * 24 * 1
 >     history = []
 >     ss = getOpenPSessions
->     lp = findPSessionByName "LP"
->     cv = findPSessionByName "CV"
->     as = findPSessionByName "AS"
 >     expSs = [lp, cv, cv, as, cv, cv]
 >     dts = [ fromGregorian 2006 2 4  6  0 0
 >           , fromGregorian 2006 2 4 10  0 0
@@ -179,12 +166,6 @@ that it does not over allocate periods to a session.
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     lp = findPSessionByName "LP"
->     as = findPSessionByName "AS"
->     gb = findPSessionByName "GB"
->     va = findPSessionByName "VA"
->     tx = findPSessionByName "TX"
->     wv = findPSessionByName "WV"
 >     expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 7 30 0
@@ -252,12 +233,6 @@ pre-scheduled periods
 >     int = 60 * 24 * 1
 >     cnl = []
 >     ss = getOpenPSessions
->     lp = findPSessionByName "LP"
->     as = findPSessionByName "AS"
->     gb = findPSessionByName "GB"
->     va = findPSessionByName "VA"
->     tx = findPSessionByName "TX"
->     wv = findPSessionByName "WV"
 >     fixed1 = Period lp (fromGregorian 2006 2 1 7 30 0) 240 0.0 undefined False
 >     history = [fixed1]
 >     --expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
@@ -291,12 +266,6 @@ pre-scheduled periods
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     lp = findPSessionByName "LP"
->     as = findPSessionByName "AS"
->     gb = findPSessionByName "GB"
->     va = findPSessionByName "VA"
->     tx = findPSessionByName "TX"
->     wv = findPSessionByName "WV"
 >     expSs = [gb, va, tx, tx, wv, gb]
 >     expDts = [fromGregorian 2006 2 1  1 30 0
 >             , fromGregorian 2006 2 1  7 30 0
@@ -326,13 +295,6 @@ pre-scheduled periods
 >     cnl = []
 >     ss = getOpenPSessions
 >     ds = defaultSession
->     --lp = findPSessionByName "LP"
->     --cv = findPSessionByName "CV"
->     --as = findPSessionByName "AS"
->     --gb = findPSessionByName "GB"
->     --va = findPSessionByName "VA"
->     --tx = findPSessionByName "TX"
->     --wv = findPSessionByName "WV"
 >     expSs = [gb, va, tx, wv, gb, lp, cv, tx]
 >     expDts = [fromGregorian 2006 2 1  1 30 0
 >             , fromGregorian 2006 2 1  7 30 0
@@ -396,6 +358,8 @@ of pre-scheduled periods (history)
 >     -- make sure that this session knows it's used up MOST of it's time
 >     s2 = cv {periods = h2}
 >     ss2 = [s2]
+
+Test Utilities:
 
 > lp = findPSessionByName "LP"
 > cv = findPSessionByName "CV"
