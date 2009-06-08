@@ -13,6 +13,7 @@
 > import Antioch.Debug
 > import Antioch.HardwareSchedule
 > import Antioch.DSSData
+> import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort)
@@ -656,7 +657,7 @@ be confused and raise false alarams.
 >     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
 >     fixed = if (not $ scheduleHonorsFixed history ps) then error ++ "Schedule does not honor pre-scheduled Periods!\n" else "Pre-scheduled Periods Honored\n"
 >     durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
->     blackouts = if ([] /= (obeyProjectBlackouts $ ps)) then error ++ "Project Blackouts NOT Honored: " ++ (show blackouts) else "Project Blackouts Honored\n"
+>     blackouts = if ([] /= (obeyProjectBlackouts $ ps)) then error ++ "Project Blackouts NOT Honored: " ++ (show . obeyProjectBlackouts $ ps) else "Project Blackouts Honored\n"
 >     scores = if (validScores ps) then "All scores >= 0.0\n" else error ++ "Socres < 0.0!\n"
 >     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
 >     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
@@ -798,6 +799,50 @@ be confused and raise false alarams.
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 
+This is a specialized version of generatePlots.  The main difference is that 
+it calls simulateScheduling instead of simulate, and it writes results to 
+the DB.
+
+> generatePlots09B :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
+> generatePlots09B strategyName outdir sps dt days name simInput = do
+>     print $ "Scheduling 09B for " ++ show days ++ " days."
+>     print $ "DON'T FORGET TO FIRST TRUNCATE PERIODS IN DB: " ++ dssDataDB
+>     w <- getWeather Nothing
+>     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
+>     let history = filterHistory history' dt days 
+>     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
+>     let execTime = 0.0 
+>     -- post simulation analysis
+>     let gaps = findScheduleGaps dt dur results
+>     let canceled = getCanceledPeriods trace
+>     schdObsEffs <- historicalSchdObsEffs results
+>     schdAtmEffs <- historicalSchdAtmEffs results
+>     schdTrkEffs <- historicalSchdTrkEffs results
+>     schdSrfEffs <- historicalSchdSrfEffs results
+>     let scores = [("obsEff", schdObsEffs)
+>                 , ("atmEff", schdAtmEffs)
+>                 , ("trkEff", schdTrkEffs)
+>                 , ("srfEff", schdSrfEffs)]
+>     -- text reports 
+>     now <- getCurrentTime
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
+>     -- create plots
+>     mapM_ (\f -> f ss results trace) sps
+>     -- new schedule to DB
+>     putPeriods results
+>   where
+>     dur     = 60 * 24 * days
+>     int     = 60 * 24 * 2
+
+Run generic simulations.
+
 > runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True
 >   where
 >     start      = fromGregorian 2006 2 1 0 0 0
+
+More specialized: Try to schedule 09B.
+
+> sim09B days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False
+>   where
+>     start      = fromGregorian 2009 6 1 0 0 0
+

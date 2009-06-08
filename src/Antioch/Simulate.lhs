@@ -285,4 +285,23 @@ Utilities:
 >     report ss' = if (length ss') == 1 then report' . head $ ss' else name ++ " is not present!!!!!!!!!!"
 >     report' s = (sName s) ++ ": " ++ (show . totalTime $ s) ++ ", " ++ (show . totalUsed $ s) ++ ", " ++ (show $ (totalTime s) - (totalUsed s))
 
+Scores the named session for the interval spanned.
+
+> scoreThisSession :: String -> DateTime -> Minutes -> [Session] -> Scoring [Score] 
+> scoreThisSession name dt dur ss = if (length ss') == 1 then scoreThisSession' (head ss') dt dur ss else return [] 
+>   where
+>     ss' = filter (\s-> (sName s) == name) ss
+
+> scoreThisSession' :: Session -> DateTime -> Minutes -> [Session] -> Scoring [Score]
+> scoreThisSession' s dt dur ss = do
+>     sf <- genScore ss
+>     let score' s dt = do
+>         fs <- genScore ss 
+>         sc <- fs dt s
+>         return $ eval sc
+>     scores <- mapM (score' s) times
+>     return scores
+>   where
+>     times = [(15*q) `addMinutes'` dt | q <- [0..(dur `div` 15)]]
+> 
 
