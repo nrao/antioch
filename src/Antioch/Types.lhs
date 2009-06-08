@@ -67,6 +67,7 @@ use a single data structure for all sessions.
 >   , grade       :: Grade
 >   , band        :: Band
 >   , nightTime   :: Bool
+>   , lstExclude  :: [(Float, Float)]
 >   , sType       :: SessionType
 >   } deriving Show
 
@@ -201,6 +202,7 @@ Simple Functions for Periods:
 >   , grade       = GradeA
 >   , band        = L
 >   , nightTime   = False
+>   , lstExclude  = []
 >   , sType       = Open
 >   }
 
