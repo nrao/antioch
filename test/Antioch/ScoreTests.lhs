@@ -30,6 +30,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_minObservingEff
 >   , test_minimumObservingConditions
 >   , test_minTsysPrime
+>   , test_needsLowRFI
 >   , test_obsAvailable
 >   , test_observerAvailable
 >   , test_observingEfficiency
@@ -623,6 +624,23 @@ Look at the scores over a range where none are zero.
 >       expTrue = 1.0
 >       expFalse = 0.0
 
+> test_needsLowRFI = TestCase $ do
+>   w <- getWeather Nothing
+>   assertEqual "test_needsLowRFI" True (isDayTime day)
+>   assertEqual "test_needsLowRFI" False (isDayTime night)
+>   fs <- runScoring w [] (needsLowRFI day sAnyTime)
+>   assertEqual "test_needsLowRFI" 1.0 (eval fs)
+>   fs <- runScoring w [] (needsLowRFI night sAnyTime)
+>   assertEqual "test_needsLowRFI" 1.0 (eval fs)
+>   fs <- runScoring w [] (needsLowRFI night sNightTime)
+>   assertEqual "test_needsLowRFI" 1.0 (eval fs)
+>   fs <- runScoring w [] (needsLowRFI day sNightTime)
+>   assertEqual "test_needsLowRFI" 0.0 (eval fs)
+>     where
+>       day   = fromGregorian 2008 1 1 15 0 0 -- rfi day starts at 12:00 UT 
+>       night = fromGregorian 2008 1 2 1 30 0 -- rfi night starts at 24:00 UT 
+>       sAnyTime = findPSessionByName "CV"
+>       sNightTime = sAnyTime { lowRFI = True }
 
 Test utilities
 

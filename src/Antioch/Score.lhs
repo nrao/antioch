@@ -338,6 +338,8 @@ Translates the total/used times pairs into pressure factors.
 >         GradeB -> 0.9
 >         GradeC -> 0.1
 
+3.x Other Factors *not* listed in Memo 5.2
+
 Checks that all receiver groups needed by the given session will be available
 at the given time.  Sessions store their desired receivers in Conjugate 
 Normal Form (CNF).  For example: receivers = [K OR L] AND [K OR S] is CNF for
@@ -373,7 +375,7 @@ Returns list of receivers that will be up at the given time.
 >         [] -> []
 >         xs -> snd $ last xs 
 
-Scoring Factors not covered in Memo 5.2
+More Scoring Factors not covered in Memo 5.2
 
 Is there an observer available for this time and session?
 
@@ -399,6 +401,14 @@ dates, then the project is not available for observing at this time.
 
 > projectAvailable' :: DateTime -> Session -> Bool
 > projectAvailable' dt s = not $ any (==True) $ map (inDateRange dt) (pBlackouts . project $ s)
+
+The low rfi flag is used for avoiding RFI that is rampent during the daytime.
+
+> needsLowRFI :: ScoreFunc
+> needsLowRFI dt s = boolean "needsLowRFI" . Just $ needsLowRFI' dt s
+
+> needsLowRFI' :: DateTime -> Session -> Bool
+> needsLowRFI' dt s = if lowRFI s then (not . isHighRFITime $ dt) else True
 
 Scoring utilities
 
@@ -596,6 +606,7 @@ Need to translate a session's factors into the final product score.
 >       , atmosphericStabilityLimit
 >       , receiver
 >       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
+>       , needsLowRFI
 >       ] dt s
 
 Convenience function for translating go/no-go into a factor.
