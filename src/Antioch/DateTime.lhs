@@ -185,3 +185,10 @@ Simple arithmetic.
 
 > isDayTime    :: DateTime -> Bool
 > isDayTime dt = getRise dt <= dt && dt <= getSet dt
+
+> isHighRFITime :: DateTime -> Bool
+> isHighRFITime dt = badRFIStart dt <= dt && dt <= badRFIEnd dt
+>   where
+>     badRFIStart dt = 86400 * (dt `div` 86400) + 12 * 3600  -- 8 AM ET
+>     badRFIEnd dt   = 86400 * (dt `div` 86400) + 24 * 3600  -- 8 PM ET
+
