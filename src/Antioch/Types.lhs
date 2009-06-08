@@ -66,6 +66,7 @@ use a single data structure for all sessions.
 >   , authorized  :: Bool
 >   , grade       :: Grade
 >   , band        :: Band
+>   , nightTime   :: Bool
 >   , sType       :: SessionType
 >   } deriving Show
 
@@ -199,6 +200,7 @@ Simple Functions for Periods:
 >   , authorized  = False
 >   , grade       = GradeA
 >   , band        = L
+>   , nightTime   = False
 >   , sType       = Open
 >   }
 
