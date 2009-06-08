@@ -177,10 +177,40 @@ TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 >   where
 >     findRcvr18_26 s = if frequency s < 22.0 then Rcvr18_22 else Rcvr22_26 
 
+Here, we gather additional information about a session: opportunities, periods,
+observing parameters, etc.
+TBF: why aren't we getting the rcvr info here?
+
 > populateSession :: Connection -> Session -> IO Session
 > populateSession cnn s = do
->     ps <- getPeriods cnn s
->     return $ makeSession s ps
+>     s' <- setObservingParameters cnn s
+>     ps <- getPeriods cnn s'
+>     return $ makeSession s' ps
+
+TBF: the following recursive patterns work for setting the observing params
+that are one-to-one between the DB and the Session (ex: nightTime).  However,
+we'll need to handle as a special case some params that we want to take from
+the DB and collapse into simpler Session params (ex: LST ranges).
+
+> setObservingParameters :: Connection -> Session -> IO Session
+> setObservingParameters cnn s = do
+>   result <- quickQuery' cnn query xs 
+>   return $ setObservingParameters' s result
+>     where
+>       xs = [toSql . sId $ s]
+>       query = "select p.name, p.type, op.string_value, op.integer_value, op.float_value, op.boolean_value, op.datetime_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND op.session_id = ?" 
+
+> setObservingParameters' :: Session -> [[SqlValue]] -> Session
+> setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
+
+TBF: for now, just set:
+   * night time flag
+
+> setObservingParameter :: Session -> [SqlValue] -> Session
+> setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT) | n == "Night-time Flag" = s { nightTime = fromSql pBool }   
+>                                                                | otherwise = s
+>   where
+>     n = fromSql pName
 
 Two ways to get Periods from the DB:
    * The Periods Table: this is a history of what ever has been scheduled 
@@ -233,9 +263,6 @@ Opportunities for Fixed Sessions should be honored via Periods
 > periodsFromOpts' cnn s = do
 >   result <- quickQuery' cnn query xs 
 >   return $ toPeriodList result
->   --let r = toPeriodList result
->   --print r
->   --return r
 >   where
 >     xs = [toSql . sId $ s]
 >     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities where windows.id = opportunities.window_id and windows.session_id = ?"
