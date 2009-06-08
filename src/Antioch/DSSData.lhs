@@ -187,7 +187,7 @@ TBF: why aren't we getting the rcvr info here?
 >     ps <- getPeriods cnn s'
 >     return $ makeSession s' ps
 
-TBF: the following recursive patterns work for setting the observing params
+The following recursive patterns work for setting the observing params
 that are one-to-one between the DB and the Session (ex: nightTime).  However,
 we'll need to handle as a special case some params that we want to take from
 the DB and collapse into simpler Session params (ex: LST ranges).
@@ -196,6 +196,9 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters cnn s = do
 >   result <- quickQuery' cnn query xs 
 >   return $ setObservingParameters' s result
+>   --let s' = setObservingParameters' s result
+>   --s'' <- setLSTExclusion cnn s'
+>   --return s''
 >     where
 >       xs = [toSql . sId $ s]
 >       query = "select p.name, p.type, op.string_value, op.integer_value, op.float_value, op.boolean_value, op.datetime_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND op.session_id = ?" 
@@ -211,6 +214,22 @@ TBF: for now, just set:
 >                                                                | otherwise = s
 >   where
 >     n = fromSql pName
+
+> setLSTExclusion :: Connection -> Session -> IO Session
+> setLSTExclusion cnn s = do
+>   result <- quickQuery' cnn query xs
+>   return $ setLSTExclusion' s result
+>   --case result of
+>   --  [[SqlValue]] -> setLSTExclusion' s result
+>   --  otherwise    -> s
+>     where
+>       xs = [toSql . sId $ s]
+>       query = "select p.name, op.float_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
+
+> setLSTExclusion' :: Session -> [[SqlValue]] -> Session
+> setLSTExclusion' s _ = s 
+
+
 
 Two ways to get Periods from the DB:
    * The Periods Table: this is a history of what ever has been scheduled 
