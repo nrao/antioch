@@ -188,7 +188,7 @@ TBF: why aren't we getting the rcvr info here?
 >     return $ makeSession s' ps
 
 The following recursive patterns work for setting the observing params
-that are one-to-one between the DB and the Session (ex: nightTime).  However,
+that are one-to-one between the DB and the Session (ex: Night Time -> low rfi).  However,
 we'll need to handle as a special case some params that we want to take from
 the DB and collapse into simpler Session params (ex: LST ranges).
 
@@ -207,10 +207,10 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
 
 TBF: for now, just set:
-   * night time flag
+   * low rfi flag
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
-> setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT) | n == "Night-time Flag" = s { nightTime = fromSql pBool }   
+> setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT) | n == "Night-time Flag" = s { lowRFI = fromSql pBool }    
 >                                                                | otherwise = s
 >   where
 >     n = fromSql pName
