@@ -479,12 +479,19 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           }
->     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 23 0.0)
+>     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0)
 
 For defaultSession w/ totalTime = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
+> defaultScores = [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
+>                 ,3.1139324,3.140008,3.187729,3.1933162,3.1966023
+>                 ,3.1995883,3.2391315,3.239888,3.2483156,3.248886
+>                 ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
+>                 ,3.2787113,3.278528,3.2781422,3.2795804,3.2791758
+>                 ,3.2789626,3.2785032,3.2757215,3.2750494,3.274302
+>                 ,3.273018,3.2735398,3.2719383,3.2699947,3.2675872,3.2657294]
+> xdefaultScores = [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
 >                 ,3.1299076,3.140008,3.1896837,3.1915457,3.1966023
 >                 ,3.1995883,3.2383318,3.239888,3.2477167,3.248886
 >                 ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
@@ -542,7 +549,7 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 24.993183 :: Score  
+>     expectedTotal = 24.975002 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 > test_projectAvailable = TestCase $ do

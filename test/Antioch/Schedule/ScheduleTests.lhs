@@ -113,8 +113,8 @@ TBF: reveils bug.
 >     history = []
 >     s = defaultSession {minDuration = 120, totalTime = 240}
 >     ss = [s]
->     exp = [Period s (fromGregorian 2006 2 1 16 30 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 18 30 0) 120 0.0 undefined False]
+>     exp = [Period s (fromGregorian 2006 2 1 16 15 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 18 15 0) 120 0.0 undefined False]
 
 > test_best = TestCase $ do
 >       w      <- getWeather . Just $ dt
@@ -136,7 +136,7 @@ TBF: reveils bug.
 >   where
 >     sess = getOpenPSessions
 >     expSession = head sess
->     expScore = 9.131835 
+>     expScore = 9.133636
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 

@@ -39,6 +39,9 @@ Defined here so that users don't need to know about Data.Time.Clock.
 > secondsToMJD   :: Int -> Float
 > secondsToMJD s = 40587.0 + (fromIntegral s / 86400.0)
 
+> secondsToMJD'   :: Int -> Double
+> secondsToMJD' s = 40587.0 + (fromIntegral s / 86400.0)
+
 > prop_secondsToMJD = invariant $ fromMJD' . secondsToMJD . toSeconds
 
 Conversion back and forth between UTCTime and MJD.

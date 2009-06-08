@@ -97,9 +97,10 @@ Ranking System from Memo 5.2, Section 3
 > zenithAngleHA      :: Session -> Radians -> Radians
 > zenithAngleHA s ha =
 >     -- Equation 5
->     acos $ sin gbtLat * sin dec' + cos gbtLat * cos dec' * cos ha
+>     acos $ sin gbtLat' * sin dec' + cos gbtLat' * cos dec' * cos ha
 >   where
 >     dec' = dec s
+>     gbtLat' = realToFrac gbtLat
 
 TBF: this was moved from Statistic to here, but it needs a better home.
 

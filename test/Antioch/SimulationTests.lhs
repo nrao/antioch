@@ -41,7 +41,7 @@
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, gb, gb, va, tx, tx, gb, wv, gb, lp, cv, tx, tx]
+>     expSs = [gb, gb, gb, va, tx, tx, gb, wv, gb, lp, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
 >           , fromGregorian 2006 2 1 5 30 0
@@ -54,8 +54,8 @@
 >           , fromGregorian 2006 2 2  6 15 0
 >           , fromGregorian 2006 2 2 10 15 0
 >           , fromGregorian 2006 2 2 12 15 0
->           , fromGregorian 2006 2 2 16 15 0 ]
->     durs = [120, 120, 120, 240, 240, 240, 120, 240, 120, 240, 120, 240, 240]
+>           , fromGregorian 2006 2 2 14 15 0 ]
+>     durs = [120, 120, 120, 240, 240, 240, 120, 240, 120, 240, 120, 120, 240]
 >     scores = replicate 13 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
@@ -136,8 +136,8 @@ that it does not over allocate periods to a session.
 >                       , project     = defaultProject {semester = "06A"}
 >                        }
 >     ss = [s]
->     exp = [Period s (fromGregorian 2006 2 1 16 30 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 18 30 0) 120 0.0 undefined False]
+>     exp = [Period s (fromGregorian 2006 2 1 16 15 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 18 15 0) 120 0.0 undefined False]
 
 > test_findCanceledPeriods = TestCase $ do
 >   assertEqual "SimulationTests_test_findCanceledPeriods1" [] $ findCanceledPeriods [] []
@@ -166,7 +166,7 @@ that it does not over allocate periods to a session.
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
+>     expSs = [gb, va, tx, tx, wv, gb, lp, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 7 30 0
 >           , fromGregorian 2006 2 1 11 30 0
@@ -175,8 +175,8 @@ that it does not over allocate periods to a session.
 >           , fromGregorian 2006 2 2  4 30 0
 >           , fromGregorian 2006 2 2  7 30 0
 >           , fromGregorian 2006 2 2 12  0 0
->           , fromGregorian 2006 2 2 16  0 0 ]
->     durs = [360, 240, 240, 360, 360, 180, 270, 240, 270]
+>           , fromGregorian 2006 2 2 14 15 0 ]
+>     durs = [360, 240, 240, 360, 360, 180, 270, 135, 360]
 >     scores = replicate 9 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 >     
@@ -200,9 +200,9 @@ time exceeds the sessions total time
 >                       , project     = defaultProject {semester = "06A"}
 >                        }
 >     ss = [s]
->     exp = [Period s (fromGregorian 2006 2 1 18 0 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 20 0 0) 120 0.0 undefined False
->          , Period s (fromGregorian 2006 2 1 22 0 0) 120 0.0 undefined False]
+>     exp = [Period s (fromGregorian 2006 2 1 17 45 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 19 45 0) 120 0.0 undefined False
+>          , Period s (fromGregorian 2006 2 1 21 45 0) 120 0.0 undefined False]
 
 > test_sim_pack_starvation2 = TestCase $ do
 >     w <- getWeather $ Just dt

@@ -1,4 +1,4 @@
-> module Antioch.SLALib (gmst, slaGaleq) where
+> module Antioch.SLALib (gmst, gmst', slaGaleq) where
 
 > import Antioch.DateTime
 
