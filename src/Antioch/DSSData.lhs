@@ -89,6 +89,7 @@ hours togethor to get the total time.
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!
+TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 
 > getSessions :: Int -> Connection -> IO [Session]
 > getSessions projId cnn = handleSqlError $ do 
@@ -97,7 +98,7 @@ get picked up!!!
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT sessions.id, sessions.name, sessions.min_duration, sessions.max_duration, sessions.time_between, sessions.frequency, allotment.total_time, allotment.grade, targets.horizontal, targets.vertical, status.enabled, status.authorized, status.backup, session_types.type FROM sessions, allotment, targets, status, session_types WHERE allotment.id = sessions.allotment_id AND targets.session_id = sessions.id AND sessions.status_id = status.id AND sessions.session_type_id = session_types.id AND sessions.project_id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.project_id = ?"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
 >       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:sty:[]) = 
