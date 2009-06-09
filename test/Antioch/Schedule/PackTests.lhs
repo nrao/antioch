@@ -37,6 +37,7 @@
 >   , test_inFixed
 >   , test_Madd1
 >   , test_Madd2
+>   , test_step
 >   , test_Pack_overlapped_fixed
 >   , test_Pack1
 >   , test_Pack2
@@ -44,10 +45,17 @@
 >   , test_Pack4
 >   , test_Pack5
 >   , test_Pack6
+>   , test_Pack7
+>   , test_Pack8
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker'5
 >   , test_PackWorker'6
+>   , test_PackWorker'6_1
+>   , test_PackWorker'6_2
+>   , test_PackWorker'6_3
+>   , test_PackWorker'6_4
+>   , test_getBest_for_PackWorker'6_3
 >   , test_PackWorker'Simple
 >   , test_PackWorker'Simple2
 >   , test_PackWorker1
@@ -167,6 +175,25 @@ negative score.
 >     ys = [Nothing, Nothing, Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
 >     zs = replicate 2 Nothing
 
+> test_step = TestCase $ do
+>     assertEqual "test_step 1" ([1.0, 2.0, 3.0], []) ((iFuture item1), (iPast item1))
+>     assertEqual "test_step 2" ([2.0, 3.0], [1.0]) ((iFuture item2), (iPast item2))
+>     assertEqual "test_step 3" ([3.0], [2.0, 1.0]) ((iFuture item3), (iPast item3))
+>     assertEqual "test_step 4" ([], [3.0, 2.0, 1.0]) ((iFuture item4), (iPast item4))
+>     assertEqual "test_step 5" ([], [0.0, 3.0, 2.0, 1.0]) ((iFuture item5), (iPast item5))
+>     assertEqual "test_step 6" ([], [0.0, 0.0, 3.0, 2.0, 1.0]) ((iFuture item6), (iPast item6))
+>       where
+>     item1 = Item 1 8 12 [1.0, 2.0, 3.0] []
+>     item2 = step item1
+>     item3 = step item2
+>     item4 = step item3
+>     item5 = step item4
+>     item6 = step item5
+
+> testItem1 = Item 1 2 4 (replicate 6 1.0) []
+> testItem2 = Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []
+> testItems = [testItem1, testItem2]
+
 > test_GetBest1 = TestCase . assertEqual "test_getBest1" xs . getBest past $ sessions 
 >   where
 >     xs = Nothing -- Just (Candidate 1 0 4 4.0)
@@ -217,13 +244,62 @@ negative score.
 
 > test_PackWorker'6 = TestCase . assertEqual "test_PackWorker'6" xs . packWorker' ys zs $ ws
 >   where
+>     -- result, list of best solutions starting for 60 minutes, then 45,
+>     -- 30, and then 15 (none) followed by the sentinel.
 >     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing,Nothing]
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     -- future, i.e., nothing pre-scheduled
 >     ys = replicate 4 Nothing
+>     -- past, i.e., start scheduling first quarter
 >     zs = [Nothing]
+>     -- input, i.e., things (with scores) to be scheduled
 >     ws = map step [Item 1 2 4 (replicate 6 1.0) []
 >                  , Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []]
 
+> test_PackWorker'6_1 = TestCase . assertEqual "test_PackWorker'6_1" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = replicate 3 Nothing
+>     zs = [Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0, 1.0, 1.0] [1.0]
+>                  , Item 2 2 4 [0.0, 2.0, 2.0, 2.0, 2.0] [0.0]]
+
+> test_PackWorker'6_2 = TestCase . assertEqual "test_PackWorker'6_2" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = replicate 2 Nothing
+>     zs = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0, 1.0] [1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0, 2.0, 2.0] [0.0, 0.0]]
+
+> test_PackWorker'6_3 = TestCase . assertEqual "test_PackWorker'6_3" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = replicate 1 Nothing
+>     zs = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0)
+>          ,Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
+
+> test_getBest_for_PackWorker'6_3 = TestCase . assertEqual "test_best_for_PackWorker'6_3" result . getBest zs $ ws
+>   where
+>     result = Just (Candidate {cId = 2, cStart = 0, cDuration = 2, cScore = 6.0})
+>     zs = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0)
+>          ,Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
+
+> test_PackWorker'6_4 = TestCase . assertEqual "test_PackWorker'6_4" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = []
+>     zs = xs
+>     ws = map step [Item 1 2 4 [1.0, 1.0] [1.0, 1.0, 1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0] [2.0, 2.0, 0.0, 0.0]]
 
 > test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' ys zs $ ws
 >   where
@@ -819,6 +895,26 @@ revealed a bug where scores are turning negative in pact.
 >     fixed = [fixed1, fixed2, fixed3]
 >     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
 
+Same as test_Pack1 except only 2 hours of totalTime instead of 24
+
+> test_Pack8 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore [candidate]
+>         pack fs starttime duration [] [candidate]
+>     assertEqual "test_Pack8_1" 1 (length periods')
+>     assertEqual "test_Pack8_2" expPeriod (head periods')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 12*60
+>     candidate = defaultSession { sName = "singleton"
+>                                , totalTime = 2*60
+>                                , minDuration = 2*60
+>                                , maxDuration = 6*60
+>                                }
+>     expStartTime = fromGregorian 2006 11 8 21 45 0
+>     expPeriod = Period candidate expStartTime 120 1.5167294 undefined False
+
 > test_Pack_overlapped_fixed = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
@@ -1008,10 +1104,6 @@ Session data to pack:
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
 >                               }
-
-> testItem1 = Item 1 2 4 (replicate 6 1.0) []
-> testItem2 = Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []
-> testItems = [testItem1, testItem2]
 
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs

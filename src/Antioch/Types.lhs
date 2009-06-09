@@ -73,6 +73,13 @@ use a single data structure for all sessions.
 > totalUsed :: Session -> Minutes
 > totalUsed = sum . map duration . periods
 
+Returns the minutes available for scheduling for this session,
+i.e., time that is not encumbered in any way and therefore
+completely open for scheduling, tentative or not.
+
+> totalAvail :: Session -> Minutes
+> totalAvail s = (totalTime s) - (totalUsed s)
+
 > instance Eq Session where
 >     (==) = (==) `on` sId
 

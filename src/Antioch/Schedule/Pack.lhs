@@ -124,14 +124,14 @@ Convert an open session `s` into a schedulable item by scoring it with
 >     return $! force `seq` Item {
 >         iId      = s
 >       , iMinDur  = numSteps . minDuration $ s
->       , iMaxDur  = numSteps . maxDuration $ s
+>       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s)
 >       , iFuture  = scores
 >       , iPast    = []
 >       }
 
 Convert candidates to telescope periods relative to a given startime.
-Remember: Candidates have unitless times, and their scores are cumulative.  Our 
-Periods need to have Minutes, and average scores.
+Remember: Candidates have unitless times, and their scores are cumulative.
+Our Periods need to have Minutes, and average scores.
 
 
 > toPeriod              :: DateTime -> Candidate Session -> Period
@@ -149,7 +149,7 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
 >     cId       :: !a
->   , cStart    :: !Int 
+>   , cStart    :: !Int
 >   , cDuration :: !Int 
 >   , cScore    :: !Score
 >   } deriving (Eq, Show)
@@ -231,7 +231,8 @@ generate a list of possible candidates corresponding to the scores.
 > toCandidate id scores = [fmap (Candidate id 0 d) s | s <- scores | d <- [1..]]
 
 Move a score from the future to the past, so that it can now be
-scheduled.
+scheduled. Note that the order of the scores are reversed as they
+are passed from future to past.
 
 > step :: Item a -> Item a
 > step item@(Item { iFuture = [],     iPast = past }) = item {               iPast = 0 : past }
@@ -257,24 +258,27 @@ packWorker' future [Nothing] (map step items)
 Note that the 'past' param is seeded w/ [Nothing], and that the Items
 have their first future score moved out their past scores ('step').
 The basic recursive pattern here is that each element of the future list
-is inspected, and the past list is constructed, until we reach the end of the 
-future list, where we terminate and return our constructed past list.
+is inspected, and the past list is constructed, until we reach the end of
+the future list, where we terminate and return our constructed past list.
 Remember, the pack algorithm works by breaking down the problem into sub
 problems.  For our case, that means first solving the 15-min schedule, then 
-using this solution to solve for the 30-min schedule, and so on.  The solutions
-to our sub-problems are represented by the 'past' param.
+using this solution to solve for the 30-min schedule, and so on.  The
+solutions to our sub-problems are represented by the 'past' param.
+Note that cStart in the result is not defined, this occurs in unwind.
 
 > packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
-> packWorker' []                 past _        = past 
-> packWorker' (Just b  : future) past sessions =
+> -- packWorker' future             past sessions
+> packWorker'    []                 past _        = past 
+> packWorker'    (Just b  : future) past sessions =
 >     packWorker' future (Just b:past) $! map (step . forget) sessions
-> packWorker' (Nothing : future) past sessions =
+> packWorker'    (Nothing : future) past sessions =
 >     let b = getBest past sessions in
 >     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' future (b:past) $! map step sessions
 
-Given the sessions (items) to pack, and the 'past', which is the step n in our N step packing algorithm (15 minute steps):
-   * from each item, create a set of candidates starting w/ 0 duration up
-     to the max duration of the session (item).  
+Given the sessions (items) to pack, and the 'past', which is the step n
+in our N step packing algorithm (15 minute steps):
+   * from each item, create a set of candidates starting with duration 0 up
+     to the max duration of the session
    * increase the scores of each candidate using the score from the 'past'
      candidate (if any).  Eventually, the 'past' will contain the best
      candidates from the previous sub-problems.
