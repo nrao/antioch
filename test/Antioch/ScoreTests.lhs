@@ -642,6 +642,30 @@ Look at the scores over a range where none are zero.
 >       sAnyTime = findPSessionByName "CV"
 >       sNightTime = sAnyTime { lowRFI = True }
 
+> test_lstExcepted = TestCase $ do
+>   w <- getWeather Nothing
+>   fs <- runScoring w [] (lstExcepted dtClear sAnyTime)
+>   assertEqual "test_lstExcpeted_1" 1.0 (eval fs)
+>   fs <- runScoring w [] (lstExcepted dtClear sExclude1)
+>   assertEqual "test_lstExcpeted_2" 1.0 (eval fs)
+>   fs <- runScoring w [] (lstExcepted dtNotClear sExclude1)
+>   assertEqual "test_lstExcpeted_3" 0.0 (eval fs)
+>   fs <- runScoring w [] (lstExcepted dtClear sExclude2)
+>   assertEqual "test_lstExcpeted_4" 0.0 (eval fs)
+>   fs <- runScoring w [] (lstExcepted dtNotClear sExclude2)
+>   assertEqual "test_lstExcpeted_5" 1.0 (eval fs)
+>   assertEqual "test_lstExpected_6" True  (checkLst dt $ lstExclude sExclude1) 
+>   assertEqual "test_lstExpected_7" False (checkLst dt $ lstExclude sExclude2) 
+>     where
+>       dtClear   = fromGregorian 2008 1 1 15 0 0  
+>       lstClear  = utc2lstHours dtClear 
+>       dtNotClear= fromGregorian 2008 1 1 14 0 0  
+>       lstNotClear  = utc2lstHours dtNotClear 
+>       dt        = fromGregorian 2008 1 1 10 0 0  
+>       sAnyTime = findPSessionByName "CV"
+>       sExclude1 = sAnyTime { lstExclude = [(12.0, 16.0)] }
+>       sExclude2 = sAnyTime { lstExclude = [(16.0, 12.0)] }
+
 Test utilities
 
 > assertAlmostEqual :: String -> Int -> Float -> Float -> IO ()

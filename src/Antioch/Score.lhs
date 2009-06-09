@@ -410,6 +410,26 @@ The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 > needsLowRFI' :: DateTime -> Session -> Bool
 > needsLowRFI' dt s = if lowRFI s then (not . isHighRFITime $ dt) else True
 
+Sessions can specify any number of LST ranges in which they do not want
+to observe at.
+
+> lstExcepted :: ScoreFunc
+> lstExcepted dt s = boolean "lstExcepted" . Just $ lstExcepted' dt s
+
+> lstExcepted' :: DateTime -> Session -> Bool
+> lstExcepted' dt s = if ((length . lstExclude $ s) == 0) then True else checkLst dt $ lstExclude s
+
+Does the given datetime fall within any of the given exclusion ranges?
+Note that an exclusion range can wrap around: that is, if, in (a, b), b < a, 
+this is a wrap around.  Example: [(16.0, 12.0)] - the exlusion range starts
+at 16, goes up to 24, and wraps around up again to 12.
+
+> checkLst :: DateTime -> [(Float, Float)] -> Bool
+> checkLst dt ranges = not $ any (inRange lst) ranges
+>   where 
+>     lst = utc2lstHours dt 
+>     inRange x range = if ((fst range) <= (snd range)) then ((fst range) <= x && x <= (snd range)) else ((snd range) >= x) || (x >= (fst range))
+
 Scoring utilities
 
 > scoreLocal :: Weather -> ScoreFunc -> Session -> DateTime -> Scoring Score
@@ -607,6 +627,7 @@ Need to translate a session's factors into the final product score.
 >       , receiver
 >       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
 >       , needsLowRFI
+>       , lstExcepted
 >       ] dt s
 
 Convenience function for translating go/no-go into a factor.
