@@ -23,14 +23,17 @@
 >     projs <- mapM (populateProject cnn) projs' 
 >     return projs
 
+TBF: get rid of the allotment table join here, and refactor it out to a 
+separate query, to deal with multiple allotments (different grades)
+
 > fetchProjectData :: Connection -> IO [Project]
 > fetchProjectData cnn = handleSqlError $ do
 >   result <- quickQuery' cnn query []
 >   return $ toProjectDataList result
 >     where
->       query = "SELECT projects.id, projects.pcode, semesters.semester, projects.thesis, allotment.total_time FROM semesters, allotment, projects, projects_allotments WHERE semesters.id = projects.semester_id AND projects.id = projects_allotments.project_id AND allotment.id = projects_allotments.allotment_id ORDER BY projects.pcode"
+>       query = "SELECT projects.id, projects.pcode, semesters.semester, projects.thesis, allotment.total_time, allotment.grade FROM semesters, allotment, projects, projects_allotments WHERE semesters.id = projects.semester_id AND projects.id = projects_allotments.project_id AND allotment.id = projects_allotments.allotment_id ORDER BY projects.pcode"
 >       toProjectDataList = map toProjectData
->       toProjectData (id:pcode:semester:thesis:time:[]) = 
+>       toProjectData (id:pcode:semester:thesis:time:grade:[]) = 
 >         defaultProject {
 >             pId = fromSql id 
 >           , pName = fromSql pcode 
@@ -195,10 +198,10 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters :: Connection -> Session -> IO Session
 > setObservingParameters cnn s = do
 >   result <- quickQuery' cnn query xs 
->   return $ setObservingParameters' s result
->   --let s' = setObservingParameters' s result
->   --s'' <- setLSTExclusion cnn s'
->   --return s''
+>   --return $ setObservingParameters' s result
+>   let s' = setObservingParameters' s result
+>   s'' <- setLSTExclusion cnn s'
+>   return s''
 >     where
 >       xs = [toSql . sId $ s]
 >       query = "select p.name, p.type, op.string_value, op.integer_value, op.float_value, op.boolean_value, op.datetime_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND op.session_id = ?" 
@@ -218,18 +221,34 @@ TBF: for now, just set:
 > setLSTExclusion :: Connection -> Session -> IO Session
 > setLSTExclusion cnn s = do
 >   result <- quickQuery' cnn query xs
->   return $ setLSTExclusion' s result
->   --case result of
->   --  [[SqlValue]] -> setLSTExclusion' s result
->   --  otherwise    -> s
+>   return $ setLSTExclusion'  s result
 >     where
 >       xs = [toSql . sId $ s]
 >       query = "select p.name, op.float_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
 
 > setLSTExclusion' :: Session -> [[SqlValue]] -> Session
-> setLSTExclusion' s _ = s 
+> setLSTExclusion' s []        = s
+> setLSTExclusion' s sqlValues = s { lstExclude = (lstExclude s) ++ [lstRange sqlValues] }  
 
+> lstRange :: [[SqlValue]] -> (Float, Float)
+> lstRange sqlValues = lstRangeLow sqlValues $ lstRangeHi sqlValues
 
+> lstRangeHi :: [[SqlValue]] -> Float
+> lstRangeHi sqlValues = lstRangeHi' . head $ filter (isLSTName n) sqlValues
+>   where
+>     n = "LST Exclude Hi"
+>     lstRangeHi' (pName:pHi:[]) = fromSql pHi
+
+> isLSTName :: String -> [SqlValue] -> Bool
+> isLSTName name (pName:pFloat:[]) = (fromSql pName) == name
+
+> lstRangeLow :: [[SqlValue]] -> Float -> (Float, Float)
+> lstRangeLow sqlValues hiValue = (lowValue, hiValue)
+>   where
+>     n = "LST Exclude Low"
+>     lowValue = lstRangeLow' . head $ filter (isLSTName n) sqlValues
+>     --isLow (pName:pFloat:[]) = (fromSql pName) == "LST Exclude Low"
+>     lstRangeLow' (pName:pLow:[]) = fromSql pLow
 
 Two ways to get Periods from the DB:
    * The Periods Table: this is a history of what ever has been scheduled 
