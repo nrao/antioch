@@ -148,19 +148,30 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_14" [[Rcvr_342]] (receivers s)
 >   assertEqual "test_session2_15" L (band s)
 >   assertEqual "test_session2_16" False (lowRFI s)
+>   assertEqual "test_session2_17" 1 (length . lstExclude $ s)
 
 Perhaps these should be Quick Check properities, but the input is not 
 generated: it's the input we want to test, really.
 
 > test_getProjectsProperties = TestCase $ do
 >   ps <- getProjects
+>   --let numSess = sort $ [(pName p, length . sessions $ p) | p <- ps]
+>   --printList $ numSess
 >   let ss = concatMap sessions ps
+>   --print $ "number of sessions: " ++ (show . length $ ss)
 >   let allPeriods = sort $ concatMap periods ss 
+>   --let sIds = [sId s | s <- ss]
+>   --print . show . sort $ sIds
 >   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
 >   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
 >   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
 >   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == GradeB) ss) )
 >   assertEqual "test_getProjects_properties_5" 46 (length $ filter lowRFI ss)
+>   let lsts = filter (\s -> (length . lstExclude $ s) > 0) ss
+>   print . show $ [(sId s, lstExclude s) | s <- lsts]
+>   assertEqual "test_getProjects_properties_6" 5 (length lsts)
+>   assertEqual "test_getProjects_properties_7" [(15.0,21.0)] (lstExclude . head $ lsts)
+>   assertEqual "test_getProjects_properties_8" [(14.0,9.0)] (lstExclude . last $ lsts)
 >     where
 >       validProject proj = "0" == (take 1 $ semester proj)
 >       validSession s = (maxDuration s) >= (minDuration s)
