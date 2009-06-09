@@ -31,15 +31,14 @@ separate query, to deal with multiple allotments (different grades)
 >   result <- quickQuery' cnn query []
 >   return $ toProjectDataList result
 >     where
->       query = "SELECT projects.id, projects.pcode, semesters.semester, projects.thesis, allotment.total_time, allotment.grade FROM semesters, allotment, projects, projects_allotments WHERE semesters.id = projects.semester_id AND projects.id = projects_allotments.project_id AND allotment.id = projects_allotments.allotment_id ORDER BY projects.pcode"
+>       query = "SELECT p.id, p.pcode, s.semester, p.thesis FROM semesters AS s, projects AS p WHERE s.id = p.semester_id ORDER BY p.pcode"
 >       toProjectDataList = map toProjectData
->       toProjectData (id:pcode:semester:thesis:time:grade:[]) = 
+>       toProjectData (id:pcode:semester:thesis:[]) = 
 >         defaultProject {
 >             pId = fromSql id 
 >           , pName = fromSql pcode 
 >           , semester = fromSql semester  
 >           , thesis = fromSql thesis 
->           , timeTotal = (*60) $ fromSql time 
 >         }
 
 > populateProject :: Connection -> Project -> IO Project
@@ -49,7 +48,9 @@ separate query, to deal with multiple allotments (different grades)
 >     -- TBF: only for 09B! Then get observer blackouts!
 >     blackouts <- getProjectBlackouts (pId project) cnn 
 >     let project' = project { pBlackouts = blackouts }
->     return $ makeProject project' (timeTotal project') sessions --blackouts
+>     allotments <- getProjectAllotments (pId project') cnn
+>     let project'' = setProjectAllotments project' allotments
+>     return $ makeProject project'' (timeTotal project'') sessions 
 
 TBF: Let's say it again.  This is only for scheduling 09B.  Then we'll
 want to ditch this, and get the observer blackouts.
@@ -63,6 +64,28 @@ want to ditch this, and get the observer blackouts.
 >       xs = [toSql projId]
 >       toBlackoutList = map toDateRange
 >       toDateRange (start:end:[]) = (sqlToDateTime start, sqlToDateTime end)
+
+We must query for the allotments separately, because if a Project has alloted
+time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
+two allotments, and querying w/ a join will duplicate the project.
+
+> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Grade)]
+> getProjectAllotments projId cnn = handleSqlError $ do 
+>   result <- quickQuery' cnn query xs 
+>   return $ toAllotmentList result 
+>     where
+>       query = "SELECT a.total_time, a.grade FROM allotment AS a, projects AS p, projects_allotments AS pa WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
+>       xs = [toSql projId]
+>       toAllotmentList = map toAllotment
+>       toAllotment (time:fltGrade:[]) = (fromSqlMinutes time, toGradeType fltGrade)
+
+TBF: WTF! In Antioch, do we need to be taking into account grades at the 
+project level?  For now, we are ignoring grade and summing the different
+hours togethor to get the total time.
+
+> setProjectAllotments :: Project -> [(Minutes, Grade)] -> Project
+> setProjectAllotments p [] = p
+> setProjectAllotments p (x:xs) = setProjectAllotments (p {timeTotal = (timeTotal p) + (fst x)} ) xs
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!

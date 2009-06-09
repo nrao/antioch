@@ -28,20 +28,21 @@ connection to the DB correctly.
 >     , test_scoreDSSData
 >     , test_session2
 >     , test_session_scores
+>     , test_totaltime
 >     ]
 
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
 >     d <- fetchProjectData cnn
->     assertEqual "test_getProjectData1" 106 (length d)  
+>     assertEqual "test_getProjectData1" 103 (length d)  
 >     assertEqual "test_getProjectData2" "BB240" (pName . head $ d)  
->     assertEqual "test_getProjectData3" 48480 (timeTotal . head $ d)  
+>     assertEqual "test_getProjectData3" False (thesis . head $ d)  
 
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
 >     let ss = sessions . head $ ps
 >     let allPeriods = sort $ concatMap periods $ concatMap sessions ps
->     assertEqual "test_getProjects1" 106 (length ps)  
+>     assertEqual "test_getProjects1" 103 (length ps)  
 >     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 48480 (timeTotal . head $ ps)  
@@ -83,6 +84,15 @@ so, clean up by hand for now.
 >                                      }
 >   
 
+Makes sure that a project with hrs for more then one grade is imported
+once and has a total time that is the sum of the grade hrs.
+
+> test_totaltime = TestCase $ do
+>   projs <- getProjects
+>   let ps = filter (\p -> (pName p) == "GBT09B-010") projs
+>   assertEqual "test_totalTime_1" 1 (length ps)
+>   assertEqual "test_totalTime_2" (22*60) (timeTotal . head $ ps)
+
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
 
@@ -121,10 +131,10 @@ from the database.
 >       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       --start = fromGregorian 2009 6 5 12 0 0 -- 11 PM ET
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [4.896624,5.0632706,5.120554,5.138654
->                   ,5.15567,5.15567,5.181927,5.181927
->                   ,5.181927,5.181927,5.201093,5.1857715
->                   ,5.169486,5.152158,5.1498766,5.1305795,5.087766]
+>       expScores = [4.8578086,5.0231347,5.079963,5.09792,5.1148014
+>                   ,5.1148014,5.1408505,5.1408505,5.1408505,5.1408505
+>                   ,5.159865,5.1446643,5.128508,5.111317,5.1090546
+>                   ,5.08991,5.047436]
 
 Test a specific session's attributes:
 
@@ -155,21 +165,15 @@ generated: it's the input we want to test, really.
 
 > test_getProjectsProperties = TestCase $ do
 >   ps <- getProjects
->   --let numSess = sort $ [(pName p, length . sessions $ p) | p <- ps]
->   --printList $ numSess
 >   let ss = concatMap sessions ps
->   --print $ "number of sessions: " ++ (show . length $ ss)
 >   let allPeriods = sort $ concatMap periods ss 
->   --let sIds = [sId s | s <- ss]
->   --print . show . sort $ sIds
 >   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
 >   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
 >   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
 >   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == GradeB) ss) )
 >   assertEqual "test_getProjects_properties_5" 46 (length $ filter lowRFI ss)
 >   let lsts = filter (\s -> (length . lstExclude $ s) > 0) ss
->   print . show $ [(sId s, lstExclude s) | s <- lsts]
->   assertEqual "test_getProjects_properties_6" 5 (length lsts)
+>   assertEqual "test_getProjects_properties_6" 4 (length lsts)
 >   assertEqual "test_getProjects_properties_7" [(15.0,21.0)] (lstExclude . head $ lsts)
 >   assertEqual "test_getProjects_properties_8" [(14.0,9.0)] (lstExclude . last $ lsts)
 >     where
