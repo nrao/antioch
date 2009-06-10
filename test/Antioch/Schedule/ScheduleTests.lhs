@@ -6,6 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
+> import Antioch.Utilities
 > import Data.List            (zipWith, zipWith6, (\\))
 > import Control.Monad.Trans  (lift)
 > import Control.Monad        (liftM)
@@ -17,6 +18,7 @@
 >   , test_obeyProjectBlackouts
 >   , test_schedMinDuration
 >   , test_schedMinDuration_starvation
+>   , test_disobeyLSTExclusion
 >   ]
 
 > test_obeyProjectBlackouts = TestCase $ do
@@ -206,4 +208,22 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       --   ]
 
 
+> test_disobeyLSTExclusion = TestCase $ do
+>   assertEqual "test_disobeyLSTExclusion_1" True $ anyOverlappingLSTs (dt1, dt2) [badLSTrange]  
+>   assertEqual "test_disobeyLSTExclusion_2" False $ anyOverlappingLSTs (dt1, dt2) [safeLSTrange]  
+>   assertEqual "test_disobeyLSTExclusion_3" False $ disobeyLSTExclusion' p1  
+>   assertEqual "test_disobeyLSTExclusion_3" True $ disobeyLSTExclusion' p2  
+>     where
+>       dt1 = fromGregorian 2009 6 5 17 0 0
+>       dt2 = fromGregorian 2009 6 5 17 3 0
+>       lst1 = utc2lstHours dt1
+>       lst2 = utc2lstHours dt2
+>       badLSTrange = (lst1 - 1.0, lst2 + 1.0)
+>       safeLSTrange = (lst2 - 1.0, lst2 - 0.1)
+>       lstRange = (15.0, 21.0)
+>       s1 = defaultSession { lstExclude = [lstRange] }
+>       p1 = defaultPeriod { session = s1, startTime = dt1, duration = 180 }
+>       s2 = defaultSession { lstExclude = [badLSTrange] }
+>       p2 = defaultPeriod { session = s2, startTime = dt1, duration = 180 }
 
+>       
