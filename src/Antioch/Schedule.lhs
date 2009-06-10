@@ -338,14 +338,14 @@ to LST exclusion ranges.
 > disobeyLSTExclusion ps = filter disobeyLSTExclusion' ps 
 
 > disobeyLSTExclusion' :: Period -> Bool
-> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (not $ checkLSTs (startTime p, endTime p) (lstExclude . session $ p))
+> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (anyOverlappingLSTs (startTime p, endTime p) (lstExclude . session $ p))
 
 Does the given time range specify an LST range that overlaps with any of
 the given LST exclusion ranges?
 Note: must take into account LST exlusion ranges given in reverse (ex: (16, 12))
 
-> checkLSTs :: (DateTime, DateTime) -> [(Float, Float)] -> Bool
-> checkLSTs dts lstExs = any (overlap lsts) lstExs'
+> anyOverlappingLSTs :: (DateTime, DateTime) -> [(Float, Float)] -> Bool
+> anyOverlappingLSTs dts lstExs = any (overlap lsts) lstExs'
 >   where
 >     lsts = (utc2lstHours . fst $ dts, utc2lstHours . snd $ dts)
 >     lstExs' = concatMap inverseRange lstExs
