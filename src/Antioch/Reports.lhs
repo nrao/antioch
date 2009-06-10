@@ -650,7 +650,7 @@ be confused and raise false alarams.
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> [Period] -> String
 > reportScheduleChecks ss ps gaps history =
->     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, blackouts, scores, gs, ras, decs, elevs]
+>     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, blackouts, scores, gs, ras, decs, elevs, rfiFlag, lstEx]
 >   where
 >     heading = "Schedule Checks: \n"
 >     error = "WARNING: "
@@ -663,7 +663,8 @@ be confused and raise false alarams.
 >     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
 >     decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
 >     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
-
+>     rfiFlag = if (disobeyLowRFI ps) == [] then "Low RFI Flags Honored\n" else error ++ "Low RFI Flags NOT Honored: "++ (show . disobeyLowRFI $ ps) ++"\n"
+>     lstEx = if (disobeyLSTExclusion ps) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
 >     heading ++ "    " ++ intercalate "    " [l1, l2, l3, l4, l5]
