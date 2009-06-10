@@ -20,7 +20,7 @@
 >   ) where
 > -}
 
-> import Antioch.DateTime  (DateTime, addMinutes', fromGregorian, toSqlString)
+> import Antioch.DateTime
 > import Antioch.Utilities
 > import Antioch.Score
 > import Antioch.Types
@@ -318,3 +318,51 @@ causing invalid elevations, don't check them
 > validElev p = 5 <= el && el <= 90 
 >   where
 >     el = elevationFromZenith p
+
+Returns the list of periods that shouldn't be observing when they are due
+to the 'lowRFI' flag.
+
+> disobeyLowRFI :: [Period] -> [Period]
+> disobeyLowRFI ps = filter disobeyLowRFI' ps
+
+Returns True if given period's session has 'lowRFI' flag set, but is observing
+during the day.
+
+> disobeyLowRFI' :: Period -> Bool
+> disobeyLowRFI' p = if (not . lowRFI . session $ p) then False else (isHighRFITime . startTime $ p)
+
+Returns the list of periods that shouldn't be observing when they are due
+to LST exclusion ranges.
+
+> disobeyLSTExclusion :: [Period] -> [Period]
+> disobeyLSTExclusion ps = filter disobeyLSTExclusion' ps 
+
+> disobeyLSTExclusion' :: Period -> Bool
+> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (not $ checkLSTs (startTime p, endTime p) (lstExclude . session $ p))
+
+Does the given time range specify an LST range that overlaps with any of
+the given LST exclusion ranges?
+Note: must take into account LST exlusion ranges given in reverse (ex: (16, 12))
+
+> checkLSTs :: (DateTime, DateTime) -> [(Float, Float)] -> Bool
+> checkLSTs dts lstExs = any (overlap lsts) lstExs'
+>   where
+>     lsts = (utc2lstHours . fst $ dts, utc2lstHours . snd $ dts)
+>     lstExs' = concatMap inverseRange lstExs
+>     inverseRange rng = if ((fst rng) <= (snd rng)) then [rng] else [(0.0, snd rng), (fst rng, 24.0)]
+>     overlap x y = (fst x) < (snd y) && (fst y) < (snd x)
+
+> disobeyRcvrSchedule :: ReceiverSchedule -> [Period] -> [Period]
+> disobeyRcvrSchedule rs ps = if rs == [] then [] else filter (disobeyRcvrSchedule' rs) ps
+
+Is the given period overlapping with any time in which the period's rcvr(s)
+aren't available?
+TBF: not done yet!
+
+> disobeyRcvrSchedule' :: ReceiverSchedule -> Period -> Bool
+> disobeyRcvrSchedule' rs p = False -- any (overlap pRng) (rcvrBlackouts rs p)
+>   where
+>     pRng = (startTime p, endTime p)
+>     rcvrBlackouts rs p = [] -- TBF: when is p's rcvr not available?
+>     
+> 
