@@ -212,18 +212,23 @@ TBF: this is not passing - but was it meant to copy a python test?
 >   assertEqual "test_disobeyLSTExclusion_1" True $ anyOverlappingLSTs (dt1, dt2) [badLSTrange]  
 >   assertEqual "test_disobeyLSTExclusion_2" False $ anyOverlappingLSTs (dt1, dt2) [safeLSTrange]  
 >   assertEqual "test_disobeyLSTExclusion_3" False $ disobeyLSTExclusion' p1  
->   assertEqual "test_disobeyLSTExclusion_3" True $ disobeyLSTExclusion' p2  
+>   assertEqual "test_disobeyLSTExclusion_4" True $ disobeyLSTExclusion' p2  
+>   assertEqual "test_disobeyLSTExclusion_5" True $ disobeyLSTExclusion' p3  
 >     where
 >       dt1 = fromGregorian 2009 6 5 17 0 0
 >       dt2 = fromGregorian 2009 6 5 17 3 0
+>       dt3 = fromGregorian 2009 6 3 2 0 0
 >       lst1 = utc2lstHours dt1
 >       lst2 = utc2lstHours dt2
 >       badLSTrange = (lst1 - 1.0, lst2 + 1.0)
 >       safeLSTrange = (lst2 - 1.0, lst2 - 0.1)
 >       lstRange = (15.0, 21.0)
+>       reverseLSTRange = (14.0, 9.0)
 >       s1 = defaultSession { lstExclude = [lstRange] }
 >       p1 = defaultPeriod { session = s1, startTime = dt1, duration = 180 }
 >       s2 = defaultSession { lstExclude = [badLSTrange] }
 >       p2 = defaultPeriod { session = s2, startTime = dt1, duration = 180 }
+>       s3 = defaultSession { lstExclude = [reverseLSTRange] }
+>       p3 = defaultPeriod { session = s3, startTime = dt3, duration = 120 }
 
 >       
