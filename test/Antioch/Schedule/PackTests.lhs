@@ -37,6 +37,7 @@
 >   , test_inFixed
 >   , test_Madd1
 >   , test_Madd2
+>   , test_step
 >   , test_Pack_overlapped_fixed
 >   , test_Pack1
 >   , test_Pack2
@@ -44,10 +45,17 @@
 >   , test_Pack4
 >   , test_Pack5
 >   , test_Pack6
+>   , test_Pack7
+>   , test_Pack8
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker'5
 >   , test_PackWorker'6
+>   , test_PackWorker'6_1
+>   , test_PackWorker'6_2
+>   , test_PackWorker'6_3
+>   , test_PackWorker'6_4
+>   , test_getBest_for_PackWorker'6_3
 >   , test_PackWorker'Simple
 >   , test_PackWorker'Simple2
 >   , test_PackWorker1
@@ -167,6 +175,25 @@ negative score.
 >     ys = [Nothing, Nothing, Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
 >     zs = replicate 2 Nothing
 
+> test_step = TestCase $ do
+>     assertEqual "test_step 1" ([1.0, 2.0, 3.0], []) ((iFuture item1), (iPast item1))
+>     assertEqual "test_step 2" ([2.0, 3.0], [1.0]) ((iFuture item2), (iPast item2))
+>     assertEqual "test_step 3" ([3.0], [2.0, 1.0]) ((iFuture item3), (iPast item3))
+>     assertEqual "test_step 4" ([], [3.0, 2.0, 1.0]) ((iFuture item4), (iPast item4))
+>     assertEqual "test_step 5" ([], [0.0, 3.0, 2.0, 1.0]) ((iFuture item5), (iPast item5))
+>     assertEqual "test_step 6" ([], [0.0, 0.0, 3.0, 2.0, 1.0]) ((iFuture item6), (iPast item6))
+>       where
+>     item1 = Item 1 8 12 [1.0, 2.0, 3.0] []
+>     item2 = step item1
+>     item3 = step item2
+>     item4 = step item3
+>     item5 = step item4
+>     item6 = step item5
+
+> testItem1 = Item 1 2 4 (replicate 6 1.0) []
+> testItem2 = Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []
+> testItems = [testItem1, testItem2]
+
 > test_GetBest1 = TestCase . assertEqual "test_getBest1" xs . getBest past $ sessions 
 >   where
 >     xs = Nothing -- Just (Candidate 1 0 4 4.0)
@@ -215,15 +242,102 @@ negative score.
 >     past = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) testItems
 
+> test_queryPast = TestCase $ do
+>   assertEqual "test_queryPast101" (0, 0, []) (queryPast testItem1 (drop 6 past) 1)
+>   assertEqual "test_queryPast201" (0, 0, []) (queryPast testItem2 (drop 6 past) 1)
+>   assertEqual "test_queryPast111" (0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
+>   assertEqual "test_queryPast211" (0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
+>   assertEqual "test_queryPast121" (2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
+>   assertEqual "test_queryPast221" (0, 0, [1]) (queryPast testItem2 (drop 4 past) 1)
+>   assertEqual "test_queryPast131" (3, 0, [2]) (queryPast testItem1 (drop 3 past) 1)
+>   assertEqual "test_queryPast231" (0, 0, [2]) (queryPast testItem2 (drop 3 past) 1)
+>   assertEqual "test_queryPast141" (2, 2, [1,1]) (queryPast testItem1 (drop 2 past) 1)
+>   assertEqual "test_queryPast241" (2, 0, [1,1]) (queryPast testItem2 (drop 2 past) 1)
+>   assertEqual "test_queryPast151" (2, 3, [2,1]) (queryPast testItem1 (drop 1 past) 1)
+>   assertEqual "test_queryPast251" (3, 0, [2,1]) (queryPast testItem2 (drop 1 past) 1)
+>   assertEqual "test_queryPast161" (2, 4, [3,1]) (queryPast testItem1 past 1)
+>   assertEqual "test_queryPast261" (4, 0, [3,1]) (queryPast testItem2 past 1)
+>   assertEqual "test_queryPast122" (0, 1, [0])  (queryPast testItem1 (drop 4 past) 2)
+>   assertEqual "test_queryPast222" (0, 1, [0]) (queryPast testItem2 (drop 4 past) 2)
+>   assertEqual "test_queryPast132" (2, 0, [1]) (queryPast testItem1 (drop 3 past) 2)
+>   assertEqual "test_queryPast232" (0, 0, [1]) (queryPast testItem2 (drop 3 past) 2)
+>   assertEqual "test_queryPast142" (3, 0, [2]) (queryPast testItem1 (drop 2 past) 2)
+>   assertEqual "test_queryPast242" (0, 0, [2]) (queryPast testItem2 (drop 2 past) 2)
+>   assertEqual "test_queryPast152" (2, 2, [1,1]) (queryPast testItem1 (drop 1 past) 2)
+>   assertEqual "test_queryPast252" (2, 0, [1,1]) (queryPast testItem2 (drop 1 past) 2)
+>   assertEqual "test_queryPast162" (2, 3, [2,1]) (queryPast testItem1 past 2)
+>   assertEqual "test_queryPast262" (3, 0, [2,1]) (queryPast testItem2 past 2)
+>   assertEqual "test_queryPast153" (3, 0, [2]) (queryPast testItem1 (drop 1 past) 3)
+>   assertEqual "test_queryPast253" (0, 0, [2]) (queryPast testItem2 (drop 1 past) 3)
+>   assertEqual "test_queryPast163" (2, 2, [1,1]) (queryPast testItem1 past 3)
+>   assertEqual "test_queryPast263" (2, 0, [1,1]) (queryPast testItem2 past 3)
+>   assertEqual "test_queryPast1hole" (2, 3, [0,1,1]) (queryPast testItem1 hole 1)
+>   assertEqual "test_queryPast2hole" (2, 1, [0,1,1]) (queryPast testItem2 hole 1)
+>     where
+>       past = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
+>              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>       hole = [Nothing, Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+
 > test_PackWorker'6 = TestCase . assertEqual "test_PackWorker'6" xs . packWorker' ys zs $ ws
 >   where
+>     -- result, list of best solutions starting for 60 minutes, then 45,
+>     -- 30, and then 15 (none) followed by the sentinel.
 >     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing,Nothing]
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     -- future, i.e., nothing pre-scheduled
 >     ys = replicate 4 Nothing
+>     -- past, i.e., start scheduling first quarter
 >     zs = [Nothing]
+>     -- input, i.e., things (with scores) to be scheduled
 >     ws = map step [Item 1 2 4 (replicate 6 1.0) []
 >                  , Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []]
 
+> test_PackWorker'6_1 = TestCase . assertEqual "test_PackWorker'6_1" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = replicate 3 Nothing
+>     zs = [Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0, 1.0, 1.0] [1.0]
+>                  , Item 2 2 4 [0.0, 2.0, 2.0, 2.0, 2.0] [0.0]]
+
+> test_PackWorker'6_2 = TestCase . assertEqual "test_PackWorker'6_2" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = replicate 2 Nothing
+>     zs = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0, 1.0] [1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0, 2.0, 2.0] [0.0, 0.0]]
+
+> test_PackWorker'6_3 = TestCase . assertEqual "test_PackWorker'6_3" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = replicate 1 Nothing
+>     zs = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0)
+>          ,Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
+
+> test_getBest_for_PackWorker'6_3 = TestCase . assertEqual "test_best_for_PackWorker'6_3" result . getBest zs $ ws
+>   where
+>     result = Just (Candidate {cId = 2, cStart = 0, cDuration = 2, cScore = 6.0})
+>     zs = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0)
+>          ,Nothing, Nothing]
+>     ws = map step [Item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
+
+> test_PackWorker'6_4 = TestCase . assertEqual "test_PackWorker'6_4" xs . packWorker' ys zs $ ws
+>   where
+>     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
+>          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     ys = []
+>     zs = xs
+>     ws = map step [Item 1 2 4 [1.0, 1.0] [1.0, 1.0, 1.0, 1.0]
+>                  , Item 2 2 4 [2.0, 2.0] [2.0, 2.0, 0.0, 0.0]]
 
 > test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' ys zs $ ws
 >   where
@@ -806,7 +920,6 @@ revealed a bug where scores are turning negative in pact.
 >     periods' <- runScoring w [] $ do
 >         fs <- genScore ss
 >         pack fs starttime duration fixed ss
->     printList periods'
 >     assertEqual "test_Pack6" 3 (numFixed periods') --expPeriods periods'  
 >   where
 >     starttime = fromGregorian 2006 10 6 3 0 0
@@ -818,6 +931,26 @@ revealed a bug where scores are turning negative in pact.
 >     fixed3 = Period ds (fromGregorian 2006 10 6 16 30 0) 255 0.0 undefined False
 >     fixed = [fixed1, fixed2, fixed3]
 >     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
+
+Same as test_Pack1 except only 2 hours of totalTime instead of 24
+
+> test_Pack8 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore [candidate]
+>         pack fs starttime duration [] [candidate]
+>     assertEqual "test_Pack8_1" 1 (length periods')
+>     assertEqual "test_Pack8_2" expPeriod (head periods')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 12*60
+>     candidate = defaultSession { sName = "singleton"
+>                                , totalTime = 2*60
+>                                , minDuration = 2*60
+>                                , maxDuration = 6*60
+>                                }
+>     expStartTime = fromGregorian 2006 11 8 21 45 0
+>     expPeriod = Period candidate expStartTime 120 1.5167294 undefined False
 
 > test_Pack_overlapped_fixed = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -1008,10 +1141,6 @@ Session data to pack:
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
 >                               }
-
-> testItem1 = Item 1 2 4 (replicate 6 1.0) []
-> testItem2 = Item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []
-> testItems = [testItem1, testItem2]
 
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs

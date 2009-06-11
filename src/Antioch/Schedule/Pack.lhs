@@ -9,7 +9,7 @@
 > import Antioch.Generators
 > import Antioch.Utilities
 > import Data.List   (foldl', sort, delete, find)
-> import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust)
+> import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust, fromJust)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
@@ -124,14 +124,14 @@ Convert an open session `s` into a schedulable item by scoring it with
 >     return $! force `seq` Item {
 >         iId      = s
 >       , iMinDur  = numSteps . minDuration $ s
->       , iMaxDur  = numSteps . maxDuration $ s
+>       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s)
 >       , iFuture  = scores
 >       , iPast    = []
 >       }
 
 Convert candidates to telescope periods relative to a given startime.
-Remember: Candidates have unitless times, and their scores are cumulative.  Our 
-Periods need to have Minutes, and average scores.
+Remember: Candidates have unitless times, and their scores are cumulative.
+Our Periods need to have Minutes, and average scores.
 
 
 > toPeriod              :: DateTime -> Candidate Session -> Period
@@ -149,7 +149,7 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
 >     cId       :: !a
->   , cStart    :: !Int 
+>   , cStart    :: !Int
 >   , cDuration :: !Int 
 >   , cScore    :: !Score
 >   } deriving (Eq, Show)
@@ -209,6 +209,11 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 Generate a series of candidates representing the possibilities for
 scheduling an item at each of a sequence of durations: 15 minutes, 30
 minutes, etc.
+Example: pass in Item {sId = 1, min = 2, max = 4, past = [1,1,0,0]
+past' becomes only [1,2] because: 1) take just the first 4 (max) 2) take 
+only the first two because of the zeros being < epsilon, then 3) do a
+running accumulate (scanl1 (+)).
+Next in our example, we call toCandidate 1 [Nothing, Just 2].
 
 > candidates               :: Item a -> [Maybe (Candidate a)]
 > candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }
@@ -224,14 +229,46 @@ minutes, etc.
 >     past' = acc . takeWhile (>= epsilon) . take max $ past
 >     acc   = scanl1 (+)
 
+Given a proposed 'item' for a slot and a list of candidates representing
+all the previous slots ('past'), return the count of previously 'used' time
+for the item and the 'separate'ion between the current item's period
+and any previous periods.  Note the returned values only apply
+if a previous candidate using item was found, i.e., 'used' > 0.
+
+> queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, [Int])
+> queryPast item past dur = queryPast' item . drop (dur - 1) $ past
+
+> queryPast' :: (Eq a) => Item a -> [Maybe (Candidate a)] -> (Int, Int, [Int])
+> --queryPast' item   past     -> (used, separate)
+> queryPast'   item   [Nothing] = (0, 0, [])
+> queryPast'   item (c:cs)
+>     | isNothing c             = (used, 1 + separate, step:vs)
+>     | itemId == candidateId   = (dur + used, 0, step:vs)
+>     | otherwise               = if used > 0
+>                                 then (used, dur + separate, step:vs)
+>                                 else (used, separate, step:vs)
+>   where
+>     itemId = iId item
+>     candidateId = cId (fromJust c)
+>     step = min (length cs) dur - 1
+>     dur = cDuration (fromMaybe (defaultCandidate {cId = (iId item), cDuration = 1}) c)
+>     (used, separate, vs) = queryPast' item (drop step cs)
+
 Given possible scores (using Maybe) over a range of a session's durations,
 generate a list of possible candidates corresponding to the scores.
+Note the use of fmap: here we are transforming Scores into Candidates 
+inside the Maybe Monad.
+Example (continued from above): toCandidate 1 [Nothing, Just 2] gives:
+[ Nothing, Just (Candidate 1 0 2 2) ]
 
 > toCandidate           :: a -> [Maybe Score] -> [Maybe (Candidate a)]
 > toCandidate id scores = [fmap (Candidate id 0 d) s | s <- scores | d <- [1..]]
+> -- add filter to remove candidates which break time_between, i.e.,
+> -- cDuration < last.cStart (not defined!) + last.cDuration?
 
 Move a score from the future to the past, so that it can now be
-scheduled.
+scheduled. Note that the order of the scores are reversed as they
+are passed from future to past.
 
 > step :: Item a -> Item a
 > step item@(Item { iFuture = [],     iPast = past }) = item {               iPast = 0 : past }
@@ -257,24 +294,27 @@ packWorker' future [Nothing] (map step items)
 Note that the 'past' param is seeded w/ [Nothing], and that the Items
 have their first future score moved out their past scores ('step').
 The basic recursive pattern here is that each element of the future list
-is inspected, and the past list is constructed, until we reach the end of the 
-future list, where we terminate and return our constructed past list.
+is inspected, and the past list is constructed, until we reach the end of
+the future list, where we terminate and return our constructed past list.
 Remember, the pack algorithm works by breaking down the problem into sub
 problems.  For our case, that means first solving the 15-min schedule, then 
-using this solution to solve for the 30-min schedule, and so on.  The solutions
-to our sub-problems are represented by the 'past' param.
+using this solution to solve for the 30-min schedule, and so on.  The
+solutions to our sub-problems are represented by the 'past' param.
+Note that cStart in the result is not defined, this occurs in unwind.
 
 > packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
-> packWorker' []                 past _        = past 
-> packWorker' (Just b  : future) past sessions =
+> -- packWorker' future             past sessions
+> packWorker'    []                 past _        = past 
+> packWorker'    (Just b  : future) past sessions =
 >     packWorker' future (Just b:past) $! map (step . forget) sessions
-> packWorker' (Nothing : future) past sessions =
+> packWorker'    (Nothing : future) past sessions =
 >     let b = getBest past sessions in
 >     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' future (b:past) $! map step sessions
 
-Given the sessions (items) to pack, and the 'past', which is the step n in our N step packing algorithm (15 minute steps):
-   * from each item, create a set of candidates starting w/ 0 duration up
-     to the max duration of the session (item).  
+Given the sessions (items) to pack, and the 'past', which is the step n
+in our N step packing algorithm (15 minute steps):
+   * from each item, create a set of candidates starting with duration 0 up
+     to the max duration of the session
    * increase the scores of each candidate using the score from the 'past'
      candidate (if any).  Eventually, the 'past' will contain the best
      candidates from the previous sub-problems.
@@ -284,7 +324,10 @@ Given the sessions (items) to pack, and the 'past', which is the step n in our N
      item
 
 > getBest ::  [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
-> getBest past sessions = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions    
+> getBest past sessions = best $ map (bestCandidateOfASession past) sessions    
+
+> bestCandidateOfASession :: [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
+> bestCandidateOfASession past sess = best . zipWith madd (candidates sess) $ past
 
 Find the best of a collection of candidates.
 
