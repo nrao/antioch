@@ -9,7 +9,7 @@
 > import Antioch.Generators
 > import Antioch.Utilities
 > import Data.List   (foldl', sort, delete, find)
-> import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust)
+> import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust, fromJust)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
@@ -209,6 +209,11 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 Generate a series of candidates representing the possibilities for
 scheduling an item at each of a sequence of durations: 15 minutes, 30
 minutes, etc.
+Example: pass in Item {sId = 1, min = 2, max = 4, past = [1,1,0,0]
+past' becomes only [1,2] because: 1) take just the first 4 (max) 2) take 
+only the first two because of the zeros being < epsilon, then 3) do a
+running accumulate (scanl1 (+)).
+Next in our example, we call toCandidate 1 [Nothing, Just 2].
 
 > candidates               :: Item a -> [Maybe (Candidate a)]
 > candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }
@@ -224,11 +229,42 @@ minutes, etc.
 >     past' = acc . takeWhile (>= epsilon) . take max $ past
 >     acc   = scanl1 (+)
 
+Given a proposed 'item' for a slot and a list of candidates representing
+all the previous slots ('past'), return the count of previously 'used' time
+for the item and the 'separate'ion between the current item's period
+and any previous periods.  Note the returned values only apply
+if a previous candidate using item was found, i.e., 'used' > 0.
+
+> queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, [Int])
+> queryPast item past dur = queryPast' item . drop (dur - 1) $ past
+
+> queryPast' :: (Eq a) => Item a -> [Maybe (Candidate a)] -> (Int, Int, [Int])
+> --queryPast' item   past     -> (used, separate)
+> queryPast'   item   [Nothing] = (0, 0, [])
+> queryPast'   item (c:cs)
+>     | isNothing c             = (used, 1 + separate, step:vs)
+>     | itemId == candidateId   = (dur + used, 0, step:vs)
+>     | otherwise               = if used > 0
+>                                 then (used, dur + separate, step:vs)
+>                                 else (used, separate, step:vs)
+>   where
+>     itemId = iId item
+>     candidateId = cId (fromJust c)
+>     step = min (length cs) dur - 1
+>     dur = cDuration (fromMaybe (defaultCandidate {cId = (iId item), cDuration = 1}) c)
+>     (used, separate, vs) = queryPast' item (drop step cs)
+
 Given possible scores (using Maybe) over a range of a session's durations,
 generate a list of possible candidates corresponding to the scores.
+Note the use of fmap: here we are transforming Scores into Candidates 
+inside the Maybe Monad.
+Example (continued from above): toCandidate 1 [Nothing, Just 2] gives:
+[ Nothing, Just (Candidate 1 0 2 2) ]
 
 > toCandidate           :: a -> [Maybe Score] -> [Maybe (Candidate a)]
 > toCandidate id scores = [fmap (Candidate id 0 d) s | s <- scores | d <- [1..]]
+> -- add filter to remove candidates which break time_between, i.e.,
+> -- cDuration < last.cStart (not defined!) + last.cDuration?
 
 Move a score from the future to the past, so that it can now be
 scheduled. Note that the order of the scores are reversed as they
@@ -288,7 +324,10 @@ in our N step packing algorithm (15 minute steps):
      item
 
 > getBest ::  [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
-> getBest past sessions = best . map (\s -> best . zipWith madd (candidates s) $ past) $ sessions    
+> getBest past sessions = best $ map (bestCandidateOfASession past) sessions    
+
+> bestCandidateOfASession :: [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
+> bestCandidateOfASession past sess = best . zipWith madd (candidates sess) $ past
 
 Find the best of a collection of candidates.
 

@@ -242,6 +242,44 @@ negative score.
 >     past = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) testItems
 
+> test_queryPast = TestCase $ do
+>   assertEqual "test_queryPast101" (0, 0, []) (queryPast testItem1 (drop 6 past) 1)
+>   assertEqual "test_queryPast201" (0, 0, []) (queryPast testItem2 (drop 6 past) 1)
+>   assertEqual "test_queryPast111" (0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
+>   assertEqual "test_queryPast211" (0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
+>   assertEqual "test_queryPast121" (2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
+>   assertEqual "test_queryPast221" (0, 0, [1]) (queryPast testItem2 (drop 4 past) 1)
+>   assertEqual "test_queryPast131" (3, 0, [2]) (queryPast testItem1 (drop 3 past) 1)
+>   assertEqual "test_queryPast231" (0, 0, [2]) (queryPast testItem2 (drop 3 past) 1)
+>   assertEqual "test_queryPast141" (2, 2, [1,1]) (queryPast testItem1 (drop 2 past) 1)
+>   assertEqual "test_queryPast241" (2, 0, [1,1]) (queryPast testItem2 (drop 2 past) 1)
+>   assertEqual "test_queryPast151" (2, 3, [2,1]) (queryPast testItem1 (drop 1 past) 1)
+>   assertEqual "test_queryPast251" (3, 0, [2,1]) (queryPast testItem2 (drop 1 past) 1)
+>   assertEqual "test_queryPast161" (2, 4, [3,1]) (queryPast testItem1 past 1)
+>   assertEqual "test_queryPast261" (4, 0, [3,1]) (queryPast testItem2 past 1)
+>   assertEqual "test_queryPast122" (0, 1, [0])  (queryPast testItem1 (drop 4 past) 2)
+>   assertEqual "test_queryPast222" (0, 1, [0]) (queryPast testItem2 (drop 4 past) 2)
+>   assertEqual "test_queryPast132" (2, 0, [1]) (queryPast testItem1 (drop 3 past) 2)
+>   assertEqual "test_queryPast232" (0, 0, [1]) (queryPast testItem2 (drop 3 past) 2)
+>   assertEqual "test_queryPast142" (3, 0, [2]) (queryPast testItem1 (drop 2 past) 2)
+>   assertEqual "test_queryPast242" (0, 0, [2]) (queryPast testItem2 (drop 2 past) 2)
+>   assertEqual "test_queryPast152" (2, 2, [1,1]) (queryPast testItem1 (drop 1 past) 2)
+>   assertEqual "test_queryPast252" (2, 0, [1,1]) (queryPast testItem2 (drop 1 past) 2)
+>   assertEqual "test_queryPast162" (2, 3, [2,1]) (queryPast testItem1 past 2)
+>   assertEqual "test_queryPast262" (3, 0, [2,1]) (queryPast testItem2 past 2)
+>   assertEqual "test_queryPast153" (3, 0, [2]) (queryPast testItem1 (drop 1 past) 3)
+>   assertEqual "test_queryPast253" (0, 0, [2]) (queryPast testItem2 (drop 1 past) 3)
+>   assertEqual "test_queryPast163" (2, 2, [1,1]) (queryPast testItem1 past 3)
+>   assertEqual "test_queryPast263" (2, 0, [1,1]) (queryPast testItem2 past 3)
+>   assertEqual "test_queryPast1hole" (2, 3, [0,1,1]) (queryPast testItem1 hole 1)
+>   assertEqual "test_queryPast2hole" (2, 1, [0,1,1]) (queryPast testItem2 hole 1)
+>     where
+>       past = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
+>              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>       hole = [Nothing, Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+
 > test_PackWorker'6 = TestCase . assertEqual "test_PackWorker'6" xs . packWorker' ys zs $ ws
 >   where
 >     -- result, list of best solutions starting for 60 minutes, then 45,
@@ -882,7 +920,6 @@ revealed a bug where scores are turning negative in pact.
 >     periods' <- runScoring w [] $ do
 >         fs <- genScore ss
 >         pack fs starttime duration fixed ss
->     printList periods'
 >     assertEqual "test_Pack6" 3 (numFixed periods') --expPeriods periods'  
 >   where
 >     starttime = fromGregorian 2006 10 6 3 0 0
