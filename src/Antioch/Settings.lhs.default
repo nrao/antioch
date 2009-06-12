@@ -1,7 +1,7 @@
 > module Antioch.Settings where
 
 > weatherDB :: String
-> weatherDB = "dss"
+> weatherDB = "weather"
 
 > hardwareScheduleDB = "dss_unit_tests"
 > dssDataDB          = "dss_unit_tests"
