@@ -82,18 +82,22 @@ tested time period
 
 > test_frequencyPressure = TestCase $ do
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
->     assertScoringResult "test_frequencyPressure generated" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
+>     assertScoringResult "test_frequencyPressure p" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
+>     freqPressure <- runScoring undefined [] $ genFrequencyPressure rSessions
+>     assertScoringResult "test_frequencyPressure r" Nothing 5 1.6708559 (freqPressure undefined . head $ rSessions)
 
+> -- TBF not in tests list (and fails)??
 > test_frequencyPressureComparison = TestCase $ do
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
 >   where
 >     ss = concatMap sessions pTestProjects
->     -- s = head $ filter (\s -> "CV" == (sName s)) ss
 
 > test_rightAscensionPressure = TestCase $ do
 >     raPressure <- runScoring undefined [] $ genRightAscensionPressure pSessions
->     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
+>     assertScoringResult "test_rightAscensionPressure p" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
+>     raPressure <- runScoring undefined [] $ genRightAscensionPressure rSessions
+>     assertScoringResult "test_rightAscensionPressure r" Nothing 5 1.3607032 (raPressure undefined . head $ rSessions)
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
@@ -723,28 +727,32 @@ These are sessions that exposed bugs from the QuickCheck properties.
 
 > dtLP = fromGregorian 2006 10 15 12 0 0
 
-> pSessions = zipWith4 genPSess tots useds ras bands 
->   where tots  = [12*60, 18*60, 10*60, 20*60]
->         useds = [ 2*60,  8*60,  5*60, 12*60]
->         ras   = [  5.4,  10.1,   4.9,  18.1]
->         bands = [    L,     C,     X,     L]
->         genPSess t u ra b = defaultSession {
+> pSessions = zipWith5 genPSess tots useds ras bands grades
+>   where tots   = [12*60, 18*60, 10*60, 20*60]
+>         useds  = [ 2*60,  8*60,  5*60, 12*60]
+>         ras    = [  5.4,  10.1,   4.9,  18.1]
+>         bands  = [    L,     C,     X,     L]
+>         grades = [GradeA, GradeA, GradeA, GradeA]
+>         genPSess t u ra b g = defaultSession {
 >             totalTime = t
 >           , periods = [defaultPeriod {duration = u}]
 >           , ra = ra
 >           , band = b
+>           , grade = g
 >         }
 
-> rSessions = zipWith4 genPSess tots useds ras bands 
->   where tots  = [12*60, 18*60, 10*60, 20*60]
->         useds = [ 2*60,  8*60,  5*60, 12*60]
->         ras   = [  5.4,  10.1,   4.9,  18.1]
->         bands = [    L,     C,     X,     L]
->         genPSess t u ra b = defaultSession {
+> rSessions = zipWith5 genPSess tots useds ras bands grades
+>   where tots   = [12*60, 18*60, 10*60, 20*60]
+>         useds  = [ 2*60,  8*60,  5*60, 12*60]
+>         ras    = [  5.4,  10.1,   4.9,  18.1]
+>         bands  = [    L,     C,     X,     L]
+>         grades = [GradeA, GradeA, GradeB, GradeB]
+>         genPSess t u ra b g = defaultSession {
 >             totalTime = t
 >           , periods = [defaultPeriod {duration = u}]
 >           , ra = ra
 >           , band = b
+>           , grade = g
 >         }
 
 > rSched = [ (fromGregorian 2006 6 14 12 0 0, [Rcvr1_2, Rcvr26_40])

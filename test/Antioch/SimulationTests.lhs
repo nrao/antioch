@@ -41,11 +41,11 @@
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, gb, gb, va, tx, tx, gb, wv, gb, lp, cv, cv, tx]
+>     expSs = [gb, gb, va, cv, tx, tx, gb, wv, gb, lp, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
 >           , fromGregorian 2006 2 1 5 30 0
->           , fromGregorian 2006 2 1 7 30 0
+>           , fromGregorian 2006 2 1 9 30 0
 >           , fromGregorian 2006 2 1 11 30 0
 >           , fromGregorian 2006 2 1 15 30 0
 >           , fromGregorian 2006 2 1 22 15 0
@@ -55,7 +55,7 @@
 >           , fromGregorian 2006 2 2 10 15 0
 >           , fromGregorian 2006 2 2 12 15 0
 >           , fromGregorian 2006 2 2 14 15 0 ]
->     durs = [120, 120, 120, 240, 240, 240, 120, 240, 120, 240, 120, 120, 240]
+>     durs = [120, 120, 240, 120, 240, 240, 120, 240, 120, 240, 120, 120, 240]
 >     scores = replicate 13 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
@@ -166,7 +166,7 @@ that it does not over allocate periods to a session.
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, va, tx, tx, wv, gb, lp, cv, tx]
+>     expSs = [gb, va, tx, tx, wv, gb, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 7 30 0
 >           , fromGregorian 2006 2 1 11 30 0
@@ -175,8 +175,8 @@ that it does not over allocate periods to a session.
 >           , fromGregorian 2006 2 2  4 30 0
 >           , fromGregorian 2006 2 2  7 30 0
 >           , fromGregorian 2006 2 2 12  0 0
->           , fromGregorian 2006 2 2 14 15 0 ]
->     durs = [360, 240, 240, 360, 360, 180, 270, 135, 360]
+>           , fromGregorian 2006 2 2 14  0 0 ]
+>     durs = [360, 240, 240, 360, 360, 180, 270, 120, 360]
 >     scores = replicate 9 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 >     
