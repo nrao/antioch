@@ -232,7 +232,7 @@ Creates an array indexed by band or hour angle with the hours total and used
 for each slice for computing pressures.
 
 > initBins             :: Ix a => (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
-> initBins bounds f xs = runSTArray $ initBins' bounds f xs
+> initBins bounds f xs = runSTArray $ initBins' bounds f . filter (\s-> (grade s) >= GradeA) $ xs
 
 > initBins' bounds f xs = do
 >     arr <- newArray bounds (0, 0)
@@ -637,7 +637,7 @@ Convenience function for translating go/no-go into a factor.
 
 Convenience function for scoring a Session over it's Period's duration
 Note: The score recorded in the period (pScore) is the average over it's 
-duration.  So, we should be able to reprodcue that using this function, 
+duration.  So, we should be able to reproduce that using this function, 
 the original pool of sessions (for the correct pressures), and the forecast 
 used to generate pScore (using the time pScore was calculated for, pForecast).
 

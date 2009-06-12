@@ -38,7 +38,7 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 
 > type ReceiverGroup = [Receiver]
 
-> data Grade = GradeA | GradeB | GradeC deriving (Eq, Show, Read)
+> data Grade = GradeC | GradeB | GradeA deriving (Eq, Ord, Show, Read)
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
