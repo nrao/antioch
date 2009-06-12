@@ -125,6 +125,8 @@ Convert an open session `s` into a schedulable item by scoring it with
 >         iId      = s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s)
+>       , iTimeAv  = totalAvail s
+>       , iTimeBt  = timeBetween s
 >       , iFuture  = scores
 >       , iPast    = []
 >       }
@@ -202,6 +204,8 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >     iId      :: !a
 >   , iMinDur  :: !Int
 >   , iMaxDur  :: !Int
+>   , iTimeAv  :: !Int
+>   , iTimeBt  :: !Int
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
 >   } deriving (Eq, Show)
@@ -284,7 +288,7 @@ Given the schedule (showing free and pre-scheduled time slots) and the list
 of sessions to pack (items have scores), returns when the session and pre-
 schedule time slots should occur (a list of *only* candidates)
 
-> packWorker        :: [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
+> packWorker        :: Eq a => [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
 > packWorker future items = unwind . packWorker' future [Nothing] . map step $ items
 
 Returns a list representing each time slot, with each element either being 
@@ -302,7 +306,7 @@ using this solution to solve for the 30-min schedule, and so on.  The
 solutions to our sub-problems are represented by the 'past' param.
 Note that cStart in the result is not defined, this occurs in unwind.
 
-> packWorker' :: [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
+> packWorker' :: Eq a => [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
 > -- packWorker' future             past sessions
 > packWorker'    []                 past _        = past 
 > packWorker'    (Just b  : future) past sessions =
@@ -323,11 +327,32 @@ in our N step packing algorithm (15 minute steps):
    * now find the best from the collection of the best candidates for each
      item
 
-> getBest ::  [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
+> getBest ::  Eq a => [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
 > getBest past sessions = best $ map (bestCandidateOfASession past) sessions    
 
-> bestCandidateOfASession :: [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
+TBF: Start using filterCandidates once we're sure it's working and it doesn't 
+seem to have a huge impact on performance.
+
+> bestCandidateOfASession :: Eq a => [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
+> --bestCandidateOfASession past sess = best . zipWith madd (filterCandidates sess past $ candidates sess) $ past
 > bestCandidateOfASession past sess = best . zipWith madd (candidates sess) $ past
+
+We need apply certain constraints inside the packing algorithm.  For example,
+time remaining, and time between must be obeyed as the candidates for packing
+are constructed.  This function will apply these types of contraints to
+a list of candidates, such that candidates that violate constraints are 
+replaced by Nothing.
+
+> filterCandidates :: Eq a => Item a -> [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Maybe (Candidate a)]
+> filterCandidates item past cs = map (filterCandidate item past) cs 
+
+> filterCandidate :: Eq a => Item a -> [Maybe (Candidate a)] -> Maybe (Candidate a) -> Maybe (Candidate a)
+> filterCandidate item past Nothing  = Nothing
+> filterCandidate item past (Just c) | iId item == cId c = acceptCandidate item used sep c 
+>                                    | otherwise         = Just c
+>   where
+>     (used, sep, hist) = queryPast item past (cDuration c)
+>     acceptCandidate item used sep c = if (used > (iTimeAv item)) || (sep < (iTimeBt item)) then Nothing else Just c
 
 Find the best of a collection of candidates.
 
