@@ -346,13 +346,19 @@ replaced by Nothing.
 > filterCandidates :: Eq a => Item a -> [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Maybe (Candidate a)]
 > filterCandidates item past cs = map (filterCandidate item past) cs 
 
+A candidate gets replaced with Nothing if:
+   * the time in the past, plus the time the candidate is testing to put on 
+   the schedule, is greater than it's available time
+   * the duration of the candidate puts it in close (too close) proximity to another period of the same session (time between constraint).
+
 > filterCandidate :: Eq a => Item a -> [Maybe (Candidate a)] -> Maybe (Candidate a) -> Maybe (Candidate a)
 > filterCandidate item past Nothing  = Nothing
-> filterCandidate item past (Just c) | iId item == cId c = acceptCandidate item used sep c 
+> filterCandidate item past (Just c) | iId item == cId c = rejectCandidate item used sep c 
 >                                    | otherwise         = Just c
 >   where
 >     (used, sep, hist) = queryPast item past (cDuration c)
->     acceptCandidate item used sep c = if (used > (iTimeAv item)) || (sep < (iTimeBt item)) then Nothing else Just c
+>     rejectCandidate item used sep c = if ((used + dur) > (iTimeAv item)) || (sep < (iTimeBt item)) then Nothing else Just c
+>     dur = cDuration c
 
 Find the best of a collection of candidates.
 
