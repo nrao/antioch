@@ -126,6 +126,9 @@ Convert an open session `s` into a schedulable item by scoring it with
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s)
 >       , iTimeAv  = totalAvail s
+>       -- PP
+>       --, iSTimAv  = totalAvail s
+>       --, iPTimAv  = timeAvail . project $ s
 >       , iTimeBt  = timeBetween s
 >       , iFuture  = scores
 >       , iPast    = []
@@ -239,6 +242,8 @@ for the item and the 'separate'ion between the current item's period
 and any previous periods.  Note the returned values only apply
 if a previous candidate using item was found, i.e., 'used' > 0.
 
+> -- PP return (sUsed, pUsed, separate) instead of (used, separate) so
+> -- acceptCandidate can eliminate those used run out of project time
 > queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, [Int])
 > queryPast item past dur = queryPast' item . drop (dur - 1) $ past
 
@@ -255,7 +260,7 @@ if a previous candidate using item was found, i.e., 'used' > 0.
 >     itemId = iId item
 >     candidateId = cId (fromJust c)
 >     step = min (length cs) dur - 1
->     dur = cDuration (fromMaybe (defaultCandidate {cId = (iId item), cDuration = 1}) c)
+>     dur = cDuration (fromMaybe (defaultCandidate {cId = itemId, cDuration = 1}) c)
 >     (used, separate, vs) = queryPast' item (drop step cs)
 
 Given possible scores (using Maybe) over a range of a session's durations,
@@ -340,8 +345,8 @@ seem to have a huge impact on performance.
 We need apply certain constraints inside the packing algorithm.  For example,
 time remaining, and time between must be obeyed as the candidates for packing
 are constructed.  This function will apply these types of contraints to
-a list of candidates, such that candidates that violate constraints are 
-replaced by Nothing.
+a list of candidates, such that those candidates that violate the constraints
+are replaced by Nothing.
 
 > filterCandidates :: Eq a => Item a -> [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Maybe (Candidate a)]
 > filterCandidates item past cs = map (filterCandidate item past) cs 
@@ -352,6 +357,7 @@ replaced by Nothing.
 >                                    | otherwise         = Just c
 >   where
 >     (used, sep, hist) = queryPast item past (cDuration c)
+>     -- PP also check (pUsed > (iPTimAv item))
 >     acceptCandidate item used sep c = if (used > (iTimeAv item)) || (sep < (iTimeBt item)) then Nothing else Just c
 
 Find the best of a collection of candidates.
