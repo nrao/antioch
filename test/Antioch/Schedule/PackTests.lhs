@@ -28,6 +28,7 @@
 >   , test_Best
 >   , test_filterCandidate
 >   , test_filterCandidate_timeBetween
+>   , test_filterCandidate_timeAvail
 >   , test_GetBest1
 >   , test_GetBest1'
 >   , test_GetBest2
@@ -356,13 +357,34 @@ Non-Happy Path tests for filterCandidate: some candidates get filtered
 >       i2_2 = testItem2 { iTimeBt = 2 }
 >       i2_1 = testItem2 { iTimeBt = 1 }
 >       i2_0 = testItem2 { iTimeBt = 0 }
->       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
->              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
->       cn = Nothing
+>       cn   = Nothing
 >       c1_1 = Just $ Candidate 1 0 1 1.0
 >       c1_2 = Just $ Candidate 1 0 2 2.0
 >       c2_1 = Just $ Candidate 2 0 1 1.0
+>       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
+>              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+
+Non-Happy Path tests for filterCandidate: some candidates get filtered
+
+> test_filterCandidate_timeAvail = TestCase $ do
+>   -- for a candidate of duration 1, see the affect of decreasing item's tb
+>   assertEqual "test_filterCandidate3_1" cn   (filterCandidate i1_0 p c1_1)
+>   assertEqual "test_filterCandidate3_2" cn   (filterCandidate i1_1 p c1_1)
+>   assertEqual "test_filterCandidate3_3" c1_1 (filterCandidate i1_3 p c1_1)
+>   assertEqual "test_filterCandidate3_4" cn   (filterCandidate i1_0 p c1_4)
+>     where
+>       i1_0 = testItem1 { iTimeAv = 0 } -- no way buddy
+>       i1_1 = testItem1 { iTimeAv = 1 } -- ill
+>       --i1_2 = testItem1 { iTimeAv = 2 } 
+>       i1_3 = testItem1 { iTimeAv = 3 } 
+>       cn   = Nothing
+>       c1_1 = Just $ Candidate 1 0 1 1.0
+>       c1_4 = Just $ Candidate 1 0 4 1.0
+>       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
+>              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>
 
 Test against python unit tests from beta test code:
 
