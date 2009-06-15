@@ -28,6 +28,7 @@
 >   , test_Best
 >   , test_filterCandidate
 >   , test_filterCandidate_timeBetween
+>   , test_filterCandidate_timeAvail
 >   , test_GetBest1
 >   , test_GetBest1'
 >   , test_GetBest2
@@ -356,13 +357,62 @@ Non-Happy Path tests for filterCandidate: some candidates get filtered
 >       i2_2 = testItem2 { iTimeBt = 2 }
 >       i2_1 = testItem2 { iTimeBt = 1 }
 >       i2_0 = testItem2 { iTimeBt = 0 }
->       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
->              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
->       cn = Nothing
+>       cn   = Nothing
 >       c1_1 = Just $ Candidate 1 0 1 1.0
 >       c1_2 = Just $ Candidate 1 0 2 2.0
 >       c2_1 = Just $ Candidate 2 0 1 1.0
+>       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
+>              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+
+Non-Happy Path tests for filterCandidate: some candidates get filtered
+
+> test_filterCandidate_timeAvail = TestCase $ do
+>   -- candidate of duration 1, see it get filtered till it has more time av.
+>   assertEqual "test_filterCandidate3_1" cn   (filterCandidate i1_0 p c1_1)
+>   assertEqual "test_filterCandidate3_2" cn   (filterCandidate i1_1 p c1_1)
+>   assertEqual "test_filterCandidate3_3" cn   (filterCandidate i1_2 p c1_1)
+>   assertEqual "test_filterCandidate3_4" c1_1 (filterCandidate i1_3 p c1_1)
+>   assertEqual "test_filterCandidate3_5" c1_1 (filterCandidate i1_4 p c1_1)
+>   -- candidate of duration 4, see it get filtered till it has more time av.
+>   assertEqual "test_filterCandidate3_6" cn   (filterCandidate i1_0 p c1_4)
+>   assertEqual "test_filterCandidate3_7" cn   (filterCandidate i1_1 p c1_4)
+>   assertEqual "test_filterCandidate3_8" cn   (filterCandidate i1_2 p c1_4)
+>   assertEqual "test_filterCandidate3_9" cn   (filterCandidate i1_3 p c1_4)
+>   assertEqual "test_filterCandidate3_10" cn  (filterCandidate i1_4 p c1_4)
+>   assertEqual "test_filterCandidate3_11" cn  (filterCandidate i1_5 p c1_4)
+>   assertEqual "test_filterCandidate3_12" cn  (filterCandidate i1_6 p c1_4)
+>   assertEqual "test_filterCandidate3_13" c1_4 (filterCandidate i1_7 p c1_4)
+>   -- same pattern, different session
+>   assertEqual "test_filterCandidate3_14" cn  (filterCandidate i2_0 p c2_1)
+>   assertEqual "test_filterCandidate3_15" cn  (filterCandidate i2_1 p c2_1)
+>   assertEqual "test_filterCandidate3_16" cn  (filterCandidate i2_2 p c2_1)
+>   assertEqual "test_filterCandidate3_17" cn  (filterCandidate i2_3 p c2_1)
+>   assertEqual "test_filterCandidate3_18" cn  (filterCandidate i2_4 p c2_1)
+>   assertEqual "test_filterCandidate3_19" c2_1 (filterCandidate i2_5 p c2_1)
+>     where
+>       i1_0 = testItem1 { iTimeAv = 0, iTimeBt = 0 } -- no way buddy
+>       i1_1 = testItem1 { iTimeAv = 1, iTimeBt = 0 } 
+>       i1_2 = testItem1 { iTimeAv = 2, iTimeBt = 0 } 
+>       i1_3 = testItem1 { iTimeAv = 3, iTimeBt = 0 } 
+>       i1_4 = testItem1 { iTimeAv = 4, iTimeBt = 0 } 
+>       i1_5 = testItem1 { iTimeAv = 5, iTimeBt = 0 } 
+>       i1_6 = testItem1 { iTimeAv = 6, iTimeBt = 0 } 
+>       i1_7 = testItem1 { iTimeAv = 7, iTimeBt = 0 } 
+>       i2_0 = testItem2 { iTimeAv = 0, iTimeBt = 0 } 
+>       i2_1 = testItem2 { iTimeAv = 1, iTimeBt = 0 } 
+>       i2_2 = testItem2 { iTimeAv = 2, iTimeBt = 0 } 
+>       i2_3 = testItem2 { iTimeAv = 3, iTimeBt = 0 } 
+>       i2_4 = testItem2 { iTimeAv = 4, iTimeBt = 0 } 
+>       i2_5 = testItem2 { iTimeAv = 5, iTimeBt = 0 } 
+>       cn   = Nothing
+>       c1_1 = Just $ Candidate 1 0 1 1.0
+>       c1_4 = Just $ Candidate 1 0 4 1.0
+>       c2_1 = Just $ Candidate 2 0 1 1.0
+>       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
+>              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
+>              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>
 
 Test against python unit tests from beta test code:
 
