@@ -7,7 +7,7 @@ import pg
 
 def getForecastType(hour):
     retval = int(hour) / 12 + 1
-    return retval if retval < 6 else 5
+    return retval if retval < 6 else None
 
 class CleoDBImport:
 
@@ -77,12 +77,60 @@ class CleoDBImport:
         self.data = [(timestamp, values) for timestamp, values in self.data.items()]
         self.data.sort(key = lambda x: x[0])
 
+    def getWeatherDate(self, timestamp):
+        r = \
+            self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+        if len(r.dictresult()) == 0:
+            self.c.query("INSERT INTO weather_dates (date) VALUES ('%s')" % timestamp)
+            r = \
+                self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+        return r.dictresult()[0]["id"]
+
+    def addForecast(self
+                  , forecast_type_id
+                  , weather_date_id
+                  , value):
+
+        speed = value['speed']
+        r = self.c.query("""SELECT wind_speed
+                            FROM forecasts
+                            WHERE forecast_type_id = %s and weather_date_id = %s
+                         """ % (forecast_type_id, weather_date_id))
+
+        if len(r.dictresult()) == 0:
+            q = """INSERT
+                   INTO forecasts (forecast_type_id, weather_date_id, wind_speed)
+                   VALUES (%s, %s, %s)""" % (forecast_type_id
+                                           , weather_date_id
+                                           , speed
+                                             )
+            self.c.query(q)
+
+        # Get the id of the forecast just inserted
+        r  = self.c.query('SELECT id from forecasts ORDER BY id DESC LIMIT 1')
+        return r.dictresult()[0]["id"]
+
+    def addForecastByFrequency(self, id, value):
+        for i, (tau, tAtm) in enumerate(zip(value['tauCleo']
+                                          , value['tAtmCleo']
+                                        )):
+            freq = i + 1
+            r = self.c.query("""SELECT opacity, tsys
+                                FROM forecast_by_frequency
+                                WHERE forecast_id = %s AND frequency = %s
+                             """ % (id, freq))
+            if len(r.dictresult()) == 0:
+                # tsys = tAtm from Cleo
+                q = """INSERT
+                       INTO forecast_by_frequency (frequency, opacity, tsys, forecast_id)
+                       VALUES(%s, %s, %s, %s)""" % (freq, tau, tAtm, id)
+                self.c.query(q)
+
     def insert(self):
-        c = pg.connect(user = "dss", dbname = self.dbname)
+        self.c = pg.connect(user = "dss", dbname = self.dbname)
         print "Inserting data"
         for timestamp, value in self.data:
             freq = 1
-            speed = value['speed']
             if value.has_key('tauCleo') and value.has_key('tSysCleo') and value.has_key('tAtmCleo'):
                 print "%s UT: Inserting weather for %s" % (datetime.utcnow().strftime("%H:%M:%S"), timestamp)
             else:
@@ -91,29 +139,13 @@ class CleoDBImport:
             
             td               = timestamp - self.startstamp
             forecast_type_id = getForecastType(td.days * 24. + td.seconds / 3600.)
-            q = """INSERT
-                   INTO forecasts (forecast_type_id, date, wind_speed, w2_wind_speed, tatm)
-                   VALUES (%s, '%s', %s, NULL, NULL)""" % (forecast_type_id
-                                                         , timestamp
-                                                         , speed
-                                                           )
-            c.query(q)
-
-            # Get the id of the forecast just inserted
-            r  = c.query('SELECT id from forecasts ORDER BY id DESC LIMIT 1')
-            id = r.dictresult()[0]["id"]
-          
-            for i, (tau, tAtm) in enumerate(zip(value['tauCleo']
-                                              , value['tAtmCleo']
-                                            )):
-                freq = i + 1
-                # tsys = tAtm from Cleo
-                q = """INSERT
-                       INTO forecast_by_frequency (frequency, opacity, tsys, forecast_id)
-                       VALUES(%s, %s, %s, %s)""" % (freq, tau, tAtm, id)
-                c.query(q)
-
-        c.close()
+            if forecast_type_id is not None:
+                weather_date_id  = self.getWeatherDate(timestamp)
+                forecast_id      = self.addForecast(forecast_type_id
+                                                  , weather_date_id
+                                                  , value)
+                self.addForecastByFrequency(forecast_id, value)
+        self.c.close()
 
     def importDB(self, files):
         self.read(files)
@@ -121,7 +153,7 @@ class CleoDBImport:
 
 if __name__ == "__main__":
     cleo = CleoDBImport()
-    #cleo.getWeather()
+    cleo.getWeather()
     try:
         path = sys.argv[1]
     except:

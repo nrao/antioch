@@ -31,7 +31,6 @@
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
 >   , w2_wind         :: DateTime -> IO (Maybe Float)  -- m/s
->   , tatm            :: DateTime -> IO (Maybe Float)  -- Kelvin
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
 >   , totalStringency :: Frequency -> Radians -> IO (Maybe Float)
@@ -82,15 +81,14 @@ TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
 >     now' <- maybe getCurrentTimeSafe return now
->     (windf, w2_windf, tatmf) <- getWindAndTAtm'
->     (opacityf, tsysf)        <- getOpacityAndTSys'
->     stringencyf              <- getTotalStringency'
->     minOpacityf              <- getMinOpacity'
->     minTSysf                 <- getMinTSysPrime'
+>     (windf, w2_windf)   <- getWinds'
+>     (opacityf, tsysf)   <- getOpacityAndTSys'
+>     stringencyf         <- getTotalStringency'
+>     minOpacityf         <- getMinOpacity'
+>     minTSysf            <- getMinTSysPrime'
 >     return Weather {
 >         wind            = pin now' $ windf conn
 >       , w2_wind         = pin now' $ w2_windf conn
->       , tatm            = pin now' $ tatmf conn
 >       , opacity         = pin now' $ opacityf conn
 >       , tsys            = pin now' $ tsysf conn
 >       , totalStringency = stringencyf conn
@@ -120,44 +118,42 @@ TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
 Both wind speeds and atmospheric temperature are values forecast independently
 of frequency.
 
-> getWindAndTAtm' = do
+> getWinds' = do
 >     cache <- newIORef M.empty
->     return (getWind cache, getW2Wind cache, getTAtm cache)
+>     return (getWind cache, getW2Wind cache)
 
-> fetchWindAndAtm :: Connection -> DateTime -> Int -> IO (Maybe Float, Maybe Float)
-> fetchWindAndAtm cnn dt ftype = handleSqlError $ do
+> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> IO (Maybe Float)
+> fetchWind cnn dt ftype query xs = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[wind, w2_wind]] -> return (fromSql' wind, fromSql' w2_wind)
->       _                 -> return (Nothing, Nothing)
->   where
->     query = "SELECT wind_speed, w2_wind_speed FROM forecasts WHERE date = ? AND forecast_type_id = ?"
->     xs    = [toSql' dt, toSql ftype]
+>       [[wind]] -> return $ fromSql' wind
+>       _        -> return Nothing
 
-> getWind :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> getWind cache cnn ftype dt = liftM fst . withCache key cache $
->     fetchWindAndAtm cnn dt' ftype
+> getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getWind cache cnn ftype dt = withCache key cache $
+>     fetchWind cnn dt' ftype query xs
 >   where
->     dt' = roundToHour dt
->     key = (dt', ftype)
+>     dt'   = roundToHour dt
+>     key   = (dt', ftype)
+>     query = "SELECT wind_speed \n\
+>              \FROM forecasts \n\
+>              \INNER JOIN weather_dates \n\
+>              \ON weather_date_id = weather_dates.id \n\
+>              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
+>     xs    = [toSql' dt', toSql ftype]
 
-> getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> getW2Wind cache cnn ftype dt = liftM snd . withCache key cache $
->     fetchWindAndAtm cnn dt' ftype
+> getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getW2Wind cache cnn ftype dt = withCache key cache $
+>     fetchWind cnn dt' ftype query xs
 >   where
->     dt' = roundToHour dt
->     key = (dt', ftype)
-
-> getTAtm :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> getTAtm cache cnn ftype dt = return Nothing
-> {-
-> TBF - skipping this until Tatm is needed
-> getTAtm cache cnn ftype dt = liftM snd . withCache key cache $
->     fetchWindAndAtm cnn dt' ftype
->   where
->     dt' = roundToHour dt
->     key = (dt', ftype)
-> -}
+>     dt'   = roundToHour dt
+>     key   = (dt', 0)
+>     query = "SELECT wind_speed \n\
+>              \FROM weather_station2 \n\
+>              \INNER JOIN weather_dates \n\
+>              \ON weather_date_id = weather_dates.id \n\
+>              \WHERE weather_dates.date = ?"
+>     xs    = [toSql' dt']
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
@@ -172,12 +168,13 @@ on frequency.
 >       [[opacity, tsys]] -> return (fromSql' opacity, fromSql' tsys)
 >       _                 -> return (Nothing, Nothing)
 >   where
+>     -- Crazy nested JOIN across multiple tables to emulate MySQL INNER JOIN!
 >     query = "SELECT opacity, tsys\n\
->             \FROM forecasts, forecast_by_frequency\n\
->             \WHERE date = ? AND\n\
->             \frequency = ? AND\n\
->             \forecast_type_id = ? AND\n\
->             \forecasts.id = forecast_by_frequency.forecast_id"
+>             \FROM forecast_by_frequency\n\
+>             \JOIN (forecasts JOIN weather_dates ON forecasts.weather_date_id = weather_dates.id) ON forecasts.id = forecast_by_frequency.forecast_id\n\
+>             \WHERE weather_dates.date = ? AND\n\
+>             \forecast_by_frequency.frequency = ? AND\n\
+>             \forecasts.forecast_type_id = ?"
 >     xs    = [toSql' dt, toSql freqIdx, toSql ftype]
 
 > getOpacity :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
@@ -283,7 +280,6 @@ Just some test functions to make sure things are working.
 >     w <- getWeather now
 >     return ( wind w target
 >            , w2_wind w target
->            , tatm w target
 >            , opacity w target frequency
 >            , tsys w target frequency
 >            , totalStringency w frequency elevation
@@ -316,7 +312,6 @@ more then 100 tests.
 >         w' <- theWeather
 >         w <- newWeather w' (Just dt)
 >         return [wind w target
->         -- TBF: this does not work & is not being used: , tatm w target
 >             , opacity w target f
 >             , tsys w target f
 >             , totalStringency w f el

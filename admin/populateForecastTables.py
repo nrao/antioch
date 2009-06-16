@@ -18,12 +18,30 @@ def fill(xs, forecast, date):
     r = \
         c.query("SELECT type_id FROM forecast_types WHERE type = '%s'" % forecast)
     forecast_id = r.dictresult()[0]["type_id"]
+
+    r = \
+        c.query("SELECT id FROM weather_dates WHERE date = '%s'" % date)
+    if len(r.dictresult()) == 0:
+        c.query("INSERT INTO weather_dates (date) VALUES ('%s')" % date)
+        r = \
+            c.query("SELECT id FROM weather_dates WHERE date = '%s'" % date)
+        weather_date_id = r.dictresult()[0]["id"]
+        
+        q = """INSERT
+               INTO weather_station2 (weather_date_id, wind_speed)
+               VALUES (%s, %s)""" % (weather_date_id
+                                   , w2_wind_speed
+                                     )
+        c.query(q)
+    else:
+        weather_date_id = r.dictresult()[0]["id"]
+
     q = """INSERT
-           INTO forecasts (forecast_type_id, date, wind_speed, w2_wind_speed, tatm)
-           VALUES (%s, '%s', %s, %s, NULL)""" % (forecast_id
-                                               , date
-                                               , wind_speed
-                                               , w2_wind_speed)
+           INTO forecasts (forecast_type_id, weather_date_id, wind_speed)
+           VALUES (%s, %s, %s)""" % (forecast_id
+                                   , weather_date_id
+                                   , wind_speed
+                                     )
     c.query(q)
     r = c.query('SELECT id from forecasts ORDER BY id DESC LIMIT 1')
     id = r.dictresult()[0]["id"]
