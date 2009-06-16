@@ -91,12 +91,21 @@ class CleoDBImport:
             
             td               = timestamp - self.startstamp
             forecast_type_id = getForecastType(td.days * 24. + td.seconds / 3600.)
+
+            r = \
+                c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+            if len(r.dictresult()) == 0:
+                c.query("INSERT INTO weather_dates (date) VALUES ('%s')" % timestamp)
+                r = \
+                    c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+            weather_date_id = r.dictresult()[0]["id"]
+
             q = """INSERT
-                   INTO forecasts (forecast_type_id, date, wind_speed, w2_wind_speed, tatm)
-                   VALUES (%s, '%s', %s, NULL, NULL)""" % (forecast_type_id
-                                                         , timestamp
-                                                         , speed
-                                                           )
+                   INTO forecasts (forecast_type_id, weather_date_id, wind_speed)
+                   VALUES (%s, %s, %s)""" % (forecast_type_id
+                                           , weather_date_id
+                                           , speed
+                                             )
             c.query(q)
 
             # Get the id of the forecast just inserted
@@ -121,7 +130,7 @@ class CleoDBImport:
 
 if __name__ == "__main__":
     cleo = CleoDBImport()
-    #cleo.getWeather()
+    cleo.getWeather()
     try:
         path = sys.argv[1]
     except:

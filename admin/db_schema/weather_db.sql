@@ -48,21 +48,42 @@ CREATE TABLE forecast_types (
 ALTER TABLE public.forecast_types OWNER TO dss;
 
 --
+-- Name: weather_dates; Type: TABLE; Schema: public; Owner: dss; Tablespace:
+--
+
+CREATE TABLE weather_dates (
+    id integer NOT NULL,
+    date timestamp without time zone NOT NULL
+);
+
+ALTER TABLE public.weather_dates OWNER TO dss;
+
+--
 -- Name: forecasts; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
 --
 
 CREATE TABLE forecasts (
     id integer NOT NULL,
     forecast_type_id integer,
-    date timestamp without time zone NOT NULL,
-    wind_speed double precision,
-    w2_wind_speed double precision,
-    tatm double precision  -- TBF:  Is this ever going to be used?
+    weather_date_id integer,
+    wind_speed double precision
 );
 
 
 ALTER TABLE public.forecasts OWNER TO dss;
 
+--
+-- Name: weather_station2; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE TABLE weather_station2 (
+    id integer NOT NULL,
+    weather_date_id integer,
+    wind_speed double precision
+);
+
+
+ALTER TABLE public.weather_station2 OWNER TO dss;
 
 --
 -- Name: stringency; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
@@ -122,6 +143,20 @@ CREATE SEQUENCE forecast_types_type_id_seq
 ALTER TABLE public.forecast_types_type_id_seq OWNER TO dss;
 
 --
+-- Name: weather_dates_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE weather_dates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.weather_dates_id_seq OWNER TO dss;
+
+--
 -- Name: forecasts_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
 --
 
@@ -134,6 +169,20 @@ CREATE SEQUENCE forecasts_id_seq
 
 
 ALTER TABLE public.forecasts_id_seq OWNER TO dss;
+
+--
+-- Name: weather_station2_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE weather_station2_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.weather_station2_id_seq OWNER TO dss;
 
 --
 -- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
@@ -194,6 +243,20 @@ ALTER TABLE forecast_types ALTER COLUMN type_id SET DEFAULT nextval('forecast_ty
 -- Name: id; Type: DEFAULT; Schema: public; Owner: dss
 --
 
+ALTER TABLE weather_dates ALTER COLUMN id SET DEFAULT nextval('weather_dates_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dss
+--
+
+ALTER TABLE weather_station2 ALTER COLUMN id SET DEFAULT nextval('weather_station2_id_seq'::regclass);
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dss
+--
+
 ALTER TABLE forecasts ALTER COLUMN id SET DEFAULT nextval('forecasts_id_seq'::regclass);
 
 
@@ -244,11 +307,19 @@ ALTER TABLE ONLY forecast_types
 
 
 --
+-- Name: weather_dates_pkey; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
+--
+
+ALTER TABLE ONLY weather_dates
+    ADD CONSTRAINT weather_dates_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: forecasts_forecast_type_id_key; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
 --
 
 ALTER TABLE ONLY forecasts
-    ADD CONSTRAINT forecasts_forecast_type_id_key UNIQUE (forecast_type_id, date);
+    ADD CONSTRAINT forecasts_forecast_type_id_key UNIQUE (forecast_type_id, weather_date_id);
 
 
 --
@@ -257,6 +328,22 @@ ALTER TABLE ONLY forecasts
 
 ALTER TABLE ONLY forecasts
     ADD CONSTRAINT forecasts_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: weather_station2_pkey; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
+--
+
+ALTER TABLE ONLY weather_station2
+    ADD CONSTRAINT weather_station2_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: weather_station2_wind_speed_date; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
+--
+
+ALTER TABLE ONLY weather_station2
+    ADD CONSTRAINT weather_station2_wind_speed_date UNIQUE (wind_speed, weather_date_id);
 
 
 --
@@ -302,14 +389,14 @@ CREATE INDEX forecast_by_frequency_frequency ON forecast_by_frequency USING btre
 -- Name: forecasts_date; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
 --
 
-CREATE INDEX forecasts_date ON forecasts USING btree (date);
+CREATE INDEX forecasts_date ON forecasts USING btree (weather_date_id);
 
 
 --
 -- Name: forecasts_date_and_type; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
 --
 
-CREATE INDEX forecasts_date_and_type ON forecasts USING btree (date, forecast_type_id);
+CREATE INDEX forecasts_date_and_type ON forecasts USING btree (weather_date_id, forecast_type_id);
 
 --
 -- Name: hour_angle_boundaries; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
@@ -357,8 +444,24 @@ ALTER TABLE ONLY forecast_by_frequency
 -- Name: forecasts_forecast_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
 --
 
+ALTER TABLE ONLY weather_station2
+    ADD CONSTRAINT weather_station2_weather_date_id_fkey FOREIGN KEY (weather_date_id) REFERENCES weather_dates(id);
+
+
+--
+-- Name: forecasts_forecast_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
 ALTER TABLE ONLY forecasts
     ADD CONSTRAINT forecasts_forecast_type_id_fkey FOREIGN KEY (forecast_type_id) REFERENCES forecast_types(type_id);
+
+
+--
+-- Name: forecasts_weather_dates_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
+ALTER TABLE ONLY forecasts
+    ADD CONSTRAINT forecasts_weather_date_id_fkey FOREIGN KEY (weather_date_id) REFERENCES weather_dates(id);
 
 
 --
