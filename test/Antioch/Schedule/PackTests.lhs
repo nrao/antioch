@@ -38,6 +38,7 @@
 >   , test_GetBest3'
 >   , test_GetBest4
 >   , test_GetBest4' 
+>   , test_queryPast
 >   , test_inFixed
 >   , test_Madd1
 >   , test_Madd2
@@ -87,13 +88,15 @@ Simplified interfaces to Item data struct:
 
 > enoughTime = 10000
 
-> item id min max future past = Item id min max enoughTime 0 future past
+> item id min max future past = Item id 0 min max enoughTime enoughTime 0 future past
 
 > dItem = Item {
 >     iId = 0
+>   , iProj = 0
 >   , iMinDur = 0
 >   , iMaxDur = 0
->   , iTimeAv = enoughTime 
+>   , iSTimAv = enoughTime 
+>   , iPTimAv = enoughTime
 >   , iTimeBt = 0
 >   , iFuture = []
 >   , iPast   = []
@@ -144,35 +147,35 @@ Begin tests:
 
 > test_Unwind1 = TestCase . assertEqual "test_Unwind1" xs . unwind $ ys
 >   where
->     xs = [Candidate 1 0 2 1.0, Candidate 2 2 2 1.0]
->     ys = [Just (Candidate 2 0 2 2.0), Nothing, Just (Candidate 1 0 2 1.0), Nothing, Nothing]
+>     xs = [Candidate 1 0 0 2 1.0, Candidate 2 0 2 2 1.0]
+>     ys = [Just (Candidate 2 0 0 2 2.0), Nothing, Just (Candidate 1 0 0 2 1.0), Nothing, Nothing]
 
 > test_Unwind2 = TestCase . assertEqual "test_Unwind2" xs . unwind $ ys
 >   where
->     xs = [Candidate 1 0 1 1.0, Candidate 2 1 2 1.0, Candidate 3 3 3 1.0]
->     ys = [Just (Candidate 3 0 3 3.0), Nothing, Nothing, Just (Candidate 2 0 2 2.0), Nothing, Just (Candidate 1 0 1 1.0), Nothing]
+>     xs = [Candidate 1 0 0 1 1.0, Candidate 2 0 1 2 1.0, Candidate 3 0 3 3 1.0]
+>     ys = [Just (Candidate 3 0 0 3 3.0), Nothing, Nothing, Just (Candidate 2 0 0 2 2.0), Nothing, Just (Candidate 1 0 0 1 1.0), Nothing]
 
 > test_Unwind3 = TestCase . assertEqual "test_Unwind3" xs . unwind $ ys
 >   where
->     xs = [Candidate 1 0 4 4.0]
->     ys = [Just (Candidate 1 0 4 4.0), Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Candidate 1 0 0 4 4.0]
+>     ys = [Just (Candidate 1 0 0 4 4.0), Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 
 TBF: this test may be exposing the bug wherein the fixed candiate gets a 
 negative score.
 
 > test_Unwind4 = TestCase . assertEqual "test_Unwind4" xs . unwind $ ys
 >   where
->     xs = [Candidate "B" 0 3 0.75, Candidate "F1" 3 1 0.0]
->     ys = [     Just (Candidate "F1" 0 1 1.0)
->              , Just (Candidate "B"  0 3 0.75)
->              , Just (Candidate "B"  0 2 0.50)
+>     xs = [Candidate "B" 0 0 3 0.75, Candidate "F1" 0 3 1 0.0]
+>     ys = [     Just (Candidate "F1" 0 0 1 1.0)
+>              , Just (Candidate "B" 0  0 3 0.75)
+>              , Just (Candidate "B" 0  0 2 0.50)
 >              , Nothing
 >              , Nothing
 >          ]
 
 > test_Candidates1 = TestCase . assertEqual "test_Candidates1" xs . candidates $ ys
 >   where
->     xs = [Nothing, Just (Candidate 1 0 2 2.0), Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
+>     xs = [Nothing, Just (Candidate 1 0 0 2 2.0), Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 4 4.0)]
 >     ys = item 1 2 4 [] (replicate 6 1.0)
 
 > test_Candidates2 = TestCase . assertEqual "test_Candidates2" xs . candidates $ ys
@@ -182,19 +185,19 @@ negative score.
 
 > test_Best = TestCase . assertEqual "test_Best" xs . best $ ys
 >   where
->     xs = Just (Candidate 1 0 4 4.0)
->     ys = [Nothing, Nothing, Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
+>     xs = Just (Candidate 1 0 0 4 4.0)
+>     ys = [Nothing, Nothing, Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 4 4.0)]
 
 > test_Madd1 = TestCase . assertEqual "test_Madd1" xs . best . zipWith madd ys $ zs
 >   where
->     xs = Just (Candidate 1 0 4 4.0)
->     ys = [Nothing, Nothing, Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
+>     xs = Just (Candidate 1 0 0 4 4.0)
+>     ys = [Nothing, Nothing, Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 4 4.0)]
 >     zs = replicate 4 Nothing
 
 > test_Madd2 = TestCase . assertEqual "test_Madd2" xs . best . zipWith madd ys $ zs
 >   where
 >     xs = Nothing
->     ys = [Nothing, Nothing, Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 4 4.0)]
+>     ys = [Nothing, Nothing, Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 4 4.0)]
 >     zs = replicate 2 Nothing
 
 > test_step = TestCase $ do
@@ -218,89 +221,89 @@ negative score.
 
 > test_GetBest1 = TestCase . assertEqual "test_getBest1" xs . getBest past $ sessions 
 >   where
->     xs = Nothing -- Just (Candidate 1 0 4 4.0)
+>     xs = Nothing -- Just (Candidate 1 0 0 4 4.0)
 >     past = [Nothing]
 >     sessions = map step [testItem1]
 
 > test_GetBest1' = TestCase . assertEqual "test_getBest1'" xs . getBest past $ sessions 
 >   where
->     xs = Nothing -- Just (Candidate 1 0 4 4.0)
+>     xs = Nothing -- Just (Candidate 1 0 0 4 4.0)
 >     past = [Nothing]
 >     sessions = map step testItems
 
 > test_GetBest2 = TestCase . assertEqual "test_getBest2" xs . getBest past $ sessions 
 >   where
->     xs = Just (Candidate 1 0 2 2.0)
+>     xs = Just (Candidate 1 0 0 2 2.0)
 >     past = [Nothing, Nothing]
 >     sessions = map (step . step) [testItem1]
 
 > test_GetBest2' = TestCase . assertEqual "test_getBest2'1" xs . getBest past $ sessions 
 >   where
->     xs = Just (Candidate 1 0 2 2.0)
+>     xs = Just (Candidate 1 0 0 2 2.0)
 >     past = [Nothing, Nothing]
 >     sessions = map (step . step) testItems 
 
 > test_GetBest3 = TestCase . assertEqual "test_getBest3" xs . getBest past $ sessions 
 >   where
->     xs = Just (Candidate 1 0 3 3.0)
->     past = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = Just (Candidate 1 0 0 3 3.0)
+>     past = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step) [testItem1] 
 
 > test_GetBest3' = TestCase . assertEqual "test_getBest3'" xs . getBest past $ sessions 
 >   where
->     xs = Just (Candidate 1 0 3 3.0)
->     past = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = Just (Candidate 1 0 0 3 3.0)
+>     past = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step) testItems
 
 > test_GetBest4 = TestCase . assertEqual "test_getBest4" xs . getBest past $ sessions 
 >   where
->     xs = Just (Candidate 1 0 4 4.0)
->     past = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = Just (Candidate 1 0 0 4 4.0)
+>     past = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) [testItem1]
 
 > test_GetBest4' = TestCase . assertEqual "test_getBest4'" xs . getBest past $ sessions 
 >   where
->     xs = Just (Candidate 2 0 2 6.0)
->     past = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = Just (Candidate 2 0 0 2 6.0)
+>     past = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) testItems
 
 > test_queryPast = TestCase $ do
->   assertEqual "test_queryPast101" (0, 0, []) (queryPast testItem1 (drop 6 past) 1)
->   assertEqual "test_queryPast201" (0, 0, []) (queryPast testItem2 (drop 6 past) 1)
->   assertEqual "test_queryPast111" (0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
->   assertEqual "test_queryPast211" (0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
->   assertEqual "test_queryPast121" (2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
->   assertEqual "test_queryPast221" (0, 0, [1]) (queryPast testItem2 (drop 4 past) 1)
->   assertEqual "test_queryPast131" (3, 0, [2]) (queryPast testItem1 (drop 3 past) 1)
->   assertEqual "test_queryPast231" (0, 0, [2]) (queryPast testItem2 (drop 3 past) 1)
->   assertEqual "test_queryPast141" (2, 2, [1,1]) (queryPast testItem1 (drop 2 past) 1)
->   assertEqual "test_queryPast241" (2, 0, [1,1]) (queryPast testItem2 (drop 2 past) 1)
->   assertEqual "test_queryPast151" (2, 3, [2,1]) (queryPast testItem1 (drop 1 past) 1)
->   assertEqual "test_queryPast251" (3, 0, [2,1]) (queryPast testItem2 (drop 1 past) 1)
->   assertEqual "test_queryPast161" (2, 4, [3,1]) (queryPast testItem1 past 1)
->   assertEqual "test_queryPast261" (4, 0, [3,1]) (queryPast testItem2 past 1)
->   assertEqual "test_queryPast122" (0, 1, [0])  (queryPast testItem1 (drop 4 past) 2)
->   assertEqual "test_queryPast222" (0, 1, [0]) (queryPast testItem2 (drop 4 past) 2)
->   assertEqual "test_queryPast132" (2, 0, [1]) (queryPast testItem1 (drop 3 past) 2)
->   assertEqual "test_queryPast232" (0, 0, [1]) (queryPast testItem2 (drop 3 past) 2)
->   assertEqual "test_queryPast142" (3, 0, [2]) (queryPast testItem1 (drop 2 past) 2)
->   assertEqual "test_queryPast242" (0, 0, [2]) (queryPast testItem2 (drop 2 past) 2)
->   assertEqual "test_queryPast152" (2, 2, [1,1]) (queryPast testItem1 (drop 1 past) 2)
->   assertEqual "test_queryPast252" (2, 0, [1,1]) (queryPast testItem2 (drop 1 past) 2)
->   assertEqual "test_queryPast162" (2, 3, [2,1]) (queryPast testItem1 past 2)
->   assertEqual "test_queryPast262" (3, 0, [2,1]) (queryPast testItem2 past 2)
->   assertEqual "test_queryPast153" (3, 0, [2]) (queryPast testItem1 (drop 1 past) 3)
->   assertEqual "test_queryPast253" (0, 0, [2]) (queryPast testItem2 (drop 1 past) 3)
->   assertEqual "test_queryPast163" (2, 2, [1,1]) (queryPast testItem1 past 3)
->   assertEqual "test_queryPast263" (2, 0, [1,1]) (queryPast testItem2 past 3)
->   assertEqual "test_queryPast1hole" (2, 3, [0,1,1]) (queryPast testItem1 hole 1)
->   assertEqual "test_queryPast2hole" (2, 1, [0,1,1]) (queryPast testItem2 hole 1)
+>   --assertEqual "test_queryPast101" (0, 0, 0, []) (queryPast testItem1 (drop 6 past) 1)
+>   --assertEqual "test_queryPast201" (0, 0, 0, []) (queryPast testItem2 (drop 6 past) 1)
+>   assertEqual "test_queryPast111" (0, 0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
+>   assertEqual "test_queryPast211" (0, 0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
+>   assertEqual "test_queryPast121" (2, 2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
+>   assertEqual "test_queryPast221" (0, 2, 0, [1]) (queryPast testItem2 (drop 4 past) 1)
+>   assertEqual "test_queryPast131" (3, 3, 0, [2]) (queryPast testItem1 (drop 3 past) 1)
+>   assertEqual "test_queryPast231" (0, 3, 0, [2]) (queryPast testItem2 (drop 3 past) 1)
+>   assertEqual "test_queryPast141" (2, 4, 2, [1,1]) (queryPast testItem1 (drop 2 past) 1)
+>   assertEqual "test_queryPast241" (2, 4, 0, [1,1]) (queryPast testItem2 (drop 2 past) 1)
+>   assertEqual "test_queryPast151" (2, 5, 3, [2,1]) (queryPast testItem1 (drop 1 past) 1)
+>   assertEqual "test_queryPast251" (3, 5, 0, [2,1]) (queryPast testItem2 (drop 1 past) 1)
+>   assertEqual "test_queryPast161" (2, 6, 4, [3,1]) (queryPast testItem1 past 1)
+>   assertEqual "test_queryPast261" (4, 6, 0, [3,1]) (queryPast testItem2 past 1)
+>   assertEqual "test_queryPast122" (0, 0, 1, [0])  (queryPast testItem1 (drop 4 past) 2)
+>   assertEqual "test_queryPast222" (0, 0, 1, [0]) (queryPast testItem2 (drop 4 past) 2)
+>   assertEqual "test_queryPast132" (2, 2, 0, [1]) (queryPast testItem1 (drop 3 past) 2)
+>   assertEqual "test_queryPast232" (0, 2, 0, [1]) (queryPast testItem2 (drop 3 past) 2)
+>   assertEqual "test_queryPast142" (3, 3, 0, [2]) (queryPast testItem1 (drop 2 past) 2)
+>   assertEqual "test_queryPast242" (0, 3, 0, [2]) (queryPast testItem2 (drop 2 past) 2)
+>   assertEqual "test_queryPast152" (2, 4, 2, [1,1]) (queryPast testItem1 (drop 1 past) 2)
+>   assertEqual "test_queryPast252" (2, 4, 0, [1,1]) (queryPast testItem2 (drop 1 past) 2)
+>   assertEqual "test_queryPast162" (2, 5, 3, [2,1]) (queryPast testItem1 past 2)
+>   assertEqual "test_queryPast262" (3, 5, 0, [2,1]) (queryPast testItem2 past 2)
+>   assertEqual "test_queryPast153" (3, 3, 0, [2]) (queryPast testItem1 (drop 1 past) 3)
+>   assertEqual "test_queryPast253" (0, 3, 0, [2]) (queryPast testItem2 (drop 1 past) 3)
+>   assertEqual "test_queryPast163" (2, 4, 2, [1,1]) (queryPast testItem1 past 3)
+>   assertEqual "test_queryPast263" (2, 4, 0, [1,1]) (queryPast testItem2 past 3)
+>   assertEqual "test_queryPast1hole" (2, 4, 3, [0,1,1]) (queryPast testItem1 hole 1)
+>   assertEqual "test_queryPast2hole" (2, 4, 1, [0,1,1]) (queryPast testItem2 hole 1)
 >     where
->       past = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
->              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
->       hole = [Nothing, Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>       past = [Just (Candidate 2 0 0 4 10.0), Just (Candidate 2 0 0 3 8.0)
+>              ,Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
+>              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
+>       hole = [Nothing, Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
+>              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
 
 Happy Path tests for filterCandidate: all candidates should be accepted
 
@@ -314,13 +317,13 @@ Happy Path tests for filterCandidate: all candidates should be accepted
 >     where
 >       i1 = testItem1
 >       i2 = testItem2
->       past = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
->              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>       past = [Just (Candidate 2 0 0 4 10.0), Just (Candidate 2 0 0 3 8.0)
+>              ,Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
+>              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
 >       cn = Nothing
->       c1' = Candidate 1 0 2 2.0
+>       c1' = Candidate 1 0 0 2 2.0
 >       c1  = Just c1'
->       c2' = Candidate 2 0 2 2.0
+>       c2' = Candidate 2 0 0 2 2.0
 >       c2  = Just c2'
 
 Non-Happy Path tests for filterCandidate: some candidates get filtered
@@ -359,12 +362,12 @@ Non-Happy Path tests for filterCandidate: some candidates get filtered
 >       i2_1 = testItem2 { iTimeBt = 1 }
 >       i2_0 = testItem2 { iTimeBt = 0 }
 >       cn   = Nothing
->       c1_1 = Just $ Candidate 1 0 1 1.0
->       c1_2 = Just $ Candidate 1 0 2 2.0
->       c2_1 = Just $ Candidate 2 0 1 1.0
->       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
->              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>       c1_1 = Just $ Candidate 1 0 0 1 1.0
+>       c1_2 = Just $ Candidate 1 0 0 2 2.0
+>       c2_1 = Just $ Candidate 2 0 0 1 1.0
+>       p    = [Just (Candidate 2 0 0 4 10.0), Just (Candidate 2 0 0 3 8.0)
+>              ,Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
+>              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
 
 Non-Happy Path tests for filterCandidate: some candidates get filtered
 
@@ -392,27 +395,27 @@ Non-Happy Path tests for filterCandidate: some candidates get filtered
 >   assertEqual "test_filterCandidate3_18" cn  (filterCandidate i2_4 p c2_1)
 >   assertEqual "test_filterCandidate3_19" c2_1 (filterCandidate i2_5 p c2_1)
 >     where
->       i1_0 = testItem1 { iTimeAv = 0, iTimeBt = 0 } -- no way buddy
->       i1_1 = testItem1 { iTimeAv = 1, iTimeBt = 0 } 
->       i1_2 = testItem1 { iTimeAv = 2, iTimeBt = 0 } 
->       i1_3 = testItem1 { iTimeAv = 3, iTimeBt = 0 } 
->       i1_4 = testItem1 { iTimeAv = 4, iTimeBt = 0 } 
->       i1_5 = testItem1 { iTimeAv = 5, iTimeBt = 0 } 
->       i1_6 = testItem1 { iTimeAv = 6, iTimeBt = 0 } 
->       i1_7 = testItem1 { iTimeAv = 7, iTimeBt = 0 } 
->       i2_0 = testItem2 { iTimeAv = 0, iTimeBt = 0 } 
->       i2_1 = testItem2 { iTimeAv = 1, iTimeBt = 0 } 
->       i2_2 = testItem2 { iTimeAv = 2, iTimeBt = 0 } 
->       i2_3 = testItem2 { iTimeAv = 3, iTimeBt = 0 } 
->       i2_4 = testItem2 { iTimeAv = 4, iTimeBt = 0 } 
->       i2_5 = testItem2 { iTimeAv = 5, iTimeBt = 0 } 
+>       i1_0 = testItem1 { iSTimAv = 0, iTimeBt = 0 } -- no way buddy
+>       i1_1 = testItem1 { iSTimAv = 1, iTimeBt = 0 } 
+>       i1_2 = testItem1 { iSTimAv = 2, iTimeBt = 0 } 
+>       i1_3 = testItem1 { iSTimAv = 3, iTimeBt = 0 } 
+>       i1_4 = testItem1 { iSTimAv = 4, iTimeBt = 0 } 
+>       i1_5 = testItem1 { iSTimAv = 5, iTimeBt = 0 } 
+>       i1_6 = testItem1 { iSTimAv = 6, iTimeBt = 0 } 
+>       i1_7 = testItem1 { iSTimAv = 7, iTimeBt = 0 } 
+>       i2_0 = testItem2 { iSTimAv = 0, iTimeBt = 0 } 
+>       i2_1 = testItem2 { iSTimAv = 1, iTimeBt = 0 } 
+>       i2_2 = testItem2 { iSTimAv = 2, iTimeBt = 0 } 
+>       i2_3 = testItem2 { iSTimAv = 3, iTimeBt = 0 } 
+>       i2_4 = testItem2 { iSTimAv = 4, iTimeBt = 0 } 
+>       i2_5 = testItem2 { iSTimAv = 5, iTimeBt = 0 } 
 >       cn   = Nothing
->       c1_1 = Just $ Candidate 1 0 1 1.0
->       c1_4 = Just $ Candidate 1 0 4 1.0
->       c2_1 = Just $ Candidate 2 0 1 1.0
->       p    = [Just (Candidate 2 0 4 10.0), Just (Candidate 2 0 3 8.0)
->              ,Just (Candidate 2 0 2 6.0),  Just (Candidate 1 0 3 3.0)
->              ,Just (Candidate 1 0 2 2.0),  Nothing, Nothing]
+>       c1_1 = Just $ Candidate 1 0 0 1 1.0
+>       c1_4 = Just $ Candidate 1 0 0 4 1.0
+>       c2_1 = Just $ Candidate 2 0 0 1 1.0
+>       p    = [Just (Candidate 2 0 0 4 10.0), Just (Candidate 2 0 0 3 8.0)
+>              ,Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
+>              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
 >
 
 Test against python unit tests from beta test code:
@@ -421,8 +424,8 @@ Test against python unit tests from beta test code:
 >   where
 >     -- result, list of best solutions starting for 60 minutes, then 45,
 >     -- 30, and then 15 (none) followed by the sentinel.
->     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
+>          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     -- future, i.e., nothing pre-scheduled
 >     ys = replicate 4 Nothing
 >     -- past, i.e., start scheduling first quarter
@@ -433,8 +436,8 @@ Test against python unit tests from beta test code:
 
 > test_PackWorker'6_1 = TestCase . assertEqual "test_PackWorker'6_1" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
+>          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 3 Nothing
 >     zs = [Nothing, Nothing]
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0, 1.0, 1.0] [1.0]
@@ -442,35 +445,35 @@ Test against python unit tests from beta test code:
 
 > test_PackWorker'6_2 = TestCase . assertEqual "test_PackWorker'6_2" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
+>          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 2 Nothing
->     zs = [Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     zs = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0, 1.0] [1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0, 2.0, 2.0] [0.0, 0.0]]
 
 > test_PackWorker'6_3 = TestCase . assertEqual "test_PackWorker'6_3" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
+>          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 1 Nothing
->     zs = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0)
+>     zs = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0)
 >          ,Nothing, Nothing]
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
 
 > test_getBest_for_PackWorker'6_3 = TestCase . assertEqual "test_best_for_PackWorker'6_3" result . getBest zs $ ws
 >   where
->     result = Just (Candidate {cId = 2, cStart = 0, cDuration = 2, cScore = 6.0})
->     zs = [Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0)
+>     result = Just (Candidate {cId = 2, cProj = 0, cStart = 0, cDuration = 2, cScore = 6.0})
+>     zs = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0)
 >          ,Nothing, Nothing]
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
 
 > test_PackWorker'6_4 = TestCase . assertEqual "test_PackWorker'6_4" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 2 6.0), Just (Candidate 1 0 3 3.0)
->          ,Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
+>          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = []
 >     zs = xs
 >     ws = map step [item 1 2 4 [1.0, 1.0] [1.0, 1.0, 1.0, 1.0]
@@ -478,34 +481,34 @@ Test against python unit tests from beta test code:
 
 > test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 1 0 4 4.0), Just (Candidate 1 0 3 3.0), Just (Candidate 1 0 2 2.0), Nothing, Nothing]
+>     xs = [Just (Candidate 1 0 0 4 4.0), Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 4 Nothing
 >     zs = [Nothing]
 >     ws = map step [item 1 2 4 (replicate 6 1.0) []]
 
 > test_PackWorker'3 = TestCase . assertEqual "test_PackWorker'3" xs . packWorker' ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 1 1.0), Just (Candidate 1 0 2 3.1), Nothing, Just (Candidate 3 0 1 1.1), Nothing]
->     ys = [Just (Candidate 3 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 1 1.0)]
+>     xs = [Just (Candidate 2 0 0 1 1.0), Just (Candidate 1 0 0 2 3.1), Nothing, Just (Candidate 3 0 0 1 1.1), Nothing]
+>     ys = [Just (Candidate 3 0 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 0 1 1.0)]
 >     zs = [Nothing]
 >     ws = map step [item 1 2 4 (replicate 6 1.0) []]
 
 > test_PackWorker1 = TestCase . assertEqual "test_PackWorker1" xs . packWorker ys $ ws
 >   where
->     xs = [Candidate 1 0 4 4.0]
+>     xs = [Candidate 1 0 0 4 4.0]
 >     ys = replicate 4 Nothing  -- nothing prescheduled
 >     ws = [item 1 2 4 (replicate 6 1.0) []] -- scores 1.0 for 6 units
 
 > test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker ys $ ws
 >   where
->     xs = [Candidate 1 0 3 3.0, Candidate 2 3 1 1.0]
->     ys = replicate 3 Nothing ++ [Just (Candidate 2 0 1 4.0)]
+>     xs = [Candidate 1 0 0 3 3.0, Candidate 2 0 3 1 1.0]
+>     ys = replicate 3 Nothing ++ [Just (Candidate 2 0 0 1 4.0)]
 >     ws = [item 1 2 4 (replicate 6 1.0) []]
 
 > test_PackWorker3 = TestCase . assertEqual "test_PackWorker3" xs . packWorker ys $ ws
 >   where
->     xs = [Candidate 3 0 1 1.1, Candidate 1 1 2 1.9999999, Candidate 2 3 1 1.0]
->     ys = [Just (Candidate 3 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 1 4.1)]
+>     xs = [Candidate 3 0 0 1 1.1, Candidate 1 0 1 2 1.9999999, Candidate 2 0 3 1 1.0]
+>     ys = [Just (Candidate 3 0 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 0 1 4.1)]
 >     ws = [item 1 2 4 (replicate 6 1.0) []]
 
 This next test `test_PackWorker4` highlights a few different
@@ -526,19 +529,19 @@ attributes of the packing algorithm:
 > test_PackWorker4 =
 >     TestCase . assertEqual "test_PackWorker4" result . packWorker fixed $ open
 >   where
->     result = [ Candidate "A"  0 2 2.0 
->              , Candidate "F1" 2 2 0.0 -- unwind mangles this score
->              , Candidate "F2" 5 2 2.0 -- these were wrong in beta!
->              , Candidate "C"  7 2 2.0
->              , Candidate "D"  9 2 2.0
+>     result = [ Candidate "A" 0  0 2 2.0 
+>              , Candidate "F1" 0 2 2 0.0 -- unwind mangles this score
+>              , Candidate "F2" 0 5 2 2.0 -- these were wrong in beta!
+>              , Candidate "C" 0  7 2 2.0
+>              , Candidate "D" 0  9 2 2.0
 >              ]
 >     fixed  = [ Nothing                        --  0
 >              , Nothing                        --  1
->              , Just (Candidate "F1" 0 1 1.0)  --  2
->              , Just (Candidate "F1" 0 2 2.0)  --  3
+>              , Just (Candidate "F1" 0 0 1 1.0)  --  2
+>              , Just (Candidate "F1" 0 0 2 2.0)  --  3
 >              , Nothing                        --  4
->              , Just (Candidate "F2" 0 1 1.0)  --  5
->              , Just (Candidate "F2" 0 2 2.0)  --  6
+>              , Just (Candidate "F2" 0 0 1 1.0)  --  5
+>              , Just (Candidate "F2" 0 0 2 2.0)  --  6
 >              , Nothing                        --  7
 >              , Nothing                        --  8
 >              , Nothing                        --  9
@@ -579,7 +582,8 @@ attributes of the packing algorithm:
 >     result1 = dItem { iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iTimeAv = totalAvail testSession
+>                    , iSTimAv = totalAvail testSession
+>                    , iPTimAv = 0
 >                    , iFuture = []
 >                    , iPast = []
 >                    }
@@ -608,7 +612,8 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iTimeAv = totalAvail sess
+>                    , iSTimAv = totalAvail sess
+>                    , iPTimAv = 0
 >                    , iFuture = scores 
 >                    , iPast = []
 >                    }
@@ -766,7 +771,7 @@ TBF: are the candidate values for cStart & cDur correct?
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed]
 >     -- TBF: are the candidate values for cStart & cDur correct?
->     candidates = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [1, 2]
+>     candidates = map (\d -> Just $ Candidate defaultSession 0 0 d 0.0) [1, 2]
 >     expected = (replicate 8 Nothing) ++ candidates ++ (replicate 22 Nothing) 
 
 Same test, >1 fixed
@@ -782,8 +787,8 @@ Same test, >1 fixed
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed1,fixed2]
 >     -- TBF: are the candidate values for cStart & cDur correct?
->     candidates1 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [1, 2]
->     candidates2 = map (\d -> Just $ Candidate defaultSession 0 d 0.0) [1, 2]
+>     candidates1 = map (\d -> Just $ Candidate defaultSession 0 0 d 0.0) [1, 2]
+>     candidates2 = map (\d -> Just $ Candidate defaultSession 0 0 d 0.0) [1, 2]
 >     expected = (replicate 8 Nothing) ++ candidates1 ++ (replicate 8 Nothing)
 >                                      ++ candidates2 ++ (replicate 12 Nothing)
 
@@ -844,7 +849,7 @@ Build up to this case with the simplest examples possible:
 > test_PackWorkerSimple =
 >     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker fixed $ open
 >   where
->     result = [ Candidate "B"  0 4 1.0
+>     result = [ Candidate "B" 0 0 4 1.0
 >              ]
 >     fixed = replicate 4 Nothing
 >     open  =  [item  "B" 2 4 (replicate 4 0.25) []]
@@ -855,9 +860,9 @@ These results are then used in test_Unwind3.
 > test_PackWorker'Simple =
 >     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker' fixed past $ open
 >   where
->     result = [ Just (Candidate "B" 0 4 1.0)
->              , Just (Candidate "B" 0 3 0.75)
->              , Just (Candidate "B" 0 2 0.50)
+>     result = [ Just (Candidate "B" 0 0 4 1.0)
+>              , Just (Candidate "B" 0 0 3 0.75)
+>              , Just (Candidate "B" 0 0 2 0.50)
 >              , Nothing
 >              , Nothing
 >              ]
@@ -872,17 +877,17 @@ TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 > test_PackWorker'Simple2 =
 >     TestCase . assertEqual "test_PackWorkerSimple2" result . packWorker' fixed past $ open
 >   where
->     result = [ Just (Candidate "F1" 0 1 0.0)
->              , Just (Candidate "B"  0 3 0.75)
->              , Just (Candidate "B"  0 2 0.50)
+>     result = [ Just (Candidate "F1" 0 0 1 0.0)
+>              , Just (Candidate "B"  0 0 3 0.75)
+>              , Just (Candidate "B"  0 0 2 0.50)
 >              , Nothing
 >              , Nothing
 >              ]
 >     past  = [Nothing]
 >     fixed = [ Nothing
 >             , Nothing
->             , Nothing --Just (Candidate "F1" 0 1 0.0)
->             , Just (Candidate "F1" 0 1 0.0)
+>             , Nothing --Just (Candidate "F1" 0 0 1 0.0)
+>             , Just (Candidate "F1" 0 0 1 0.0)
 >             ]
 >     open'  =  [item  "B" 2 4 (replicate 4 0.25) []]
 >     open   = map step open'
@@ -892,21 +897,21 @@ TBF: Scores not right due to negative score for F1 !!!
 > test_PackWorker5 =
 >     TestCase . assertEqual "test_PackWorker5" result . packWorker fixed $ open
 >   where
->     result = [ Candidate "B"  0 8 2.2
->              , Candidate "F1" 8 2 0.0 -- bug: -2.2
+>     result = [ Candidate "B"  0 0 8 2.2
+>              , Candidate "F1" 0 8 2 0.0 -- bug: -2.2
 >              ]
->     fixed  = [ Nothing                        --  0
->              , Nothing                        --  1
->              , Nothing                        --  2
->              , Nothing                        --  3
->              , Nothing                        --  4
->              , Nothing                        --  5
->              , Nothing                        --  6
->              , Nothing                        --  7
->              , Just (Candidate "F1" 0 1 0.0)  --  8 bug: durrs = 1 & 2?
->              , Just (Candidate "F1" 0 2 0.0)  --  9 
->              , Nothing                        --  10
->              , Nothing                        --  11
+>     fixed  = [ Nothing                         --  0
+>              , Nothing                         --  1
+>              , Nothing                         --  2
+>              , Nothing                         --  3
+>              , Nothing                         --  4
+>              , Nothing                         --  5
+>              , Nothing                         --  6
+>              , Nothing                         --  7
+>              , Just (Candidate "F1" 0 0 1 0.0) --  8 bug: durrs = 1 & 2?
+>              , Just (Candidate "F1" 0 0 2 0.0) --  9 
+>              , Nothing                         --  10
+>              , Nothing                         --  11
 >              ]
 >     open   = [ item "A" 12 24 (replicate 12 0.0) [] 
 >              , item "B"  8 28 ((replicate 8 0.275)++[0.0,0.0,0.275,0.275]) []
@@ -918,22 +923,22 @@ TBF: Scores not right due to negative score for F1 !!!
 >   where
 >     result = [  Nothing
 >               , Nothing
->               , Just (Candidate "F1" 0 2 0.0)
->               , Just (Candidate "F1" 0 1 0.0)
->               , Just (Candidate "B"  0 8 2.2)
+>               , Just (Candidate "F1" 0 0 2 0.0)
+>               , Just (Candidate "F1" 0 0 1 0.0)
+>               , Just (Candidate "B" 0  0 8 2.2)
 >               ] ++ replicate 8 Nothing 
->     future  = [ Nothing                        --  0
->              , Nothing                        --  1
->              , Nothing                        --  2
->              , Nothing                        --  3
->              , Nothing                        --  4
->              , Nothing                        --  5
->              , Nothing                        --  6
->              , Nothing                        --  7
->              , Just (Candidate "F1" 0 1 0.0)  --  8 bug: durrs = 1 & 2?
->              , Just (Candidate "F1" 0 2 0.0)  --  9 
->              , Nothing                        --  10
->              , Nothing                        --  11
+>     future  = [Nothing                         --  0
+>              , Nothing                         --  1
+>              , Nothing                         --  2
+>              , Nothing                         --  3
+>              , Nothing                         --  4
+>              , Nothing                         --  5
+>              , Nothing                         --  6
+>              , Nothing                         --  7
+>              , Just (Candidate "F1" 0 0 1 0.0) --  8 bug: durrs = 1 & 2?
+>              , Just (Candidate "F1" 0 0 2 0.0) --  9 
+>              , Nothing                         --  10
+>              , Nothing                         --  11
 >              ]
 >     past   = [Nothing]
 >     open   = [ item "A" 12 24 (replicate 12 0.0) []
