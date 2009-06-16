@@ -109,10 +109,11 @@ function assumes its inputs are sorted.
 >     | dt  <  begin = Nothing : toSchedule dts' ps
 >     | end <= dt    = toSchedule dts ps'
 >     | otherwise    =
->         Just (Candidate (session p) 0 (1 + (numSteps $ dt `diffMinutes'` begin)) (pScore p)) : toSchedule dts' ps
+>         Just (Candidate (session p) (pId . project . session $ p) 0 (1 + (numSteps $ dt `diffMinutes'` begin)) (pScore p)) : toSchedule dts' ps
 >   where
 >     begin = startTime p
 >     end   = addMinutes' (duration p) begin
+>     id   = pId . project . session $ p
 
 Convert an open session `s` into a schedulable item by scoring it with
 `sf` at each of the open time slots in a mask `dts`.
@@ -123,12 +124,11 @@ Convert an open session `s` into a schedulable item by scoring it with
 >     let force = if sum scores >= 0.0 then True else False
 >     return $! force `seq` Item {
 >         iId      = s
+>       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s)
->       , iTimeAv  = totalAvail s
->       -- PP
->       --, iSTimAv  = totalAvail s
->       --, iPTimAv  = timeAvail . project $ s
+>       , iSTimAv  = totalAvail s
+>       , iPTimAv  = timeAvail . project $ s
 >       , iTimeBt  = timeBetween s
 >       , iFuture  = scores
 >       , iPast    = []
@@ -154,6 +154,7 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 > data Candidate a = Candidate {
 >     cId       :: !a
+>   , cProj     :: !Int
 >   , cStart    :: !Int
 >   , cDuration :: !Int 
 >   , cScore    :: !Score
@@ -161,6 +162,7 @@ with.  Both `cStart` and `cDuration` are simply in "units."
 
 > defaultCandidate = Candidate {
 >     cId       = 0
+>   , cProj     = 0
 >   , cStart    = 0
 >   , cDuration = 0
 >   , cScore    = 0.0
@@ -205,9 +207,12 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 
 > data Item a = Item {
 >     iId      :: !a
+>   , iProj    :: !Int
 >   , iMinDur  :: !Int
 >   , iMaxDur  :: !Int
->   , iTimeAv  :: !Int
+>   --, iTimeAv  :: !Int
+>   , iSTimAv  :: !Int
+>   , iPTimAv  :: !Int
 >   , iTimeBt  :: !Int
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
@@ -237,31 +242,39 @@ Next in our example, we call toCandidate 1 [Nothing, Just 2].
 >     acc   = scanl1 (+)
 
 Given a proposed 'item' for a slot and a list of candidates representing
-all the previous slots ('past'), return the count of previously 'used' time
-for the item and the 'separate'ion between the current item's period
-and any previous periods.  Note the returned values only apply
-if a previous candidate using item was found, i.e., 'used' > 0.
+all the previous slots ('past'), return the count of previously 'sUsed' time
+for the item, 'pUsed' time for its project, and the 'separate'ion between
+the current item's period and any previous periods.  Note the returned
+values only apply if a previous candidate using item was found, i.e.,
+'sUsed' > 0.
+TBF Note: the returned list (vs) at the end of the tuple is for debugging
+purposes.  It was last used during development on 6/15/09.  It should be
+removed if not used in a month or so.
 
-> -- PP return (sUsed, pUsed, separate) instead of (used, separate) so
-> -- acceptCandidate can eliminate those used run out of project time
-> queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, [Int])
+> queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, Int, [Int])
 > queryPast item past dur = queryPast' item . drop (dur - 1) $ past
 
-> queryPast' :: (Eq a) => Item a -> [Maybe (Candidate a)] -> (Int, Int, [Int])
-> --queryPast' item   past     -> (used, separate)
-> queryPast'   item   [Nothing] = (0, 0, [])
+> queryPast' :: (Eq a) => Item a -> [Maybe (Candidate a)] -> (Int, Int, Int, [Int])
+> --queryPast' item   past     -> (pUsed, sUsed, separate)
+> queryPast'   item   [Nothing] = (0,     0,     0,       [])
 > queryPast'   item (c:cs)
->     | isNothing c             = (used, 1 + separate, step:vs)
->     | itemId == candidateId   = (dur + used, 0, step:vs)
->     | otherwise               = if used > 0
->                                 then (used, dur + separate, step:vs)
->                                 else (used, separate, step:vs)
+>     | isNothing c             = (sUsed, pUsed, 1 + separate, step:vs)
+>     | itemSId == candidateSId   = (newSUsed, newPUsed, 0, step:vs)
+>     | otherwise                 = if sUsed > 0
+>                                   then (newSUsed, newPUsed, dur + separate, step:vs)
+>                                   else (newSUsed, newPUsed,       separate, step:vs)
 >   where
->     itemId = iId item
->     candidateId = cId (fromJust c)
+>     itemSId = iId item
+>     candidateSId = cId (fromJust c)
+>     itemPId = iProj item
+>     candidatePId = cProj (fromJust c)
 >     step = min (length cs) dur - 1
->     dur = cDuration (fromMaybe (defaultCandidate {cId = itemId, cDuration = 1}) c)
->     (used, separate, vs) = queryPast' item (drop step cs)
+>     dur = cDuration (fromMaybe (defaultCandidate {cId = itemSId, cDuration = 1}) c)
+>     (sUsed, pUsed, separate, vs) = queryPast' item (drop step cs)
+>     newPUsed | itemPId == candidatePId   = dur + pUsed
+>              | otherwise                 = pUsed
+>     newSUsed | itemSId == candidateSId   = dur + sUsed
+>              | otherwise                 = sUsed
 
 Given possible scores (using Maybe) over a range of a session's durations,
 generate a list of possible candidates corresponding to the scores.
@@ -271,7 +284,7 @@ Example (continued from above): toCandidate 1 [Nothing, Just 2] gives:
 [ Nothing, Just (Candidate 1 0 2 2) ]
 
 > toCandidate           :: a -> [Maybe Score] -> [Maybe (Candidate a)]
-> toCandidate id scores = [fmap (Candidate id 0 d) s | s <- scores | d <- [1..]]
+> toCandidate id scores = [fmap (Candidate id 0 0 d) s | s <- scores | d <- [1..]]
 > -- add filter to remove candidates which break time_between, i.e.,
 > -- cDuration < last.cStart (not defined!) + last.cDuration?
 
@@ -358,13 +371,16 @@ A candidate gets replaced with Nothing if:
 
 > filterCandidate :: Eq a => Item a -> [Maybe (Candidate a)] -> Maybe (Candidate a) -> Maybe (Candidate a)
 > filterCandidate item past Nothing  = Nothing
-> filterCandidate item past (Just c) | iId item == cId c = rejectCandidate item used sep c 
+> filterCandidate item past (Just c) | iId item == cId c = rejectCandidate
 >                                    | otherwise         = Just c
 >   where
->     (used, sep, hist) = queryPast item past (cDuration c)
->     -- PP also check (pUsed > (iPTimAv item))
->     rejectCandidate item used sep c = if ((used + dur) > (iTimeAv item)) || (sep < (iTimeBt item)) then Nothing else Just c
+>     (sUsed, pUsed, sep, hist) = queryPast item past (cDuration c)
 >     dur = cDuration c
+>     rejectCandidate = if ((sUsed + dur) > (iSTimAv item)) ||
+>                          (sep < (iTimeBt item)) ||
+>                          ((pUsed + dur) > (iPTimAv item))
+>                       then Nothing
+>                       else Just c
 
 Find the best of a collection of candidates.
 
