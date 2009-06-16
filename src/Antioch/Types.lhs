@@ -51,9 +51,9 @@ use a single data structure for all sessions.
 > data Session = Session {
 >     sId         :: Int
 >   , sName       :: String
+>   , sAlloted    :: Minutes
 >   , project     :: Project
 >   , periods     :: [Period]
->   , totalTime   :: Minutes
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
 >   , timeBetween :: Minutes
@@ -116,10 +116,10 @@ Tying the knot.
 > makeProject p tt ss = p'
 >   where
 >     p' = p { pAlloted = tt, sessions = map (\s -> s { project = p' }) ss }
->     t  = sum . map totalTime $ ss
+>     t  = sum . map sAlloted $ ss
 
 > instance Show Project where
->     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAlloted $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] 
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAlloted $ p) ++ ") Sessions: " ++ show [ sAlloted s | s <- sessions p] 
 
 > type DateRange = (DateTime, DateTime)
 
@@ -184,7 +184,7 @@ Simple Functions for Periods:
 >   , sName       = ""
 >   , project     = defaultProject 
 >   , periods     = [defaultPeriod]
->   , totalTime   = 0
+>   , sAlloted   = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0

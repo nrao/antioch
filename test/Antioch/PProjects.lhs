@@ -27,7 +27,7 @@
 >         sId = 1
 >       , sName = "GB"
 >       , periods = []
->       , totalTime = 80*60
+>       , sAlloted = 80*60
 >       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 27.5
@@ -41,7 +41,7 @@
 >         sId = 2
 >       , sName = "CV"
 >       , periods = []
->       , totalTime = 60*60
+>       , sAlloted = 60*60
 >       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 4.3
@@ -59,7 +59,7 @@
 >                 startTime = fromGregorian 2006 10 15 9 0 0
 >               , duration = 6*60 }
 >           ]
->       , totalTime = 40*60
+>       , sAlloted = 40*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 5.4
@@ -72,7 +72,7 @@
 >   , defaultSession {
 >         sId = 4
 >       , sName = "TX"
->       , totalTime = 40*60
+>       , sAlloted = 40*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 17.8
@@ -85,7 +85,7 @@
 >   , defaultSession {
 >         sId = 5
 >       , sName = "VA"
->       , totalTime = 30*60
+>       , sAlloted = 30*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 22.7
@@ -98,7 +98,7 @@
 >   , defaultSession {
 >         sId = 6
 >       , sName = "WV"
->       , totalTime = 120*60
+>       , sAlloted = 120*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 34.9
@@ -111,7 +111,7 @@
 >   , defaultSession {
 >         sId = 7
 >       , sName = "AS"
->       , totalTime = 40*60
+>       , sAlloted = 40*60
 >       , minDuration = 6*60
 >       , maxDuration = 8*60
 >       , frequency = 0.5
@@ -134,7 +134,7 @@
 >               , duration = 2*60
 >               }
 >           ]
->       , totalTime = 40*60
+>       , sAlloted = 40*60
 >       , minDuration = 2*60
 >       , maxDuration = 6*60
 >       , frequency = 67.8
@@ -152,7 +152,7 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 1 18 0 0
 >               , duration = 6*60 }
->       , totalTime = 6*60
+>       , sAlloted = 6*60
 >       , minDuration = 6*60
 >       , maxDuration = 6*60
 >       , frequency = 67.8
@@ -169,7 +169,7 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 4 11 0 0
 >               , duration = 4*60 }
->       , totalTime = 4*60
+>       , sAlloted = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 67.8
@@ -186,7 +186,7 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 5 1 0 0
 >               , duration = 5*60 }
->       , totalTime = 5*60
+>       , sAlloted = 5*60
 >       , minDuration = 5*60
 >       , maxDuration = 5*60
 >       , frequency = 67.8
@@ -201,7 +201,7 @@
 >   , defaultWindowed {
 >         sId = 12
 >       , sName = "TestWindowed1"
->       , totalTime = 4*60
+>       , sAlloted = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 67.8
@@ -214,7 +214,7 @@
 >   , defaultWindowed {
 >         sId = 13
 >       , sName = "TestWindowed2"
->       , totalTime = 6*60
+>       , sAlloted = 6*60
 >       , minDuration = 6*60
 >       , maxDuration = 6*60
 >       , frequency = 67.8
@@ -227,7 +227,7 @@
 >   , defaultWindowed {
 >         sId = 14
 >       , sName = "TestWindowed3"
->       , totalTime = 4*60
+>       , sAlloted = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 2.0
@@ -256,7 +256,7 @@
 >         sId = 15
 >       , sName = "GB_thesis"
 >       , periods = []
->       , totalTime = 80*60
+>       , sAlloted = 80*60
 >       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 27.5
@@ -271,7 +271,7 @@
 >         sId = 16
 >       , sName = "WV_thesis"
 >       , periods = []
->       , totalTime = 120*60
+>       , sAlloted = 120*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 34.9

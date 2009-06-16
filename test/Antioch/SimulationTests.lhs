@@ -135,7 +135,7 @@ that it does not over allocate periods to a session.
 >                        , pAlloted = 240
 >                        }
 >     s = defaultSession {minDuration = 120
->                       , totalTime   = 240
+>                       , sAlloted   = 240
 >                       , project     = p 
 >                        }
 >     ss = [s]
@@ -153,7 +153,7 @@ Can't simulate anything because the project doesn't have enough time!
 >     dur = 60 * 24 * 10
 >     int = 60 * 24 * 1
 >     s = defaultSession {minDuration = 120
->                       , totalTime   = 240
+>                       , sAlloted   = 240
 >                       , project     = defaultProject -- not enought time! 
 >                        }
 
@@ -219,7 +219,7 @@ time exceeds the sessions total time
 >                        }
 >     s = defaultSession {minDuration = 120
 >                       , maxDuration = 120
->                       , totalTime   = 240
+>                       , sAlloted   = 240
 >                       , project     = p 
 >                        }
 >     ss = [s]
@@ -239,7 +239,7 @@ time exceeds the sessions total time
 >     int = 60 * 24 * 1
 >     history = []
 >     -- induce starvation by shortening everybody's time
->     ss = map (\s -> s {totalTime = 10*60}) getOpenPSessions
+>     ss = map (\s -> s {sAlloted = 10*60}) getOpenPSessions
 
 TBF: the simulate function currently cannot handle scheduling around 
 pre-scheduled periods
@@ -360,7 +360,7 @@ of pre-scheduled periods (history)
 >     (result, t) <- simulateScheduling Pack w rs dt dur int h2 cnl ss2
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_3" True (scheduleHonorsFixed h2 result)
 >     let observedTime = sum $ map duration result
->     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_4" True (abs (observedTime - (totalTime s2)) <= (minDuration s2))
+>     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_4" True (abs (observedTime - (sAlloted s2)) <= (minDuration s2))
 >   where
 >     rs  = []
 >     -- set it up to be like production 08B beta test scheduling
@@ -370,7 +370,7 @@ of pre-scheduled periods (history)
 >     cnl = []
 >     ds = defaultSession
 >     -- a period that uses up all the sessions' time!
->     f1 = Period ds {sId = sId cv} (dt) (totalTime cv) 0.0 undefined False
+>     f1 = Period ds {sId = sId cv} (dt) (sAlloted cv) 0.0 undefined False
 >     h1 = [f1]
 >     -- make sure that this session knows it's used up it's time
 >     s1 = cv {periods = h1}
@@ -396,7 +396,7 @@ of pre-scheduled periods (history)
 >       s1 = defaultSession
 >       -- use up some time, but not all ( 3 hrs left )
 >       proj = defaultProject { pAlloted = 7 * 60 }
->       s2' = s1 { totalTime = 7 * 60
+>       s2' = s1 { sAlloted = 7 * 60
 >                , minDuration = 2 * 60
 >                , project = proj }
 >       dt2 = fromGregorian 2009 5 2 0 0 0
@@ -419,7 +419,7 @@ of pre-scheduled periods (history)
 >       -- now the session has enought time, depending on the semester
 >       proj3' = proj { pAlloted = 6 * 60 
 >                     , maxSemesterTime = 2 * 60 }
->       s5' = s1 { totalTime = 7 * 60
+>       s5' = s1 { sAlloted = 7 * 60
 >                , minDuration = 2 * 60 }
 >       s5 = makeSession s5' [p1]
 >       s6' = s5'

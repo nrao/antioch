@@ -328,7 +328,7 @@ BETA: TestStringency.py testScore (first assert)
 >     ss''  = [
 >         defaultSession {
 >             periods = [defaultPeriod {duration = tt - tl}]
->           , totalTime = tt
+>           , sAlloted = tt
 >           }
 >       ]
 >     ss'   = [ makeSession s (periods s) | s <- ss'' ]
@@ -457,7 +457,7 @@ to use in conjunction with Pack tests.
 >   where
 >     dummytime = fromGregorian 2006 11 7 12 0 0
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     s = defaultSession {totalTime = 24*60, minDuration=2*60, maxDuration=6*60}
+>     s = defaultSession {sAlloted = 24*60, minDuration=2*60, maxDuration=6*60}
 >     expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
 >     exp = (sum expScores) / (fromIntegral $ length expScores) 
 > 
@@ -480,13 +480,13 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = defaultSession { sName = "singleton"
->                           , totalTime = 24*60
+>                           , sAlloted = 24*60
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           }
 >     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0)
 
-For defaultSession w/ totalTime = 24*60; start time is  2006 11 8 12 0 0
+For defaultSession w/ sAlloted = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
 > defaultScores = [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
@@ -520,7 +520,7 @@ plus 40 quarters.
 >     assertEqual "test_score2" expected avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     sess = defaultSession { totalTime = 24*60 
+>     sess = defaultSession { sAlloted = 24*60 
 >                           , minDuration = 2*60 
 >                           , maxDuration = 6*60
 >                           }
@@ -544,7 +544,7 @@ Look at the scores over a range where none are zero.
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     dur = 2*60
->     sess = defaultSession { totalTime = 24*60 
+>     sess = defaultSession { sAlloted = 24*60 
 >                           , minDuration = dur 
 >                           , maxDuration = 6*60
 >                           }
@@ -734,7 +734,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         bands  = [    L,     C,     X,     L]
 >         grades = [GradeA, GradeA, GradeA, GradeA]
 >         genPSess t u ra b g = defaultSession {
->             totalTime = t
+>             sAlloted = t
 >           , periods = [defaultPeriod {duration = u}]
 >           , ra = ra
 >           , band = b
@@ -748,7 +748,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         bands  = [    L,     C,     X,     L]
 >         grades = [GradeA, GradeA, GradeB, GradeB]
 >         genPSess t u ra b g = defaultSession {
->             totalTime = t
+>             sAlloted = t
 >           , periods = [defaultPeriod {duration = u}]
 >           , ra = ra
 >           , band = b

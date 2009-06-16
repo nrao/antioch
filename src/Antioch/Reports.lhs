@@ -767,7 +767,7 @@ be confused and raise false alarams.
 >     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
 >     let history = filterHistory history' dt days 
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
->     putStrLn $ "Total Time: " ++ show (sum (map totalTime ss)) ++ " minutes"
+>     putStrLn $ "Total Time: " ++ show (sum (map sAlloted ss)) ++ " minutes"
 >     start <- getCPUTime
 >     -- TBF: better way of switching between the two types of simulations?
 >     (results, trace) <- simulate strategyName w rs dt dur int history [] ss

@@ -53,7 +53,7 @@ similar test in SimulationTests.
 >     history = []
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
->     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s)
+>     timeLeft s = ((sAlloted s) - (sUsed s)) > (minDuration s)
 >     gb = findPSessionByName "GB"
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
@@ -84,7 +84,7 @@ TBF: don't run as a test yet - it fails, but we don't know its status.
 >     history = [Period tx (fromGregorian 2006 2 1 2 30 0) 120 0.0 undefined False]
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
->     timeLeft s = ((totalTime s) - (totalUsed s)) > (minDuration s)
+>     timeLeft s = ((sAlloted s) - (sUsed s)) > (minDuration s)
 >     gb = findPSessionByName "GB"
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
@@ -114,7 +114,7 @@ TBF: reveils bug.
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 2
 >     history = []
->     s = defaultSession {minDuration = 120, totalTime = 240}
+>     s = defaultSession {minDuration = 120, sAlloted = 240}
 >     ss = [s]
 >     exp = [Period s (fromGregorian 2006 2 1 16 15 0) 120 0.0 undefined False
 >          , Period s (fromGregorian 2006 2 1 18 15 0) 120 0.0 undefined False]
@@ -165,11 +165,11 @@ TBF: constrain has not been fully implemented yet
 >     ss = getOpenPSessions
 >     cv = findPSessionByName "CV"
 >     ssMinusCV = ss \\ [cv]
->     s' = defaultSession {sId = 1000, totalTime = 2, minDuration = 1}
+>     s' = defaultSession {sId = 1000, sAlloted = 2, minDuration = 1}
 >     almostBookedSession = s' {periods = [Period s' dt 1 0.0 undefined False]}
 >     bookedSession = s' {periods = [Period s' dt 1 0.0 undefined False, Period s' dt2 1 0.0 undefined False]}
 >     p1 = Period cv dt (minDuration cv) 0.0 undefined False
->     maxNumTPs = (totalTime cv) `div` (minDuration cv)
+>     maxNumTPs = (sAlloted cv) `div` (minDuration cv)
 >     maxTPs' = replicate maxNumTPs p1
 >     dts = [(hr*60) `addMinutes'` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 
 >     maxTPs = zipWith adjustPeriod maxTPs' dts

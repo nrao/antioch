@@ -240,7 +240,7 @@ for each slice for computing pressures.
 >     for xs $ \x -> do
 >         let bin = f x
 >         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + totalTime x, c + totalUsed x)
+>         writeArray arr bin $! (t + sAlloted x, c + sUsed x)
 >     return arr
 >   where
 >     for xs f = foldr ((>>) . f) (return ()) xs
@@ -325,7 +325,7 @@ Translates the total/used times pairs into pressure factors.
 > projectCompletion _ s = let
 >     weight = 1000.0
 >     total = fromIntegral (pAlloted . project $ s)
->     left  = total - fromIntegral (timeUsed  . project $ s)
+>     left  = total - fromIntegral (pUsed  . project $ s)
 >     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
 >     in factor "projectCompletion" . Just $
 >     if percent <= 0.0 then 1.0 else 1.0 + percent/weight

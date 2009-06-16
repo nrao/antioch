@@ -109,7 +109,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , minDuration = fromSqlMinutes mind
 >           , maxDuration = fromSqlMinutes maxd
 >           , timeBetween = fromSqlMinutes between
->           , totalTime   = fromSqlMinutes time 
+>           , sAlloted    = fromSqlMinutes time 
 >           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
 >           , dec = fromSql v  
 >           , grade = toGradeType fltGrade 

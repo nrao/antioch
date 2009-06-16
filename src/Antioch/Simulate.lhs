@@ -41,7 +41,7 @@ Sessions that:
 > type SelectionCriteria = DateTime -> Session -> Bool
 
 > timeLeft :: SelectionCriteria
-> timeLeft dt s = (totalAvail s sem) >= (minDuration s)
+> timeLeft dt s = (sAvail s sem) >= (minDuration s)
 >   where 
 >     sem = dt2semester dt
 
@@ -285,7 +285,7 @@ Utilities:
 >   where
 >     ss' = filter (\s-> (sName s) == name) ss
 >     report ss' = if (length ss') == 1 then report' . head $ ss' else name ++ " is not present!!!!!!!!!!"
->     report' s = (sName s) ++ ": " ++ (show . totalTime $ s) ++ ", " ++ (show . totalUsed $ s) ++ ", " ++ (show $ (totalTime s) - (totalUsed s))
+>     report' s = (sName s) ++ ": " ++ (show . sAlloted $ s) ++ ", " ++ (show . sUsed $ s) ++ ", " ++ (show $ (sAlloted s) - (sUsed s))
 
 Scores the named session for the interval spanned.
 

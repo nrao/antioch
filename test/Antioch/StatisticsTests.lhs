@@ -155,8 +155,8 @@ what bin it shows up in.
 >     assertEqual "test_sessionFreqHrs" 1.0 (snd (freqHist!!1))
 >     assertEqual "test_sessionFreqHrs" 1.0 (snd (freqHist!!2))
 >   where
->     s1 = defaultSession { totalTime = 60, frequency = 2.0 }
->     s2 = defaultSession { totalTime = 60, frequency = 2.2 }
+>     s1 = defaultSession { sAlloted = 60, frequency = 2.0 }
+>     s2 = defaultSession { sAlloted = 60, frequency = 2.2 }
 >     freqHist = sessionFreqHrs [s1, s2]
 
 > test_periodFreq = TestCase $ do

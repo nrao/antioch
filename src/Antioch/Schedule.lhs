@@ -125,13 +125,13 @@ Is there time for this session?  Taking into account both the session's periods
 and the periods in the history?
 
 > timeLeftHistory :: [Period] -> Session -> Bool
-> timeLeftHistory history s = totalTime s - timeUsedHistory history s >= minDuration s
+> timeLeftHistory history s = sAlloted s - timeUsedHistory history s >= minDuration s
 
 The list of periods (ps) may contain redundant versions of the
 sessions' periods list.  
 
 > timeUsedHistory :: [Period] -> Session -> Minutes
-> timeUsedHistory ps s = sum [duration p | p <- uniquePeriods ps s] + totalUsed s 
+> timeUsedHistory ps s = sum [duration p | p <- uniquePeriods ps s] + sUsed s 
 >   where
 >     uniquePeriods ps s = [p | p <- ps, s == session p] \\ periods s
 > 

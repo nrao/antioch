@@ -22,43 +22,43 @@ But the devil is in the details.  Like:
 
 TBF: these naming conventions suck.  Need to rename them ...
 
-> totalUsed :: Session -> Minutes
-> totalUsed = sum . map duration . periods
+> sUsed :: Session -> Minutes
+> sUsed = sum . map duration . periods
 
 Returns the minutes available for scheduling for this session,
 i.e., time that is not encumbered in any way and therefore
 completely open for scheduling, tentative or not.
 
-> totalAvailTotal :: Session -> Minutes
-> totalAvailTotal s = (totalTime s) - (totalUsed s)
+> sAvailTotal :: Session -> Minutes
+> sAvailTotal s = (sAlloted s) - (sUsed s)
 
 The time available to this session might actually be further restricted by 
 the time available to it's project, which may depend on which semester it is.
 
-> totalAvail :: Session -> String -> Minutes
-> totalAvail s sem = min (totalAvailTotal s) (timeAvail (project s) sem)
+> sAvail :: Session -> String -> Minutes
+> sAvail s sem = min (sAvailTotal s) (pAvail (project s) sem)
 
-> timeUsed :: Project -> Minutes
-> timeUsed = sum . map totalUsed . sessions
+> pUsed :: Project -> Minutes
+> pUsed = sum . map sUsed . sessions
 
-> timeAvailTotal :: Project -> Minutes
-> timeAvailTotal p = (pAlloted p) - (timeUsed p) 
+> pAvailTotal :: Project -> Minutes
+> pAvailTotal p = (pAlloted p) - (pUsed p) 
 
 Usually, the time available for a project is simply it's total time minus
 the time it has already used up.  But for large projects, it may be allowed
 only a certain amount of time per semester.
 
-> timeAvail :: Project -> String -> Minutes
-> timeAvail p sem = min ((pAlloted p) - (timeUsed p)) (timeAvailBySemester p sem)
+> pAvail :: Project -> String -> Minutes
+> pAvail p sem = min ((pAlloted p) - (pUsed p)) (pAvailBySemester p sem)
 
-> timeAvailBySemester :: Project -> String -> Minutes
-> timeAvailBySemester p sem = (maxSemesterTime p) - (timeUsedBySemester p sem)
+> pAvailBySemester :: Project -> String -> Minutes
+> pAvailBySemester p sem = (maxSemesterTime p) - (pUsedBySemester p sem)
 
-> timeUsedBySemester :: Project -> String -> Minutes
-> timeUsedBySemester p sem = sum $ map (totalUsedBySemester sem) $ sessions p
+> pUsedBySemester :: Project -> String -> Minutes
+> pUsedBySemester p sem = sum $ map (sUsedBySemester sem) $ sessions p
 
-> totalUsedBySemester :: String -> Session -> Minutes
-> totalUsedBySemester sem s = sum $ map duration $ periodsBySemester s sem 
+> sUsedBySemester :: String -> Session -> Minutes
+> sUsedBySemester sem s = sum $ map duration $ periodsBySemester s sem 
 
 > periodsBySemester :: Session -> String -> [Period]
 > periodsBySemester s sem = filter (isSemester sem) $ periods s

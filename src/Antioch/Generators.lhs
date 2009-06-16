@@ -51,8 +51,7 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     semester <- genSemesterName
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
->     let pAlloted = sum [ totalTime s | s <- sessions ]
->     let timeUsed  = sum [ totalUsed s | s <- sessions ]
+>     let pAlloted = sum [ sAlloted s | s <- sessions ]
 >     let project = defaultProject {
 >           pName = str name
 >         , semester = semester
@@ -79,7 +78,7 @@ at a time:
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["05C", "06A", "06B", "06C"]
 
-Each Project's Sessions can have a totalTime between 2 & 30 hrs.  Currently
+Each Project's Sessions can have a sAlloted between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
 
 > prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
@@ -92,9 +91,9 @@ Each Session can have 0-3 Periods, each with a max of 10 hours:
 > prop_projectPeriods p = let n = sum [length . periods $ s | s <- sessions p] in 0 <= n && n <= 5*3
 
 TBF: this does not pass because generated periods aren't limited by their
-sessions' totalTime.
+sessions' sAlloted.
 
-> prop_timeUsed p = 0 <= timeUsed p && timeUsed p <= pAlloted p
+> prop_pUsed p = 0 <= pUsed p && pUsed p <= pAlloted p
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
@@ -150,7 +149,7 @@ Only 20 percent of the low freq. sessions are backups
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
->     totalTime  <- choose (6*60, 30*60)
+>     sAlloted  <- choose (6*60, 30*60)
 >     minD       <- genMinTP f
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
@@ -165,20 +164,20 @@ Only 20 percent of the low freq. sessions are backups
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
 >                -- TBF: only for scheduleMinDuration; then go back
->                --, totalTime      = matchAvTime totalTime (round2quarter minD)
->                , totalTime      = round2quarter totalTime
+>                --, sAlloted      = matchAvTime sAlloted (round2quarter minD)
+>                , sAlloted      = round2quarter sAlloted
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
 >                }
 
 TBF: this is only for use with the scheduleMinDuration strategy.  We want
-to use this so that the totalTime of a session can be completely scheduled
+to use this so that the sAlloted of a session can be completely scheduled
 without leaving behind 'loose change'.  This can happen because this strategy
 only schedule Periods of length minDuration.
 
 > matchAvTime :: Int -> Int -> Int
-> matchAvTime totalTime minDuration = (totalTime `div` minDuration) * minDuration
+> matchAvTime sAlloted minDuration = (sAlloted `div` minDuration) * minDuration
 
 > genProjectSessions :: Gen [Session]
 > genProjectSessions = 
@@ -209,9 +208,9 @@ Assumes a single scalar rcvr group
 
 Make sure that the total time used up by the periods is correct:
 
-> prop_totalUsed s          = 0 <= totalUsed s && totalUsed s <= (3*10*60)
-> prop_totalTime s          = (2*60) <= totalTime s && totalTime s <= (30*60)
-> prop_totalTimeQuarter s   = totalTime s `mod` quarter == 0
+> prop_sUsed s          = 0 <= sUsed s && sUsed s <= (3*10*60)
+> prop_sAlloted s          = (2*60) <= sAlloted s && sAlloted s <= (30*60)
+> prop_sAllotedQuarter s   = sAlloted s `mod` quarter == 0
 > prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (6*60)
 > prop_minDurationQuarter s = minDuration s `mod` quarter == 0
 > prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)

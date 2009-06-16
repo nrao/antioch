@@ -90,8 +90,8 @@ once and has a total time that is the sum of the grade hrs.
 > test_totaltime = TestCase $ do
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09B-010") projs
->   assertEqual "test_totalTime_1" 1 (length ps)
->   assertEqual "test_totalTime_2" (22*60) (pAlloted . head $ ps)
+>   assertEqual "test_sAlloted_1" 1 (length ps)
+>   assertEqual "test_sAlloted_2" (22*60) (pAlloted . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -148,7 +148,7 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_4" "GBT09A-081-02" (sName s)
 >   assertEqual "test_session2_5" "GBT09A-081" (pName . project $ s)
 >   assertEqual "test_session2_6" "09A" (semester . project $ s)
->   assertEqual "test_session2_7" 210 (totalTime s)
+>   assertEqual "test_session2_7" 210 (sAlloted s)
 >   assertEqual "test_session2_8" 180 (minDuration s)
 >   assertEqual "test_session2_9" 210 (maxDuration s)
 >   assertEqual "test_session2_10" 0 (timeBetween s)
@@ -183,7 +183,7 @@ generated: it's the input we want to test, really.
 >     where
 >       validProject proj = "0" == (take 1 $ semester proj)
 >       validSession s = (maxDuration s) >= (minDuration s)
->                    -- TBF!! &&  (totalTime s)     >= (minDuration s)
+>                    -- TBF!! &&  (sAlloted s)     >= (minDuration s)
 >                     &&  (validRA s) && (validDec s)
 >       validPeriods allPeriods = not . internalConflicts $ allPeriods
 

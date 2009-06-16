@@ -128,9 +128,9 @@ Convert an open session `s` into a schedulable item by scoring it with
 >         iId      = s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
->       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s sem)
->       , iSTimAv  = totalAvail s sem
->       , iPTimAv  = timeAvail (project s) sem
+>       , iMaxDur  = numSteps $ min (maxDuration s) (sAvail s sem)
+>       , iSTimAv  = sAvail s sem
+>       , iPTimAv  = pAvail (project s) sem
 >       , iTimeBt  = timeBetween s
 >       , iFuture  = scores
 >       , iPast    = []
