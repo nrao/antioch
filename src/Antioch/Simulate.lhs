@@ -36,21 +36,23 @@ Sessions that:
    * have no time left (due to Periods)
    * have been marked as complete
    * more ...
-TBF: only have implemented time left so far ...
 
 > type SelectionCriteria = DateTime -> Session -> Bool
 
 > timeLeft :: SelectionCriteria
-> timeLeft _ s     = ((totalTime s) - (totalUsed s)) >= (minDuration s)
+> --timeLeft _ s     = ((totalTime s) - (totalUsed s)) >= (minDuration s)
+> timeLeft dt s = (totalAvail' s sem) >= (minDuration s)
+>   where 
+>     sem = dt2semester dt
 
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open
 
-TBF: we need to be using 'isScheduableSemester', that looks at past semesters
-dependeing on grade.
+We are explicitly ignoring grade here: it has been decided that a humna
+should deal with closing old B projects, etc.
 
-> isMySemester :: SelectionCriteria 
-> isMySemester dt s = (semester $ project s) <= current_semester
+> isScheduableSemester :: SelectionCriteria 
+> isScheduableSemester dt s = (semester $ project s) <= current_semester
 >    where
 >      current_semester = dt2semester dt
 
@@ -104,8 +106,8 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > runSimStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isMySemester] sessions
->   sf <- genScore $ filterSessions dt [isMySemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isScheduableSemester] sessions
+>   sf <- genScore $ filterSessions dt [isScheduableSemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
@@ -260,8 +262,8 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 > runSimSchedStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isMySemester] sessions
->   sf <- genScore $ filterSessions dt [isMySemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isScheduableSemester] sessions
+>   sf <- genScore $ filterSessions dt [isScheduableSemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   return schedPeriods
 
