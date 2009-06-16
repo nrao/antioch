@@ -8,5 +8,11 @@ syntax: glob
 *.orig
 *.prof
 *.swp
+*.png
+*.dat
+*.txt
+*.gp
+simulate
+Settings.lhs
 
 dist/
