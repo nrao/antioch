@@ -112,11 +112,6 @@ Tying the knot.
 >   , pBlackouts      :: [DateRange] -- TBF: only needed for 09B.  delete me!!!
 >   } deriving Eq
 
-
-> timeAvail :: Project -> Minutes
-> timeAvail p = (timeTotal p) - (timeUsed p)
-> -- TBF does NOT account for trimester time
-
 > makeProject :: Project -> Minutes -> [Session] -> Project
 > makeProject p tt ss = p'
 >   where
