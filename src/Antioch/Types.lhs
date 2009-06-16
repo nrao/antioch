@@ -103,10 +103,10 @@ Tying the knot.
 > data Project = Project {
 >     pId             :: !Int
 >   , pName           :: !String
+>   , pAlloted        :: !Minutes
 >   , semester        :: !String
 >   , sessions        :: [Session]
 >   , thesis          :: !Bool
->   , timeTotal       :: !Minutes
 >   , maxSemesterTime :: !Minutes
 >   , observers       :: [Observer]
 >   , pBlackouts      :: [DateRange] -- TBF: only needed for 09B.  delete me!!!
@@ -115,11 +115,11 @@ Tying the knot.
 > makeProject :: Project -> Minutes -> [Session] -> Project
 > makeProject p tt ss = p'
 >   where
->     p' = p { timeTotal = tt, sessions = map (\s -> s { project = p' }) ss }
+>     p' = p { pAlloted = tt, sessions = map (\s -> s { project = p' }) ss }
 >     t  = sum . map totalTime $ ss
 
 > instance Show Project where
->     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] 
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAlloted $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] 
 
 > type DateRange = (DateTime, DateTime)
 
@@ -214,7 +214,7 @@ Simple Functions for Periods:
 >   , semester  = ""
 >   , sessions  = [defaultSession]
 >   , thesis    = False
->   , timeTotal = 0
+>   , pAlloted = 0
 >   , maxSemesterTime = 10000000 -- more then enough time
 >   , observers = [defaultObserver]
 >   , pBlackouts = []

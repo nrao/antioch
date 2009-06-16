@@ -42,14 +42,14 @@ the time available to it's project, which may depend on which semester it is.
 > timeUsed = sum . map totalUsed . sessions
 
 > timeAvailTotal :: Project -> Minutes
-> timeAvailTotal p = (timeTotal p) - (timeUsed p) 
+> timeAvailTotal p = (pAlloted p) - (timeUsed p) 
 
 Usually, the time available for a project is simply it's total time minus
 the time it has already used up.  But for large projects, it may be allowed
 only a certain amount of time per semester.
 
 > timeAvail :: Project -> String -> Minutes
-> timeAvail p sem = min ((timeTotal p) - (timeUsed p)) (timeAvailBySemester p sem)
+> timeAvail p sem = min ((pAlloted p) - (timeUsed p)) (timeAvailBySemester p sem)
 
 > timeAvailBySemester :: Project -> String -> Minutes
 > timeAvailBySemester p sem = (maxSemesterTime p) - (timeUsedBySemester p sem)

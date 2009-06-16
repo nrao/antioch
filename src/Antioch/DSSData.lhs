@@ -50,7 +50,7 @@ separate query, to deal with multiple allotments (different grades)
 >     let project' = project { pBlackouts = blackouts }
 >     allotments <- getProjectAllotments (pId project') cnn
 >     let project'' = setProjectAllotments project' allotments
->     return $ makeProject project'' (timeTotal project'') sessions 
+>     return $ makeProject project'' (pAlloted project'') sessions 
 
 TBF: Let's say it again.  This is only for scheduling 09B.  Then we'll
 want to ditch this, and get the observer blackouts.
@@ -85,7 +85,7 @@ hours togethor to get the total time.
 
 > setProjectAllotments :: Project -> [(Minutes, Grade)] -> Project
 > setProjectAllotments p [] = p
-> setProjectAllotments p (x:xs) = setProjectAllotments (p {timeTotal = (timeTotal p) + (fst x)} ) xs
+> setProjectAllotments p (x:xs) = setProjectAllotments (p {pAlloted = (pAlloted p) + (fst x)} ) xs
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!

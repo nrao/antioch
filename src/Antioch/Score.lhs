@@ -324,7 +324,7 @@ Translates the total/used times pairs into pressure factors.
 
 > projectCompletion _ s = let
 >     weight = 1000.0
->     total = fromIntegral (timeTotal . project $ s)
+>     total = fromIntegral (pAlloted . project $ s)
 >     left  = total - fromIntegral (timeUsed  . project $ s)
 >     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
 >     in factor "projectCompletion" . Just $

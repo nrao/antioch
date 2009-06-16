@@ -19,7 +19,7 @@
 >   , pName = "TestDB"
 >   , semester = "06A"
 >   -- , timeLeft = 28740
->   , timeTotal = 33812
+>   , pAlloted = 33812
 > }
 
 > p1sessions' = [
@@ -248,7 +248,7 @@
 >   , semester = "06A"
 >   , thesis = True
 >   -- , timeLeft = 14*60
->   -- , timeTotal = 14*60
+>   -- , pAlloted = 14*60
 > }
 
 > p2sessions' = [

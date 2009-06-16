@@ -1270,7 +1270,7 @@ epsilon, and so is "correct".
 
 Session data to pack:
 
-> testProject  = defaultProject { timeTotal = 24*60 }
+> testProject  = defaultProject { pAlloted = 24*60 }
 
 > testSession  = defaultSession { sName = "singleton"
 >                               , totalTime = 24*60

@@ -132,7 +132,7 @@ that it does not over allocate periods to a session.
 >     int = 60 * 24 * 1
 >     history = []
 >     p = defaultProject { semester = "06A"
->                        , timeTotal = 240
+>                        , pAlloted = 240
 >                        }
 >     s = defaultSession {minDuration = 120
 >                       , totalTime   = 240
@@ -215,7 +215,7 @@ time exceeds the sessions total time
 >     int = 60 * 24 * 1
 >     history = []
 >     p = defaultProject {semester = "06A"
->                       , timeTotal = 240
+>                       , pAlloted = 240
 >                        }
 >     s = defaultSession {minDuration = 120
 >                       , maxDuration = 120
@@ -395,7 +395,7 @@ of pre-scheduled periods (history)
 >       dt1 = fromGregorian 2009 6 2 0 0 0 -- 09B
 >       s1 = defaultSession
 >       -- use up some time, but not all ( 3 hrs left )
->       proj = defaultProject { timeTotal = 7 * 60 }
+>       proj = defaultProject { pAlloted = 7 * 60 }
 >       s2' = s1 { totalTime = 7 * 60
 >                , minDuration = 2 * 60
 >                , project = proj }
@@ -412,12 +412,12 @@ of pre-scheduled periods (history)
 >       p3 = p2 { startTime = dt4 }
 >       s3 = makeSession s2' [p1,p2,p3] 
 >       -- now the session has enough time, but not the project
->       proj2' = proj { timeTotal = 4 * 60 }
+>       proj2' = proj { pAlloted = 4 * 60 }
 >       s4' = s2 { project = proj2' }
 >       proj2 = makeProject proj2' (4*60) [s4']
 >       s4 = head . sessions $ proj2
 >       -- now the session has enought time, depending on the semester
->       proj3' = proj { timeTotal = 6 * 60 
+>       proj3' = proj { pAlloted = 6 * 60 
 >                     , maxSemesterTime = 2 * 60 }
 >       s5' = s1 { totalTime = 7 * 60
 >                , minDuration = 2 * 60 }

@@ -45,7 +45,7 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects1" 103 (length ps)  
 >     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 48480 (timeTotal . head $ ps)  
+>     assertEqual "test_getProjects3" 48480 (pAlloted . head $ ps)  
 >     assertEqual "test_getProjects4" 16 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Windowed (sType . head $ ss)
 >     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
@@ -91,7 +91,7 @@ once and has a total time that is the sum of the grade hrs.
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09B-010") projs
 >   assertEqual "test_totalTime_1" 1 (length ps)
->   assertEqual "test_totalTime_2" (22*60) (timeTotal . head $ ps)
+>   assertEqual "test_totalTime_2" (22*60) (pAlloted . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.

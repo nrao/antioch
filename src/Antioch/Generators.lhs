@@ -51,15 +51,15 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     semester <- genSemesterName
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
->     let timeTotal = sum [ totalTime s | s <- sessions ]
+>     let pAlloted = sum [ totalTime s | s <- sessions ]
 >     let timeUsed  = sum [ totalUsed s | s <- sessions ]
 >     let project = defaultProject {
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
->         -- , timeTotal = timeTotal
+>         -- , pAlloted = pAlloted
 >         }
->     return $ makeProject project timeTotal sessions
+>     return $ makeProject project pAlloted sessions
 
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []
@@ -83,9 +83,9 @@ Each Project's Sessions can have a totalTime between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
 
 > prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
-> prop_timeTotal p = (1*2*60) <= timeTotal p && timeTotal p <= (5*30*60)
+> prop_pAlloted p = (1*2*60) <= pAlloted p && pAlloted p <= (5*30*60)
 
-> prop_timeTotalQuarter p = timeTotal p `mod` quarter == 0
+> prop_pAllotedQuarter p = pAlloted p `mod` quarter == 0
 
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
@@ -94,7 +94,7 @@ Each Session can have 0-3 Periods, each with a max of 10 hours:
 TBF: this does not pass because generated periods aren't limited by their
 sessions' totalTime.
 
-> prop_timeUsed p = 0 <= timeUsed p && timeUsed p <= timeTotal p
+> prop_timeUsed p = 0 <= timeUsed p && timeUsed p <= pAlloted p
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
