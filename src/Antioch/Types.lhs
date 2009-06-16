@@ -71,21 +71,6 @@ use a single data structure for all sessions.
 >   , sType       :: SessionType
 >   } deriving Show
 
-> totalUsed :: Session -> Minutes
-> totalUsed = sum . map duration . periods
-
-Returns the minutes available for scheduling for this session,
-i.e., time that is not encumbered in any way and therefore
-completely open for scheduling, tentative or not.
-
-> totalAvail :: Session -> Minutes
-> totalAvail s = (totalTime s) - (totalUsed s)
-
-The time available to this session might actually be further restricted by 
-the time available to it's project, which may depend on which semester it is.
-
-> totalAvail' :: Session -> String -> Minutes
-> totalAvail' s sem = min (totalAvail s) (timeAvail' (project s) sem)
 
 > instance Eq Session where
 >     (==) = (==) `on` sId
@@ -127,45 +112,6 @@ Tying the knot.
 >   , pBlackouts      :: [DateRange] -- TBF: only needed for 09B.  delete me!!!
 >   } deriving Eq
 
-> timeUsed :: Project -> Minutes
-> timeUsed = sum . map totalUsed . sessions
-
-> timeAvail :: Project -> Minutes
-> timeAvail p = (timeTotal p) - (timeUsed p) 
-
-Usually, the time available for a project is simply it's total time minus
-the time it has already used up.  But for large projects, it may be allowed
-only a certain amount of time per semester.
-
-> timeAvail' :: Project -> String -> Minutes
-> timeAvail' p sem = min ((timeTotal p) - (timeUsed p)) (timeAvailBySemester p sem)
-
-> timeAvailBySemester :: Project -> String -> Minutes
-> timeAvailBySemester p sem = (maxSemesterTime p) - (timeUsedBySemester p sem)
-
-> timeUsedBySemester :: Project -> String -> Minutes
-> timeUsedBySemester p sem = sum $ map (totalUsedBySemester sem) $ sessions p
-
-> totalUsedBySemester :: String -> Session -> Minutes
-> totalUsedBySemester sem s = sum $ map duration $ periodsBySemester s sem 
-
-> periodsBySemester :: Session -> String -> [Period]
-> periodsBySemester s sem = filter (isSemester sem) $ periods s
->   where
->     isSemester sem p = sem == (dt2semesterLocal . startTime $ p)
-
-TBF: dt2semester is defined in Utilities, but we risk cicrular imports
-
-> dt2semesterLocal :: DateTime -> String
-> dt2semesterLocal dt = yearStr ++ (drop 1 sem)
->   where
->     (year, month, _) = toGregorian' dt
->     sem   | month <   2 = "0C"
->           | month <   6 = "1A"
->           | month <  10 = "1B"
->           | month <= 12 = "1C"
->     year' = if (take 1 sem) == "0" then year - 1 else year
->     yearStr = drop 2 $ show year'
 
 > makeProject :: Project -> Minutes -> [Session] -> Project
 > makeProject p tt ss = p'
@@ -174,7 +120,7 @@ TBF: dt2semester is defined in Utilities, but we risk cicrular imports
 >     t  = sum . map totalTime $ ss
 
 > instance Show Project where
->     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ", " ++ (show . timeUsed $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] ++ ", " ++  show [ totalUsed s | s <- sessions p]
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . timeTotal $ p) ++ ") Sessions: " ++ show [ totalTime s | s <- sessions p] 
 
 > type DateRange = (DateTime, DateTime)
 

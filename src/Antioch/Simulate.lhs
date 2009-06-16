@@ -5,6 +5,7 @@
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
+> import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, rad2hr, showList', dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
@@ -40,7 +41,6 @@ Sessions that:
 > type SelectionCriteria = DateTime -> Session -> Bool
 
 > timeLeft :: SelectionCriteria
-> --timeLeft _ s     = ((totalTime s) - (totalUsed s)) >= (minDuration s)
 > timeLeft dt s = (totalAvail' s sem) >= (minDuration s)
 >   where 
 >     sem = dt2semester dt

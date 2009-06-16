@@ -5,6 +5,7 @@
 > import Antioch.Schedule.Pack 
 > import Antioch.DateTime
 > import Antioch.Types
+> import Antioch.TimeAccounting
 > import Antioch.Score
 > import Antioch.Weather
 > import Antioch.Generators (generateTestSessions)

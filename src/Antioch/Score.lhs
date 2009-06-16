@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Generators
 > import Antioch.Types
+> import Antioch.TimeAccounting
 > import Antioch.Utilities
 > import Antioch.Weather
 > import Control.Monad.RWS.Strict

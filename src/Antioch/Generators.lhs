@@ -1,6 +1,7 @@
 > module Antioch.Generators where
 
 > import Antioch.Types
+> import Antioch.TimeAccounting
 > import Antioch.SLALib  (slaGaleq)
 > import Antioch.Utilities
 > import Antioch.DateTime

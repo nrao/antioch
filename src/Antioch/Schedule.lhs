@@ -1,29 +1,12 @@
 > {-# OPTIONS -XPatternGuards #-}
 
 > module Antioch.Schedule where
-> {- TBF: was there a good reason why we were hiding some things?
-> module Antioch.Schedule (
->     Strategy
->   , pack
->   , scheduleFixedDuration
->   , scheduleFixedDuration'
->   , scheduleMinDuration
->   , scheduleLittleNell
->   , validPackScores
->   , validScores
->   , obeyDurations
->   , obeySchedDuration
->   , best
->   , constrain
->   , timeLeftHistory
->   , timeUsedHistory
->   ) where
-> -}
 
 > import Antioch.DateTime
 > import Antioch.Utilities
 > import Antioch.Score
 > import Antioch.Types
+> import Antioch.TimeAccounting
 > import Antioch.Weather
 > import Antioch.Generators
 > import Control.Monad     (liftM)

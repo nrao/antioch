@@ -5,6 +5,7 @@
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
+> import Antioch.TimeAccounting
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Data.List            (zipWith, zipWith6, (\\))
