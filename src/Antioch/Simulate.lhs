@@ -41,7 +41,7 @@ Sessions that:
 > type SelectionCriteria = DateTime -> Session -> Bool
 
 > timeLeft :: SelectionCriteria
-> timeLeft dt s = (totalAvail' s sem) >= (minDuration s)
+> timeLeft dt s = (totalAvail s sem) >= (minDuration s)
 >   where 
 >     sem = dt2semester dt
 

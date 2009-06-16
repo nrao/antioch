@@ -38,7 +38,7 @@ to generate `items` for input to the `packWorker` function.
 > pack sf dt dur fixed sessions = do
 >     let dts = quarterDateTimes dt dur
 >     let sched = toSchedule dts . sort $ fixed
->     items <- mapM (toItem sf (mask dts sched)) sessions
+>     items <- mapM (toItem dt sf (mask dts sched)) sessions
 >     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker sched $ items
 
 Some things have to be corrected before this 'schedule' can be returned:
@@ -119,17 +119,18 @@ function assumes its inputs are sorted.
 Convert an open session `s` into a schedulable item by scoring it with
 `sf` at each of the open time slots in a mask `dts`.
 
-> toItem          :: ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
-> toItem sf dts s = do
+> toItem          :: DateTime -> ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
+> toItem dt sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
 >     let force = if sum scores >= 0.0 then True else False
+>     let sem = dt2semester dt
 >     return $! force `seq` Item {
 >         iId      = s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
->       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s)
->       , iSTimAv  = totalAvail s
->       , iPTimAv  = timeAvail . project $ s
+>       , iMaxDur  = numSteps $ min (maxDuration s) (totalAvail s sem)
+>       , iSTimAv  = totalAvail s sem
+>       , iPTimAv  = timeAvail (project s) sem
 >       , iTimeBt  = timeBetween s
 >       , iFuture  = scores
 >       , iPast    = []

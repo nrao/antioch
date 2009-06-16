@@ -559,13 +559,13 @@ attributes of the packing algorithm:
 >     -- create an item without a mask, i.e. no scoring
 >     item' <- runScoring w [] $ do
 >         fs <- genScore [testSession]
->         toItem fs [] testSession
+>         toItem starttime fs [] testSession
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
 >     item' <- runScoring w [] $ do
 >         fs <- genScore [testSession]
->         toItem fs dts testSession
+>         toItem starttime fs dts testSession
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
 >     assertEqual "test_ToItem_3" result2 item'
 >   where
@@ -574,16 +574,11 @@ attributes of the packing algorithm:
 >     -- the 'mask' is just a list of datetimes to score at
 >     dts' = quarterDateTimes starttime duration 
 >     dts = [(Just dt) | dt <- dts']
->     --session = defaultSession { sName = "singleton"
->     --                         , totalTime = 24*60
->     --                         , minDuration = 2*60
->     --                         , maxDuration = 6*60
->     --                         }
 >     result1 = dItem { iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iSTimAv = totalAvail testSession
->                    , iPTimAv = 0
+>                    , iSTimAv = 24 * 60  
+>                    , iPTimAv = 24 * 60
 >                    , iFuture = []
 >                    , iPast = []
 >                    }
@@ -596,7 +591,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     w <- getWeather . Just $ starttime 
 >     result <- runScoring w [] $ do
 >         fs <- genScore [sess]
->         toItem fs dts sess
+>         toItem starttime fs dts sess
 >     assertEqual "test_ToItem2" expected result
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
@@ -612,8 +607,8 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iSTimAv = totalAvail sess
->                    , iPTimAv = 0
+>                    , iSTimAv = 24 * 60 
+>                    , iPTimAv = 24 * 60
 >                    , iFuture = scores 
 >                    , iPast = []
 >                    }
@@ -808,6 +803,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , totalTime = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
 >     expPeriod = Period candidate expStartTime 135 39.949707 undefined False
@@ -1092,6 +1088,7 @@ Same as test_Pack1 except only 2 hours of totalTime instead of 24
 >                                , totalTime = 2*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
 >     expPeriod = Period candidate expStartTime 120 1.5167294 undefined False
@@ -1273,16 +1270,20 @@ epsilon, and so is "correct".
 
 Session data to pack:
 
+> testProject  = defaultProject { timeTotal = 24*60 }
+
 > testSession  = defaultSession { sName = "singleton"
 >                               , totalTime = 24*60
 >                               , minDuration = 2*60
 >                               , maxDuration = 6*60
+>                               , project = testProject
 >                              }
 
 > testSession2 = defaultSession { sName = "second"
 >                               , totalTime = 24*60
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
+>                               , project = testProject
 >                               }
 
 This expected result for the scoring of the session in 15-min

@@ -29,26 +29,27 @@ Returns the minutes available for scheduling for this session,
 i.e., time that is not encumbered in any way and therefore
 completely open for scheduling, tentative or not.
 
-> totalAvail :: Session -> Minutes
-> totalAvail s = (totalTime s) - (totalUsed s)
+> totalAvailTotal :: Session -> Minutes
+> totalAvailTotal s = (totalTime s) - (totalUsed s)
 
 The time available to this session might actually be further restricted by 
 the time available to it's project, which may depend on which semester it is.
 
-> totalAvail' :: Session -> String -> Minutes
-> totalAvail' s sem = min (totalAvail s) (timeAvail' (project s) sem)
+> totalAvail :: Session -> String -> Minutes
+> totalAvail s sem = min (totalAvailTotal s) (timeAvail (project s) sem)
+
 > timeUsed :: Project -> Minutes
 > timeUsed = sum . map totalUsed . sessions
 
-> timeAvail :: Project -> Minutes
-> timeAvail p = (timeTotal p) - (timeUsed p) 
+> timeAvailTotal :: Project -> Minutes
+> timeAvailTotal p = (timeTotal p) - (timeUsed p) 
 
 Usually, the time available for a project is simply it's total time minus
 the time it has already used up.  But for large projects, it may be allowed
 only a certain amount of time per semester.
 
-> timeAvail' :: Project -> String -> Minutes
-> timeAvail' p sem = min ((timeTotal p) - (timeUsed p)) (timeAvailBySemester p sem)
+> timeAvail :: Project -> String -> Minutes
+> timeAvail p sem = min ((timeTotal p) - (timeUsed p)) (timeAvailBySemester p sem)
 
 > timeAvailBySemester :: Project -> String -> Minutes
 > timeAvailBySemester p sem = (maxSemesterTime p) - (timeUsedBySemester p sem)
