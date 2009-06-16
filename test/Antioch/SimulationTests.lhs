@@ -23,7 +23,9 @@
 >    , test_sim_schedMinDuration
 >    -- test_sim_schedMinDuration_backup TBF: broken
 >    , test_sim_schedMinDuration_fail_backup
+>    , test_sim_schedMinDuration_famine
 >    , test_sim_schedMinDuration_starvation
+>    , test_sim_timeLeft
 >   ]
 >
 
@@ -119,25 +121,43 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 Make sure the simulation can handle running out of sessions to schedule, and
 that it does not over allocate periods to a session.
 
-> -- Producing new, better results.  As desired?
 > test_sim_schedMinDuration_starvation = TestCase $ do
 >     w <- getWeather $ Just dt
 >     (result, c) <- simulate ScheduleMinDuration w rs dt dur int history [] ss
 >     assertEqual "SimulationTests_test_sim_schedMinDuration_starvation" exp result
->     --assertEqual "SimulationTests_test_sim_schedMinDuration_starvation2" [] c 
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 1 0 0 0
 >     dur = 60 * 24 * 10
 >     int = 60 * 24 * 1
 >     history = []
+>     p = defaultProject { semester = "06A"
+>                        , timeTotal = 240
+>                        }
 >     s = defaultSession {minDuration = 120
 >                       , totalTime   = 240
->                       , project     = defaultProject {semester = "06A"}
+>                       , project     = p 
 >                        }
 >     ss = [s]
 >     exp = [Period s (fromGregorian 2006 2 1 16 15 0) 120 0.0 undefined False
 >          , Period s (fromGregorian 2006 2 1 18 15 0) 120 0.0 undefined False]
+
+Can't simulate anything because the project doesn't have enough time!
+
+> test_sim_schedMinDuration_famine = TestCase $ do
+>     w <- getWeather $ Just dt
+>     (r, c) <- simulate ScheduleMinDuration w [] dt dur int [] [] [s]
+>     assertEqual "SimulationTests_test_sim_schedMinDuration_famine" [] r
+>   where
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dur = 60 * 24 * 10
+>     int = 60 * 24 * 1
+>     s = defaultSession {minDuration = 120
+>                       , totalTime   = 240
+>                       , project     = defaultProject -- not enought time! 
+>                        }
+
+
 
 > test_findCanceledPeriods = TestCase $ do
 >   assertEqual "SimulationTests_test_findCanceledPeriods1" [] $ findCanceledPeriods [] []
@@ -194,10 +214,13 @@ time exceeds the sessions total time
 >     dur = 60 * 24 * 10
 >     int = 60 * 24 * 1
 >     history = []
+>     p = defaultProject {semester = "06A"
+>                       , timeTotal = 240
+>                        }
 >     s = defaultSession {minDuration = 120
 >                       , maxDuration = 120
 >                       , totalTime   = 240
->                       , project     = defaultProject {semester = "06A"}
+>                       , project     = p 
 >                        }
 >     ss = [s]
 >     exp = [Period s (fromGregorian 2006 2 1 17 45 0) 120 0.0 undefined False
@@ -358,6 +381,53 @@ of pre-scheduled periods (history)
 >     -- make sure that this session knows it's used up MOST of it's time
 >     s2 = cv {periods = h2}
 >     ss2 = [s2]
+
+
+> test_sim_timeLeft = TestCase $ do
+>   assertEqual "test_timeLeft_1" True  (timeLeft dt1 s1)
+>   assertEqual "test_timeLeft_2" True  (timeLeft dt1 s2)
+>   assertEqual "test_timeLeft_3" False (timeLeft dt1 s3)
+>   assertEqual "test_timeLeft_4" False (timeLeft dt1 s4)
+>   assertEqual "test_timeLeft_5" False (timeLeft dt2 s6) -- 09A
+>   assertEqual "test_timeLeft_6" True  (timeLeft dt1 s6) -- 09B
+>     where
+>       -- vanilla test
+>       dt1 = fromGregorian 2009 6 2 0 0 0 -- 09B
+>       s1 = defaultSession
+>       -- use up some time, but not all ( 3 hrs left )
+>       proj = defaultProject { timeTotal = 7 * 60 }
+>       s2' = s1 { totalTime = 7 * 60
+>                , minDuration = 2 * 60
+>                , project = proj }
+>       dt2 = fromGregorian 2009 5 2 0 0 0
+>       dt3 = fromGregorian 2009 5 3 0 0 0
+>       p1 = defaultPeriod { session = s2'
+>                          , startTime = dt2
+>                          , duration = 2 * 60
+>                          }
+>       p2 = p1 { startTime = dt3 }
+>       s2 = makeSession s2' [p1,p2] 
+>       -- use up some time, but too much ( 1 hr left )
+>       dt4 = fromGregorian 2009 5 4 0 0 0
+>       p3 = p2 { startTime = dt4 }
+>       s3 = makeSession s2' [p1,p2,p3] 
+>       -- now the session has enough time, but not the project
+>       proj2' = proj { timeTotal = 4 * 60 }
+>       s4' = s2 { project = proj2' }
+>       proj2 = makeProject proj2' (4*60) [s4']
+>       s4 = head . sessions $ proj2
+>       -- now the session has enought time, depending on the semester
+>       proj3' = proj { timeTotal = 6 * 60 
+>                     , maxSemesterTime = 2 * 60 }
+>       s5' = s1 { totalTime = 7 * 60
+>                , minDuration = 2 * 60 }
+>       s5 = makeSession s5' [p1]
+>       s6' = s5'
+>       proj3 = makeProject proj3' (6*60) [s5, s6']
+>       s6 = last . sessions $ proj3
+
+
+>       
 
 Test Utilities:
 
