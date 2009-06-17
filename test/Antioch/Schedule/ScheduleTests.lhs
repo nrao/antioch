@@ -267,3 +267,31 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       badTb2 = [(0, ((ps4_1!!1), (ps4_1!!2)))]
 >       
 
+> test_disobeySessionAlloted = TestCase $ do
+>   assertEqual "test_disobeySAlloted_1" 0 $ length . disobeySessionAlloted $ []
+>   assertEqual "test_disobeySAlloted_2" 0 $ length . disobeySessionAlloted $ ps1 
+>   assertEqual "test_disobeySAlloted_3" 0 $ length . disobeySessionAlloted $ ps2 
+>   print $ sAvail s3 "06B"
+>   print $ sAvail (session . head $ ps3) "06B"
+>   assertEqual "test_disobeySAlloted_4" [s3] $ disobeySessionAlloted $ ps3 
+>     where
+>       -- plenty of time
+>       s1' = defaultSession { sAlloted = 2*60 }
+>       dt1 = fromGregorian 2006 1 1 0 0 0
+>       p1 = mkPeriod s1' dt1 
+>       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, duration = 60 }
+>       ps1 = [p1]
+>       s1 = makeSession s1' ps1
+>       -- use up exactly the alloted time
+>       dt2 = fromGregorian 2006 1 1 1 0 0
+>       p2 = mkPeriod s1' dt2 
+>       ps2 = [p1, p2]
+>       s2 = makeSession s1' ps2
+>       -- use to much time
+>       dt3 = fromGregorian 2006 1 1 2 0 0
+>       p3 = mkPeriod s1' dt3 
+>       ps3 = [p1, p2, p3]
+>       s3 = makeSession s1' ps3
+>       
+>       
+>       
