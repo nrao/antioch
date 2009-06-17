@@ -11,7 +11,7 @@
 > import Antioch.Generators
 > import Control.Monad     (liftM)
 > import Data.Foldable     (foldlM, foldr')
-> import Data.List         (foldl', find, delete, nub, (\\))
+> import Data.List         
 > import Data.Maybe        (maybe, maybeToList, isJust)
 > import qualified Antioch.Schedule.Pack as P
 > import Test.QuickCheck hiding (frequency)
@@ -240,6 +240,48 @@ Make sure no single period is longer or shorter then it's session's max and min 
 >   where
 >     obeysDurations p = (minDuration . session $ p) <= duration p &&
 >                        (maxDuration . session $ p) >= duration p
+
+Which, if any, Sessions appearing in the given schedule, 
+have used up more then their alloted time.
+
+> disobeySessionAlloted :: [Period] -> [Session]
+> disobeySessionAlloted ps = nub $ concatMap disobeysSAlloted ps
+>   where
+>     disobeysSAlloted p = if ((sAvail (session p) (sem p)) < 0) then [session p] else []
+>     sem p = dt2semester . startTime $ p
+
+Which, if any, Projects appearing in the given schedule, 
+have used up more then their alloted time.
+
+> disobeyProjectAlloted :: [Period] -> [Project]
+> disobeyProjectAlloted ps = nub $ concatMap disobeysPAlloted ps
+>   where
+>     disobeysPAlloted p = if ((pAvail (pr p) (sem p)) < 0) then [pr p] else []
+>     pr p = project . session $ p
+>     sem p = dt2semester . startTime $ p
+
+which, if any, pairs of periods in the given schedule, are separated
+by a duration greater then their session's timebetween.
+
+> disobeyTimeBetween :: [Period] -> [(Minutes, (Period, Period))]
+> disobeyTimeBetween ps = concatMap disobeyTimeBetween' sps
+>   where 
+>     sps = groupBy sameSession $ sortBy compareBySession ps
+>     sameSession p1 p2 = (session p1) == (session p2) 
+>     disobeyTimeBetween' ps' = findDisobediance (tb ps') (periodDiffs ps')
+>     tb ps' = timeBetween . session . head $ ps' 
+>     findDisobediance tb pds = filter (\pd -> (fst pd) < tb) pds
+
+> compareBySession :: Period -> Period -> Ordering
+> compareBySession p1 p2 | (session p1) > (session p2) = GT
+>                        | (session p1) < (session p2) = LT
+>                        | otherwise                   = EQ
+
+> periodDiffs :: [Period] -> [(Minutes, (Period, Period))]
+> periodDiffs (p:[]) = []
+> periodDiffs (p:ps) = (diffTime p (head ps), (p, (head ps))):(periodDiffs ps)
+>   where
+>     diffTime p1 p2 = diffMinutes (startTime p2) (endTime p1)
 
 Make sure that no periods are scheduled where their project should be blacked
 out.  TBF: this is only valid for 09B!!!

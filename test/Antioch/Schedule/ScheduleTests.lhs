@@ -8,7 +8,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Weather
 > import Antioch.Utilities
-> import Data.List            (zipWith, zipWith6, (\\))
+> import Data.List            
 > import Control.Monad.Trans  (lift)
 > import Control.Monad        (liftM)
 > import Test.HUnit
@@ -20,6 +20,7 @@
 >   , test_schedMinDuration
 >   , test_schedMinDuration_starvation
 >   , test_disobeyLSTExclusion
+>   , test_disobeyTimeBetween
 >   ]
 
 > test_obeyProjectBlackouts = TestCase $ do
@@ -232,4 +233,37 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       s3 = defaultSession { lstExclude = [reverseLSTRange] }
 >       p3 = defaultPeriod { session = s3, startTime = dt3, duration = 120 }
 
+> test_disobeyTimeBetween = TestCase $ do
+>   assertEqual "test_disobeyTimeBetween_1" 0 $ length . disobeyTimeBetween $ []
+>   assertEqual "test_disobeyTimeBetween_2" 0 $ length . disobeyTimeBetween $ ps1 
+>   assertEqual "test_disobeyTimeBetween_3" badTb1 $ disobeyTimeBetween $ ps2
+>   assertEqual "test_disobeyTimeBetween_4" 0 $ length . disobeyTimeBetween $ ps3 
+>   assertEqual "test_disobeyTimeBetween_5" badTb2 $ disobeyTimeBetween $ ps4
+>     where
+>       --sps = groupBy sameSession ps
+>       sameSession p1 p2 = (session p1) == (session p2)
+>       -- set up allowed adjacent periods
+>       s1 = defaultSession { sId = 0, timeBetween = 0 }
+>       dt1 = fromGregorian 2006 1 1 0 0 0
+>       dt2 = fromGregorian 2006 1 1 1 0 0
+>       ps1 = map (mkPeriod s1) [dt1, dt2]
+>       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, duration = 60 }
+>       -- now disallow them
+>       s2 = defaultSession { sId = 1, timeBetween = 1 * 60 }
+>       ps2 = map (mkPeriod s2) [dt1, dt2]
+>       badTb1 = [(0, ((ps2!!0), (ps2!!1)))]
+>       -- more complex, but allowed
+>       dt3 = fromGregorian 2006 1 1 2 0 0
+>       dt4 = fromGregorian 2006 1 1 3 0 0
+>       dt5 = fromGregorian 2006 1 1 4 0 0
+>       dt6 = fromGregorian 2006 1 1 5 0 0
+>       ps3_1 = map (mkPeriod s2) [dt1, dt3, dt5]
+>       ps3_2 = map (mkPeriod s1) [dt2, dt4, dt6]
+>       ps3 = sort $ ps3_1 ++ ps3_2
+>       -- now break it
+>       ps4_1 = map (mkPeriod s2) [dt1, dt3, dt4]
+>       ps4_2 = map (mkPeriod s1) [dt2, dt5, dt6]
+>       ps4 = sort $ ps4_1 ++ ps4_2
+>       badTb2 = [(0, ((ps4_1!!1), (ps4_1!!2)))]
 >       
+
