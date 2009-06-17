@@ -215,10 +215,14 @@ time exceeds the sessions total time
 >     int = 60 * 24 * 1
 >     history = []
 >     p = defaultProject {semester = "06A"
+>                       -- FILTER
+>                       -- , timeTotal = 360
 >                       , pAlloted = 240
 >                        }
 >     s = defaultSession {minDuration = 120
 >                       , maxDuration = 120
+>                       -- FILTER
+>                       -- , totalTime   = 360
 >                       , sAlloted   = 240
 >                       , project     = p 
 >                        }

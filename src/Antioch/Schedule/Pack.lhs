@@ -14,6 +14,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
+> import Debug.Trace
 
 > epsilon  =  1.0e-4 :: Score
 
@@ -129,9 +130,9 @@ Convert an open session `s` into a schedulable item by scoring it with
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (sAvail s sem)
->       , iSTimAv  = sAvail s sem
->       , iPTimAv  = pAvail (project s) sem
->       , iTimeBt  = timeBetween s
+>       , iSTimAv  = numSteps $ sAvail s sem
+>       , iPTimAv  = numSteps $ pAvail (project s) sem
+>       , iTimeBt  = numSteps $ timeBetween s
 >       , iFuture  = scores
 >       , iPast    = []
 >       }
@@ -212,7 +213,6 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iProj    :: !Int
 >   , iMinDur  :: !Int
 >   , iMaxDur  :: !Int
->   --, iTimeAv  :: !Int
 >   , iSTimAv  :: !Int
 >   , iPTimAv  :: !Int
 >   , iTimeBt  :: !Int
@@ -247,7 +247,7 @@ Given a proposed 'item' for a slot and a list of candidates representing
 all the previous slots ('past'), return the count of previously 'sUsed' time
 for the item, 'pUsed' time for its project, and the 'separate'ion between
 the current item's period and any previous periods.  Note the returned
-values only apply if a previous candidate using item was found, i.e.,
+separate value only applies if a previous candidate of item was found, i.e.,
 'sUsed' > 0.
 TBF Note: the returned list (vs) at the end of the tuple is for debugging
 purposes.  It was last used during development on 6/15/09.  It should be
@@ -260,7 +260,7 @@ removed if not used in a month or so.
 > --queryPast' item   past     -> (pUsed, sUsed, separate)
 > queryPast'   item   [Nothing] = (0,     0,     0,       [])
 > queryPast'   item (c:cs)
->     | isNothing c             = (sUsed, pUsed, 1 + separate, step:vs)
+>     | isNothing c               = (sUsed, pUsed, 1 + separate, step:vs)
 >     | itemSId == candidateSId   = (newSUsed, newPUsed, 0, step:vs)
 >     | otherwise                 = if sUsed > 0
 >                                   then (newSUsed, newPUsed, dur + separate, step:vs)
@@ -287,8 +287,6 @@ Example (continued from above): toCandidate 1 [Nothing, Just 2] gives:
 
 > toCandidate           :: a -> [Maybe Score] -> [Maybe (Candidate a)]
 > toCandidate id scores = [fmap (Candidate id 0 0 d) s | s <- scores | d <- [1..]]
-> -- add filter to remove candidates which break time_between, i.e.,
-> -- cDuration < last.cStart (not defined!) + last.cDuration?
 
 Move a score from the future to the past, so that it can now be
 scheduled. Note that the order of the scores are reversed as they
@@ -354,7 +352,8 @@ TBF: Start using filterCandidates once we're sure it's working and it doesn't
 seem to have a huge impact on performance.
 
 > bestCandidateOfASession :: Eq a => [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
-> --bestCandidateOfASession past sess = best . zipWith madd (filterCandidates sess past $ candidates sess) $ past
+> -- FILTER
+> -- bestCandidateOfASession past sess = best . zipWith madd (filterCandidates sess past $ candidates sess) $ past
 > bestCandidateOfASession past sess = best . zipWith madd (candidates sess) $ past
 
 We need apply certain constraints inside the packing algorithm.  For example,
@@ -374,12 +373,12 @@ A candidate gets replaced with Nothing if:
 > filterCandidate :: Eq a => Item a -> [Maybe (Candidate a)] -> Maybe (Candidate a) -> Maybe (Candidate a)
 > filterCandidate item past Nothing  = Nothing
 > filterCandidate item past (Just c) | iId item == cId c = rejectCandidate
->                                    | otherwise         = Just c
+>                                     | otherwise         = Just c
 >   where
 >     (sUsed, pUsed, sep, hist) = queryPast item past (cDuration c)
 >     dur = cDuration c
 >     rejectCandidate = if ((sUsed + dur) > (iSTimAv item)) ||
->                          (sep < (iTimeBt item)) ||
+>                          (sUsed > 0 && sep < (iTimeBt item)) ||
 >                          ((pUsed + dur) > (iPTimAv item))
 >                       then Nothing
 >                       else Just c

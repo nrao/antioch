@@ -268,8 +268,8 @@ negative score.
 >     sessions = map (step . step . step . step) testItems
 
 > test_queryPast = TestCase $ do
->   --assertEqual "test_queryPast101" (0, 0, 0, []) (queryPast testItem1 (drop 6 past) 1)
->   --assertEqual "test_queryPast201" (0, 0, 0, []) (queryPast testItem2 (drop 6 past) 1)
+>   assertEqual "test_queryPast101" (0, 0, 0, []) (queryPast testItem1 (drop 6 past) 1)
+>   assertEqual "test_queryPast201" (0, 0, 0, []) (queryPast testItem2 (drop 6 past) 1)
 >   assertEqual "test_queryPast111" (0, 0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
 >   assertEqual "test_queryPast211" (0, 0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
 >   assertEqual "test_queryPast121" (2, 2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
@@ -577,8 +577,11 @@ attributes of the packing algorithm:
 >     result1 = dItem { iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iSTimAv = 24 * 60  
->                    , iPTimAv = 24 * 60
+>                    -- , iSTimAv = numSteps . totalAvail $ testSession
+>                    -- FILTER
+>                    -- , iPTimAv = 192
+>                    , iSTimAv = numSteps $ 24 * 60  
+>                    , iPTimAv = numSteps $ 24 * 60
 >                    , iFuture = []
 >                    , iPast = []
 >                    }
@@ -607,8 +610,11 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iSTimAv = 24 * 60 
->                    , iPTimAv = 24 * 60
+>                    -- , iSTimAv = numSteps . totalAvail $ sess
+>                    -- FILTER
+>                    -- , iPTimAv = 192
+>                    , iSTimAv = numSteps $ 24 * 60 
+>                    , iPTimAv = numSteps $ 24 * 60
 >                    , iFuture = scores 
 >                    , iPast = []
 >                    }
@@ -800,6 +806,11 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
 >     candidate = defaultSession { sName = "singleton"
+>                                -- FILTER
+>                                -- , project = defaultProject {
+>                                --       timeTotal = 24*60
+>                                --     , maxSemesterTime = 24*60
+>                                --     }
 >                                , sAlloted = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
@@ -1085,9 +1096,15 @@ Same as test_Pack1 except only 2 hours of sAlloted instead of 24
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
 >     candidate = defaultSession { sName = "singleton"
+>                                -- FILTER
+>                                -- , project = defaultProject {
+>                                --       timeTotal = 2*60
+>                                --     , maxSemesterTime = 2*60
+>                                --     }
 >                                , sAlloted = 2*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , timeBetween = 24*60
 >                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
@@ -1270,7 +1287,11 @@ epsilon, and so is "correct".
 
 Session data to pack:
 
-> testProject  = defaultProject { pAlloted = 24*60 }
+> -- FILTER
+> testProject = defaultProject {
+>                                pAlloted = 24*60  -- or 48?
+>                              , maxSemesterTime = 24*60  -- or 48?
+>                              }
 
 > testSession  = defaultSession { sName = "singleton"
 >                               , sAlloted = 24*60
