@@ -10,6 +10,7 @@
 > import Test.HUnit
 > import Data.List            (zip4, zipWith4, zipWith5)
 > import Data.Maybe           (isJust)
+> import Data.Array.IArray    (elems)
 
 Note: the keyword BETA throughout the unit tests denotes tests whose main
 purpose is to cross check results between this haskell code and the 2008
@@ -98,6 +99,12 @@ tested time period
 >     assertScoringResult "test_rightAscensionPressure p" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
 >     raPressure <- runScoring undefined [] $ genRightAscensionPressure rSessions
 >     assertScoringResult "test_rightAscensionPressure r" Nothing 5 1.3607032 (raPressure undefined . head $ rSessions)
+
+> test_initBins = TestCase $ do
+>     --result <- elems $ initBins (0, 23) accessor pSessions
+>     assertBool "test_initBins" True
+>   where
+>     accessor s = (round . rad2hr . ra $ s) `mod` 24
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0

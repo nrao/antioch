@@ -268,8 +268,8 @@ negative score.
 >     sessions = map (step . step . step . step) testItems
 
 > test_queryPast = TestCase $ do
->   --assertEqual "test_queryPast101" (0, 0, 0, []) (queryPast testItem1 (drop 6 past) 1)
->   --assertEqual "test_queryPast201" (0, 0, 0, []) (queryPast testItem2 (drop 6 past) 1)
+>   assertEqual "test_queryPast101" (0, 0, 0, []) (queryPast testItem1 (drop 6 past) 1)
+>   assertEqual "test_queryPast201" (0, 0, 0, []) (queryPast testItem2 (drop 6 past) 1)
 >   assertEqual "test_queryPast111" (0, 0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
 >   assertEqual "test_queryPast211" (0, 0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
 >   assertEqual "test_queryPast121" (2, 2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
@@ -574,15 +574,12 @@ attributes of the packing algorithm:
 >     -- the 'mask' is just a list of datetimes to score at
 >     dts' = quarterDateTimes starttime duration 
 >     dts = [(Just dt) | dt <- dts']
->     --session = defaultSession { sName = "singleton"
->     --                         , totalTime = 24*60
->     --                         , minDuration = 2*60
->     --                         , maxDuration = 6*60
->     --                         }
 >     result1 = dItem { iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iSTimAv = totalAvail testSession
+>                    , iSTimAv = numSteps . totalAvail $ testSession
+>                    -- FILTER
+>                    -- , iPTimAv = 192
 >                    , iPTimAv = 0
 >                    , iFuture = []
 >                    , iPast = []
@@ -612,7 +609,9 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    , iSTimAv = totalAvail sess
+>                    , iSTimAv = numSteps . totalAvail $ sess
+>                    -- FILTER
+>                    -- , iPTimAv = 192
 >                    , iPTimAv = 0
 >                    , iFuture = scores 
 >                    , iPast = []
@@ -805,6 +804,11 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
 >     candidate = defaultSession { sName = "singleton"
+>                                -- FILTER
+>                                -- , project = defaultProject {
+>                                --       timeTotal = 24*60
+>                                --     , maxSemesterTime = 24*60
+>                                --     }
 >                                , totalTime = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
@@ -1089,9 +1093,15 @@ Same as test_Pack1 except only 2 hours of totalTime instead of 24
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
 >     candidate = defaultSession { sName = "singleton"
+>                                -- FILTER
+>                                -- , project = defaultProject {
+>                                --       timeTotal = 2*60
+>                                --     , maxSemesterTime = 2*60
+>                                --     }
 >                                , totalTime = 2*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , timeBetween = 24*60
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
 >     expPeriod = Period candidate expStartTime 120 1.5167294 undefined False
@@ -1273,13 +1283,23 @@ epsilon, and so is "correct".
 
 Session data to pack:
 
+> -- FILTER
+> testProject = defaultProject {
+>                                timeTotal = 48*60
+>                              , maxSemesterTime = 48*60
+>                              }
+
 > testSession  = defaultSession { sName = "singleton"
+>                               -- FILTER
+>                               -- , project = testProject
 >                               , totalTime = 24*60
 >                               , minDuration = 2*60
 >                               , maxDuration = 6*60
 >                              }
 
 > testSession2 = defaultSession { sName = "second"
+>                               -- FILTER
+>                               -- , project = testProject
 >                               , totalTime = 24*60
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
