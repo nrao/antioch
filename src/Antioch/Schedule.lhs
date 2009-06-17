@@ -162,7 +162,10 @@ TBF: failing after n tests!
 >      obeySchedDuration dur sched &&
 >      --validPackScores sched
 >      validScores sched &&
->      validSchdPositions ps sched
+>      validSchdPositions ps sched &&
+>      disobeySessionAlloted sched == [] &&
+>      disobeyProjectAlloted sched == [] &&
+>      disobeyTimeBetween sched == []
 
 Same as above, but now insert some pre-schedule periods into the problem.
 TBF: failing after 1 test!
