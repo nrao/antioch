@@ -213,7 +213,7 @@ Make sure that the total time used up by the periods is correct:
 > prop_sAllotedQuarter s   = sAlloted s `mod` quarter == 0
 > prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (6*60)
 > prop_minDurationQuarter s = minDuration s `mod` quarter == 0
-> prop_maxDuration s        = (6*60) <= maxDuration s && maxDuration s <= (8*60)
+> prop_maxDuration s        = (11*60) <= maxDuration s && maxDuration s <= (12*60)
 > prop_maxDurationQuarter s = maxDuration s `mod` quarter == 0
 
 > prop_Dec s = (-pi) / 2 <= dec s && dec s <= pi / 2
