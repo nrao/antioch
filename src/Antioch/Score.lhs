@@ -689,9 +689,10 @@ Quick Check properties:
 > prop_atmosphericStabilityLimit = forAll genProject $ \p -> checkBoolScore p atmosphericStabilityLimit
 
 > prop_frequencyPressure = forAll genProject $ \p ->
->   let es = map (getScoringResult fp) (sessions p) in greaterThenOne es
+>   let es = map (getScoringResult fp) (sessions p) in greaterOrEqToOne es
 >     where
 >       fp = getPressureFunction genFrequencyPressure
+>       greaterOrEqToOne xs = dropWhile (>=1) xs == []
 
 > prop_rightAscensionPressure = forAll genProject $ \p ->
 >   let es = map (getScoringResult fp) (sessions p) in greaterOrEqToOne es
