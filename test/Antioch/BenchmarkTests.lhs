@@ -74,9 +74,9 @@ So write to dev/nell to force some execution to take place.
 >       xs = replicate 97 Nothing -- 24 blank hours
 >       enoughTime = 10000
 >       scores1 = (replicate 50 1.0) ++ (replicate 50 0.0)
->       i1s = map (\id -> Item id 2 4 enoughTime 8 scores1 []) [0 .. 100]
+>       i1s = map (\id -> Item id 1 2 4 enoughTime enoughTime 8 scores1 []) [0 .. 100]
 >       scores2 = (replicate 50 0.0) ++ (replicate 50 1.0)
->       i2s = map (\id -> Item id 3 6 enoughTime 6 scores2 []) [101 .. 200]
+>       i2s = map (\id -> Item id 1 3 6 enoughTime enoughTime 6 scores2 []) [101 .. 200]
 >       ys = i1s ++ i2s
 >   
 > benchmark_packWorker_2 :: IO ()
@@ -89,8 +89,8 @@ So write to dev/nell to force some execution to take place.
 >     where 
 >       xs = replicate 97 Nothing -- 24 blank hours
 >       scores1 = (replicate 50 1.0) ++ (replicate 50 0.0)
->       i1s = map (\id -> Item id 2 4 5 8 scores1 []) [0 .. 100]
+>       i1s = map (\id -> Item id 1 2 4 5 5 8 scores1 []) [0 .. 100]
 >       scores2 = (replicate 50 0.0) ++ (replicate 50 1.0)
->       i2s = map (\id -> Item id 3 6 10 6 scores2 []) [101 .. 200]
+>       i2s = map (\id -> Item id 1 3 6 10 10 6 scores2 []) [101 .. 200]
 >       ys = i1s ++ i2s
 

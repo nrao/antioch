@@ -352,9 +352,7 @@ TBF: Start using filterCandidates once we're sure it's working and it doesn't
 seem to have a huge impact on performance.
 
 > bestCandidateOfASession :: Eq a => [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
-> -- FILTER
-> -- bestCandidateOfASession past sess = best . zipWith madd (filterCandidates sess past $ candidates sess) $ past
-> bestCandidateOfASession past sess = best . zipWith madd (candidates sess) $ past
+> bestCandidateOfASession past sess = best . zipWith madd (filterCandidates sess past $ candidates sess) $ past
 
 We need apply certain constraints inside the packing algorithm.  For example,
 time remaining, and time between must be obeyed as the candidates for packing

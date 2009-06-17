@@ -577,9 +577,6 @@ attributes of the packing algorithm:
 >     result1 = dItem { iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    -- , iSTimAv = numSteps . totalAvail $ testSession
->                    -- FILTER
->                    -- , iPTimAv = 192
 >                    , iSTimAv = numSteps $ 24 * 60  
 >                    , iPTimAv = numSteps $ 24 * 60
 >                    , iFuture = []
@@ -610,9 +607,6 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
->                    -- , iSTimAv = numSteps . totalAvail $ sess
->                    -- FILTER
->                    -- , iPTimAv = 192
 >                    , iSTimAv = numSteps $ 24 * 60 
 >                    , iPTimAv = numSteps $ 24 * 60
 >                    , iFuture = scores 
@@ -806,11 +800,6 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
 >     candidate = defaultSession { sName = "singleton"
->                                -- FILTER
->                                -- , project = defaultProject {
->                                --       timeTotal = 24*60
->                                --     , maxSemesterTime = 24*60
->                                --     }
 >                                , sAlloted = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
@@ -1096,11 +1085,6 @@ Same as test_Pack1 except only 2 hours of sAlloted instead of 24
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12*60
 >     candidate = defaultSession { sName = "singleton"
->                                -- FILTER
->                                -- , project = defaultProject {
->                                --       timeTotal = 2*60
->                                --     , maxSemesterTime = 2*60
->                                --     }
 >                                , sAlloted = 2*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
@@ -1287,10 +1271,9 @@ epsilon, and so is "correct".
 
 Session data to pack:
 
-> -- FILTER
 > testProject = defaultProject {
->                                pAlloted = 24*60  -- or 48?
->                              , maxSemesterTime = 24*60  -- or 48?
+>                                pAlloted = 24*60
+>                              , maxSemesterTime = 24*60
 >                              }
 
 > testSession  = defaultSession { sName = "singleton"
