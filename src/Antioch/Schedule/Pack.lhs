@@ -223,7 +223,7 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 Generate a series of candidates representing the possibilities for
 scheduling an item at each of a sequence of durations: 15 minutes, 30
 minutes, etc.
-Example: pass in Item {sId = 1, min = 2, max = 4, past = [1,1,0,0]
+Example: pass in Item sId = 1, min = 2, max = 4, past = [1,1,0,0]
 past' becomes only [1,2] because: 1) take just the first 4 (max) 2) take 
 only the first two because of the zeros being < epsilon, then 3) do a
 running accumulate (scanl1 (+)).
