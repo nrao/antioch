@@ -97,15 +97,26 @@ tested time period
 
 > test_rightAscensionPressure = TestCase $ do
 >     raPressure <- runScoring undefined [] $ genRightAscensionPressure pSessions
->     assertScoringResult "test_rightAscensionPressure p" Nothing 5 1.19812 (raPressure undefined . head $ pSessions)
+>     assertScoringResult "test_rightAscensionPressure p" Nothing 5 1.25729 (raPressure undefined . head $ pSessions)
 >     raPressure <- runScoring undefined [] $ genRightAscensionPressure rSessions
 >     assertScoringResult "test_rightAscensionPressure r" Nothing 5 1.3607032 (raPressure undefined . head $ rSessions)
 
 > test_initBins = TestCase $ do
->     --result <- elems $ initBins (0, 23) accessor pSessions
 >     assertBool "test_initBins" True
+>     assertEqual "test_initBins1" expectedp resultp
+>     assertEqual "test_initBins2" expectedr resultr
 >   where
 >     accessor s = (round . rad2hr . ra $ s) `mod` 24
+>     expectedp = [(0,0),(0,0),(0,0),(0,0),(0,0),(1320,420)
+>                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
+>                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)
+>                 ,(1200,720),(0,0),(0,0),(0,0),(0,0),(0,0)]
+>     resultp = elems $ initBins (0, 23) accessor pSessions
+>     expectedr = [(0,0),(0,0),(0,0),(0,0),(0,0),(720,120)
+>                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
+>                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)
+>                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)]
+>     resultr = elems $ initBins (0, 23) accessor rSessions
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
@@ -801,7 +812,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         genPSess t u ra b g = defaultSession {
 >             sAlloted = t
 >           , periods = [defaultPeriod {duration = u}]
->           , ra = ra
+>           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
 >         }
@@ -815,7 +826,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         genPSess t u ra b g = defaultSession {
 >             sAlloted = t
 >           , periods = [defaultPeriod {duration = u}]
->           , ra = ra
+>           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
 >         }
