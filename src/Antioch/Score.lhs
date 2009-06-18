@@ -431,6 +431,36 @@ at 16, goes up to 24, and wraps around up again to 12.
 >     lst = utc2lstHours dt 
 >     inRange x range = if ((fst range) <= (snd range)) then ((fst range) <= x && x <= (snd range)) else ((snd range) >= x) || (x >= (fst range))
 
+A session should not be scheduled too close to previosly scheduled periods,
+as specified by the timeBetween session attribute.  
+NOTE: this does not keep strategies like Pack from disobeying 'timeBetween',
+this must be handled inside of Pack, but does keep Pack from scheduling to 
+close to periods scheduled in previous calls to Pack.
+
+> enoughTimeBetween :: ScoreFunc
+> enoughTimeBetween dt s = boolean "enoughTimeBetween" . Just $ enoughTimeBetween' dt s
+
+TBF: what to really do in case of overlaps?
+
+> enoughTimeBetween' :: DateTime -> Session -> Bool
+> enoughTimeBetween' dt s | (timeBetween s) == 0 = True
+>                         | (length . periods $ s) == 0 = True
+>                         | overlapsPeriod dt s = False -- TBF WTF?
+>                         | otherwise = (timeBetweenRecentPeriod dt s) >= (timeBetween s)
+>   where
+>     overlapsPeriod dt s = any (inPeriod dt) (periods s)
+>     inPeriod dt p = (dt >= (startTime p)) && (dt < (endTime p))
+
+We must handle not just the expected case: we are querying a time after
+the last scheduled period has ended.  We must deal with periods in the
+future as well.
+
+> timeBetweenRecentPeriod :: DateTime -> Session -> Minutes
+> timeBetweenRecentPeriod dt s = minimum $ map (absoluteTimeDiff dt) $ times s
+>   where
+>     absoluteTimeDiff dt1 dt2 = abs $ diffMinutes dt1 dt2
+>     times s = concatMap (\p -> [startTime p, endTime p]) $ periods s
+
 Scoring utilities
 
 > scoreLocal :: Weather -> ScoreFunc -> Session -> DateTime -> Scoring Score
@@ -629,6 +659,7 @@ Need to translate a session's factors into the final product score.
 >       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
 >       , needsLowRFI
 >       , lstExcepted
+>       , enoughTimeBetween
 >       ] dt s
 
 Convenience function for translating go/no-go into a factor.

@@ -23,6 +23,7 @@ codes weather server used for unit tests (TWeather).
 >     test_averageScore
 >   , test_averageScore2
 >   , test_efficiency
+>   , test_enoughTimeBetween
 >   , test_frequencyPressure
 >   , test_getReceivers
 >   , test_hourAngleLimit
@@ -676,6 +677,63 @@ Look at the scores over a range where none are zero.
 >       sAnyTime = findPSessionByName "CV"
 >       sExclude1 = sAnyTime { lstExclude = [(12.0, 16.0)] }
 >       sExclude2 = sAnyTime { lstExclude = [(16.0, 12.0)] }
+
+> test_enoughTimeBetween = TestCase $ do
+>   assertEqual "test_enoughTimeBetween_1" True r1
+>   assertEqual "test_enoughTimeBetween_2" True r2
+>   assertEqual "test_enoughTimeBetween_3" False r3
+>   assertEqual "test_enoughTimeBetween_4" True r4
+>   assertEqual "test_enoughTimeBetween_5" False r5
+>   assertEqual "test_enoughTimeBetween_6" True r6
+>   assertEqual "test_enoughTimeBetween_7" False r7
+>   assertEqual "test_enoughTimeBetween_8" True r8
+>   w <- getWeather Nothing
+>   fs <- runScoring w [] (enoughTimeBetween tdt1 s1)
+>   assertEqual "test_enoughTimeBetween_9" 1.0 (eval fs)
+>   --fs <- runScoring w [] (lstExcepted dtClear sExclude1)
+>     where
+>       -- test times
+>       tdt1 = fromGregorian 2006 1 1 1 0 0
+>       -- session has no periods - no problem
+>       s1 = defaultSession { timeBetween = 100, periods = [] }
+>       r1 = enoughTimeBetween' tdt1 s1
+>       -- now some seemingly innocent periods
+>       dt1 = fromGregorian 2006 1 1 0 0 0 
+>       dt2 = fromGregorian 2006 1 1 3 0 0 
+>       dt3 = fromGregorian 2006 1 1 6 0 0 
+>       --ps = map (mkPeriod s1') [dt1, dt2, dt3]
+>       --s1 = makeSession s1' ps
+>       -- session has no timebetween - no problem
+>       s2' = defaultSession { timeBetween = 0 }
+>       ps2 = map (mkPeriod s2') [dt1, dt2, dt3]
+>       s2 = makeSession s2' ps2
+>       r2 = enoughTimeBetween' tdt1 s2
+>       -- now potential problems - session w/ timebetween & periods
+>       s3' = defaultSession { timeBetween = 60 }
+>       ps3 = map (mkPeriod s3') [dt1, dt2, dt3]
+>       s3 = makeSession s3' ps3
+>       -- overlap case
+>       r3 = enoughTimeBetween' tdt1 s3
+>       -- vanilla test - far after last period ends
+>       tdt2 = fromGregorian 2006 1 1 12 0 0
+>       r4 = enoughTimeBetween' tdt2 s3
+>       --  too close after last period ends
+>       tdt3 = fromGregorian 2006 1 1 7 30 0
+>       r5 = enoughTimeBetween' tdt3 s3
+>       -- between periods, but far enough away from all of them
+>       tdt4 = fromGregorian 2006 1 1 5 0 0
+>       r6 = enoughTimeBetween' tdt4 s3
+>       -- between but too close
+>       tdt5 = fromGregorian 2006 1 1 5 30 0
+>       r7 = enoughTimeBetween' tdt5 s3
+>       -- far enough back in the past
+>       tdt6 = fromGregorian 2005 12 31 12 0 0
+>       r8 = enoughTimeBetween' tdt6 s3
+>       -- utility
+>       mkPeriod s dt = defaultPeriod { session = s
+>                                     , startTime = dt
+>                                     , duration = 60 }
+>       
 
 Test utilities
 
