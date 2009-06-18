@@ -228,3 +228,21 @@ Simple Functions for Periods:
 >   , pForecast = undefined
 >   , pBackup   = False
 >   }
+
+> checkProjectTied :: Project -> Bool
+> checkProjectTied proj = 
+>   pr2s proj &&
+>   all s2p (sessions proj)
+>     where
+>   pr2s pr = all (\s -> (project s) == pr) (sessions pr)
+>   s2p s = all (\p -> (session p) == s) (periods s)
+
+> checkProjectSessionTied :: Project -> Session -> Bool
+> checkProjectSessionTied proj sess =
+>   any (\s -> s == sess) (sessions proj) &&
+>   (project sess) == proj
+
+> checkSessionPeriodTied :: Session -> Period -> Bool
+> checkSessionPeriodTied sess per =
+>   any (\p -> p == per) (periods sess) &&
+>   (session per) == sess
