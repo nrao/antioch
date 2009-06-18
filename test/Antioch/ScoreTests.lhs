@@ -44,6 +44,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_receiver
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
+>   , test_initBins
 >   , test_score
 >   , test_scoreCV
 >   , test_scoreCV2
