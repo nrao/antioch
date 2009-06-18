@@ -49,10 +49,10 @@ the time it has already used up.  But for large projects, it may be allowed
 only a certain amount of time per semester.
 
 > pAvail :: Project -> String -> Minutes
-> pAvail p sem = min ((pAlloted p) - (pUsed p)) (pAvailBySemester p sem)
+> pAvail p sem = min (pAvailTotal p) (pSemesterRemainingTime p sem)
 
-> pAvailBySemester :: Project -> String -> Minutes
-> pAvailBySemester p sem = (maxSemesterTime p) - (pUsedBySemester p sem)
+> pSemesterRemainingTime :: Project -> String -> Minutes
+> pSemesterRemainingTime p sem = (maxSemesterTime p) - (pUsedBySemester p sem)
 
 > pUsedBySemester :: Project -> String -> Minutes
 > pUsedBySemester p sem = sum $ map (sUsedBySemester sem) $ sessions p
