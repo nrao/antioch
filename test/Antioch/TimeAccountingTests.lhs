@@ -14,6 +14,7 @@
 >   , test_sAvailTotal
 >   , test_sAvail
 >   , test_sAvail2
+>   , test_sAvail3
 >     ]
 
 > test_sUsed = TestCase $ do
