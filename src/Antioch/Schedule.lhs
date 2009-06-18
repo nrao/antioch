@@ -179,8 +179,10 @@ TBF: failing after 1 test!
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
 >      honorsFixed fixed sched &&
->      validSchdPositions' ps sched fixed
->      -- validScores sched -- TBF: periods getting neg. scores!
+>      validSchdPositions' ps sched fixed &&
+>      disobeySessionAlloted sched == [] &&
+>      disobeyProjectAlloted sched == [] &&
+>      disobeyTimeBetween sched == []
 
 > prop_minDurValidSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
