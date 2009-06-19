@@ -633,7 +633,11 @@ be confused and raise false alarams.
 >     r8 = reportRcvrSchedule rs
 >     r9 = reportPreScheduled history
 >     r10 = reportFinalSchedule ps
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10]
+>     r11 = reportSessionDetails ss
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11]
+
+> reportSessionDetails :: [Session] -> String
+> reportSessionDetails ss = "Session Details: \n" ++ (concatMap (\s -> (show s) ++ "\n") ss)
 
 > reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps simInput =
