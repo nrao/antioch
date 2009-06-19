@@ -43,6 +43,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_projectAvailable
 >   , test_projectCompletion
 >   , test_receiver
+>   , test_receiverBoost
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
 >   , test_initBins
@@ -751,6 +752,42 @@ Look at the scores over a range where none are zero.
 >                                     , startTime = dt
 >                                     , duration = 60 }
 >       
+
+TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
+
+> test_receiverBoost = TestCase $ do
+>   assertEqual "test_receiverBoost_1" False (receiverBoost' s1)
+>   assertEqual "test_receiverBoost_2" False (receiverBoost' s2)
+>   assertEqual "test_receiverBoost_3" False (receiverBoost' s3)
+>   assertEqual "test_receiverBoost_4" False (receiverBoost' s4)
+>   assertEqual "test_receiverBoost_5" True  (receiverBoost' s5)
+>   assertEqual "test_receiverBoost_6" False (receiverBoost' s6)
+>   assertEqual "test_receiverBoost_7" True  (receiverBoost' s7)
+>   assertEqual "test_receiverBoost_8" False (receiverBoost' s8)
+>   assertEqual "test_receiverBoost_9" False (receiverBoost' s9)
+>     where
+>       boost = Rcvr_1070
+>       s = defaultSession
+>       -- just L band
+>       s1 = s { receivers = [[Rcvr1_2]] }
+>       -- L or S
+>       s2 = s { receivers = [[Rcvr1_2, Rcvr2_3]] }
+>       -- L and S
+>       s3 = s { receivers = [[Rcvr1_2], [Rcvr2_3]] }
+>       -- L or (S and C)
+>       s4 = s { receivers = [[Rcvr1_2,Rcvr4_6], [Rcvr1_2,Rcvr2_3]] }
+>       -- now start including the boosted rcvr
+>       s5 = s { receivers = [[boost]] }
+>       -- L or boost 
+>       s6 = s { receivers = [[Rcvr1_2, boost]] }
+>       -- L and boost
+>       s7 = s { receivers = [[Rcvr1_2], [boost]] }
+>       -- boost or (S and C)
+>       s8 = s { receivers = [[boost,Rcvr4_6], [boost,Rcvr2_3]] }
+>       -- L or (boost and C)
+>       s9 = s { receivers = [[Rcvr1_2,boost], [Rcvr1_2,Rcvr2_3]] }
+>       
+>   
 
 Test utilities
 

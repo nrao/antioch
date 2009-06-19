@@ -461,6 +461,20 @@ future as well.
 >     absoluteTimeDiff dt1 dt2 = abs $ diffMinutes dt1 dt2
 >     times s = concatMap (\p -> [startTime p, endTime p]) $ periods s
 
+Some receivers are up for a limited time only.  Sessions that need these
+types of receivers and have an A grade will get a boost so that they
+have a better chance of being scheduled while the receiver is available.
+
+> receiverBoost :: ScoreFunc
+> receiverBoost _ s = factor "receiverBoost" . Just $ if receiverBoost' s then 1.5 else 1.0
+
+> receiverBoost' :: Session -> Bool
+> receiverBoost' s =  
+>   any (==True) $ map (\rg -> all (==True) $ map (\r -> elem r boostRcvrs) rg) rgs
+>   where
+>     rgs = receivers s
+>     boostRcvrs = [Rcvr_1070] -- PF2; TBF: how to specify this dynamically?
+
 Scoring utilities
 
 > scoreLocal :: Weather -> ScoreFunc -> Session -> DateTime -> Scoring Score
