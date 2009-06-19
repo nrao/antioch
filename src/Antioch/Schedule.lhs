@@ -362,13 +362,17 @@ during the day.
 > disobeyLowRFI' p = if (not . lowRFI . session $ p) then False else (isHighRFITime . startTime $ p)
 
 Returns the list of periods that shouldn't be observing when they are due
-to LST exclusion ranges.
+to LST exclusion ranges.  Note that we don't count the last 15 minutes of a 
+period, since pack deals with scores at the start of each 15 minute interval.
 
 > disobeyLSTExclusion :: [Period] -> [Period]
 > disobeyLSTExclusion ps = filter disobeyLSTExclusion' ps 
 
 > disobeyLSTExclusion' :: Period -> Bool
-> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (anyOverlappingLSTs (startTime p, endTime p) (lstExclude . session $ p))
+> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (anyOverlappingLSTs (startTime p, endTime' p) (lstExclude . session $ p))
+>   where
+>     endTime' p = ((duration p) - step) `addMinutes` startTime p 
+>     step = 15 -- don't count the last 15 minutes of the period!
 
 Does the given time range specify an LST range that overlaps with any of
 the given LST exclusion ranges?
