@@ -43,7 +43,9 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
 
-> --assignProject p ss = [ s {project = p} | s <- sessions p]
+> genMaxSemesterTime :: Minutes -> Gen Minutes
+> genMaxSemesterTime time = T.frequency [(20, return $ div time 2), (80, return time)]
+
 
 > genProject :: Gen Project
 > genProject = do
@@ -52,11 +54,12 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
 >     let pAlloted = sum [ sAlloted s | s <- sessions ]
+>     maxST    <- genMaxSemesterTime pAlloted
 >     let project = defaultProject {
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
->         -- , pAlloted = pAlloted
+>         , maxSemesterTime = maxST
 >         }
 >     return $ makeProject project pAlloted sessions
 
@@ -138,6 +141,22 @@ Only 20 percent of the low freq. sessions are backups
 >   if freq > 18.0 then choose (12*60, 12*60)
 >            else choose (11*60, 12*60)
 
+> genTimeBetween :: Gen Minutes
+> genTimeBetween = T.frequency [(50, return 0)
+>                             , (25, return (8 *60))
+>                             , (25, return (12*60))]
+
+> genLowRFIFlag :: Gen Bool
+> genLowRFIFlag = T.frequency [(85, return False), (15, return True)]
+
+> genLSTExclusion :: Gen [(Float, Float)]
+> genLSTExclusion = T.frequency [(80, return []), (20, lsts)]
+>   where
+>     lsts = do 
+>       low  <- choose (0.0, 5.0)
+>       high <- choose (6.0, 12.0)
+>       return $ [(low, high)]
+
 > genSession :: Gen Session
 > genSession = do
 >     project    <- genProject
@@ -154,6 +173,9 @@ Only 20 percent of the low freq. sessions are backups
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
 >     --maxD       <- choose (11*60, 12*60)
+>     tb         <- genTimeBetween
+>     lstEx      <- genLSTExclusion
+>     lowRFIFlag <- genLowRFIFlag
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []
@@ -165,7 +187,10 @@ Only 20 percent of the low freq. sessions are backups
 >                , maxDuration    = round2quarter maxD
 >                -- TBF: only for scheduleMinDuration; then go back
 >                --, sAlloted      = matchAvTime sAlloted (round2quarter minD)
->                , sAlloted      = round2quarter sAlloted
+>                , sAlloted       = round2quarter sAlloted
+>                , timeBetween    = round2quarter tb
+>                , lstExclude     = lstEx
+>                , lowRFI         = lowRFIFlag
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
