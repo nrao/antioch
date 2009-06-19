@@ -29,6 +29,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_hourAngleLimit
 >   , test_kineticTemperature
 >   , test_kineticTemperature2
+>   , test_lstExcepted
 >   , test_minObservingEff
 >   , test_minimumObservingConditions
 >   , test_minTsysPrime
@@ -680,15 +681,19 @@ Look at the scores over a range where none are zero.
 >   assertEqual "test_lstExcpeted_5" 1.0 (eval fs)
 >   assertEqual "test_lstExpected_6" True  (checkLst dt $ lstExclude sExclude1) 
 >   assertEqual "test_lstExpected_7" False (checkLst dt $ lstExclude sExclude2) 
+>   fs <- runScoring w [] (lstExcepted dt2 sExclude3)
+>   assertEqual "test_lstExcpeted_8" 0.0 (eval fs)
 >     where
 >       dtClear   = fromGregorian 2008 1 1 15 0 0  
 >       lstClear  = utc2lstHours dtClear 
 >       dtNotClear= fromGregorian 2008 1 1 14 0 0  
 >       lstNotClear  = utc2lstHours dtNotClear 
 >       dt        = fromGregorian 2008 1 1 10 0 0  
+>       dt2       = fromGregorian 2006 3 28 21 30  0
 >       sAnyTime = findPSessionByName "CV"
 >       sExclude1 = sAnyTime { lstExclude = [(12.0, 16.0)] }
 >       sExclude2 = sAnyTime { lstExclude = [(16.0, 12.0)] }
+>       sExclude3 = sAnyTime { lstExclude = [(4.4721766,8.396873)] }
 
 > test_enoughTimeBetween = TestCase $ do
 >   assertEqual "test_enoughTimeBetween_1" True r1
