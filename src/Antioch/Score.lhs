@@ -469,7 +469,8 @@ have a better chance of being scheduled while the receiver is available.
 > receiverBoost _ s = factor "receiverBoost" . Just $ if receiverBoost' s then 1.5 else 1.0
 
 > receiverBoost' :: Session -> Bool
-> receiverBoost' s =  
+> receiverBoost' s | (grade s) /= GradeA = False
+>                  | otherwise            =
 >   any (==True) $ map (\rg -> all (==True) $ map (\r -> elem r boostRcvrs) rg) rgs
 >   where
 >     rgs = receivers s
