@@ -204,7 +204,7 @@ Assumes a single scalar rcvr group
 > validRA :: Session -> Bool
 > validRA s = 0.0 <= ra' && ra' <= 24.0
 >   where 
->     ra' = rad2hr . ra $ s
+>     ra' = rad2hrs . ra $ s
 
 Make sure that the total time used up by the periods is correct:
 

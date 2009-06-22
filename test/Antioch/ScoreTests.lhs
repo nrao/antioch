@@ -107,7 +107,7 @@ tested time period
 >     assertEqual "test_initBins1" expectedp resultp
 >     assertEqual "test_initBins2" expectedr resultr
 >   where
->     accessor s = (round . rad2hr . ra $ s) `mod` 24
+>     accessor s = (round . rad2hrs . ra $ s) `mod` 24
 >     expectedp = [(0,0),(0,0),(0,0),(0,0),(0,0),(1320,420)
 >                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
 >                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)

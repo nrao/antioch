@@ -30,9 +30,11 @@
 >   , test_filterCandidate
 >   , test_filterCandidate_timeBetween
 >   , test_filterCandidate_timeAvail
+>   , test_transitCheck
 >   , test_GetBest1
 >   , test_GetBest1'
 >   , test_GetBest2
+>   , test_GetBestTr
 >   , test_GetBest2'
 >   , test_GetBest3
 >   , test_GetBest3'
@@ -45,6 +47,7 @@
 >   , test_step
 >   , test_Pack_overlapped_fixed
 >   , test_Pack1
+>   , test_PackTransit
 >   , test_Pack2
 >   , test_Pack3
 >   , test_Pack4
@@ -79,6 +82,7 @@
 >   , test_ToCandidate
 >   , test_ToItem
 >   , test_ToItem2
+>   , test_deriveTransits
 >   , test_ToPeriod
 >   , test_ToSchedule
 >   , test_ToSchedule2
@@ -88,7 +92,7 @@ Simplified interfaces to Item data struct:
 
 > enoughTime = 10000
 
-> item id min max future past = Item id 0 min max enoughTime enoughTime 0 future past
+> item id min max future past = Item id 0 min max enoughTime enoughTime 0 Optional [] future past
 
 > dItem = Item {
 >     iId = 0
@@ -98,6 +102,8 @@ Simplified interfaces to Item data struct:
 >   , iSTimAv = enoughTime 
 >   , iPTimAv = enoughTime
 >   , iTimeBt = 0
+>   , iTrType = Optional
+>   , iTrnsts = []
 >   , iFuture = []
 >   , iPast   = []
 >   }
@@ -219,49 +225,55 @@ negative score.
 > testItem2 = item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []
 > testItems = [testItem1, testItem2]
 
-> test_GetBest1 = TestCase . assertEqual "test_getBest1" xs . getBest past $ sessions 
+> test_GetBest1 = TestCase . assertEqual "test_getBest1" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Nothing -- Just (Candidate 1 0 0 4 4.0)
 >     past = [Nothing]
 >     sessions = map step [testItem1]
 
-> test_GetBest1' = TestCase . assertEqual "test_getBest1'" xs . getBest past $ sessions 
+> test_GetBest1' = TestCase . assertEqual "test_getBest1'" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Nothing -- Just (Candidate 1 0 0 4 4.0)
 >     past = [Nothing]
 >     sessions = map step testItems
 
-> test_GetBest2 = TestCase . assertEqual "test_getBest2" xs . getBest past $ sessions 
+> test_GetBest2 = TestCase . assertEqual "test_getBest2" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Just (Candidate 1 0 0 2 2.0)
 >     past = [Nothing, Nothing]
 >     sessions = map (step . step) [testItem1]
 
-> test_GetBest2' = TestCase . assertEqual "test_getBest2'1" xs . getBest past $ sessions 
+> test_GetBestTr = TestCase . assertEqual "test_getBestTr" xs . getBest 0 past $ sessions 
+>   where
+>     xs = Just (Candidate 1 0 0 2 2.0)
+>     past = [Nothing, Nothing]
+>     sessions = map (step . step) [testItem1 {iTrType = Partial, iTrnsts = [0]}]
+
+> test_GetBest2' = TestCase . assertEqual "test_getBest2'1" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Just (Candidate 1 0 0 2 2.0)
 >     past = [Nothing, Nothing]
 >     sessions = map (step . step) testItems 
 
-> test_GetBest3 = TestCase . assertEqual "test_getBest3" xs . getBest past $ sessions 
+> test_GetBest3 = TestCase . assertEqual "test_getBest3" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Just (Candidate 1 0 0 3 3.0)
 >     past = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step) [testItem1] 
 
-> test_GetBest3' = TestCase . assertEqual "test_getBest3'" xs . getBest past $ sessions 
+> test_GetBest3' = TestCase . assertEqual "test_getBest3'" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Just (Candidate 1 0 0 3 3.0)
 >     past = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step) testItems
 
-> test_GetBest4 = TestCase . assertEqual "test_getBest4" xs . getBest past $ sessions 
+> test_GetBest4 = TestCase . assertEqual "test_getBest4" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Just (Candidate 1 0 0 4 4.0)
 >     past = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) [testItem1]
 
-> test_GetBest4' = TestCase . assertEqual "test_getBest4'" xs . getBest past $ sessions 
+> test_GetBest4' = TestCase . assertEqual "test_getBest4'" xs . getBest 0 past $ sessions 
 >   where
 >     xs = Just (Candidate 2 0 0 2 6.0)
 >     past = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
@@ -418,9 +430,60 @@ Non-Happy Path tests for filterCandidate: some candidates get filtered
 >              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
 >
 
+> test_transitCheck = TestCase $ do
+>   assertEqual "transitCheck optional" (cnd 0) (transitCheck dItem 8 (Just defaultCandidate))
+>   -- vanilla, non-pathological numbers
+>   assertEqual "transitCheck  0" Nothing (transitCheck pItem 10 (cnd 8))
+>   assertEqual "transitCheck  1" Nothing (transitCheck pItem 11 (cnd 8))
+>   assertEqual "transitCheck  2" (cnd 8) (transitCheck pItem 12 (cnd 8))
+>   assertEqual "transitCheck  3" (cnd 8) (transitCheck pItem 13 (cnd 8))
+>   assertEqual "transitCheck  4" (cnd 8) (transitCheck pItem 14 (cnd 8))
+>   assertEqual "transitCheck  5" (cnd 8) (transitCheck pItem 15 (cnd 8))
+>   assertEqual "transitCheck  6" Nothing (transitCheck pItem 16 (cnd 8))
+>   assertEqual "transitCheck  7" Nothing (transitCheck pItem 17 (cnd 8))
+>   assertEqual "transitCheck  8" Nothing (transitCheck pItem 18 (cnd 8))
+>   -- transit type center implies only one good candidate per transit
+>   assertEqual "transitCheck  9" Nothing (transitCheck cItem 15 (cnd 12))
+>   assertEqual "transitCheck 10" (cnd 12) (transitCheck cItem 16 (cnd 12))
+>   assertEqual "transitCheck 11" Nothing (transitCheck cItem 17 (cnd 12))
+>   -- odd duration better put the middle quarter on the transit
+>   assertEqual "transitCheck 12" Nothing (transitCheck cItem 15 (cnd 13))
+>   assertEqual "transitCheck 13" (cnd 13) (transitCheck cItem 16 (cnd 13))
+>   assertEqual "transitCheck 14" Nothing (transitCheck cItem 17 (cnd 13))
+>   assertEqual "transitCheck 15" Nothing (transitCheck cItem 18 (cnd 13))
+>   -- short durations
+>   assertEqual "transitCheck 16" Nothing (transitCheck cItem 12 (cnd 2))
+>   assertEqual "transitCheck 17" (cnd 2) (transitCheck cItem 11 (cnd 2))
+>   assertEqual "transitCheck 18" Nothing (transitCheck cItem 10 (cnd 2))
+>   assertEqual "transitCheck 19" Nothing (transitCheck cItem 11 (cnd 1))
+>   assertEqual "transitCheck 20" (cnd 1) (transitCheck cItem 10 (cnd 1))
+>   assertEqual "transitCheck 21" Nothing (transitCheck cItem  9 (cnd 1))
+>   -- spot check longer durations
+>   assertEqual "transitCheck 22" Nothing (transitCheck pItem 19 (cnd 12))
+>   assertEqual "transitCheck 23" (cnd 12) (transitCheck pItem 18 (cnd 12))
+>   assertEqual "transitCheck 24" (cnd 12) (transitCheck pItem 13 (cnd 12))
+>   assertEqual "transitCheck 25" Nothing (transitCheck pItem 12 (cnd 12))
+>   assertEqual "transitCheck 26" Nothing (transitCheck cItem 17 (cnd 12))
+>   assertEqual "transitCheck 27" (cnd 12) (transitCheck cItem 16 (cnd 12))
+>   assertEqual "transitCheck 28" Nothing (transitCheck cItem 15 (cnd 12))
+>   -- second transit should also work
+>   assertEqual "transitCheck 29" Nothing (transitCheck pItem 20 (cnd 8))
+>   assertEqual "transitCheck 30" Nothing (transitCheck pItem 21 (cnd 8))
+>   assertEqual "transitCheck 31" (cnd 8) (transitCheck pItem 22 (cnd 8))
+>   assertEqual "transitCheck 33" (cnd 8) (transitCheck pItem 23 (cnd 8))
+>   assertEqual "transitCheck 33" (cnd 8) (transitCheck pItem 24 (cnd 8))
+>   assertEqual "transitCheck 34" (cnd 8) (transitCheck pItem 25 (cnd 8))
+>   assertEqual "transitCheck 35" Nothing (transitCheck pItem 26 (cnd 8))
+>   assertEqual "transitCheck 36" Nothing (transitCheck pItem 27 (cnd 8))
+>   assertEqual "transitCheck 37" Nothing (transitCheck pItem 28 (cnd 8))
+>     where
+>   cItem = dItem {iTrType = Center,  iTrnsts = [10, 20]}
+>   pItem = dItem {iTrType = Partial, iTrnsts = [10, 20]}
+>   cnd d = Just (defaultCandidate {cDuration = d})
+
 Test against python unit tests from beta test code:
 
-> test_PackWorker'6 = TestCase . assertEqual "test_PackWorker'6" xs . packWorker' ys zs $ ws
+> test_PackWorker'6 = TestCase . assertEqual "test_PackWorker'6" xs . packWorker' 0 ys zs $ ws
 >   where
 >     -- result, list of best solutions starting for 60 minutes, then 45,
 >     -- 30, and then 15 (none) followed by the sentinel.
@@ -434,7 +497,7 @@ Test against python unit tests from beta test code:
 >     ws = map step [item 1 2 4 (replicate 6 1.0) []
 >                  , item 2 2 4 [0.0,0.0,2.0,2.0,2.0,2.0] []]
 
-> test_PackWorker'6_1 = TestCase . assertEqual "test_PackWorker'6_1" xs . packWorker' ys zs $ ws
+> test_PackWorker'6_1 = TestCase . assertEqual "test_PackWorker'6_1" xs . packWorker' 0 ys zs $ ws
 >   where
 >     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
 >          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
@@ -443,7 +506,7 @@ Test against python unit tests from beta test code:
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0, 1.0, 1.0] [1.0]
 >                  , item 2 2 4 [0.0, 2.0, 2.0, 2.0, 2.0] [0.0]]
 
-> test_PackWorker'6_2 = TestCase . assertEqual "test_PackWorker'6_2" xs . packWorker' ys zs $ ws
+> test_PackWorker'6_2 = TestCase . assertEqual "test_PackWorker'6_2" xs . packWorker' 0 ys zs $ ws
 >   where
 >     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
 >          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
@@ -452,7 +515,7 @@ Test against python unit tests from beta test code:
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0, 1.0] [1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0, 2.0, 2.0] [0.0, 0.0]]
 
-> test_PackWorker'6_3 = TestCase . assertEqual "test_PackWorker'6_3" xs . packWorker' ys zs $ ws
+> test_PackWorker'6_3 = TestCase . assertEqual "test_PackWorker'6_3" xs . packWorker' 0 ys zs $ ws
 >   where
 >     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
 >          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
@@ -462,7 +525,7 @@ Test against python unit tests from beta test code:
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
 
-> test_getBest_for_PackWorker'6_3 = TestCase . assertEqual "test_best_for_PackWorker'6_3" result . getBest zs $ ws
+> test_getBest_for_PackWorker'6_3 = TestCase . assertEqual "test_best_for_PackWorker'6_3" result . getBest 0 zs $ ws
 >   where
 >     result = Just (Candidate {cId = 2, cProj = 0, cStart = 0, cDuration = 2, cScore = 6.0})
 >     zs = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0)
@@ -470,7 +533,7 @@ Test against python unit tests from beta test code:
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0, 2.0] [2.0, 0.0, 0.0]]
 
-> test_PackWorker'6_4 = TestCase . assertEqual "test_PackWorker'6_4" xs . packWorker' ys zs $ ws
+> test_PackWorker'6_4 = TestCase . assertEqual "test_PackWorker'6_4" xs . packWorker' 0 ys zs $ ws
 >   where
 >     xs = [Just (Candidate 2 0 0 2 6.0), Just (Candidate 1 0 0 3 3.0)
 >          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
@@ -479,33 +542,33 @@ Test against python unit tests from beta test code:
 >     ws = map step [item 1 2 4 [1.0, 1.0] [1.0, 1.0, 1.0, 1.0]
 >                  , item 2 2 4 [2.0, 2.0] [2.0, 2.0, 0.0, 0.0]]
 
-> test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' ys zs $ ws
+> test_PackWorker'1 = TestCase . assertEqual "test_PackWorker'1" xs . packWorker' 0 ys zs $ ws
 >   where
 >     xs = [Just (Candidate 1 0 0 4 4.0), Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 4 Nothing
 >     zs = [Nothing]
 >     ws = map step [item 1 2 4 (replicate 6 1.0) []]
 
-> test_PackWorker'3 = TestCase . assertEqual "test_PackWorker'3" xs . packWorker' ys zs $ ws
+> test_PackWorker'3 = TestCase . assertEqual "test_PackWorker'3" xs . packWorker' 0 ys zs $ ws
 >   where
 >     xs = [Just (Candidate 2 0 0 1 1.0), Just (Candidate 1 0 0 2 3.1), Nothing, Just (Candidate 3 0 0 1 1.1), Nothing]
 >     ys = [Just (Candidate 3 0 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 0 1 1.0)]
 >     zs = [Nothing]
 >     ws = map step [item 1 2 4 (replicate 6 1.0) []]
 
-> test_PackWorker1 = TestCase . assertEqual "test_PackWorker1" xs . packWorker ys $ ws
+> test_PackWorker1 = TestCase . assertEqual "test_PackWorker1" xs . packWorker 0 ys $ ws
 >   where
 >     xs = [Candidate 1 0 0 4 4.0]
 >     ys = replicate 4 Nothing  -- nothing prescheduled
 >     ws = [item 1 2 4 (replicate 6 1.0) []] -- scores 1.0 for 6 units
 
-> test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker ys $ ws
+> test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker 0 ys $ ws
 >   where
 >     xs = [Candidate 1 0 0 3 3.0, Candidate 2 0 3 1 1.0]
 >     ys = replicate 3 Nothing ++ [Just (Candidate 2 0 0 1 4.0)]
 >     ws = [item 1 2 4 (replicate 6 1.0) []]
 
-> test_PackWorker3 = TestCase . assertEqual "test_PackWorker3" xs . packWorker ys $ ws
+> test_PackWorker3 = TestCase . assertEqual "test_PackWorker3" xs . packWorker 0 ys $ ws
 >   where
 >     xs = [Candidate 3 0 0 1 1.1, Candidate 1 0 1 2 1.9999999, Candidate 2 0 3 1 1.0]
 >     ys = [Just (Candidate 3 0 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 0 1 4.1)]
@@ -527,7 +590,7 @@ attributes of the packing algorithm:
   4. A scheduled session will not include any zero periods.
 
 > test_PackWorker4 =
->     TestCase . assertEqual "test_PackWorker4" result . packWorker fixed $ open
+>     TestCase . assertEqual "test_PackWorker4" result . packWorker 0 fixed $ open
 >   where
 >     result = [ Candidate "A" 0  0 2 2.0 
 >              , Candidate "F1" 0 2 2 0.0 -- unwind mangles this score
@@ -559,13 +622,13 @@ attributes of the packing algorithm:
 >     -- create an item without a mask, i.e. no scoring
 >     item' <- runScoring w [] $ do
 >         fs <- genScore [testSession]
->         toItem starttime fs [] testSession
+>         toItem starttime 0 fs [] testSession
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
 >     item' <- runScoring w [] $ do
 >         fs <- genScore [testSession]
->         toItem starttime fs dts testSession
+>         toItem starttime 0 fs dts testSession
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
 >     assertEqual "test_ToItem_3" result2 item'
 >   where
@@ -574,7 +637,7 @@ attributes of the packing algorithm:
 >     -- the 'mask' is just a list of datetimes to score at
 >     dts' = quarterDateTimes starttime duration 
 >     dts = [(Just dt) | dt <- dts']
->     result1 = dItem { iId = testSession
+>     result1 = dItem {iId = testSession
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
 >                    , iSTimAv = numSteps $ 24 * 60  
@@ -591,7 +654,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     w <- getWeather . Just $ starttime 
 >     result <- runScoring w [] $ do
 >         fs <- genScore [sess]
->         toItem starttime fs dts sess
+>         toItem starttime 0 fs dts sess
 >     assertEqual "test_ToItem2" expected result
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
@@ -612,6 +675,8 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                    , iFuture = scores 
 >                    , iPast = []
 >                    }
+
+> test_deriveTransits = TestCase . assertEqual "test_deriveTransits" [54, 149] . deriveTransits 1245661800 2880 $ defaultSession {ra = 3.0}
 
 > fixedPeriods = [ defaultPeriod { session = defaultSession { sId = 1 }
 >                                , pScore = 1.0
@@ -808,6 +873,76 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
 >     expPeriod = Period candidate expStartTime 135 39.949707 undefined False
 
+> test_PackTransit = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore [candidate]
+>         pack fs starttime duration [] [candidate]
+>     assertEqual "test_PackTransit_1" 2 (length periods')
+>     assertEqual "test_PackTransit_2" expPeriod (head periods')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 48*60
+>     candidate = defaultSession { sName = "singleton"
+>                                , sAlloted = 24*60
+>                                , minDuration = 2*60
+>                                , maxDuration = 6*60
+>                                , project = testProject
+>                                , ra = 1.8
+>                                , transit = Partial
+>                                }
+>     expStartTime = fromGregorian 2006 11 9 6 45 0
+>     expPeriod = Period candidate expStartTime 360 3.2790582 undefined False
+
+> test_PackBt = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods1' <- runScoring w [] $ do
+>         fs <- genScore [candidate1]
+>         pack fs starttime duration [] [candidate1]
+>     assertEqual "test_PackBt_1" 1 (length periods1')
+>     assertEqual "test_PackBt_2" expPeriod1 (head periods1')
+>     periods2' <- runScoring w [] $ do
+>         fs <- genScore [candidate2]
+>         pack fs starttime duration [] [candidate2]
+>     assertEqual "test_PackBt_3" 2 (length periods2')
+>     assertEqual "test_PackBt_4" expPeriod2_1 (head periods2')
+>     assertEqual "test_PackBt_4" expPeriod2_2 (head . tail $ periods2')
+>     periods3' <- runScoring w [] $ do
+>         fs <- genScore [candidate3]
+>         pack fs starttime duration [] [candidate3]
+>     assertEqual "test_PackBt_3" 1 (length periods3')
+>     assertEqual "test_PackBt_4" expPeriod3 (head periods3')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 12*60
+>     candidate1 = defaultSession { sName = "singleton"
+>                                , sAlloted = 24*60
+>                                , minDuration = 135
+>                                , maxDuration = 135
+>                                , timeBetween = 0
+>                                , project = testProject
+>                                }
+>     candidate2 = defaultSession { sName = "singleton"
+>                                , sAlloted = 24*60
+>                                , minDuration = 60
+>                                , maxDuration = 60
+>                                , timeBetween = 0
+>                                , project = testProject
+>                                }
+>     candidate3 = defaultSession { sName = "singleton"
+>                                , sAlloted = 24*60
+>                                , minDuration = 60
+>                                , maxDuration = 60
+>                                , timeBetween = duration
+>                                , project = testProject
+>                                }
+>     expStartTime1 = fromGregorian 2006 11 8 21 45 0
+>     expStartTime2 = fromGregorian 2006 11 8 22 45 0
+>     expPeriod1 = Period candidate1 expStartTime1 135 39.949707 undefined False
+>     expPeriod2_1 = Period candidate2 expStartTime1 60 3.1255755 undefined False
+>     expPeriod2_2 = Period candidate2 expStartTime2 60 3.1227193 undefined False
+>     expPeriod3 = Period candidate3 expStartTime1 60 3.1255755 undefined False
+
 Create a long schedule from a reproducable randomly created set of sessions.
 The main value of this test is to catch changes in the packing algorithm that 
 produce changes in the final result.
@@ -843,7 +978,7 @@ TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
 Build up to this case with the simplest examples possible:
 
 > test_PackWorkerSimple =
->     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker fixed $ open
+>     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker 0 fixed $ open
 >   where
 >     result = [ Candidate "B" 0 0 4 1.0
 >              ]
@@ -854,7 +989,7 @@ Test PackWorker' w/ the input provided by test_PackWorkerSimple above:
 These results are then used in test_Unwind3.
 
 > test_PackWorker'Simple =
->     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker' fixed past $ open
+>     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker' 0 fixed past $ open
 >   where
 >     result = [ Just (Candidate "B" 0 0 4 1.0)
 >              , Just (Candidate "B" 0 0 3 0.75)
@@ -871,7 +1006,7 @@ Same as above, but with one time segment pre-scheduled:
 TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 
 > test_PackWorker'Simple2 =
->     TestCase . assertEqual "test_PackWorkerSimple2" result . packWorker' fixed past $ open
+>     TestCase . assertEqual "test_PackWorkerSimple2" result . packWorker' 0 fixed past $ open
 >   where
 >     result = [ Just (Candidate "F1" 0 0 1 0.0)
 >              , Just (Candidate "B"  0 0 3 0.75)
@@ -891,7 +1026,7 @@ TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 TBF: Scores not right due to negative score for F1 !!!
 
 > test_PackWorker5 =
->     TestCase . assertEqual "test_PackWorker5" result . packWorker fixed $ open
+>     TestCase . assertEqual "test_PackWorker5" result . packWorker 0 fixed $ open
 >   where
 >     result = [ Candidate "B"  0 0 8 2.2
 >              , Candidate "F1" 0 8 2 0.0 -- bug: -2.2
@@ -915,7 +1050,7 @@ TBF: Scores not right due to negative score for F1 !!!
 >              ]
 
 > test_PackWorker'5 =
->     TestCase . assertEqual "test_PackWorker'5" result  . packWorker' future past $ sessions
+>     TestCase . assertEqual "test_PackWorker'5" result  . packWorker' 0 future past $ sessions
 >   where
 >     result = [  Nothing
 >               , Nothing
@@ -1119,7 +1254,6 @@ Same as test_Pack1 except only 2 hours of sAlloted instead of 24
 >     open2 = Period (ds {sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 375 0.0 undefined False
 >     open3 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 30 0) 360 0.0 undefined False
 >     expPeriods = [open1, open2, fixed2, open3, fixed3]
-
 
 The beta test code runs packing using TScore, which is essentially a
 random score generator.  So to match the two code bases we have to choose:

@@ -209,7 +209,7 @@ Generate a scoring function having the pressure factors.
 > genRightAscensionPressure          :: [Session] -> Scoring ScoreFunc
 > genRightAscensionPressure sessions = genRightAscensionPressure' factors
 >   where
->     accessor s = (round . rad2hr . ra $ s) `mod` 24
+>     accessor s = (round . rad2hrs . ra $ s) `mod` 24
 >     bins    = initBins (0, 23) accessor sessions
 >     factors = binsToFactors bins
 
@@ -217,7 +217,7 @@ Generate a scoring function having the pressure factors.
 >     tell [RaPressureHistory factors]
 >     return $ rightAscensionPressure factors accessor
 >   where
->     accessor s = (round . rad2hr . ra $ s) `mod` 24
+>     accessor s = (round . rad2hrs . ra $ s) `mod` 24
 
 Select the appropriate pressure factor from the array of pressures.
 

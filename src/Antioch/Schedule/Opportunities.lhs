@@ -56,7 +56,7 @@
 > hourAngle session
 >     | denominator <  1.0e-3 = 12.0
 >     | cosha       >= 1.0    = 12.0
->     | otherwise             = rad2hr cosha
+>     | otherwise             = rad2hrs cosha
 >   where
 >     denominator = cos gbtLat * cos (dec session)
 >     cosha       = (cos (deg2rad 85.0) - sin gbtLat * sin (dec session)) / denominator

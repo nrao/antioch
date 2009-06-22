@@ -42,6 +42,7 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
+> data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 
 TBF: Initially, Open, Fixed, and Windowed all share the same contents.
 Ideally, we need to evolve these as we go and add new items and remove
@@ -69,6 +70,7 @@ use a single data structure for all sessions.
 >   , lowRFI      :: Bool
 >   , lstExclude  :: [(Float, Float)]
 >   , sType       :: SessionType
+>   , transit     :: TransitType
 >   } deriving Show
 
 
@@ -200,6 +202,7 @@ Simple Functions for Periods:
 >   , lowRFI      = False
 >   , lstExclude  = []
 >   , sType       = Open
+>   , transit     = Optional
 >   }
 
 > defaultObserver = Observer {

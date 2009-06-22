@@ -6,7 +6,7 @@
 > import Antioch.Types
 > -- import Antioch.Score      (Trace, zenithAngle, minObservingEff, elevationFromZenith)
 > import Antioch.Score
-> import Antioch.Utilities  (rad2hr, rad2deg, utc2lstHours, dt2semester) 
+> import Antioch.Utilities  (rad2hrs, rad2deg, utc2lstHours, dt2semester) 
 > import Antioch.Weather
 > import Antioch.Debug
 > import Control.Arrow      ((&&&), second)
@@ -90,16 +90,16 @@ offending period/session/project needs to be revealed.
 > periodDecRA = promote sessionDecRA
 
 > sessionRA :: [Session] -> [(Radians, Float)]
-> sessionRA = count (rad2hr . ra) [0..24]
+> sessionRA = count (rad2hrs . ra) [0..24]
 
 > periodRA :: [Period] -> [(Radians, Float)]
 > periodRA = promote sessionRA
 
 > sessionRAHrs :: [Session] -> [(Radians, Float)]
-> sessionRAHrs =  histogram [0..24] . ((fractionalHours . sAlloted) `vs` (rad2hr . ra))
+> sessionRAHrs =  histogram [0..24] . ((fractionalHours . sAlloted) `vs` (rad2hrs . ra))
 
 > periodRAHrs :: [Period] -> [(Radians, Float)]
-> periodRAHrs = histogram [0..24] . ((fractionalHours . duration) `vs` (rad2hr . ra . session))
+> periodRAHrs = histogram [0..24] . ((fractionalHours . duration) `vs` (rad2hrs . ra . session))
 
 > fractionalHours min = fromIntegral min / 60.0
 

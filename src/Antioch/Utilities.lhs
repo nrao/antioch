@@ -27,7 +27,7 @@
 > rad2deg' :: Double -> Double
 > rad2deg' rad = rad * 180.0 / pi
 
-> rad2hr x = 12 * x / pi
+> rad2hrs x = 12 * x / pi
 
 > deg2hrs :: Double -> Double
 > deg2hrs d = d/15.0

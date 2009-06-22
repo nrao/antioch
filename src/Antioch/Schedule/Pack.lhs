@@ -39,8 +39,8 @@ to generate `items` for input to the `packWorker` function.
 > pack sf dt dur fixed sessions = do
 >     let dts = quarterDateTimes dt dur
 >     let sched = toSchedule dts . sort $ fixed
->     items <- mapM (toItem dt sf (mask dts sched)) sessions
->     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker sched $ items
+>     items <- mapM (toItem dt dur sf (mask dts sched)) sessions
+>     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker dur sched $ items
 
 Some things have to be corrected before this 'schedule' can be returned:
    * pre-scheduled Periods on the time boundraries have been cut off
@@ -120,8 +120,8 @@ function assumes its inputs are sorted.
 Convert an open session `s` into a schedulable item by scoring it with
 `sf` at each of the open time slots in a mask `dts`.
 
-> toItem          :: DateTime -> ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
-> toItem dt sf dts s = do
+> toItem          :: DateTime -> Minutes -> ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
+> toItem dt dur sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
 >     let force = if sum scores >= 0.0 then True else False
 >     let sem = dt2semester dt
@@ -133,9 +133,23 @@ Convert an open session `s` into a schedulable item by scoring it with
 >       , iSTimAv  = numSteps $ sAvail s sem
 >       , iPTimAv  = numSteps $ pAvail (project s) sem
 >       , iTimeBt  = numSteps $ timeBetween s
+>       , iTrType  = transit s
+>       , iTrnsts  = if (transit s) == Optional
+>                    then []
+>                    else deriveTransits dt dur s
 >       , iFuture  = scores
 >       , iPast    = []
 >       }
+
+Generate a session's transit times over the time slice dt/dur
+
+> deriveTransits :: DateTime -> Minutes -> Session -> [Int]
+> deriveTransits dt dur sess = map (\t -> numSteps $ t `diffMinutes` dt) $ deriveTransits' dt dur sess
+
+> deriveTransits' :: DateTime -> Minutes -> Session -> [DateTime]
+> deriveTransits' dt dur sess
+>     | dur <= 0    = []
+>     | otherwise   = lstHours2utc dt (rad2hrs . ra $ sess) :  deriveTransits' (1440 `addMinutes` dt) (dur - 1440) sess
 
 Convert candidates to telescope periods relative to a given startime.
 Remember: Candidates have unitless times, and their scores are cumulative.
@@ -216,6 +230,8 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iSTimAv  :: !Int
 >   , iPTimAv  :: !Int
 >   , iTimeBt  :: !Int
+>   , iTrType  :: !TransitType
+>   , iTrnsts  :: ![Int]
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
 >   } deriving (Eq, Show)
@@ -306,8 +322,8 @@ Given the schedule (showing free and pre-scheduled time slots) and the list
 of sessions to pack (items have scores), returns when the session and pre-
 schedule time slots should occur (a list of *only* candidates)
 
-> packWorker        :: Eq a => [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
-> packWorker future items = unwind . packWorker' future [Nothing] . map step $ items
+> packWorker        :: Eq a => Minutes -> [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
+> packWorker dur future items = unwind . packWorker' (numSteps dur) future [Nothing] . map step $ items
 
 Returns a list representing each time slot, with each element either being 
 Nothing or a Candidate.  Note that this list is 'Nothing' terminated.
@@ -319,19 +335,19 @@ The basic recursive pattern here is that each element of the future list
 is inspected, and the past list is constructed, until we reach the end of
 the future list, where we terminate and return our constructed past list.
 Remember, the pack algorithm works by breaking down the problem into sub
-problems.  For our case, that means first solving the 15-min schedule, then 
-using this solution to solve for the 30-min schedule, and so on.  The
-solutions to our sub-problems are represented by the 'past' param.
+problems.  For our case, that means first solving the 15-min schedule,
+then using this solution to solve for the 30-min schedule, and so on.
+The solutions to our sub-problems are represented by the 'past' param.
 Note that cStart in the result is not defined, this occurs in unwind.
 
-> packWorker' :: Eq a => [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
-> -- packWorker' future             past sessions
-> packWorker'    []                 past _        = past 
-> packWorker'    (Just b  : future) past sessions =
->     packWorker' future (Just b:past) $! map (step . forget) sessions
-> packWorker'    (Nothing : future) past sessions =
->     let b = getBest past sessions in
->     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' future (b:past) $! map step sessions
+> packWorker' :: Eq a => Int -> [Maybe (Candidate a)] -> [Maybe (Candidate a)] -> [Item a] -> [Maybe (Candidate a)]
+> -- packWorker' dur  future             past sessions
+> packWorker'    _    []                 past _        = past 
+> packWorker'    dur  (Just b  : future) past sessions =
+>     packWorker' dur future (Just b:past) $! map (step . forget) sessions
+> packWorker'    dur (Nothing : future) past sessions =
+>     let b = getBest dur past sessions in
+>     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' dur future (b:past) $! map step sessions
 
 Given the sessions (items) to pack, and the 'past', which is the step n
 in our N step packing algorithm (15 minute steps):
@@ -345,14 +361,11 @@ in our N step packing algorithm (15 minute steps):
    * now find the best from the collection of the best candidates for each
      item
 
-> getBest ::  Eq a => [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
-> getBest past sessions = best $ map (bestCandidateOfASession past) sessions    
+> getBest ::  Eq a => Int -> [Maybe (Candidate a)] -> [Item a] -> Maybe (Candidate a)
+> getBest dur past sessions = best $ map (bestCandidateOfASession dur past) sessions    
 
-TBF: Start using filterCandidates once we're sure it's working and it doesn't 
-seem to have a huge impact on performance.
-
-> bestCandidateOfASession :: Eq a => [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
-> bestCandidateOfASession past sess = best . zipWith madd (filterCandidates sess past $ candidates sess) $ past
+> bestCandidateOfASession :: Eq a => Int -> [Maybe (Candidate a)] -> Item a -> Maybe (Candidate a)
+> bestCandidateOfASession dur past sess = best . transitChecks sess dur . zipWith madd (filterCandidates sess past $ candidates sess) $ past
 
 We need apply certain constraints inside the packing algorithm.  For example,
 time remaining, and time between must be obeyed as the candidates for packing
@@ -369,9 +382,9 @@ A candidate gets replaced with Nothing if:
    * the duration of the candidate puts it in close (too close) proximity to another period of the same session (time between constraint).
 
 > filterCandidate :: Eq a => Item a -> [Maybe (Candidate a)] -> Maybe (Candidate a) -> Maybe (Candidate a)
-> filterCandidate item past Nothing  = Nothing
+> filterCandidate    _    _ Nothing                      = Nothing
 > filterCandidate item past (Just c) | iId item == cId c = rejectCandidate
->                                     | otherwise         = Just c
+>                                    | otherwise         = Just c
 >   where
 >     (sUsed, pUsed, sep, hist) = queryPast item past (cDuration c)
 >     dur = cDuration c
@@ -380,6 +393,32 @@ A candidate gets replaced with Nothing if:
 >                          ((pUsed + dur) > (iPTimAv item))
 >                       then Nothing
 >                       else Just c
+
+Given an item and a list of its possible candidates (cs) for a given scheduling
+duration (dur), eliminate any candidate in the list by substituting Nothing
+if it does not provide sufficient coverage of the item's transit.
+
+> transitChecks :: Eq a => Item a -> Int -> [Maybe (Candidate a)] -> [Maybe (Candidate a)]
+> transitChecks item dur cs = map (transitCheck item dur) cs
+
+> transitCheck :: Eq a => Item a -> Int -> Maybe (Candidate a) -> Maybe (Candidate a)
+> transitCheck    _   _  Nothing                 = Nothing
+> transitCheck item dur (Just c)
+>     | (iTrType item) == Optional || inTransit  = Just c
+>     | otherwise                                = Nothing
+>   where
+>     factor = if (iTrType item) == Partial
+>              then 4 -- 25% criterion
+>              else 2 -- 50% criterion
+>     cDur = cDuration c
+>     span = flip div factor cDur
+>     lower t = t + span
+>     upper' t = t - span + cDur
+>     -- fudge to handle Center candidates with even number of quarters
+>     upper t = if (iTrType item) == Center && (even cDur)
+>               then (upper' t) + 1
+>               else (upper' t)
+>     inTransit = any (\t -> (lower t) <= dur && dur < (upper t)) (iTrnsts item)
 
 Find the best of a collection of candidates.
 

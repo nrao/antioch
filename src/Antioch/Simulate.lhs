@@ -6,7 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, rad2hr, showList', dt2semester)
+> import Antioch.Utilities    (between, showList', dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
