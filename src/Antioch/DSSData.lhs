@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
+> import Antioch.Reservations
 > import Antioch.Utilities (hrs2rad, deg2rad, printList)
 > import Antioch.Settings (dssDataDB)
 > import Data.List (groupBy, sort, nub)
@@ -49,9 +50,40 @@ separate query, to deal with multiple allotments (different grades)
 >     -- TBF: only for 09B! Then get observer blackouts!
 >     blackouts <- getProjectBlackouts (pId project) cnn 
 >     let project' = project { pBlackouts = blackouts }
+>     -- project times
 >     allotments <- getProjectAllotments (pId project') cnn
 >     let project'' = setProjectAllotments project' allotments
->     return $ makeProject project'' (pAlloted project'') sessions 
+>     -- project observers (will include observer blackouts!)
+>     observers <- getProjectObservers (pId project) cnn
+>     let project''' = setProjectObservers project'' observers
+>     return $ makeProject project'' (pAlloted project''') sessions 
+
+The scheduling algorithm does not need to know all the details about the observers
+on a project - it only needs a few key facts, which are defined in the Observer
+data structure.  These facts come from two sources:
+   1. DSS Database:
+      * observer sancioned flag 
+      * observer black out dates
+   2. BOS web service:
+      * observer on site dates (GB reservation date)
+
+TBF: currently no observer black out date tables
+TBF: We currently cannot link info in the DSS database to the id's used in the
+BOS web services to retrieve reservation dates.
+
+> getProjectObservers :: Int -> Connection -> IO [Observer]
+> getProjectObservers projId cnn = handleSqlError $ do
+>     -- 0. TBF: get the usernames (or other ID?) associated with this project
+>     -- 1. Use these to lookup the needed info from the BOS web service.
+>     -- obs <- getReservationInfo obs'
+>     -- 1. Use these to lookup the needed info from the DSS database
+>     -- obs' <- get
+>     -- return obs
+>     return []
+
+> setProjectObservers :: Project -> [Observer] -> Project
+> setProjectObservers proj obs = proj { observers = obs }
+
 
 TBF: Let's say it again.  This is only for scheduling 09B.  Then we'll
 want to ditch this, and get the observer blackouts.
