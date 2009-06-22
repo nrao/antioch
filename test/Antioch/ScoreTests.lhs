@@ -36,6 +36,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_needsLowRFI
 >   , test_obsAvailable
 >   , test_observerAvailable
+>   , test_observerOnSite
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
@@ -791,6 +792,27 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       s10 = defaultSession { receivers = [[boost]], grade = GradeB }
 >       
 >   
+
+> test_observerOnSite = TestCase $ do
+>   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
+>   assertEqual "test_observerOnSite_2" False (obsOnSite dt2 s1)
+>   assertEqual "test_observerOnSite_3" False (obsOnSite dt3 s1)
+>   assertEqual "test_observerOnSite_4" True  (obsOnSite dt  s2)
+>   assertEqual "test_observerOnSite_5" False (obsOnSite dt2 s2)
+>   assertEqual "test_observerOnSite_6" True  (obsOnSite dt3 s2)
+>     where
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       rs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       o   = defaultObserver
+>       o2  = defaultObserver { reservations = rs }
+>       pr1 = defaultProject { observers = [o,o2] }
+>       s1  = defaultSession { project = pr1 }
+>       rs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       o3  = defaultObserver { reservations = rs2 }
+>       pr2 = defaultProject { observers = [o2, o3] }
+>       s2  = defaultSession { project = pr2 }
 
 Test utilities
 

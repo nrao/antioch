@@ -378,6 +378,19 @@ Returns list of receivers that will be up at the given time.
 
 More Scoring Factors not covered in Memo 5.2
 
+Is there an observer on site for this time and session?
+Important, because on site observers get a boost.
+TBF: what should the boost factor really be?
+
+> observerOnSite :: ScoreFunc
+> observerOnSite dt s = factor "observerOnSite" . Just $ if (obsOnSite dt s) then 1.05 else 1.0
+
+> obsOnSite :: DateTime -> Session -> Bool
+> obsOnSite dt s = any (==True) $ map (isOnSite dt) (obs s)
+>   where 
+>     obs s = observers . project $ s
+>     isOnSite dt o = any (==True) $ map (inDateRange dt) (reservations o) 
+
 Is there an observer available for this time and session?
 
 > observerAvailable :: ScoreFunc
@@ -672,6 +685,7 @@ Need to translate a session's factors into the final product score.
 >       , atmosphericStabilityLimit
 >       , receiver
 >       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
+>       , observerOnSite
 >       , needsLowRFI
 >       , lstExcepted
 >       , enoughTimeBetween
