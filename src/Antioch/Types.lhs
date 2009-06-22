@@ -52,6 +52,7 @@ use a single data structure for all sessions.
 >     sId         :: Int
 >   , sName       :: String
 >   , sAlloted    :: Minutes
+>   , sClosed     :: Bool
 >   , project     :: Project
 >   , periods     :: [Period]
 >   , minDuration :: Minutes
@@ -104,6 +105,7 @@ Tying the knot.
 >     pId             :: !Int
 >   , pName           :: !String
 >   , pAlloted        :: !Minutes
+>   , pClosed         :: !Bool
 >   , semester        :: !String
 >   , sessions        :: [Session]
 >   , thesis          :: !Bool
@@ -199,6 +201,7 @@ Simple Functions for Periods:
 >   , band        = L
 >   , lowRFI      = False
 >   , lstExclude  = []
+>   , sClosed     = False
 >   , sType       = Open
 >   }
 
@@ -218,6 +221,7 @@ Simple Functions for Periods:
 >   , maxSemesterTime = 10000000 -- more then enough time
 >   , observers = [defaultObserver]
 >   , pBlackouts = []
+>   , pClosed  = False
 >   }
 
 > defaultPeriod = Period {

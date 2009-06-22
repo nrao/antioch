@@ -15,6 +15,8 @@
 >   , test_sAvail
 >   , test_sAvail2
 >   , test_sAvail3
+>   , test_sComplete
+>   , test_sComplete2
 >     ]
 
 > test_sUsed = TestCase $ do
@@ -51,6 +53,36 @@
 >   assertEqual "test_sAvail3_8" (1*60) (pAvail pr5 "09C") 
 >   assertEqual "test_sAvail3_9" (-60)  (sAvail s5 sem) 
 >   assertEqual "test_sAvail3_10" (1*60) (sAvail s5 "09C") 
+
+> test_sComplete = TestCase $ do
+>   assertEqual "test_sComplete_1"  False (sComplete s1) 
+>   assertEqual "test_sComplete_2"  False (pComplete pr1) 
+>   assertEqual "test_sComplete_3"  True  (sComplete s2) 
+>   assertEqual "test_sComplete_4"  True  (pComplete pr2) 
+>   assertEqual "test_sComplete_5"  True  (sComplete s3) 
+>   assertEqual "test_sComplete_6"  True  (pComplete pr3) 
+>   assertEqual "test_sComplete_7"  True  (sComplete s4) 
+>   assertEqual "test_sComplete_8"  True  (pComplete pr4) 
+>   assertEqual "test_sComplete_9"  False (sComplete s5) 
+>   assertEqual "test_sComplete_10" False (pComplete pr5) 
+
+> test_sComplete2 = TestCase $ do
+>   assertEqual "test_sComplete2_1"  True  (sComplete s6) 
+>   assertEqual "test_sComplete2_2"  False (pComplete pr6) 
+>   assertEqual "test_sComplete2_3"  True  (sComplete s7) 
+>   assertEqual "test_sComplete2_4"  True  (pComplete pr7) 
+>     where
+>       -- proj completeness doesn't depend on session completeness
+>       s6'' = sess { sClosed = True }
+>       s6' = makeSession s6'' ps1
+>       pr6 = makeProject proj (pAlloted proj) [s6']
+>       s6 = head . sessions $ pr6
+>       -- but sess completeness DOES depend on project completeness
+>       s7' = makeSession sess ps1 -- sComplete sess == False
+>       pr7' = proj { pClosed = True }
+>       pr7 = makeProject pr7' (pAlloted pr7') [s7']
+>       s7 = head . sessions $ pr7
+>     
 
 Utilities:
 

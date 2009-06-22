@@ -11,6 +11,7 @@
 > import qualified Antioch.SimulationTests as SimsT
 > import qualified Antioch.Schedule.PackTests as PackT
 > import qualified Antioch.Schedule.ScheduleTests as ScheduleT
+> import qualified Antioch.TimeAccountingTests as TimeAccountingT
 > import qualified Antioch.UtilitiesTests as UtilitiesT
 > import qualified Antioch.WeatherTests as WeatherT
 > import Test.HUnit
@@ -27,6 +28,7 @@
 >   , ReportT.tests
 >   , ScheduleT.tests
 >   , SimsT.tests
+>   , TimeAccountingT.tests
 >   , UtilitiesT.tests
 >   , WeatherT.tests
 >   ]

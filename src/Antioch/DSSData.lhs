@@ -31,14 +31,15 @@ separate query, to deal with multiple allotments (different grades)
 >   result <- quickQuery' cnn query []
 >   return $ toProjectDataList result
 >     where
->       query = "SELECT p.id, p.pcode, s.semester, p.thesis FROM semesters AS s, projects AS p WHERE s.id = p.semester_id ORDER BY p.pcode"
+>       query = "SELECT p.id, p.pcode, s.semester, p.thesis, p.complete FROM semesters AS s, projects AS p WHERE s.id = p.semester_id ORDER BY p.pcode"
 >       toProjectDataList = map toProjectData
->       toProjectData (id:pcode:semester:thesis:[]) = 
+>       toProjectData (id:pcode:semester:thesis:comp:[]) = 
 >         defaultProject {
 >             pId = fromSql id 
 >           , pName = fromSql pcode 
 >           , semester = fromSql semester  
 >           , thesis = fromSql thesis 
+>           , pClosed = fromSql comp
 >         }
 
 > populateProject :: Connection -> Project -> IO Project
@@ -98,10 +99,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.project_id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.project_id = ?"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -119,6 +120,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , authorized = fromSql a
 >           , backup = fromSql b
 >           , band = deriveBand $ fromSql freq
+>           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
 >        -- TBF: need to cover any other types?
