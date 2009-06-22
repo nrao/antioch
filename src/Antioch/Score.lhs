@@ -392,6 +392,7 @@ TBF: what should the boost factor really be?
 >     isOnSite dt o = any (==True) $ map (inDateRange dt) (reservations o) 
 
 Is there an observer available for this time and session?
+TBF: should we be taking observer.scanioned and on site into account?
 
 > observerAvailable :: ScoreFunc
 > observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
