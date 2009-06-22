@@ -487,7 +487,7 @@ have a better chance of being scheduled while the receiver is available.
 >   any (==True) $ map (\rg -> all (==True) $ map (\r -> elem r boostRcvrs) rg) rgs
 >   where
 >     rgs = receivers s
->     boostRcvrs = [Rcvr_1070] -- PF2; TBF: how to specify this dynamically?
+>     boostRcvrs = [Rcvr_1070, Rcvr_342, Rcvr_450, Rcvr_800] --TBF: may change 
 
 Scoring utilities
 

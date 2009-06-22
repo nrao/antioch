@@ -45,6 +45,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_projectCompletion
 >   , test_receiver
 >   , test_receiverBoost
+>   , test_receiverBoost2
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
 >   , test_initBins
@@ -790,8 +791,30 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       s9 = s { receivers = [[Rcvr1_2,boost], [Rcvr1_2,Rcvr2_3]] }
 >       -- Grade B's don't get the boost
 >       s10 = defaultSession { receivers = [[boost]], grade = GradeB }
->       
->   
+
+> test_receiverBoost2 = TestCase $ do
+>   assertEqual "test_receiverBoost2_1"  False (receiverBoost' s1)
+>   assertEqual "test_receiverBoost2_2"  False (receiverBoost' s2)
+>   assertEqual "test_receiverBoost2_3"  False (receiverBoost' s3)
+>   assertEqual "test_receiverBoost2_4"  True  (receiverBoost' s4)
+>   assertEqual "test_receiverBoost2_5"  True  (receiverBoost' s5)
+>   assertEqual "test_receiverBoost2_6"  False (receiverBoost' s6)
+>     where
+>       b1 = Rcvr_1070
+>       b2 = Rcvr_450
+>       s = defaultSession { grade = GradeA }
+>       -- just L band
+>       s1 = s { receivers = [[Rcvr1_2]] }
+>       -- L or S
+>       s2 = s { receivers = [[Rcvr1_2, Rcvr2_3]] }
+>       -- L or boost
+>       s3 = s { receivers = [[Rcvr1_2, b1]] }
+>       -- boost 1 or 2
+>       s4 = s { receivers = [[b1, b2]] }
+>       -- boost 1 and 2
+>       s5 = s { receivers = [[b1], [b2]] }
+>       -- L or (boost 1 and 2)
+>       s6 = s { receivers = [[Rcvr1_2, b1], [Rcvr1_2, b2]] }
 
 > test_observerOnSite = TestCase $ do
 >   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
