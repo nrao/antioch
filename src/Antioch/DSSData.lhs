@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
+> import Antioch.Reservations
 > import Antioch.Utilities (hrs2rad, deg2rad, printList)
 > import Antioch.Settings (dssDataDB)
 > import Data.List (groupBy, sort, nub)
@@ -31,14 +32,15 @@ separate query, to deal with multiple allotments (different grades)
 >   result <- quickQuery' cnn query []
 >   return $ toProjectDataList result
 >     where
->       query = "SELECT p.id, p.pcode, s.semester, p.thesis FROM semesters AS s, projects AS p WHERE s.id = p.semester_id ORDER BY p.pcode"
+>       query = "SELECT p.id, p.pcode, s.semester, p.thesis, p.complete FROM semesters AS s, projects AS p WHERE s.id = p.semester_id ORDER BY p.pcode"
 >       toProjectDataList = map toProjectData
->       toProjectData (id:pcode:semester:thesis:[]) = 
+>       toProjectData (id:pcode:semester:thesis:comp:[]) = 
 >         defaultProject {
 >             pId = fromSql id 
 >           , pName = fromSql pcode 
 >           , semester = fromSql semester  
 >           , thesis = fromSql thesis 
+>           , pClosed = fromSql comp
 >         }
 
 > populateProject :: Connection -> Project -> IO Project
@@ -48,9 +50,40 @@ separate query, to deal with multiple allotments (different grades)
 >     -- TBF: only for 09B! Then get observer blackouts!
 >     blackouts <- getProjectBlackouts (pId project) cnn 
 >     let project' = project { pBlackouts = blackouts }
+>     -- project times
 >     allotments <- getProjectAllotments (pId project') cnn
 >     let project'' = setProjectAllotments project' allotments
->     return $ makeProject project'' (pAlloted project'') sessions 
+>     -- project observers (will include observer blackouts!)
+>     observers <- getProjectObservers (pId project) cnn
+>     let project''' = setProjectObservers project'' observers
+>     return $ makeProject project'' (pAlloted project''') sessions 
+
+The scheduling algorithm does not need to know all the details about the observers
+on a project - it only needs a few key facts, which are defined in the Observer
+data structure.  These facts come from two sources:
+   1. DSS Database:
+      * observer sancioned flag 
+      * observer black out dates
+   2. BOS web service:
+      * observer on site dates (GB reservation date)
+
+TBF: currently no observer black out date tables
+TBF: We currently cannot link info in the DSS database to the id's used in the
+BOS web services to retrieve reservation dates.
+
+> getProjectObservers :: Int -> Connection -> IO [Observer]
+> getProjectObservers projId cnn = handleSqlError $ do
+>     -- 0. TBF: get the usernames (or other ID?) associated with this project
+>     -- 1. Use these to lookup the needed info from the BOS web service.
+>     -- obs <- getReservationInfo obs'
+>     -- 1. Use these to lookup the needed info from the DSS database
+>     -- obs' <- get
+>     -- return obs
+>     return []
+
+> setProjectObservers :: Project -> [Observer] -> Project
+> setProjectObservers proj obs = proj { observers = obs }
+
 
 TBF: Let's say it again.  This is only for scheduling 09B.  Then we'll
 want to ditch this, and get the observer blackouts.
@@ -98,10 +131,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.project_id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.project_id = ?"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -119,6 +152,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , authorized = fromSql a
 >           , backup = fromSql b
 >           , band = deriveBand $ fromSql freq
+>           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
 >        -- TBF: need to cover any other types?

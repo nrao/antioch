@@ -5,12 +5,14 @@
 > import qualified Antioch.DSSDataTests as DSSDataT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
 > import qualified Antioch.ReportsTests as ReportT
+> import qualified Antioch.ReservationsTests as ReservationsT
 > import qualified Antioch.ScoreTests as ScoreT
 > import qualified Antioch.SLAlibTests as SLAlibT
 > import qualified Antioch.StatisticsTests as StatsT
 > import qualified Antioch.SimulationTests as SimsT
 > import qualified Antioch.Schedule.PackTests as PackT
 > import qualified Antioch.Schedule.ScheduleTests as ScheduleT
+> import qualified Antioch.TimeAccountingTests as TimeAccountingT
 > import qualified Antioch.UtilitiesTests as UtilitiesT
 > import qualified Antioch.WeatherTests as WeatherT
 > import Test.HUnit
@@ -25,8 +27,10 @@
 >   , StatsT.tests
 >   , PackT.tests
 >   , ReportT.tests
+>   , ReservationsT.tests
 >   , ScheduleT.tests
 >   , SimsT.tests
+>   , TimeAccountingT.tests
 >   , UtilitiesT.tests
 >   , WeatherT.tests
 >   ]

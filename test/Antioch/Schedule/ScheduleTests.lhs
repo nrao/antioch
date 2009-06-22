@@ -20,6 +20,7 @@
 >   , test_schedMinDuration
 >   , test_schedMinDuration_starvation
 >   , test_disobeyLSTExclusion
+>   , test_disobeySessionAlloted
 >   , test_disobeyTimeBetween
 >   ]
 
@@ -216,15 +217,23 @@ TBF: this is not passing - but was it meant to copy a python test?
 >   assertEqual "test_disobeyLSTExclusion_3" False $ disobeyLSTExclusion' p1  
 >   assertEqual "test_disobeyLSTExclusion_4" True $ disobeyLSTExclusion' p2  
 >   assertEqual "test_disobeyLSTExclusion_5" True $ disobeyLSTExclusion' p3  
+>   assertEqual "test_disobeyLSTExclusion_6" False $ anyOverlappingLSTs (dt4, dt5) [lstRange2]  
+>   assertEqual "test_disobeyLSTExclusion_7" False $ anyOverlappingLSTs (dt6, dt7) [lstRange3]  
 >     where
 >       dt1 = fromGregorian 2009 6 5 17 0 0
 >       dt2 = fromGregorian 2009 6 5 17 3 0
 >       dt3 = fromGregorian 2009 6 3 2 0 0
+>       dt4 = fromGregorian 2006 3 24 19 45 0 
+>       dt5 = fromGregorian 2006 3 24 21 30 0 
+>       dt6 = fromGregorian 2006 3 28 17 0  0 
+>       dt7 = fromGregorian 2006 3 28 21 15 0 
 >       lst1 = utc2lstHours dt1
 >       lst2 = utc2lstHours dt2
 >       badLSTrange = (lst1 - 1.0, lst2 + 1.0)
 >       safeLSTrange = (lst2 - 1.0, lst2 - 0.1)
 >       lstRange = (15.0, 21.0)
+>       lstRange2 = (4.5722694,9.58269)
+>       lstRange3 = (4.4721766,8.396873)
 >       reverseLSTRange = (14.0, 9.0)
 >       s1 = defaultSession { lstExclude = [lstRange] }
 >       p1 = defaultPeriod { session = s1, startTime = dt1, duration = 180 }
@@ -269,29 +278,33 @@ TBF: this is not passing - but was it meant to copy a python test?
 
 > test_disobeySessionAlloted = TestCase $ do
 >   assertEqual "test_disobeySAlloted_1" 0 $ length . disobeySessionAlloted $ []
->   assertEqual "test_disobeySAlloted_2" 0 $ length . disobeySessionAlloted $ ps1 
->   assertEqual "test_disobeySAlloted_3" 0 $ length . disobeySessionAlloted $ ps2 
->   print $ sAvail s3 "06B"
->   print $ sAvail (session . head $ ps3) "06B"
->   assertEqual "test_disobeySAlloted_4" [s3] $ disobeySessionAlloted $ ps3 
+>   assertEqual "test_disobeySAlloted_2" 0 $ length . disobeySessionAlloted $ periods s1 
+>   assertEqual "test_disobeySAlloted_3" 0 $ length . disobeySessionAlloted $ periods s2 
+>   assertEqual "test_disobeySAlloted_4" [s3] $ disobeySessionAlloted $ periods s3 
 >     where
->       -- plenty of time
->       s1' = defaultSession { sAlloted = 2*60 }
->       dt1 = fromGregorian 2006 1 1 0 0 0
->       p1 = mkPeriod s1' dt1 
+>       proj = defaultProject { pAlloted = 2*60 }   -- 0
+>       sess = defaultSession { sAlloted = 2*60, project = proj }
 >       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, duration = 60 }
+>       dt1 = fromGregorian 2006 1 1 3 0 0
+>       sem = dt2semester dt1
+>         -- plenty of time
+>       p1 = mkPeriod sess dt1 
 >       ps1 = [p1]
->       s1 = makeSession s1' ps1
+>       s1' = makeSession sess ps1 
+>       pr1 = makeProject proj (pAlloted proj) [s1']
+>       s1 = head . sessions $ pr1
 >       -- use up exactly the alloted time
 >       dt2 = fromGregorian 2006 1 1 1 0 0
->       p2 = mkPeriod s1' dt2 
+>       p2 = mkPeriod sess dt2 
 >       ps2 = [p1, p2]
->       s2 = makeSession s1' ps2
->       -- use to much time
+>       s2' = makeSession sess ps2
+>       pr2 = makeProject proj (pAlloted proj) [s2']
+>       s2 = head . sessions $ pr2
+>       -- use too much time
 >       dt3 = fromGregorian 2006 1 1 2 0 0
->       p3 = mkPeriod s1' dt3 
+>       p3 = mkPeriod sess dt3 
 >       ps3 = [p1, p2, p3]
->       s3 = makeSession s1' ps3
->       
->       
->       
+>       s3' = makeSession sess ps3
+>       pr3 = makeProject proj (pAlloted proj) [s3']
+>       s3 = head . sessions $ pr3
+

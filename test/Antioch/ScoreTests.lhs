@@ -29,12 +29,14 @@ codes weather server used for unit tests (TWeather).
 >   , test_hourAngleLimit
 >   , test_kineticTemperature
 >   , test_kineticTemperature2
+>   , test_lstExcepted
 >   , test_minObservingEff
 >   , test_minimumObservingConditions
 >   , test_minTsysPrime
 >   , test_needsLowRFI
 >   , test_obsAvailable
 >   , test_observerAvailable
+>   , test_observerOnSite
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
@@ -42,6 +44,8 @@ codes weather server used for unit tests (TWeather).
 >   , test_projectAvailable
 >   , test_projectCompletion
 >   , test_receiver
+>   , test_receiverBoost
+>   , test_receiverBoost2
 >   , test_receiverTemperature
 >   , test_rightAscensionPressure
 >   , test_initBins
@@ -680,15 +684,19 @@ Look at the scores over a range where none are zero.
 >   assertEqual "test_lstExcpeted_5" 1.0 (eval fs)
 >   assertEqual "test_lstExpected_6" True  (checkLst dt $ lstExclude sExclude1) 
 >   assertEqual "test_lstExpected_7" False (checkLst dt $ lstExclude sExclude2) 
+>   fs <- runScoring w [] (lstExcepted dt2 sExclude3)
+>   assertEqual "test_lstExcpeted_8" 0.0 (eval fs)
 >     where
 >       dtClear   = fromGregorian 2008 1 1 15 0 0  
 >       lstClear  = utc2lstHours dtClear 
 >       dtNotClear= fromGregorian 2008 1 1 14 0 0  
 >       lstNotClear  = utc2lstHours dtNotClear 
 >       dt        = fromGregorian 2008 1 1 10 0 0  
+>       dt2       = fromGregorian 2006 3 28 21 30  0
 >       sAnyTime = findPSessionByName "CV"
 >       sExclude1 = sAnyTime { lstExclude = [(12.0, 16.0)] }
 >       sExclude2 = sAnyTime { lstExclude = [(16.0, 12.0)] }
+>       sExclude3 = sAnyTime { lstExclude = [(4.4721766,8.396873)] }
 
 > test_enoughTimeBetween = TestCase $ do
 >   assertEqual "test_enoughTimeBetween_1" True r1
@@ -746,6 +754,88 @@ Look at the scores over a range where none are zero.
 >                                     , startTime = dt
 >                                     , duration = 60 }
 >       
+
+TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
+
+> test_receiverBoost = TestCase $ do
+>   assertEqual "test_receiverBoost_1"  False (receiverBoost' s1)
+>   assertEqual "test_receiverBoost_2"  False (receiverBoost' s2)
+>   assertEqual "test_receiverBoost_3"  False (receiverBoost' s3)
+>   assertEqual "test_receiverBoost_4"  False (receiverBoost' s4)
+>   assertEqual "test_receiverBoost_5"  True  (receiverBoost' s5)
+>   assertEqual "test_receiverBoost_6"  False (receiverBoost' s6)
+>   assertEqual "test_receiverBoost_7"  True  (receiverBoost' s7)
+>   assertEqual "test_receiverBoost_8"  False (receiverBoost' s8)
+>   assertEqual "test_receiverBoost_9"  False (receiverBoost' s9)
+>   assertEqual "test_receiverBoost_10" False (receiverBoost' s10)
+>     where
+>       boost = Rcvr_1070
+>       s = defaultSession { grade = GradeA }
+>       -- just L band
+>       s1 = s { receivers = [[Rcvr1_2]] }
+>       -- L or S
+>       s2 = s { receivers = [[Rcvr1_2, Rcvr2_3]] }
+>       -- L and S
+>       s3 = s { receivers = [[Rcvr1_2], [Rcvr2_3]] }
+>       -- L or (S and C)
+>       s4 = s { receivers = [[Rcvr1_2,Rcvr4_6], [Rcvr1_2,Rcvr2_3]] }
+>       -- now start including the boosted rcvr
+>       s5 = s { receivers = [[boost]] }
+>       -- L or boost 
+>       s6 = s { receivers = [[Rcvr1_2, boost]] }
+>       -- L and boost
+>       s7 = s { receivers = [[Rcvr1_2], [boost]] }
+>       -- boost or (S and C)
+>       s8 = s { receivers = [[boost,Rcvr4_6], [boost,Rcvr2_3]] }
+>       -- L or (boost and C)
+>       s9 = s { receivers = [[Rcvr1_2,boost], [Rcvr1_2,Rcvr2_3]] }
+>       -- Grade B's don't get the boost
+>       s10 = defaultSession { receivers = [[boost]], grade = GradeB }
+
+> test_receiverBoost2 = TestCase $ do
+>   assertEqual "test_receiverBoost2_1"  False (receiverBoost' s1)
+>   assertEqual "test_receiverBoost2_2"  False (receiverBoost' s2)
+>   assertEqual "test_receiverBoost2_3"  False (receiverBoost' s3)
+>   assertEqual "test_receiverBoost2_4"  True  (receiverBoost' s4)
+>   assertEqual "test_receiverBoost2_5"  True  (receiverBoost' s5)
+>   assertEqual "test_receiverBoost2_6"  False (receiverBoost' s6)
+>     where
+>       b1 = Rcvr_1070
+>       b2 = Rcvr_450
+>       s = defaultSession { grade = GradeA }
+>       -- just L band
+>       s1 = s { receivers = [[Rcvr1_2]] }
+>       -- L or S
+>       s2 = s { receivers = [[Rcvr1_2, Rcvr2_3]] }
+>       -- L or boost
+>       s3 = s { receivers = [[Rcvr1_2, b1]] }
+>       -- boost 1 or 2
+>       s4 = s { receivers = [[b1, b2]] }
+>       -- boost 1 and 2
+>       s5 = s { receivers = [[b1], [b2]] }
+>       -- L or (boost 1 and 2)
+>       s6 = s { receivers = [[Rcvr1_2, b1], [Rcvr1_2, b2]] }
+
+> test_observerOnSite = TestCase $ do
+>   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
+>   assertEqual "test_observerOnSite_2" False (obsOnSite dt2 s1)
+>   assertEqual "test_observerOnSite_3" False (obsOnSite dt3 s1)
+>   assertEqual "test_observerOnSite_4" True  (obsOnSite dt  s2)
+>   assertEqual "test_observerOnSite_5" False (obsOnSite dt2 s2)
+>   assertEqual "test_observerOnSite_6" True  (obsOnSite dt3 s2)
+>     where
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       rs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       o   = defaultObserver
+>       o2  = defaultObserver { reservations = rs }
+>       pr1 = defaultProject { observers = [o,o2] }
+>       s1  = defaultSession { project = pr1 }
+>       rs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       o3  = defaultObserver { reservations = rs2 }
+>       pr2 = defaultProject { observers = [o2, o3] }
+>       s2  = defaultSession { project = pr2 }
 
 Test utilities
 

@@ -378,7 +378,20 @@ Returns list of receivers that will be up at the given time.
 
 More Scoring Factors not covered in Memo 5.2
 
+Is there an observer on site for this time and session?
+Important, because on site observers get a boost.
+
+> observerOnSite :: ScoreFunc
+> observerOnSite dt s = factor "observerOnSite" . Just $ if (obsOnSite dt s) then 1.5 else 1.0
+
+> obsOnSite :: DateTime -> Session -> Bool
+> obsOnSite dt s = any (==True) $ map (isOnSite dt) (obs s)
+>   where 
+>     obs s = observers . project $ s
+>     isOnSite dt o = any (==True) $ map (inDateRange dt) (reservations o) 
+
 Is there an observer available for this time and session?
+TBF: should we be taking observer.scanioned and on site into account?
 
 > observerAvailable :: ScoreFunc
 > observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
@@ -460,6 +473,21 @@ future as well.
 >   where
 >     absoluteTimeDiff dt1 dt2 = abs $ diffMinutes dt1 dt2
 >     times s = concatMap (\p -> [startTime p, endTime p]) $ periods s
+
+Some receivers are up for a limited time only.  Sessions that need these
+types of receivers and have an A grade will get a boost so that they
+have a better chance of being scheduled while the receiver is available.
+
+> receiverBoost :: ScoreFunc
+> receiverBoost _ s = factor "receiverBoost" . Just $ if receiverBoost' s then 1.05 else 1.0
+
+> receiverBoost' :: Session -> Bool
+> receiverBoost' s | (grade s) /= GradeA = False
+>                  | otherwise            =
+>   any (==True) $ map (\rg -> all (==True) $ map (\r -> elem r boostRcvrs) rg) rgs
+>   where
+>     rgs = receivers s
+>     boostRcvrs = [Rcvr_1070, Rcvr_342, Rcvr_450, Rcvr_800] --TBF: may change 
 
 Scoring utilities
 
@@ -657,6 +685,7 @@ Need to translate a session's factors into the final product score.
 >       , atmosphericStabilityLimit
 >       , receiver
 >       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
+>       , observerOnSite
 >       , needsLowRFI
 >       , lstExcepted
 >       , enoughTimeBetween

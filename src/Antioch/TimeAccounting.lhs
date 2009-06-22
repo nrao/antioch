@@ -20,7 +20,28 @@ But the devil is in the details.  Like:
 
    * What Else???
 
-TBF: these naming conventions suck.  Need to rename them ...
+The requirements below for project completion are drawn from Project Note 11.3.
+A project is considered closed within the DSS when any of:
+   1. the total amount of time allotted for that project has been billed (less than 15 minutes remains),
+   2. the project is marked as closed by a project investigator or the GBT telescope scheduler,
+
+> pComplete :: Project -> Bool
+> pComplete p = (pClosed p) || ((pAvailTotal p) <= quarter )
+> -- NOTE: project completeness is NOT dependent on session completeness:
+> --  where
+> --    allSessClosed p = all (==True) $ map sClosed $ sessions p
+
+How much time has this session used up in periods?
+The requirements below for session completion are drawn from Project Note 11.3.
+A session is considered closed within the DSS when any of:
+   1. the total amount of time allotted for that session has been billed (less than 15 minutes remains),
+   2. the session is marked as closed by a project investigator or the GBT telescope scheduler, or
+   3. the project to which it belongs is closed.
+
+> sComplete :: Session -> Bool
+> sComplete s = (sClosed s) || (pClosed . project $ s) || ((sAvailTotal s) <= quarter )
+
+How much time has this session used up in periods?
 
 > sUsed :: Session -> Minutes
 > sUsed = sum . map duration . periods
@@ -49,10 +70,10 @@ the time it has already used up.  But for large projects, it may be allowed
 only a certain amount of time per semester.
 
 > pAvail :: Project -> String -> Minutes
-> pAvail p sem = min ((pAlloted p) - (pUsed p)) (pAvailBySemester p sem)
+> pAvail p sem = min (pAvailTotal p) (pSemesterRemainingTime p sem)
 
-> pAvailBySemester :: Project -> String -> Minutes
-> pAvailBySemester p sem = (maxSemesterTime p) - (pUsedBySemester p sem)
+> pSemesterRemainingTime :: Project -> String -> Minutes
+> pSemesterRemainingTime p sem = (maxSemesterTime p) - (pUsedBySemester p sem)
 
 > pUsedBySemester :: Project -> String -> Minutes
 > pUsedBySemester p sem = sum $ map (sUsedBySemester sem) $ sessions p
