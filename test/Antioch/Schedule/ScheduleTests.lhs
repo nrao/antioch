@@ -22,6 +22,7 @@
 >   , test_disobeyLSTExclusion
 >   , test_disobeySessionAlloted
 >   , test_disobeyTimeBetween
+>   , test_disobeyTransit
 >   ]
 
 > test_obeyProjectBlackouts = TestCase $ do
@@ -241,6 +242,40 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       p2 = defaultPeriod { session = s2, startTime = dt1, duration = 180 }
 >       s3 = defaultSession { lstExclude = [reverseLSTRange] }
 >       p3 = defaultPeriod { session = s3, startTime = dt3, duration = 120 }
+
+> test_disobeyTransit = TestCase $ do
+>   {-
+>   print "p7:"
+>   let transit = rad2hrs . ra . session $ p7
+>   let startLst = utc2lstHours . startTime $ p7
+>   let endLst = utc2lstHours . periodEndTime $ p7
+>   print startLst
+>   print transit
+>   print endLst
+>   -}
+>   assertEqual "test_disobeyTransit_1" False $ disobeyTransit' p1  
+>   assertEqual "test_disobeyTransit_2" True  $ disobeyTransit' p2  
+>   assertEqual "test_disobeyTransit_3" False $ disobeyTransit' p3  
+>   assertEqual "test_disobeyTransit_4" True  $ disobeyTransit' p4  
+>   assertEqual "test_disobeyTransit_5" False $ disobeyTransit' p5  
+>   assertEqual "test_disobeyTransit_6" True  $ disobeyTransit' p6  
+>   assertEqual "test_disobeyTransit_7" True  $ disobeyTransit' p7  
+>     where
+>       dt1 = fromGregorian 2009 6 5 17 0 0
+>       dt2 = fromGregorian 2009 6 6  8 30 0
+>       dt3 = fromGregorian 2006 2 4  0 30 0 
+>       dt4 = fromGregorian 2006 2 20 3 30 0 
+>       p1 = defaultPeriod -- session: transit == Optional
+>       s1 = defaultSession { ra = 3.14, transit = Partial }
+>       p2 = p1 { session = s1, startTime = dt1, duration = 2 *60 } 
+>       p3 = p1 { session = s1, startTime = dt1, duration = 12*60 } 
+>       p4 = p1 { session = s1, startTime = dt2, duration = 12*60 } 
+>       p5 = p1 { session = s1, startTime = dt2, duration = 20*60 } 
+>       s2 = defaultSession { ra = 0.8807137, transit = Partial }
+>       p6 = p1 { session = s2, startTime = dt3, duration = 2 *60 } 
+>       s3 = defaultSession { ra = 1.6393563 , transit = Partial }
+>       p7 = p1 { session = s3, startTime = dt4, duration = 3 *60 } 
+
 
 > test_disobeyTimeBetween = TestCase $ do
 >   assertEqual "test_disobeyTimeBetween_1" 0 $ length . disobeyTimeBetween $ []

@@ -165,6 +165,7 @@ TBF: failing after n tests!
 >      validSchdPositions ps sched &&
 >      disobeySessionAlloted sched == [] &&
 >      disobeyProjectAlloted sched == [] &&
+>      disobeyTransit sched == [] &&
 >      disobeyTimeBetween sched == []
 
 Same as above, but now insert some pre-schedule periods into the problem.
@@ -385,6 +386,25 @@ Note: must take into account LST exlusion ranges given in reverse (ex: (16, 12))
 >     lstExs' = concatMap inverseRange lstExs
 >     inverseRange rng = if ((fst rng) <= (snd rng)) then [rng] else [(0.0, snd rng), (fst rng, 24.0)]
 >     overlap x y = (fst x) < (snd y) && (fst y) < (snd x)
+
+> disobeyTransit :: [Period] -> [Period]
+> disobeyTransit ps = filter disobeyTransit' ps
+
+> disobeyTransit' :: Period -> Bool
+> disobeyTransit' p = if ((transit . session $ p) == Optional) then False else ( not $ transitWithinLstRange p)
+
+Checks that the transit is between the lsts observed by this period.  Deals
+with wrap around (ex: 23 to 2 Hours) by converting it to two ranges (ex:
+[(0,2), (23, 24)]).
+
+> transitWithinLstRange p = any (==True) $ checkTransit p
+>   where
+>     checkTransit p = map checkTransit' $ unwrap (lstStart, lstEnd)
+>     checkTransit' rng = (fst rng) <= transit && transit < (snd rng)
+>     unwrap rng = if ((fst rng) <= (snd rng)) then [rng] else [(0.0, snd rng), (fst rng, 24.0)]
+>     transit = rad2hrs . ra . session $ p
+>     lstStart = utc2lstHours . startTime $ p
+>     lstEnd = utc2lstHours . periodEndTime $ p
 
 > disobeyRcvrSchedule :: ReceiverSchedule -> [Period] -> [Period]
 > disobeyRcvrSchedule rs ps = if rs == [] then [] else filter (disobeyRcvrSchedule' rs) ps

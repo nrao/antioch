@@ -654,7 +654,7 @@ be confused and raise false alarams.
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> [Period] -> String
 > reportScheduleChecks ss ps gaps history =
->     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, sTime, pTime, tb, blackouts, scores, gs, ras, decs, elevs, rfiFlag, lstEx]
+>     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, sTime, pTime, tb, blackouts, scores, gs, ras, decs, elevs, rfiFlag, lstEx, trans]
 >   where
 >     heading = "Schedule Checks: \n"
 >     error = "WARNING: "
@@ -672,6 +672,7 @@ be confused and raise false alarams.
 >     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
 >     rfiFlag = if (disobeyLowRFI ps) == [] then "Low RFI Flags Honored\n" else error ++ "Low RFI Flags NOT Honored: "++ (show . disobeyLowRFI $ ps) ++"\n"
 >     lstEx = if (disobeyLSTExclusion ps) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
+>     trans = if (disobeyTransit psOpen) == [] then "Transit Flags Honored\n" else error ++ "Transit Flags NOT Honored: " ++ (show . disobeyTransit $ psOpen) ++ "\n"
 >     psOpen = filter (\p -> (sType . session $ p) == Open) ps
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 

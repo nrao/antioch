@@ -149,6 +149,11 @@ Only 20 percent of the low freq. sessions are backups
 > genLowRFIFlag :: Gen Bool
 > genLowRFIFlag = T.frequency [(85, return False), (15, return True)]
 
+> genTransitFlag :: Gen TransitType
+> genTransitFlag = T.frequency [(70, return Optional)
+>                             , (15, return Partial)
+>                             , (15, return Center)]
+
 > genLSTExclusion :: Gen [(Float, Float)]
 > genLSTExclusion = T.frequency [(80, return []), (20, lsts)]
 >   where
@@ -176,6 +181,7 @@ Only 20 percent of the low freq. sessions are backups
 >     tb         <- genTimeBetween
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
+>     trans      <- genTransitFlag
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []
@@ -191,6 +197,7 @@ Only 20 percent of the low freq. sessions are backups
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
 >                , lowRFI         = lowRFIFlag
+>                , transit        = trans
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
