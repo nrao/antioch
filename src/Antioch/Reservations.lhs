@@ -21,6 +21,7 @@ There are currently three types of BOS web service avaialable for res. info:
    3. Input : ([bos id #], sdate - edate) -> Output : (res id #, bos id #, sdate - edate)
 
 This method uses service #1 described above.
+TBF: this won't work until we can stop BOS from redirecting us.
 
 > getObserverResDates :: Int -> IO [DateRange]
 > getObserverResDates bosId = do
@@ -38,15 +39,33 @@ This method constructs the URL for service #1 described above.
 >     urlRoot = "https://bos.nrao.edu/resReports/reservationsByPerson/"
 
 This method parses the results from the service #1 described above.
-TBF: need to understand and comment the below code.
 
-> parseResDatesXML :: String -> String -> [DateRange]
-> parseResDatesXML content name = [(start, end)]
+> parseResDatesXML:: String -> String -> [DateRange]
+> parseResDatesXML content name = map toDateRange $ map toDateContents $ reservation doc
 >   where
->     start = strToDateTime . getStart $ doc
->     end = strToDateTime . getEnd $ doc
 >     parseResult = xmlParse name content
 >     doc = getContent parseResult
+
+This returns a Content for each reservation the user has.
+
+> reservations :: CFilter
+> reservations doc = tag "nrao:user" /> tag "nrao:reservation" $ doc
+
+For each reservation, get the Content containing the start & end dates.
+
+> toDateContents :: Content -> ([Content], [Content])
+> toDateContents res = ((getDate "nrao:startDate" res), (getDate "nrao:endDate" res))
+
+> getDate :: String -> Content -> [Content]
+> getDate tagName res = keep /> tag tagName /> txt $ res
+
+Convert the Content representing the date range, first to strings, 
+then to DateTime's.
+
+> toDateRange :: ([Content], [Content]) -> DateRange
+> toDateRange c = (toDt . fst $ c, toDt . snd $ c)
+>   where
+>     toDt c' = strToDateTime . contentToString $ c'
 
 Assumes format of YYYY-MM-DD
 
@@ -56,12 +75,6 @@ Assumes format of YYYY-MM-DD
 >     year  = read (take 4 dtStr) :: Int
 >     month = read (drop 5 $ take 7  dtStr) :: Int
 >     day   = read (drop 8 $ take 10 dtStr) :: Int
-
-> getStart :: Content -> String
-> getStart doc = contentToStringDefault "2000-01-01" (reservation /> tag "nrao:startDate" /> txt $ doc)
-
-> getEnd :: Content -> String
-> getEnd doc = contentToStringDefault "2020-01-01" (reservation /> tag "nrao:endDate" /> txt $ doc)
 
 > contentToStringDefault :: String -> [Content] -> String
 > contentToStringDefault msg [] = msg
