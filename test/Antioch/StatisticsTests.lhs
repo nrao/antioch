@@ -13,10 +13,8 @@
 > import System.Random
 
 > tests = TestList [
->     test_breakdownSimulationTimes
+>     test_scheduleHonorsFixed
 >   , test_count
->   , test_findScheduleGaps
->   , test_getOriginalSchedule'
 >   , test_sessionDecFreq
 >   , test_periodDecFreq
 >   , test_sessionDecRA
@@ -26,14 +24,16 @@
 >   , test_sessionDec
 >   , test_periodDec
 >   , test_sessionFreq
+>   , test_sessionFreq2
+>   , test_sessionFreqHrs
 >   , test_periodFreq
->   , test_sessionMinDuration
 >   , test_sessionTP
 >   , test_sessionTP2
 >   , test_sessionTPQtrs
+>   , test_periodDuration
+>   , test_sessionMinDuration
 >   , test_freqTime
 >   , test_periodBand
->   , test_periodDuration
 >   , test_periodEfficiencyByBand
 >   , test_decVsElevation
 >   , test_efficiencyVsFrequency
@@ -44,8 +44,10 @@
 >   , test_historicalTime'
 >   , test_historicalLST
 >   , test_satisfactionRatio
->   , test_scheduleHonorsFixed
->     ]
+>   , test_findScheduleGaps
+>   , test_getOriginalSchedule'
+>   , test_breakdownSimulationTimes
+>    ]
 
 > test_scheduleHonorsFixed = TestCase $ do
 >     assertEqual "StatisticsTests_test_scheduleHonorsFixed_1" True (scheduleHonorsFixed fixed1 schd)

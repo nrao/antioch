@@ -17,6 +17,7 @@
 >    , test_sim_pack
 >    , test_sim_pack_starvation
 >    , test_sim_pack_starvation2
+>    -- , test_sim_pack_around_history
 >    , test_sim_schd_pack
 >    , test_sim_schd_pack_around_history
 >    , test_sim_schd_pack_exhaustive_history
