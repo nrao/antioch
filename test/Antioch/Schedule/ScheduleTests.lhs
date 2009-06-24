@@ -16,6 +16,7 @@
 > tests = TestList [
 >     test_best
 >   , test_constrain
+>   -- , test_schedule_open
 >   , test_obeyProjectBlackouts
 >   , test_schedMinDuration
 >   , test_schedMinDuration_starvation

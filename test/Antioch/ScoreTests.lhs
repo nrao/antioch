@@ -20,48 +20,51 @@ The reason why this branch should be used is that a bug was found in this
 codes weather server used for unit tests (TWeather).  
 
 > tests = TestList [
->     test_averageScore
->   , test_averageScore2
->   , test_efficiency
->   , test_enoughTimeBetween
+>     test_hourAngleLimit
 >   , test_frequencyPressure
->   , test_getReceivers
->   , test_hourAngleLimit
->   , test_kineticTemperature
->   , test_kineticTemperature2
->   , test_lstExcepted
->   , test_minObservingEff
->   , test_minimumObservingConditions
->   , test_minTsysPrime
->   , test_needsLowRFI
->   , test_obsAvailable
->   , test_observerAvailable
->   , test_observerOnSite
->   , test_observingEfficiency
->   , test_observingEfficiency2
->   , test_observingEfficiencyLimit
->   , test_politicalFactors
->   , test_projectAvailable
->   , test_projectCompletion
->   , test_receiver
->   , test_receiverBoost
->   , test_receiverBoost2
->   , test_receiverTemperature
+>   , test_frequencyPressureComparison
 >   , test_rightAscensionPressure
 >   , test_initBins
->   , test_score
->   , test_scoreCV
->   , test_scoreCV2
->   , test_stringency
->   , test_surfaceObservingEfficiency
->   , test_trackingEfficiency
->   , test_trackingErrorLimit
+>   , test_receiver
+>   , test_getReceivers
 >   , test_zenithAngle
 >   , test_zenithAngle2
 >   , test_zenithAngleAtTransit
->   , test_zenithAngleLimit
+>   , test_minTsysPrime
+>   , test_minimumObservingConditions
+>   , test_observingEfficiency
+>   , test_observingEfficiency2
+>   , test_observingEfficiencyLimit
+>   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
+>   , test_receiverTemperature
+>   , test_minObservingEff
+>   , test_kineticTemperature
+>   , test_kineticTemperature2
+>   , test_stringency
+>   , test_projectCompletion
+>   , test_politicalFactors
+>   , test_trackingEfficiency
+>   , test_trackingErrorLimit
+>   , test_zenithAngleLimit
+>   , test_surfaceObservingEfficiency
+>   , test_scoreCV
+>   , test_scoreCV2
+>   , test_avgScoreForTime
+>   , test_avgScoreForTime2
+>   , test_score
+>   , test_averageScore
+>   , test_averageScore2
+>   , test_projectAvailable
+>   , test_obsAvailable
+>   , test_observerAvailable
+>   , test_needsLowRFI
+>   , test_lstExcepted
+>   , test_enoughTimeBetween
+>   , test_receiverBoost
+>   , test_receiverBoost2
+>   , test_observerOnSite
 >   ]
 
 > benchmark = do

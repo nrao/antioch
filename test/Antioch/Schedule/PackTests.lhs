@@ -24,6 +24,8 @@
 >   -- , test_Unwind4 -- TBF: scoring pre-scheduled periods wrong!
 >   , test_candidates1
 >   , test_candidates2
+>   , test_candidates3
+>   , test_candidates4
 >   , test_Candidates1
 >   , test_Candidates2
 >   , test_Best
@@ -49,6 +51,7 @@
 >   , test_Pack1
 >   , test_PackTransit1
 >   , test_PackTransit2
+>   , test_PackBt
 >   , test_Pack2
 >   , test_Pack3
 >   , test_Pack4
@@ -77,6 +80,7 @@
 >   , test_RandomScore2
 >   , test_restoreBnd
 >   , test_TestPack_pack1
+>   , test_TestPack_pack1withHistory
 >   , test_TestPack_pack2
 >   , test_TestPack_pack3
 >   , test_TestPack_pack8
@@ -84,6 +88,8 @@
 >   , test_ToItem
 >   , test_ToItem2
 >   , test_deriveTransits
+>   , test_restoreFixedScore_replace
+>   , test_restoreFixedScore_not_replace
 >   , test_ToPeriod
 >   , test_ToSchedule
 >   , test_ToSchedule2

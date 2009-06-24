@@ -20,11 +20,12 @@ TBF: tests hang when all are run togethor - I don't think I'm handling the
 connection to the DB correctly.
 
 > tests = TestList [
->       --test_fetchPeriods
+>     --test_fetchPeriods
 >       test_getProjects
+>     -- , test_numPeriods
 >     , test_getProjectData
 >     , test_getProjectsProperties
->     --, test_putPeriods
+>     -- , test_putPeriods
 >     , test_scoreDSSData
 >     , test_session2
 >     , test_session_scores
