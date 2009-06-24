@@ -8,7 +8,8 @@
 > import Antioch.Schedule
 > import Antioch.Simulate
 > import Antioch.Statistics (scheduleHonorsFixed)
-> import Data.List (zipWith6, sort)
+> import Data.List (zipWith6, sort, find)
+> import Data.Maybe
 > import Test.HUnit
 > import System.Random
 
@@ -19,6 +20,7 @@
 >    , test_sim_pack_starvation2
 >    , test_sim_schd_pack
 >    , test_sim_schd_pack_around_history
+>    , test_sim_pack_completion
 >    , test_sim_schd_pack_exhaustive_history
 >    , test_sim_schedMinDuration
 >    -- test_sim_schedMinDuration_backup TBF: broken
@@ -384,12 +386,12 @@ of pre-scheduled periods (history)
 
 
 > test_sim_timeLeft = TestCase $ do
->   assertEqual "test_timeLeft_1" True  (timeLeft dt1 s1)
->   assertEqual "test_timeLeft_2" True  (timeLeft dt1 s2)
->   assertEqual "test_timeLeft_3" False (timeLeft dt1 s3)
->   assertEqual "test_timeLeft_4" False (timeLeft dt1 s4)
->   assertEqual "test_timeLeft_5" False (timeLeft dt2 s6) -- 09A
->   assertEqual "test_timeLeft_6" True  (timeLeft dt1 s6) -- 09B
+>   assertEqual "test_timeLeft_1" True  (hasTimeScheduable dt1 s1)
+>   assertEqual "test_timeLeft_2" True  (hasTimeScheduable dt1 s2)
+>   assertEqual "test_timeLeft_3" False (hasTimeScheduable dt1 s3)
+>   assertEqual "test_timeLeft_4" False (hasTimeScheduable dt1 s4)
+>   assertEqual "test_timeLeft_5" False (hasTimeScheduable dt2 s6) -- 09A
+>   assertEqual "test_timeLeft_6" True  (hasTimeScheduable dt1 s6) -- 09B
 >     where
 >       -- vanilla test
 >       dt1 = fromGregorian 2009 6 2 0 0 0 -- 09B
@@ -427,7 +429,52 @@ of pre-scheduled periods (history)
 >       s6 = last . sessions $ proj3
 
 
+> test_sim_pack_completion = TestCase $ do
+>   w <- getWeather $ Just dt
+>   (r, t) <- simulateScheduling Pack w [] dt dur int [] [] ss1
+>   assertEqual "test_sim_pack_completion_1" True  (hasSessions r ss1)
+>   (r, t) <- simulateScheduling Pack w [] dt dur int [] [] ss2
+>   assertEqual "test_sim_pack_completion_2" True  (hasSessions r (drop 1 ss2))
+>   assertEqual "test_sim_pack_completion_3" True  (doesNotHave r (take 1 ss2))
+>   (r, t) <- simulateScheduling Pack w [] dt dur int [] [] ss3
+>   assertEqual "test_sim_pack_completion_4" True  (hasSessions r (drop 2 ss2))
+>   assertEqual "test_sim_pack_completion_5" True  (doesNotHave r (take 2 ss2))
+>   (r2, t) <- simulateScheduling Pack w [] dt dur int [] [] ss4
+>   assertEqual "test_sim_pack_completion_6" True  (length r2 == 0)
+>     where
+>       hasSessions ps ss = all (\x -> isJust x == True) $ map (\s -> find (==s) $ map session ps) ss 
+>       doesNotHave ps ss = all (\x -> isNothing x == True) $ map (\s -> find (==s) $ map session ps) ss 
+>       dt = fromGregorian 2006 1 1 0 0 0
+>       dur = 24 * 60
+>       int = 12 * 60
+>       dt1 = fromGregorian 2005 1 1 0 0 0
+>       -- setup a project with sessions - no used time
+>       pr = defaultProject { pAlloted = 10 * 60 }
+>       s = defaultSession { sAlloted = 5 * 60
+>                          , project = pr
+>                          , minDuration = 1 * 60
+>                          , maxDuration = 5 * 60
+>                          }
+>       s1' = s { sId = 0, ra = 0.0 } 
+>       s2' = s { sId = 1, ra = 8.0 }
+>       s3' = s { sId = 2, ra = 16.0 }
+>       pr1 = makeProject pr (pAlloted pr) [s1', s2', s3']
+>       ss1 = sessions pr1
+>       -- now use up the scheduable time of one of them
+>       p1 = defaultPeriod { session = s1', startTime = dt, duration = (4 * 60) + 30 }
+>       s1'' = makeSession s1' [p1] 
+>       pr2 = makeProject pr (pAlloted pr) [s1'', s2', s3']
+>       ss2 = sessions pr2
+>       -- now close one of them
+>       s2'' = s2' { sClosed = True }
+>       pr3 = makeProject pr (pAlloted pr) [s1'', s2'', s3']
+>       ss3 = sessions pr3
+>       -- now close the project
+>       pr4' = pr3 { pClosed = True }
+>       pr4 = makeProject pr4' (pAlloted pr4') [s1'', s2'', s3']
+>       ss4 = sessions pr4
 >       
+>   
 
 Test Utilities:
 
