@@ -40,10 +40,13 @@ Sessions that:
 
 > type SelectionCriteria = DateTime -> Session -> Bool
 
-> timeLeft :: SelectionCriteria
-> timeLeft dt s = (sAvail s sem) >= (minDuration s)
+> hasTimeScheduable :: SelectionCriteria
+> hasTimeScheduable dt s = (sAvail s sem) >= (minDuration s)
 >   where 
 >     sem = dt2semester dt
+
+> isNotComplete :: SelectionCriteria
+> isNotComplete _ s = not . sComplete $ s
 
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open
@@ -106,7 +109,7 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > runSimStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isScheduableSemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, hasTimeScheduable, isNotComplete, isScheduableSemester] sessions
 >   sf <- genScore $ filterSessions dt [isScheduableSemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
@@ -262,7 +265,7 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 > runSimSchedStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, timeLeft, isScheduableSemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, hasTimeScheduable, isNotComplete, isScheduableSemester] sessions
 >   sf <- genScore $ filterSessions dt [isScheduableSemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   return schedPeriods
