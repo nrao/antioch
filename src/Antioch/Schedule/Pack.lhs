@@ -40,7 +40,7 @@ to generate `items` for input to the `packWorker` function.
 >     let dts = quarterDateTimes dt dur
 >     let sched = toSchedule dts . sort $ fixed
 >     items <- mapM (toItem dt dur sf (mask dts sched)) sessions
->     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker dur sched $ items
+>     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker sched $ items
 
 Some things have to be corrected before this 'schedule' can be returned:
    * pre-scheduled Periods on the time boundraries have been cut off
@@ -322,8 +322,8 @@ Given the schedule (showing free and pre-scheduled time slots) and the list
 of sessions to pack (items have scores), returns when the session and pre-
 schedule time slots should occur (a list of *only* candidates)
 
-> packWorker        :: Eq a => Minutes -> [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
-> packWorker dur future items = unwind . packWorker' (numSteps dur) future [Nothing] . map step $ items
+> packWorker :: Eq a => [Maybe (Candidate a)] -> [Item a] -> [Candidate a]
+> packWorker future items = unwind . packWorker' 0 future [Nothing] . map step $ items
 
 Returns a list representing each time slot, with each element either being 
 Nothing or a Candidate.  Note that this list is 'Nothing' terminated.
@@ -344,10 +344,10 @@ Note that cStart in the result is not defined, this occurs in unwind.
 > -- packWorker' dur  future             past sessions
 > packWorker'    _    []                 past _        = past 
 > packWorker'    dur  (Just b  : future) past sessions =
->     packWorker' dur future (Just b:past) $! map (step . forget) sessions
+>     packWorker' (dur + 1) future (Just b:past) $! map (step . forget) sessions
 > packWorker'    dur (Nothing : future) past sessions =
 >     let b = getBest dur past sessions in
->     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' dur future (b:past) $! map step sessions
+>     (if maybe 0.0 cScore b >= 0.0 then True else False) `seq` packWorker' (dur + 1) future (b:past) $! map step sessions
 
 Given the sessions (items) to pack, and the 'past', which is the step n
 in our N step packing algorithm (15 minute steps):

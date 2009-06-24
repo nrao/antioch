@@ -47,7 +47,8 @@
 >   , test_step
 >   , test_Pack_overlapped_fixed
 >   , test_Pack1
->   , test_PackTransit
+>   , test_PackTransit1
+>   , test_PackTransit2
 >   , test_Pack2
 >   , test_Pack3
 >   , test_Pack4
@@ -556,19 +557,19 @@ Test against python unit tests from beta test code:
 >     zs = [Nothing]
 >     ws = map step [item 1 2 4 (replicate 6 1.0) []]
 
-> test_PackWorker1 = TestCase . assertEqual "test_PackWorker1" xs . packWorker 0 ys $ ws
+> test_PackWorker1 = TestCase . assertEqual "test_PackWorker1" xs . packWorker ys $ ws
 >   where
 >     xs = [Candidate 1 0 0 4 4.0]
 >     ys = replicate 4 Nothing  -- nothing prescheduled
 >     ws = [item 1 2 4 (replicate 6 1.0) []] -- scores 1.0 for 6 units
 
-> test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker 0 ys $ ws
+> test_PackWorker2 = TestCase . assertEqual "test_PackWorker2" xs . packWorker ys $ ws
 >   where
 >     xs = [Candidate 1 0 0 3 3.0, Candidate 2 0 3 1 1.0]
 >     ys = replicate 3 Nothing ++ [Just (Candidate 2 0 0 1 4.0)]
 >     ws = [item 1 2 4 (replicate 6 1.0) []]
 
-> test_PackWorker3 = TestCase . assertEqual "test_PackWorker3" xs . packWorker 0 ys $ ws
+> test_PackWorker3 = TestCase . assertEqual "test_PackWorker3" xs . packWorker ys $ ws
 >   where
 >     xs = [Candidate 3 0 0 1 1.1, Candidate 1 0 1 2 1.9999999, Candidate 2 0 3 1 1.0]
 >     ys = [Just (Candidate 3 0 0 1 1.1), Nothing, Nothing, Just (Candidate 2 0 0 1 4.1)]
@@ -590,7 +591,7 @@ attributes of the packing algorithm:
   4. A scheduled session will not include any zero periods.
 
 > test_PackWorker4 =
->     TestCase . assertEqual "test_PackWorker4" result . packWorker 0 fixed $ open
+>     TestCase . assertEqual "test_PackWorker4" result . packWorker fixed $ open
 >   where
 >     result = [ Candidate "A" 0  0 2 2.0 
 >              , Candidate "F1" 0 2 2 0.0 -- unwind mangles this score
@@ -873,13 +874,13 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
 >     expPeriod = Period candidate expStartTime 135 39.949707 undefined False
 
-> test_PackTransit = TestCase $ do
+> test_PackTransit1 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] $ do
 >         fs <- genScore [candidate]
 >         pack fs starttime duration [] [candidate]
->     assertEqual "test_PackTransit_1" 2 (length periods')
->     assertEqual "test_PackTransit_2" expPeriod (head periods')
+>     assertEqual "test_PackTransit1_1" 2 (length periods')
+>     assertEqual "test_PackTransit1_2" expPeriod (head periods')
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 48*60
@@ -893,6 +894,27 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                }
 >     expStartTime = fromGregorian 2006 11 9 6 45 0
 >     expPeriod = Period candidate expStartTime 360 3.2790582 undefined False
+
+> test_PackTransit2 = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     periods' <- runScoring w [] $ do
+>         fs <- genScore [candidate]
+>         pack fs starttime duration [] [candidate]
+>     assertEqual "test_PackTransit2_1" 1 (length periods')
+>     assertEqual "test_PackTransit2_2" expPeriod (head periods')
+>   where
+>     starttime = fromGregorian 2006 2 19 19 0 0
+>     duration = 24*60
+>     candidate = defaultSession { sName = "s3"
+>                                , sAlloted = 24*60
+>                                , minDuration = 2*60
+>                                , maxDuration = 6*60
+>                                , project = testProject
+>                                , ra = 1.6393563
+>                                , transit = Partial
+>                                }
+>     expStartTime = fromGregorian 2006 2 19 21 45 0
+>     expPeriod = Period candidate expStartTime 360 3.1971 undefined False
 
 > test_PackBt = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -978,7 +1000,7 @@ TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
 Build up to this case with the simplest examples possible:
 
 > test_PackWorkerSimple =
->     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker 0 fixed $ open
+>     TestCase . assertEqual "test_PackWorkerSimple" result . packWorker fixed $ open
 >   where
 >     result = [ Candidate "B" 0 0 4 1.0
 >              ]
@@ -1026,7 +1048,7 @@ TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 TBF: Scores not right due to negative score for F1 !!!
 
 > test_PackWorker5 =
->     TestCase . assertEqual "test_PackWorker5" result . packWorker 0 fixed $ open
+>     TestCase . assertEqual "test_PackWorker5" result . packWorker fixed $ open
 >   where
 >     result = [ Candidate "B"  0 0 8 2.2
 >              , Candidate "F1" 0 8 2 0.0 -- bug: -2.2

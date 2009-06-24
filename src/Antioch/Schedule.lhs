@@ -149,9 +149,8 @@ Select the highest scoring element of a list.
 
 QuickCheck Properties:
 
-Make sure that the schedule produced by pack has no conlficts: no overlapping
-periods. 
-TBF: failing after n tests!
+Make sure that the schedule produced by pack has no conlficts: no
+overlapping periods. 
 
 > prop_packValidSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
@@ -165,7 +164,7 @@ TBF: failing after n tests!
 >      validSchdPositions ps sched &&
 >      disobeySessionAlloted sched == [] &&
 >      disobeyProjectAlloted sched == [] &&
->      --disobeyTransit sched == []  && -- TBF: this occansionnaly fails!
+>      disobeyTransit sched == []  &&
 >      disobeyTimeBetween sched == [] -- TBF: also failing!
 
 Same as above, but now insert some pre-schedule periods into the problem.
@@ -397,7 +396,7 @@ Note: must take into account LST exlusion ranges given in reverse (ex: (16, 12))
 > disobeyTransit ps = filter disobeyTransit' ps
 
 > disobeyTransit' :: Period -> Bool
-> disobeyTransit' p = if ((transit . session $ p) == Optional) then False else ( not $ transitWithinLstRange p)
+> disobeyTransit' p = if ((transit . session $ p) == Optional) then False else (not $ transitWithinLstRange p)
 
 Checks that the transit is between the lsts observed by this period.  Deals
 with wrap around (ex: 23 to 2 Hours) by converting it to two ranges (ex:

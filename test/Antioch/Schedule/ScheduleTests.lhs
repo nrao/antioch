@@ -250,7 +250,9 @@ TBF: this is not passing - but was it meant to copy a python test?
 >   let startLst = utc2lstHours . startTime $ p7
 >   let endLst = utc2lstHours . periodEndTime $ p7
 >   print startLst
+>   print (toGregorian . startTime $ p7)
 >   print transit
+>   print (toGregorian . periodEndTime $ p7)
 >   print endLst
 >   -}
 >   assertEqual "test_disobeyTransit_1" False $ disobeyTransit' p1  
