@@ -96,13 +96,14 @@ tested time period
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure rSessions
 >     assertScoringResult "test_frequencyPressure r" Nothing 5 1.6708559 (freqPressure undefined . head $ rSessions)
 
-> -- TBF not in tests list (and fails)??
+Test that a frequency NOT in the initial bins gives a pressure of 1.0
+
 > test_frequencyPressureComparison = TestCase $ do
 >     print pSessions
 >     print "ss:"
 >     print $ head ss
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
->     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
+>     assertScoringResult' "test_frequencyPressure comparison" Nothing 1.0 (freqPressure undefined . head $ ss)
 >   where
 >     ss = concatMap sessions pTestProjects
 
