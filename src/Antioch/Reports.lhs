@@ -614,9 +614,9 @@ be confused and raise false alarams.
 >     endTime p = (duration p) `addMinutes'` (startTime p)
 >     inWindow p = startTime p >= start && endTime p <= end 
 
-> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history = do
->     putStrLn $ report
+> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history quiet = do
+>     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
 >     (year, month, day, hours, minutes, seconds) = toGregorian now
@@ -771,8 +771,8 @@ be confused and raise false alarams.
 >     hdr = "Final Schedule:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
-> generatePlots strategyName outdir sps dt days name simInput = do
+> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
+> generatePlots strategyName outdir sps dt days name simInput quiet = do
 >     w <- getWeather Nothing
 >     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
 >     let history = filterHistory history' dt days 
@@ -798,7 +798,7 @@ be confused and raise false alarams.
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history quiet
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >     -- TBF: Here's what you need to call if you the new TP's should be 
@@ -814,8 +814,8 @@ This is a specialized version of generatePlots.  The main difference is that
 it calls simulateScheduling instead of simulate, and it writes results to 
 the DB.
 
-> generatePlots09B :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> IO ()
-> generatePlots09B strategyName outdir sps dt days name simInput = do
+> generatePlots09B :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
+> generatePlots09B strategyName outdir sps dt days name simInput quiet = do
 >     print $ "Scheduling 09B for " ++ show days ++ " days."
 >     print $ "DON'T FORGET TO FIRST TRUNCATE PERIODS IN DB: " ++ dssDataDB
 >     w <- getWeather Nothing
@@ -836,7 +836,7 @@ the DB.
 >                 , ("srfEff", schdSrfEffs)]
 >     -- text reports 
 >     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history
+>     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >     -- new schedule to DB
@@ -847,13 +847,13 @@ the DB.
 
 Run generic simulations.
 
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True True
 >   where
 >     start      = fromGregorian 2006 2 1 0 0 0
 
 More specialized: Try to schedule 09B.
 
-> sim09B days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False
+> sim09B days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
 >     start      = fromGregorian 2009 6 1 0 0 0
 
