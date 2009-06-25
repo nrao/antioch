@@ -99,9 +99,6 @@ tested time period
 Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
 > test_frequencyPressureComparison = TestCase $ do
->     print pSessions
->     print "ss:"
->     print $ head ss
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 1.0 (freqPressure undefined . head $ ss)
 >   where
