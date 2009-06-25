@@ -491,30 +491,37 @@ have a better chance of being scheduled while the receiver is available.
 
 Scoring utilities
 
-> scoreLocal :: Weather -> ScoreFunc -> Session -> DateTime -> Scoring Score
-> scoreLocal w' sf s dt = local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
+Score the given session at the given time:
+   * using the passed in weather
+   * possibly using measured wind speeds (w2 flag)
+
+> scoreLocal :: Weather -> ScoreFunc -> Session -> DateTime -> Bool -> Scoring Score
+> scoreLocal w' sf s dt w2 = local (\env -> env { envWeather = w', envMeasuredWind = w2}) $ do
 >       fs <- sf dt s
 >       return $ eval fs 
 
-Compute the score for a given session at given time, but replacing weather
+Compute the score for a given session at given time, but:
+   * replacing weather w/ one for the given time
+   * possibly using measured wind speeds (w2 flag)
 
-> scoreForTime  :: ScoreFunc -> DateTime -> Session -> Scoring Score 
-> scoreForTime sf dt s = do
+> scoreForTime  :: ScoreFunc -> DateTime -> Bool -> Session -> Scoring Score 
+> scoreForTime sf dt w2 s = do
 >     w  <- weather
 >     w' <- liftIO $ newWeather w (Just dt)
->     scoreLocal w' sf s dt
+>     scoreLocal w' sf s dt w2
 
 Compute the average score for a given session over an interval:
    * modfiy the weather to start at the time given
+   * use measured wind speeds instead of forecasts
    * reject sessions that have quarters of score zero
 This is for use when determining best backups to run.
 
 > 
-> avgScoreForTime  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
-> avgScoreForTime sf dt dur s = do
+> avgScoreForTimeRealWind  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
+> avgScoreForTimeRealWind sf dt dur s = do
 >     w  <- weather
 >     w' <- liftIO $ newWeather w (Just dt)
->     scores <- mapM (scoreLocal w' sf s) times 
+>     scores <- mapM (\t -> scoreLocal w' sf s t True) times 
 >     case length scores of
 >       0 -> return 0.0
 >       otherwise -> return $ sumScores scores / (fromIntegral . length $ scores)

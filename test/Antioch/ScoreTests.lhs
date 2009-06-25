@@ -98,6 +98,9 @@ tested time period
 
 > -- TBF not in tests list (and fails)??
 > test_frequencyPressureComparison = TestCase $ do
+>     print pSessions
+>     print "ss:"
+>     print $ head ss
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 2.64413777007 (freqPressure undefined . head $ ss)
 >   where
@@ -448,6 +451,32 @@ to use in conjunction with Pack tests.
 >     let result = eval fs
 >     assertAlmostEqual "test_scoreCV2" 3 3.9704554 result  
 
+> test_scoreForTime = TestCase $ do
+>     -- score on top of weather
+>     w <- getWeather $ Just dt
+>     fs <- runScoring w [] $ do
+>         sf <- genScore ss
+>         sf dt s
+>     let w1Score = eval fs
+>     -- use different forecast; should get different score
+>     w <- getWeather $ Just dt2
+>     fs <- runScoring w [] $ do
+>         sf <- genScore ss
+>         sf dt s
+>     let w2Score = eval fs
+>     assert (w1Score /= w2Score) 
+>     -- now try to get the original score again, despite current weather obj
+>     w3Score <- runScoring w [] $ do
+>         sf <- genScore ss
+>         scoreForTime sf dt False s
+>     assertEqual "test_avgScoreForTime" w1Score w3Score
+>   where
+>     dt = fromGregorian 2006 10 1 18 0 0
+>     dt2 = fromGregorian 2006 10 1 0 0 0
+>     ss = getOpenPSessions
+>     s = findPSessionByName "CV"
+> 
+
 > test_avgScoreForTime = TestCase $ do
 >     -- score on top of weather
 >     w <- getWeather $ Just dt
@@ -465,8 +494,11 @@ to use in conjunction with Pack tests.
 >     -- now try to get the original score again, despite current weather obj
 >     w3Score <- runScoring w [] $ do
 >         sf <- genScore ss
->         avgScoreForTime sf dt 15 s
->     assertEqual "test_avgScoreForTime" w1Score w3Score
+>         avgScoreForTimeRealWind sf dt 15 s
+>     -- since we're using real (measured) wind, the scores should be close
+>     -- but not equal
+>     assert  (w1Score /= w3Score)
+>     assertAlmostEqual "test_avgScoreForTime_2" 4 3.9365761 w3Score
 >   where
 >     dt = fromGregorian 2006 10 1 18 0 0
 >     dt2 = fromGregorian 2006 10 1 0 0 0
@@ -477,16 +509,25 @@ to use in conjunction with Pack tests.
 > test_avgScoreForTime2 = TestCase $ do
 >     -- weather that shouldn't get used
 >     w <- getWeather $ Just dummytime
+>     -- score over a wide range of time, that includes zeros, and see
+>     -- how it zeros out the scores.
 >     avgScore <- runScoring w [] $ do
 >         sf <- genScore [s]
->         avgScoreForTime sf starttime (24*60) s
->     assertEqual "test_avgScoreForTime2" exp avgScore
+>         avgScoreForTimeRealWind sf starttime (24*60) s
+>     -- now limit the time window to an area w/ non-zero scores
+>     avgScore2 <- runScoring w [] $ do
+>         sf <- genScore [s]
+>         avgScoreForTimeRealWind sf starttime2 (4*60) s
+>     assertEqual "test_avgScoreForTime2_1" 0.0 avgScore
+>     assertEqual "test_avgScoreForTime2_2" True (avgScore2 /= 0.0)
 >   where
->     dummytime = fromGregorian 2006 11 7 12 0 0
->     starttime = fromGregorian 2006 11 8 12 0 0
+>     dummytime  = fromGregorian 2006 11 7 12 0 0
+>     starttime  = fromGregorian 2006 11 8 12 0 0
+>     starttime2 = fromGregorian 2006 11 8 22 0 0
 >     s = defaultSession {sAlloted = 24*60, minDuration=2*60, maxDuration=6*60}
->     expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
->     exp = (sum expScores) / (fromIntegral $ length expScores) 
+>     -- scoring using a weather from starttime gives these scores for this
+>     -- session in 24 hours
+>     --expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
 > 
 
 Test the 24-hour scoring profile of the default session, per quarter.

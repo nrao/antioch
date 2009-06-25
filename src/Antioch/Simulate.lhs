@@ -175,9 +175,9 @@ Find the best backup for a given period according to the strategy being used.
 > findBestBackup :: StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Session, Score)
 > findBestBackup sn sf backups p =
 >   case sn of
->     Pack ->  best (avgScoreForTime sf (startTime p) (duration p)) backups
->     ScheduleMinDuration ->  best (avgScoreForTime sf (startTime p) (duration p)) backups
->     ScheduleLittleNell ->  best (scoreForTime sf (startTime p)) backups
+>     Pack ->  best (avgScoreForTimeRealWind sf (startTime p) (duration p)) backups
+>     ScheduleMinDuration ->  best (avgScoreForTimeRealWind sf (startTime p) (duration p)) backups
+>     ScheduleLittleNell ->  best (scoreForTime sf (startTime p) True) backups
 >     
 
 Find the best backup for a given period.  The backups are scored using the
