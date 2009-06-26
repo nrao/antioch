@@ -66,13 +66,13 @@ So write to dev/nell to force some execution to take place.
 > benchmark_packWorker_1 :: IO ()
 > benchmark_packWorker_1 = do
 >   start <- getCPUTime
->   let zs = packWorker dur xs ys
+>   let zs = packWorker xs ys
 >   forceExec (show . length $ zs)
 >   stop <- getCPUTime
 >   showExecTime "benchmark_packWorker_1" start stop
 >     where 
 >       o = Optional
->       dur = 24 * 60
+>       --dur = 24 * 60
 >       xs = replicate 97 Nothing -- 24 blank hours
 >       enoughTime = 10000
 >       scores1 = (replicate 50 1.0) ++ (replicate 50 0.0)
@@ -84,13 +84,13 @@ So write to dev/nell to force some execution to take place.
 > benchmark_packWorker_2 :: IO ()
 > benchmark_packWorker_2 = do
 >   start <- getCPUTime
->   let zs = packWorker dur xs ys
+>   let zs = packWorker xs ys
 >   forceExec (show .length $ zs)
 >   stop <- getCPUTime
 >   showExecTime "benchmark_packWorker_2" start stop
 >     where 
 >       o = Optional
->       dur = 24 * 60
+>       --dur = 24 * 60
 >       xs = replicate 97 Nothing -- 24 blank hours
 >       scores1 = (replicate 50 1.0) ++ (replicate 50 0.0)
 >       i1s = map (\id -> Item id 1 2 4 5 5 8 o [] scores1 []) [0 .. 100]
