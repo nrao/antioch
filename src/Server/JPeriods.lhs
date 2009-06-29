@@ -17,6 +17,11 @@
 > -- this works!
 > -- import Antioch.Reports
 
+NOTE: this is code responsible for returning JSON representations of Periods
+read from the DSS data base.  This code has been checked in as an example
+of working code, since there are no available examples on the web that I
+can find.  Nothing in DSS is currently using this code.
+
 > periodsHandler     :: Connection -> Handler ()
 > periodsHandler cnn = hMethodRouter [
 >       (GET,  listPeriods cnn)
