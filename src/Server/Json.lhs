@@ -13,7 +13,9 @@
 
 > jsonHandler      :: JSON t => t -> Handler ()
 > jsonHandler json = do
->     enterM response $ setM contentType ("text/plain", Just "utf-8")
+>     -- TBF: setting the content type here seems to cause the output to 
+>     -- not be returned.
+>     --enterM response $ setM contentType ("text/plain", Just "utf-8")
 >     sendStr $ encode json
 
 > simpleToJson             :: String -> [String] -> [[SqlValue]] -> JSValue
