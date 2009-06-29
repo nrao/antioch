@@ -1,7 +1,19 @@
 > module Antioch.Settings where
 
+Databases:
+
 > weatherDB :: String
 > weatherDB = "weather"
 
 > hardwareScheduleDB = "dss_unit_tests"
 > dssDataDB          = "dss_unit_tests"
+
+Ports:
+
+Note: should match to entries in /home/dss/conundrum/conf/nginx.conf
+
+> proxyListenerPort = 8001
+
+> salviaListenerPort :: PortNumber
+> salviaListenerPort = 9099
+
