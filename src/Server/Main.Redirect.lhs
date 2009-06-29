@@ -18,7 +18,6 @@
 > import Network.Socket                      (inet_addr)
 > import Server.JPeriods
 > import Server.RunScheduler
-> import Maybe
 
 > connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani2 user=dss"
 
@@ -42,22 +41,11 @@
 >     sessions <- mkSessions
 >     return $ hDefault counter sessions handler
 
-> getSchedulingURI = fromJust $ parseURI "http://trent.gb.nrao.edu:8001/runscheduler"
-> --getSchedulingURI =  mkURI --URI False mkScheme mkAuthority getSchedulingPath mkQuery mkFragment
-
-> --getSchedulingPath = p' { absolute = False }
-> --  where 
-> --    p' = mkPath
-
-> -- Path { _absolute = False, _segments = ["/periods"] }
-
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
->           ("/redirect", hRedirect getSchedulingURI) --"/runscheduler") --periodsHandler cnn)
+>           ("/periods", hRedirect mkURI) --"/runscheduler") --periodsHandler cnn)
 >         , ("/runscheduler", runSchedulerHandler)
->         , ("/schedule", scheduleAndRedirectHandler)
->         , ("/periods", periodsHandler cnn)
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn
 

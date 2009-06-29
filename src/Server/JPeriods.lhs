@@ -28,7 +28,7 @@
 >     , session_id :: Maybe Int
 >     , start_time :: Maybe String
 >     , duration :: Maybe Double
-> }
+> } deriving Show
 
 > defaultJPeriod = JPeriod {
 >       jperiod_id = 0
@@ -58,7 +58,7 @@
 
 > listPeriods cnn = do
 >     -- try scheduling! this actually works!
->     -- liftIO $ sim09B 4 "sims" 
+>     --liftIO $ sim09B 4 "sims" 
 >     liftIO $ print "querying periods from DB!"
 >     rst <- liftIO $ quickQuery' cnn query []
 >     let periods = map buildPeriod rst
