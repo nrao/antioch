@@ -19,6 +19,7 @@
 > import Server.JPeriods
 > import Server.RunScheduler
 > import Maybe
+> import Antioch.Settings                    (salviaListenerPort)
 
 > connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani2 user=dss"
 
@@ -28,9 +29,9 @@
 >     cfg  <- defaultConfig
 >     let cfg' = cfg {
 >         hostname   = "localhost"
->       , email      = "nubgames@gmail.com"
+>       , email      = "nubgames@gmail.com" -- TBF: should we change this?
 >       , listenAddr = addr
->       , listenPort = 9099
+>       , listenPort = salviaListenerPort 
 >       }
 >     mkHandler >>= start cfg'
 
@@ -42,22 +43,13 @@
 >     sessions <- mkSessions
 >     return $ hDefault counter sessions handler
 
-> getSchedulingURI = fromJust $ parseURI "http://trent.gb.nrao.edu:8001/runscheduler"
-> --getSchedulingURI =  mkURI --URI False mkScheme mkAuthority getSchedulingPath mkQuery mkFragment
-
-> --getSchedulingPath = p' { absolute = False }
-> --  where 
-> --    p' = mkPath
-
-> -- Path { _absolute = False, _segments = ["/periods"] }
 
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
->           ("/redirect", hRedirect getSchedulingURI) --"/runscheduler") --periodsHandler cnn)
->         , ("/runscheduler", runSchedulerHandler)
->         , ("/schedule", scheduleAndRedirectHandler)
->         , ("/periods", periodsHandler cnn)
+>           ("/schedule_algo", scheduleAndRedirectHandler)
+>         , ("/runscheduler", runSchedulerHandler)  -- Example, not used
+>         , ("/periods", periodsHandler cnn)        -- Example, not used
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn
 

@@ -16,22 +16,25 @@
 > import Server.List
 > import Antioch.Reports
 > import Network.Protocol.Uri 
-> import Network.Salvia.Handlers.Redirect    (hRedirect)
+> import Network.Salvia.Handlers.Redirect      (hRedirect)
 > import Maybe
+> import Antioch.Settings                      (proxyListenerPort)
 
 > scheduleAndRedirectHandler :: Handler ()
 > scheduleAndRedirectHandler = hMethodRouter [
 >         (POST, runScheduleAndRedirect)
->       , (GET,  runScheduleAndRedirect)
+>       , (GET,  runScheduleAndRedirect) -- currently only POST is used
 >     ] $ hError NotFound
 
 > runScheduleAndRedirect = do
->     -- schedule something!
->     liftIO $ sim09B 4 "sims" 
->     --jsonHandler $ makeObj [("success", showJSON "ok")]
+>     -- schedule something! TBF: need to pass in start & dur
+>     liftIO $ sim09B 3 "sims" 
+>     -- now redirect caller back to the scheduling page
 >     hRedirect getSchedulingPage 
 
-> getSchedulingPage = fromJust $ parseURI "http://trent.gb.nrao.edu:8001/periods"
+> getSchedulingPage = fromJust . parseURI $ "http://trent.gb.nrao.edu:" ++ (show proxyListenerPort) ++ "/sessions/schedule"
+
+This is just example code - no one currently uses this code.
 
 > runSchedulerHandler :: Handler ()
 > runSchedulerHandler         = hMethodRouter [
