@@ -32,7 +32,7 @@
 >     -- now redirect caller back to the scheduling page
 >     hRedirect getSchedulingPage 
 
-> getSchedulingPage = fromJust . parseURI $ "http://trent.gb.nrao.edu:" ++ (show proxyListenerPort) ++ "/sessions/schedule"
+> getSchedulingPage = fromJust . parseURI $ "http://trent.gb.nrao.edu:" ++ (show proxyListenerPort) ++ "/schedule"
 
 This is just example code - no one currently uses this code.
 

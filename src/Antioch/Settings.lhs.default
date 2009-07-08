@@ -12,8 +12,8 @@ Ports:
 
 Note: should match to entries in /home/dss/conundrum/conf/nginx.conf
 
-> proxyListenerPort = 8001
+> proxyListenerPort = 8001             --MODIFY--
 
 > salviaListenerPort :: PortNumber
-> salviaListenerPort = 9099
+> salviaListenerPort = 9099            --MODIFY--
 
