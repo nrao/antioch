@@ -25,7 +25,7 @@
 
 > main = do
 >     print "starting server"
->     addr <- inet_addr "127.0.0.1"
+>     addr <- inet_addr "0.0.0.0" --this is any client, "127.0.0.1" for a client running on local host
 >     cfg  <- defaultConfig
 >     let cfg' = cfg {
 >         hostname   = "localhost"
