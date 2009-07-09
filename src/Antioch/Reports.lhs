@@ -853,6 +853,8 @@ Run generic simulations.
 
 More specialized: Try to schedule 09B.
 
+> sim09B' start days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False True
+
 > sim09B days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
 >     start      = fromGregorian 2009 6 1 0 0 0
