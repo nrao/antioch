@@ -461,7 +461,7 @@ of pre-scheduled periods (history)
 >       s3' = s { sId = 2, ra = 16.0 }
 >       pr1 = makeProject pr (pAlloted pr) [s1', s2', s3']
 >       ss1 = sessions pr1
->       -- now use up the scheduable time of one of them
+>       -- now use up the schedulable time of one of them
 >       p1 = defaultPeriod { session = s1', startTime = dt, duration = (4 * 60) + 30 }
 >       s1'' = makeSession s1' [p1] 
 >       pr2 = makeProject pr (pAlloted pr) [s1'', s2', s3']
