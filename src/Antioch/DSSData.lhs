@@ -62,7 +62,7 @@ The scheduling algorithm does not need to know all the details about the observe
 on a project - it only needs a few key facts, which are defined in the Observer
 data structure.  These facts come from two sources:
    1. DSS Database:
-      * observer sancioned flag 
+      * observer sanctioned flag 
       * observer black out dates
    2. BOS web service:
       * observer on site dates (GB reservation date)

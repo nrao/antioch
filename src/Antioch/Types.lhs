@@ -134,7 +134,7 @@ Tying the knot.
 >     end   = snd r
 
 > data Observer = Observer {
->     sancioned    :: Bool
+>     sanctioned   :: Bool
 >   , reservations :: [DateRange]
 >   , blackouts    :: [DateRange]
 > } deriving (Eq, Show, Read)
@@ -209,7 +209,7 @@ Simple Functions for Periods:
 >   }
 
 > defaultObserver = Observer {
->     sancioned    = True
+>     sanctioned   = True
 >   , reservations = []
 >   , blackouts    = []
 > }
