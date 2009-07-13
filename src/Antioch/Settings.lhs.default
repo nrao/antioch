@@ -1,5 +1,7 @@
 > module Antioch.Settings where
 
+> import Network.Socket (PortNumber)
+
 Databases:
 
 > weatherDB :: String
