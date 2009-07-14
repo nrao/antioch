@@ -24,18 +24,28 @@
 > scheduleAndRedirectHandler :: Handler ()
 > scheduleAndRedirectHandler = hMethodRouter [
 >        (POST, runScheduleAndRedirect)
->       -- (GET,  runScheduleAndRedirect) -- currently only POST is used
+>      -- POST only works because trying to get params from a GET will hang
+>      -- , (GET,  runScheduleAndRedirect) 
 >     ] $ hError NotFound
 
-> runScheduleAndRedirect = do
+Get params from the URL that can then be used to run the simulator
+for the given date range.
+
+> runSchedule = do
 >     bytes <- contents
 >     let params = maybe [] id $ bytes >>= parseQueryParams . L.unpack
+>     liftIO $ print params
 >     -- schedule something! 
 >     liftIO $ schedule (getKeyValuePairs params) 
->     -- now redirect caller back to the scheduling page
->     hRedirect getSchedulingPage 
 >   where
 >     getKeyValuePairs pairs = [(key, value) | (key, Just value) <- pairs]
+
+Just like the name says: run the schedule, then redirect to a new page.
+
+> runScheduleAndRedirect = do
+>     runSchedule
+>     -- now redirect caller back to the scheduling page
+>     hRedirect getSchedulingPage 
 
 TBF: currently, a date time string entered in a form's text box gets parsed
 as (example): "2009-06-20 00%3A00%3A00".  To avoiad the issue with the time,
@@ -59,17 +69,16 @@ we are rounding off to the nearest day.
 
 > getSchedulingPage = fromJust . parseURI $ "http://trent.gb.nrao.edu:" ++ (show proxyListenerPort) ++ "/schedule" --"/sessions/schedule"
 
-This is just example code - no one currently uses this code.
-
 > runSchedulerHandler :: Handler ()
 > runSchedulerHandler         = hMethodRouter [
 >         (POST, runSchedule)
 >       , (GET,  runSchedule)
 >     ] $ hError NotFound
 
-> runSchedule = do
->     -- schedule something!
->     liftIO $ sim09B 4 "sims" 
+Just like the name says: create a schedule, then return an OK status.
+
+> runScheduleAndReturn = do
+>     runSchedule
 >     jsonHandler $ makeObj [("success", showJSON "ok")]
 
 
