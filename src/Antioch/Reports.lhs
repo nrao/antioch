@@ -16,7 +16,7 @@
 > import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate, sort)
+> import Data.List (intercalate, sort, (\\))
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -839,8 +839,8 @@ the DB.
 >     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
->     -- new schedule to DB
->     putPeriods results
+>     -- new schedule to DB; only write the new ones
+>     putPeriods $ results \\ history
 >   where
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2

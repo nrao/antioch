@@ -47,8 +47,8 @@
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
->           ("/schedule_algo", scheduleAndRedirectHandler)
->         , ("/runscheduler", runSchedulerHandler)  -- Example, not used
+>           ("/schedule_algo", scheduleAndRedirectHandler) -- deprecated
+>         , ("/runscheduler", runSchedulerHandler)  
 >         , ("/periods", periodsHandler cnn)        -- Example, not used
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn
