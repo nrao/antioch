@@ -234,12 +234,12 @@ boundary?
 >     simulate' w dt dur history sessions [] []
 >   where
 >     simulate' w dt dur history sessions pAcc tAcc
->         | dur < int  = return (pAcc, tAcc)
+>         | dur == 0  = return (pAcc, tAcc)
 >         | otherwise  = do
 >             w' <- liftIO $ newWeather w $ Just dt
 >             -- schedPeriods only includes those periods from the history that
 >             -- are contained in or overlap (dt - (dt + int)).
->             (schedPeriods, t1) <- runScoring' w' rs $ runSimSchedStrategy sched dt int sessions history
+>             (schedPeriods, t1) <- runScoring' w' rs $ runSimSchedStrategy sched dt int' sessions history
 >             -- take out the 'history' out of the result from the strategy
 >             let newlyScheduledPeriods = schedPeriods \\ history
 >             --liftIO $ print $ "newly scheduled periods: " ++ (show newlyScheduledPeriods)
@@ -254,8 +254,12 @@ boundary?
 >             -- the creation of identical Periods.
 >             simulate' w' (hint `addMinutes'` dt) (dur - hint) (nub . sort $ schedPeriods ++ history) sessions' (nub . sort $ schedPeriods ++ history) $! (tAcc ++ t1)
 >       where
+>         -- must handle if duration is less then the sim. interval
+>         -- ex: sim intervals are often 2 days - must be able to sim 1 day
+>         int'   = if dur < int then dur else int 
 >         -- move forward next simulation by half the sim. interval
->         hint   = int `div` 2 
+>         hint   = int `div` 2
+>         
 
 
 The main diff between this and runSimStrategy is that we aren't simulating
