@@ -71,8 +71,8 @@ we are rounding off to the nearest day.
 
 > runSchedulerHandler :: Handler ()
 > runSchedulerHandler         = hMethodRouter [
->         (POST, runSchedule)
->       , (GET,  runSchedule)
+>         (POST, runScheduleAndReturn)
+>       --, (GET,  runSchedule)
 >     ] $ hError NotFound
 
 Just like the name says: create a schedule, then return an OK status.
