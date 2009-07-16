@@ -2,10 +2,14 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Schedule.Pack
+> import Antioch.Schedule.Pack as P 
+> import Antioch.Schedule 
 > import Antioch.Score
 > import Antioch.Weather
 > import Antioch.PProjects
+> import Antioch.Simulate
+> import Antioch.Utilities
+> -- import Antioch.Generators (validRA, validDec)
 > import Control.Exception (assert)
 > import System.CPUTime
 
@@ -15,6 +19,8 @@
 >   benchmark_packWorker_2
 >   benchmark_pack_1
 >   benchmark_pack_2
+>   benchmark_simulate_1
+>   benchmark_simulateScheduling_1
 
 > showExecTime name start stop = do 
 >   if fromIntegral (stop-start) / 1.0e9 == 0.0 then showExecTimeNs name start stop else showExecTimeMs name start stop
@@ -41,7 +47,7 @@ So write to dev/nell to force some execution to take place.
 >   start <- getCPUTime
 >   periods' <- runScoring w [] $ do
 >       fs <- genScore sess
->       pack fs starttime duration [] sess
+>       P.pack fs starttime duration [] sess
 >   stop <- getCPUTime
 >   showExecTime "benchmark_pack_1" start stop
 >     where
@@ -55,13 +61,78 @@ So write to dev/nell to force some execution to take place.
 >   start <- getCPUTime
 >   periods' <- runScoring w [] $ do
 >       fs <- genScore sess
->       pack fs starttime duration [] sess
+>       P.pack fs starttime duration [] sess
 >   stop <- getCPUTime
 >   showExecTime "benchmark_pack_2" start stop
 >     where
 >       sess = getOpenPSessions 
 >       starttime = fromGregorian 2006 6 1 0 0 0
 >       duration = 24*60
+
+> benchmark_simulate_1 :: IO ()
+> benchmark_simulate_1 = do
+>   w <- getWeather Nothing
+>   start <- getCPUTime
+>   (results, trace) <- simulate Pack w rs dt dur int hist [] ss
+>   stop <- getCPUTime
+>   showExecTime "benchmark_simulate_1" start stop
+>     where
+>       ss = getOpenPSessions
+>       rs = [] -- rcvr schedule
+>       hist = [] -- pre-schedule periods
+>       dt = fromGregorian 2006 6 1 0 0 0
+>       dur = 24 * 60 * 3
+>       int = 24 * 60 * 2
+
+More Sessions, for longer
+
+> benchmark_simulate_2 :: IO ()
+> benchmark_simulate_2 = do
+>   w <- getWeather Nothing
+>   start <- getCPUTime
+>   (results, trace) <- simulate Pack w rs dt dur int hist [] ss
+>   stop <- getCPUTime
+>   print . show . length $ ss
+>   showExecTime "benchmark_simulate_1" start stop
+>     where
+>       ss = getBigSessionPool
+>       rs = [] -- rcvr schedule
+>       hist = [] -- pre-schedule periods
+>       dt = fromGregorian 2006 6 1 0 0 0
+>       dur = 24 * 60 * 10
+>       int = 24 * 60 * 2
+
+> benchmark_simulateScheduling_1 :: IO ()
+> benchmark_simulateScheduling_1 = do
+>   w <- getWeather Nothing
+>   start <- getCPUTime
+>   (results, trace) <- simulateScheduling Pack w rs dt dur int hist [] ss
+>   stop <- getCPUTime
+>   showExecTime "benchmark_simulateScheduling_1" start stop
+>     where
+>       ss = getOpenPSessions
+>       rs = [] -- rcvr schedule
+>       hist = [] -- pre-schedule periods
+>       dt = fromGregorian 2006 6 1 0 0 0
+>       dur = 24 * 60 * 3
+>       int = 24 * 60 * 2
+
+More sessions, for longer 
+
+> benchmark_simulateScheduling_2 :: IO ()
+> benchmark_simulateScheduling_2 = do
+>   w <- getWeather Nothing
+>   start <- getCPUTime
+>   (results, trace) <- simulateScheduling Pack w rs dt dur int hist [] ss
+>   stop <- getCPUTime
+>   showExecTime "benchmark_simulateScheduling_1" start stop
+>     where
+>       ss = getBigSessionPool
+>       rs = [] -- rcvr schedule
+>       hist = [] -- pre-schedule periods
+>       dt = fromGregorian 2006 6 1 0 0 0
+>       dur = 24 * 60 * 10
+>       int = 24 * 60 * 2
 
 > benchmark_packWorker_1 :: IO ()
 > benchmark_packWorker_1 = do
@@ -97,4 +168,46 @@ So write to dev/nell to force some execution to take place.
 >       scores2 = (replicate 50 0.0) ++ (replicate 50 1.0)
 >       i2s = map (\id -> Item id 1 3 6 10 10 6 o [] scores2 []) [101 .. 200]
 >       ys = i1s ++ i2s
+
+Utilities:
+
+We can't use the Generators to give us a large pool of sessions to test with, 
+because we don't want this input to our tests to change.  So we'll take the
+small pool we get from PProjects, and build off that.
+
+> getBigSessionPool :: [Session]
+> getBigSessionPool = concatMap sessions $ map expand pTestProjects
+>   where
+>     applyUniqueIds ss = zipWith (\s n -> s {sId = n}) ss [0..]
+
+Takes a project's sessions, uses them as a template to make more of them,
+and recreates the project to include these new ones.
+
+> expand :: Project -> Project
+> expand p = makeProject p enoughTime $ newSessions p
+>   where
+>     enoughTime = 1000000000 * 60
+
+> newSessions :: Project -> [Session]
+> newSessions p = concatMap gimmeMore $ sessions p
+
+> gimmeMore :: Session -> [Session]
+> gimmeMore s = take 10 $ iterate incrementSession s
+
+> incrementSession :: Session -> Session
+> incrementSession s = s {frequency = newF s, ra = newRa s, dec = newDec s}
+>   where
+>     newF s = (frequency s) + 2.0 -- GHz
+>     newRa s = if (validRA ((ra s) + 0.5)) then ((ra s) + 0.5) else 0.5 -- rads
+>     newDec s =  if validDec ((dec s) + 0.5) then ((dec s) + 0.5) else 0.5 -- rads
+
+> validRA :: Radians -> Bool
+> validRA r = 0.0 <= ra' && ra' <= 24.0
+>   where 
+>     ra' = rad2hrs r
+
+> validDec :: Radians -> Bool
+> validDec r = -45.0 <= dec' && dec' <= 90.0
+>   where
+>     dec' = rad2deg r
 
