@@ -387,12 +387,12 @@ of pre-scheduled periods (history)
 
 
 > test_sim_timeLeft = TestCase $ do
->   assertEqual "test_timeLeft_1" True  (hasTimeScheduable dt1 s1)
->   assertEqual "test_timeLeft_2" True  (hasTimeScheduable dt1 s2)
->   assertEqual "test_timeLeft_3" False (hasTimeScheduable dt1 s3)
->   assertEqual "test_timeLeft_4" False (hasTimeScheduable dt1 s4)
->   assertEqual "test_timeLeft_5" False (hasTimeScheduable dt2 s6) -- 09A
->   assertEqual "test_timeLeft_6" True  (hasTimeScheduable dt1 s6) -- 09B
+>   assertEqual "test_timeLeft_1" True  (hasTimeSchedulable dt1 s1)
+>   assertEqual "test_timeLeft_2" True  (hasTimeSchedulable dt1 s2)
+>   assertEqual "test_timeLeft_3" False (hasTimeSchedulable dt1 s3)
+>   assertEqual "test_timeLeft_4" False (hasTimeSchedulable dt1 s4)
+>   assertEqual "test_timeLeft_5" False (hasTimeSchedulable dt2 s6) -- 09A
+>   assertEqual "test_timeLeft_6" True  (hasTimeSchedulable dt1 s6) -- 09B
 >     where
 >       -- vanilla test
 >       dt1 = fromGregorian 2009 6 2 0 0 0 -- 09B

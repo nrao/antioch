@@ -40,8 +40,8 @@ Sessions that:
 
 > type SelectionCriteria = DateTime -> Session -> Bool
 
-> hasTimeScheduable :: SelectionCriteria
-> hasTimeScheduable dt s = (sAvail s sem) >= (minDuration s)
+> hasTimeSchedulable :: SelectionCriteria
+> hasTimeSchedulable dt s = (sAvail s sem) >= (minDuration s)
 >   where 
 >     sem = dt2semester dt
 
@@ -51,11 +51,14 @@ Sessions that:
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open
 
+> isGradeA :: SelectionCriteria
+> isGradeA _ s = grade s >= GradeA
+
 We are explicitly ignoring grade here: it has been decided that a humna
 should deal with closing old B projects, etc.
 
-> isScheduableSemester :: SelectionCriteria 
-> isScheduableSemester dt s = (semester $ project s) <= current_semester
+> isSchedulableSemester :: SelectionCriteria 
+> isSchedulableSemester dt s = (semester $ project s) <= current_semester
 >    where
 >      current_semester = dt2semester dt
 
@@ -109,8 +112,8 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > runSimStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, hasTimeScheduable, isNotComplete, isScheduableSemester] sessions
->   sf <- genScore $ filterSessions dt [isScheduableSemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester] sessions
+>   sf <- genScore $ filterSessions dt [isSchedulableSemester, isGradeA] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
@@ -269,8 +272,8 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 > runSimSchedStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, hasTimeScheduable, isNotComplete, isScheduableSemester] sessions
->   sf <- genScore $ filterSessions dt [isScheduableSemester] sessions
+>   let schedSessions = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester] sessions
+>   sf <- genScore $ filterSessions dt [isSchedulableSemester] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   return schedPeriods
 

@@ -111,7 +111,6 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     assertScoringResult "test_rightAscensionPressure r" Nothing 5 1.3607032 (raPressure undefined . head $ rSessions)
 
 > test_initBins = TestCase $ do
->     assertBool "test_initBins" True
 >     assertEqual "test_initBins1" expectedp resultp
 >     assertEqual "test_initBins2" expectedr resultr
 >   where

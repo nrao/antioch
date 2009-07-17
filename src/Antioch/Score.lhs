@@ -233,7 +233,7 @@ Creates an array indexed by band or hour angle with the hours total and used
 for each slice for computing pressures.
 
 > initBins             :: Ix a => (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
-> initBins bounds f xs = runSTArray $ initBins' bounds f . filter (\s-> (grade s) >= GradeA) $ xs
+> initBins bounds f xs = runSTArray $ initBins' bounds f $ xs
 
 > initBins' bounds f xs = do
 >     arr <- newArray bounds (0, 0)
