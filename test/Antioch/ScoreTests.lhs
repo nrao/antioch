@@ -92,9 +92,7 @@ tested time period
 
 > test_frequencyPressure = TestCase $ do
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
->     assertScoringResult "test_frequencyPressure p" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
->     freqPressure <- runScoring undefined [] $ genFrequencyPressure rSessions
->     assertScoringResult "test_frequencyPressure r" Nothing 5 1.6708559 (freqPressure undefined . head $ rSessions)
+>     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
 
 Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
@@ -106,25 +104,17 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
 > test_rightAscensionPressure = TestCase $ do
 >     raPressure <- runScoring undefined [] $ genRightAscensionPressure pSessions
->     assertScoringResult "test_rightAscensionPressure p" Nothing 5 1.25729 (raPressure undefined . head $ pSessions)
->     raPressure <- runScoring undefined [] $ genRightAscensionPressure rSessions
->     assertScoringResult "test_rightAscensionPressure r" Nothing 5 1.3607032 (raPressure undefined . head $ rSessions)
+>     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.25729 (raPressure undefined . head $ pSessions)
 
 > test_initBins = TestCase $ do
->     assertEqual "test_initBins1" expectedp resultp
->     assertEqual "test_initBins2" expectedr resultr
+>     assertEqual "test_initBins1" expected result
 >   where
 >     accessor s = (round . rad2hrs . ra $ s) `mod` 24
->     expectedp = [(0,0),(0,0),(0,0),(0,0),(0,0),(1320,420)
+>     expected  = [(0,0),(0,0),(0,0),(0,0),(0,0),(1320,420)
 >                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
 >                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)
 >                 ,(1200,720),(0,0),(0,0),(0,0),(0,0),(0,0)]
->     resultp = elems $ initBins (0, 23) accessor pSessions
->     expectedr = [(0,0),(0,0),(0,0),(0,0),(0,0),(720,120)
->                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
->                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)
->                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)]
->     resultr = elems $ initBins (0, 23) accessor rSessions
+>     result    = elems $ initBins (0, 23) accessor pSessions
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
