@@ -9,7 +9,7 @@
 > import Antioch.PProjects
 > import Antioch.Simulate
 > import Antioch.Utilities
-> -- import Antioch.Generators (validRA, validDec)
+> import Antioch.Reports
 > import Control.Exception (assert)
 > import System.CPUTime
 
@@ -20,7 +20,10 @@
 >   benchmark_pack_1
 >   benchmark_pack_2
 >   benchmark_simulate_1
+>   benchmark_simulate_2
 >   benchmark_simulateScheduling_1
+>   benchmark_simulateScheduling_2
+>   benchmark_generatePlots_1
 
 > showExecTime name start stop = do 
 >   if fromIntegral (stop-start) / 1.0e9 == 0.0 then showExecTimeNs name start stop else showExecTimeMs name start stop
@@ -168,6 +171,20 @@ More sessions, for longer
 >       scores2 = (replicate 50 0.0) ++ (replicate 50 1.0)
 >       i2s = map (\id -> Item id 1 3 6 10 10 6 o [] scores2 []) [101 .. 200]
 >       ys = i1s ++ i2s
+
+This benchmark test is not very reliable, since it relies on randomly generated
+input, which can vary everytime (unrelated) parts of the code change.  But
+I thought it would be interesting to do anyways.
+
+> benchmark_generatePlots_1 :: IO ()
+> benchmark_generatePlots_1 = do
+>   start <- getCPUTime
+>   runSim 120 "sims" -- a whole semester!
+>   -- don't need this, due to production of things in the real world (plots)
+>   -- forceExec (show .length $ zs)
+>   stop <- getCPUTime
+>   showExecTime "benchmark_generatePlots_1" start stop
+>     where 
 
 Utilities:
 
