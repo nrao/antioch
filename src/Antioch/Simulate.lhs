@@ -273,7 +273,7 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
 >   let schedSessions = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester] sessions
->   sf <- genScore $ filterSessions dt [isSchedulableSemester] sessions
+>   sf <- genScore $ filterSessions dt [isSchedulableSemester, isGradeA] sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   return schedPeriods
 
