@@ -51,7 +51,7 @@ TBF: currently, a date time string entered in a form's text box gets parsed
 as (example): "2009-06-20 00%3A00%3A00".  To avoiad the issue with the time,
 we are rounding off to the nearest day.
 
-> schedule params = sim09B' start days "sims" 
+> schedule params = sim09B' start days "." 
 >   where
 >     start = case start' of
 >                 Just dt -> dt

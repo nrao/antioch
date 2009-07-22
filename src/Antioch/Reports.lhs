@@ -840,6 +840,8 @@ the DB.
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
 >     -- new schedule to DB; only write the new ones
+>     -- TBF: this ensures that entries in the opportunity tables don't 
+>     -- get put in the DB - BUG!!!
 >     putPeriods $ results \\ history
 >   where
 >     dur     = 60 * 24 * days
