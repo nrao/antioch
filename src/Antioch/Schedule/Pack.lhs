@@ -238,7 +238,8 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 
 Generate a series of candidates representing the possibilities for
 scheduling an item at each of a sequence of durations: 15 minutes, 30
-minutes, etc.
+minutes, etc. Note the first quarter of a session is always scored 0.0
+to account for overhead.
 Example: pass in Item sId = 1, min = 2, max = 4, past = [1,1,0,0]
 past' becomes only [1,2] because: 1) take just the first 4 (max) 2) take 
 only the first two because of the zeros being < epsilon, then 3) do a
@@ -248,14 +249,8 @@ Next in our example, we call toCandidate 1 [Nothing, Just 2].
 > candidates               :: Item a -> [Maybe (Candidate a)]
 > candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }
 >     | length past' < min = []
->     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ past')
+>     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ 0.0 : (init past'))
 >   where
->     -- TBF OVERHEAD: This computes the period's score ignoring
->     -- the first quarter of the period, i.e., assumes a score of 0.0
->     --past' = case takeWhile (>= epsilon) . take max $ past of
->     --    []     -> []
->     --    (_:ss) -> scanl (+) 0.0 ss
->     -- These functions score all quarters, i.e., no overhead
 >     past' = acc . takeWhile (>= epsilon) . take max $ past
 >     acc   = scanl1 (+)
 

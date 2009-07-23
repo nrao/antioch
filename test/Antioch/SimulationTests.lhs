@@ -191,15 +191,15 @@ Can't simulate anything because the project doesn't have enough time!
 >     ss = getOpenPSessions
 >     expSs = [gb, va, tx, tx, wv, gb, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
->           , fromGregorian 2006 2 1 7 30 0
+>           , fromGregorian 2006 2 1 7 15 0
 >           , fromGregorian 2006 2 1 11 30 0
->           , fromGregorian 2006 2 1 15 30 0
+>           , fromGregorian 2006 2 1 17 30 0
 >           , fromGregorian 2006 2 1 22 30 0
 >           , fromGregorian 2006 2 2  4 30 0
 >           , fromGregorian 2006 2 2  7 30 0
 >           , fromGregorian 2006 2 2 12  0 0
 >           , fromGregorian 2006 2 2 14  0 0 ]
->     durs = [360, 240, 240, 360, 360, 180, 270, 120, 360]
+>     durs = [345, 255, 360, 240, 360, 180, 270, 120, 360]
 >     scores = replicate 9 0.0
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 >     
@@ -280,7 +280,6 @@ pre-scheduled periods
 > test_sim_schd_pack = TestCase $ do
 >     w <- getWeather $ Just dt
 >     (result, t) <- simulateScheduling Pack w rs dt dur int history cnl ss
->     printList result
 >     assertEqual "SimulationTests_test_sim_schd_pack_1" True (scheduleHonorsFixed history result)
 >     assertEqual "SimulationTests_test_sim_schd_pack_2" exp (take 6 result)
 >   where
@@ -294,13 +293,13 @@ pre-scheduled periods
 >     ss = getOpenPSessions
 >     expSs = [gb, va, tx, tx, wv, gb]
 >     expDts = [fromGregorian 2006 2 1  1 30 0
->             , fromGregorian 2006 2 1  7 30 0
+>             , fromGregorian 2006 2 1  7 15 0
 >             , fromGregorian 2006 2 1 11 30 0
->             , fromGregorian 2006 2 1 15 30 0
+>             , fromGregorian 2006 2 1 17 30 0
 >             , fromGregorian 2006 2 1 22 15 0
 >             , fromGregorian 2006 2 2  4 15 0
 >               ]
->     expDurs = [360, 240, 240, 360, 360, 135]
+>     expDurs = [345, 255, 360, 240, 360, 135]
 >     exp = zipWith3 mkPeriod expSs expDts expDurs
 >     mkPeriod s dt dur = Period s dt dur 0.0 undefined False
 
@@ -323,7 +322,7 @@ pre-scheduled periods
 >     ds = defaultSession
 >     expSs = [gb, va, tx, wv, gb, lp, cv, tx]
 >     expDts = [fromGregorian 2006 2 1  1 30 0
->             , fromGregorian 2006 2 1  7 30 0
+>             , fromGregorian 2006 2 1  7 15 0
 >             --, fromGregorian 2006 2 1 11 30 0
 >             , fromGregorian 2006 2 1 14 00 0
 >             , fromGregorian 2006 2 1 22 15 0
@@ -332,7 +331,7 @@ pre-scheduled periods
 >             , fromGregorian 2006 2 2 11  0 0
 >             , fromGregorian 2006 2 2 13  0 0
 >               ]
->     expDurs = [360, 270, 360, 360, 135, 270, 120, 270]
+>     expDurs = [345, 285, 360, 360, 135, 270, 120, 270]
 >     exp' = zipWith3 mkPeriod expSs expDts expDurs
 >     mkPeriod s dt dur = Period s dt dur 0.0 undefined False
 >     -- outside of the simulation range
