@@ -96,7 +96,7 @@ More Sessions, for longer
 >   (results, trace) <- simulate Pack w rs dt dur int hist [] ss
 >   stop <- getCPUTime
 >   print . show . length $ ss
->   showExecTime "benchmark_simulate_1" start stop
+>   showExecTime "benchmark_simulate_2" start stop
 >     where
 >       ss = getBigSessionPool
 >       rs = [] -- rcvr schedule
@@ -128,7 +128,7 @@ More sessions, for longer
 >   start <- getCPUTime
 >   (results, trace) <- simulateScheduling Pack w rs dt dur int hist [] ss
 >   stop <- getCPUTime
->   showExecTime "benchmark_simulateScheduling_1" start stop
+>   showExecTime "benchmark_simulateScheduling_2" start stop
 >     where
 >       ss = getBigSessionPool
 >       rs = [] -- rcvr schedule
