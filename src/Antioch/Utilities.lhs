@@ -89,6 +89,9 @@ Translates a relative sidereal time (lst) at the given absolute solar time
 >     year' = if (take 1 sem) == "0" then year - 1 else year
 >     yearStr = drop 2 $ show year'
 
+> readMinutes :: String -> Minutes
+> readMinutes = read
+
 QuickCheck Properties:
 
 > genDate :: Gen DateTime

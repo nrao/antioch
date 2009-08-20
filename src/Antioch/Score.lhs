@@ -516,7 +516,6 @@ Compute the average score for a given session over an interval:
    * reject sessions that have quarters of score zero
 This is for use when determining best backups to run.
 
-> 
 > avgScoreForTimeRealWind  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
 > avgScoreForTimeRealWind sf dt dur s = do
 >     w  <- weather
@@ -572,6 +571,40 @@ individual score is zero then the end result must also be zero.
 >     step s (Just x)
 >         | s < 1.0e-6 = Nothing
 >         | otherwise  = Just $! x + s
+
+For a start time, optional minimum/maximum durations, and session,
+find the duration that yields the highest score.
+Note if an alternate duration is provided then the smaller of
+the provided duratin and the session's duration is used.
+
+> bestDuration :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> Session -> Scoring Nominee
+> bestDuration sf dt lower upper session = do
+>     scores <- mapM (liftM eval . flip sf session) times
+>     let sums  = scanl (+) 0.0 . takeWhile (> 0.0) $ scores
+>     --  mds :: [(Score, Minutes)] -- period means and durations
+>     let mds   = [(s / ((+1) . fromIntegral $ (d `div` 15)), d) | (s, d) <- zip sums durs]
+>     let result = foldl findBest (0.0, 0) mds
+>     return $ (session, fst result, snd result)
+>   where
+>     start = maybe (minDuration session) (min . minDuration $ session) lower
+>     stop = maybe (maxDuration session) (min . maxDuration $ session) upper
+>     durs  = [0, quarter .. stop]
+>     times = map (`addMinutes'` dt) durs
+>     findBest x y = if (fst x) > (fst y) then x else y
+
+For a start time, optional minimum/maximum durations, and a list
+of sessions, generate a list of the associated best durations -- if
+non-zero scored -- for each session.
+
+> type Nominee = (Session, Score, Minutes)
+
+> bestDurations :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> [Session] -> Scoring [Nominee]
+> bestDurations  _  _     _     _   [] = do
+>     return []
+> bestDurations sf dt lower upper (s:ss) = do
+>     result <- bestDuration sf dt lower upper s
+>     remainder <- bestDurations sf dt lower upper ss
+>     return $ result : remainder
 
 > type Factor   = (String, Maybe Score)
 > type Factors  = [Factor]
@@ -697,6 +730,37 @@ Need to translate a session's factors into the final product score.
 >       , lstExcepted
 >       , enoughTimeBetween
 >       ] dt s
+
+> genPartScore          :: [ScoreFunc] -> [Session] -> Scoring ScoreFunc
+> genPartScore sfs sessions = do
+>     raPressure   <- genRightAscensionPressure sessions
+>     freqPressure <- genFrequencyPressure sessions
+>     genPartScore' sfs raPressure freqPressure
+
+> genPartScore' sfs raPressure freqPressure = return $ \dt s -> do
+>     effs <- calcEfficiency dt s
+>     score ([
+>         scienceGrade
+>       , thesisProject
+>       , projectCompletion
+>       , stringency
+>       , (atmosphericOpacity' . fmap fst) effs
+>       , surfaceObservingEfficiency
+>       , trackingEfficiency
+>       , raPressure
+>       , freqPressure
+>       , observingEfficiencyLimit
+>       , (hourAngleLimit' . fmap snd) effs
+>       , zenithAngleLimit
+>       , trackingErrorLimit
+>       , atmosphericStabilityLimit
+>       , receiver
+>       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
+>       , observerOnSite
+>       , needsLowRFI
+>       , lstExcepted
+>       --, enoughTimeBetween
+>       ] ++ sfs) dt s
 
 Convenience function for translating go/no-go into a factor.
 

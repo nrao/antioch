@@ -5,6 +5,7 @@
 > import Data.List                             (find, intercalate)
 > import Data.Maybe                            (maybeToList)
 > import Database.HDBC
+> import Control.Monad.State.Lazy              (StateT)
 > import Database.HDBC.PostgreSQL              (Connection)
 > import Network.Protocol.Http
 > import Network.Protocol.Uri
@@ -31,6 +32,7 @@
 Get params from the URL that can then be used to run the simulator
 for the given date range.
 
+> runSchedule :: StateT Context IO ()
 > runSchedule = do
 >     bytes <- contents
 >     let params = maybe [] id $ bytes >>= parseQueryParams . L.unpack
@@ -42,15 +44,17 @@ for the given date range.
 
 Just like the name says: run the schedule, then redirect to a new page.
 
+> runScheduleAndRedirect :: StateT Context IO ()
 > runScheduleAndRedirect = do
 >     runSchedule
 >     -- now redirect caller back to the scheduling page
 >     hRedirect getSchedulingPage 
 
 TBF: currently, a date time string entered in a form's text box gets parsed
-as (example): "2009-06-20 00%3A00%3A00".  To avoiad the issue with the time,
+as (example): "2009-06-20 00%3A00%3A00".  To avoid the issue with the time,
 we are rounding off to the nearest day.
 
+> schedule :: [(String, String)] -> IO ()
 > schedule params = sim09B' start days "." 
 >   where
 >     start = case start' of
@@ -67,6 +71,7 @@ we are rounding off to the nearest day.
 >   where
 >     pair = find (\x -> ((fst x) == key)) params 
 
+> getSchedulingPage ::URI
 > getSchedulingPage = fromJust . parseURI $ "http://trent.gb.nrao.edu:" ++ (show proxyListenerPort) ++ "/schedule" --"/sessions/schedule"
 
 > runSchedulerHandler :: Handler ()
@@ -77,6 +82,7 @@ we are rounding off to the nearest day.
 
 Just like the name says: create a schedule, then return an OK status.
 
+> runScheduleAndReturn :: StateT Context IO ()
 > runScheduleAndReturn = do
 >     runSchedule
 >     jsonHandler $ makeObj [("success", showJSON "ok")]

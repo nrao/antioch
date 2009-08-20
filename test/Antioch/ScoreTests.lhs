@@ -559,6 +559,42 @@ plus 40 quarters.
 >                 ,3.2787383,3.27825,3.2757215,3.2750494,3.273897
 >                 ,3.273018,3.2730415,3.271333,3.2699947,3.2675872]
 
+> test_bestDuration = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     let ss = concatMap sessions pTestProjects
+>     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     bestDur <- runScoring w [] $ do
+>         sf <- genScore ss
+>         bestDuration sf starttime Nothing Nothing s
+>     let expected = (s, 3.738552, 255)
+>     assertEqual "test_bestDuration 1" expected bestDur
+>     -- override the minimum and maximum
+>     bestDur <- runScoring w [] $ do
+>         sf <- genScore ss
+>         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
+>     let expected = (s, 3.7120736, 225)
+>     assertEqual "test_bestDuration 2" expected bestDur
+>   where
+>     starttime = fromGregorian 2006 10 1 18 0 0
+
+> test_bestDurations = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     let ss = concatMap sessions pTestProjects
+>     bestDurs <- runScoring w [] $ do
+>         sf <- genScore ss
+>         bestDurations sf starttime Nothing Nothing ss
+>     assertEqual "test_bestDurations 1" 10 (length bestDurs)
+>     let (s, v, d) = bestDurs !! 1
+>     assertEqual "test_bestDurations 2 n" "CV" (sName s)
+>     assertEqual "test_bestDurations 2 v" 3.738552 v
+>     assertEqual "test_bestDurations 2 d" 255 d
+>     let (s, v, d) = bestDurs !! 6
+>     assertEqual "test_bestDurations 3 n" "AS" (sName s)
+>     assertEqual "test_bestDurations 3 v" 3.3932652 v
+>     assertEqual "test_bestDurations 3 d" 375 d
+>   where
+>     starttime = fromGregorian 2006 10 1 18 0 0
+
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     let score' w dt = runScoring w [] $ do

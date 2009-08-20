@@ -1,6 +1,7 @@
 > module Server.JPeriods where
 
 > import Control.Monad.Trans                   (liftIO)
+> import Control.Monad.State.Lazy              (StateT)
 > import Data.Record.Label
 > import Data.List                             (intercalate)
 > import Data.Maybe                            (maybeToList)
@@ -22,12 +23,6 @@ read from the DSS data base.  This code has been checked in as an example
 of working code, since there are no available examples on the web that I
 can find.  Nothing in DSS is currently using this code.
 
-> periodsHandler     :: Connection -> Handler ()
-> periodsHandler cnn = hMethodRouter [
->       (GET,  listPeriods cnn)
->     --, (POST, handlePost cnn)
->     ] $ hError NotFound
-
 > data JPeriod = JPeriod {
 >       jperiod_id :: Int
 >     , session_id :: Maybe Int
@@ -48,19 +43,27 @@ can find.  Nothing in DSS is currently using this code.
 
 > jsonToJPeriod _ = undefined
 
+> jperiodToJson :: JPeriod -> JSValue
 > jperiodToJson period = makeObj $
 >       ("id", showJSON . jperiod_id $ period)
 >     : concatMap field [
->           ("session_id",         showJSON' . session_id )
+>           ("session_id",      showJSON' . session_id )
 >         , ("start_time",      showJSON' . start_time)
->         , ("duration", showJSON' . duration)
->      ]
+>         , ("duration",        showJSON' . duration)
+>       ]
 >   where
 >     field (name, accessor) = maybeToList . fmap ((,) name) . accessor $ period
 
 > showJSON' :: JSON a => Maybe a -> Maybe JSValue
 > showJSON' = fmap showJSON
 
+> periodsHandler     :: Connection -> Handler ()
+> periodsHandler cnn = hMethodRouter [
+>       (GET,  listPeriods cnn)
+>     --, (POST, handlePost cnn)
+>     ] $ hError NotFound
+
+> listPeriods :: (IConnection conn) => conn -> StateT Context IO ()
 > listPeriods cnn = do
 >     -- try scheduling! this actually works!
 >     --liftIO $ sim09B 4 "sims" 

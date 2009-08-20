@@ -18,6 +18,7 @@
 > import Network.Socket                      (inet_addr)
 > import Server.JPeriods
 > import Server.RunScheduler
+> import Server.Nominees
 > import Maybe
 > import Antioch.Settings                    (salviaListenerPort)
 
@@ -48,7 +49,8 @@
 >     cnn <- liftIO connect
 >     hPrefixRouter [
 >           ("/schedule_algo", scheduleAndRedirectHandler) -- deprecated
->         , ("/runscheduler", runSchedulerHandler)  
+>         , ("/runscheduler",  runSchedulerHandler)  
+>         , ("/nominees",    getNomineesHandler)  
 >         , ("/periods", periodsHandler cnn)        -- Example, not used
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn

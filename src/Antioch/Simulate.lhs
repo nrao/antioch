@@ -54,7 +54,10 @@ Sessions that:
 > isGradeA :: SelectionCriteria
 > isGradeA _ s = grade s >= GradeA
 
-We are explicitly ignoring grade here: it has been decided that a humna
+> isBackup :: SelectionCriteria
+> isBackup _ s = backup s
+
+We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
 > isSchedulableSemester :: SelectionCriteria 
@@ -112,11 +115,17 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > runSimStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   let schedSessions = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester] sessions
->   sf <- genScore $ filterSessions dt [isSchedulableSemester, isGradeA] sessions
+>   let schedSessions = schedulableSessions dt sessions
+>   sf <- genScore . scoringSessions dt $ sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
+
+> schedulableSessions :: DateTime -> [Session] -> [Session]
+> schedulableSessions dt = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester]
+
+> scoringSessions :: DateTime -> [Session] -> [Session]
+> scoringSessions dt = filterSessions dt [isSchedulableSemester, isGradeA]
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
