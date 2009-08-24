@@ -248,6 +248,7 @@ Next in our example, we call toCandidate 1 [Nothing, Just 2].
 
 > candidates               :: Item a -> [Maybe (Candidate a)]
 > candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }
+>     | max == 0           = []
 >     | length past' < min = []
 >     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ 0.0 : (init past'))
 >   where
