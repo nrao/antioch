@@ -23,8 +23,9 @@
 >               | Rcvr4_6
 >               | Rcvr8_10
 >               | Rcvr12_18
->               | Rcvr18_22
->               | Rcvr22_26
+>               -- | Rcvr18_22
+>               -- | Rcvr22_26 -- these 2 rcvrs wrapped in one like in DB 
+>               | Rcvr18_26
 >               | Rcvr26_40
 >               | Rcvr40_52
 >               | Rcvr_PAR

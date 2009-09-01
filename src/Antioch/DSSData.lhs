@@ -234,9 +234,10 @@ in part because if there are *no* rcvrs, that larger SQL would not return
 TBF: is what we'ere doing here w/ the rcvr and frequency legal?
 
 > toRcvrType :: Session -> SqlValue -> Receiver
-> toRcvrType s val = if (fromSql val) == ("Rcvr18_26" :: String) then findRcvr18_26 s else read . fromSql $ val
+> toRcvrType s val = read . fromSql $ val
+> --toRcvrType s val = if (fromSql val) == ("Rcvr18_26" :: String) then findRcvr18_26 s else read . fromSql $ val
 >   where
->     findRcvr18_26 s = if frequency s < 22.0 then Rcvr18_22 else Rcvr22_26 
+> --    findRcvr18_26 s = if frequency s < 22.0 then Rcvr18_22 else Rcvr22_26 
 
 Here, we gather additional information about a session: opportunities, periods,
 observing parameters, etc.

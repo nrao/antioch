@@ -634,7 +634,7 @@ be confused and raise false alarams.
 >     r9 = reportPreScheduled history
 >     r10 = reportFinalSchedule ps
 >     r11 = reportSessionDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11]
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11] 
 
 > reportSessionDetails :: [Session] -> String
 > reportSessionDetails ss = "Session Details: \n" ++ (concatMap (\s -> (show s) ++ "\n") ss)
@@ -839,9 +839,7 @@ the DB.
 >     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss results trace) sps
->     -- new schedule to DB; only write the new ones
->     -- TBF: this ensures that entries in the opportunity tables don't 
->     -- get put in the DB - BUG!!!
+>     -- new schedule to DB; only write the new periods
 >     putPeriods $ results \\ history
 >   where
 >     dur     = 60 * 24 * days
@@ -861,3 +859,6 @@ More specialized: Try to schedule 09B.
 >   where
 >     start      = fromGregorian 2009 6 1 0 0 0
 
+> sim09C days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False False
+>   where
+>     start      = fromGregorian 2009 10 1 0 0 0

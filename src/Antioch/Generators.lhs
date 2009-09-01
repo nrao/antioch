@@ -416,7 +416,7 @@ Q      80     5.3%     3.2   6
 > band2Receiver C = Rcvr4_6
 > band2Receiver X = Rcvr8_10
 > band2Receiver U = Rcvr12_18
-> band2Receiver K = Rcvr18_22 -- Need Rcvr22_26
+> band2Receiver K = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
 
