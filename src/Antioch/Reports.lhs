@@ -816,8 +816,7 @@ the DB.
 
 > generatePlots2db :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
 > generatePlots2db strategyName outdir sps dt days name simInput quiet = do
->     print $ "Scheduling trimester for " ++ show days ++ " days."
->     print $ "DON'T FORGET TO FIRST TRUNCATE PERIODS IN DB: " ++ dssDataDB
+>     print $ "Scheduling trimester for " ++ show days ++ " days starting at " ++ show . toGregorian $ dt ++ "."
 >     w <- getWeather Nothing
 >     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
 >     let history = filterHistory history' dt days 
