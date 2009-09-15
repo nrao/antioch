@@ -1,4 +1,4 @@
-from datetime    import datetime
+from datetime    import datetime, timedelta
 from WeatherData import WeatherData
 import pg
 
@@ -47,8 +47,12 @@ class WeatherStation2DBImport:
 
     def insert(self):
         for dt, wind_speed in self.getWindSpeeds():
-            print "Inserting wind_speed for %s." % dt
             wd_id = self.getWeatherDate(dt)
+            # Handle if no weather station wind speed measure was taken
+            if str(wind_speed) == 'nan':
+                earlier = datetime.utcnow() - timedelta(hours = 4)
+                if dt < earlier:
+                    wind_speed = "NULL"
             self.c.query("""
                          INSERT INTO weather_station2 (wind_speed, weather_date_id)
                          VALUES (%s, %s)
