@@ -146,7 +146,7 @@ ODBC and MySQL.
 > fromHttpString :: String -> Maybe DateTime
 > fromHttpString = fmap toSeconds . parseUTCTime httpFormat
 
-The string conversions may loss precsion at the level of a second.  This is
+The string conversions may loss precision at the level of a second.  This is
 close enough for our purposes (TBF)?
 
 > prop_SqlString dt = diffSeconds dt dt' <= 1
@@ -166,6 +166,12 @@ close enough for our purposes (TBF)?
 > httpFormat = iso8601DateFormat (Just " %HA%MA%S")
 
 Simple arithmetic.
+
+> addHours :: Int -> DateTime -> DateTime
+> addHours = addMinutes . (60 *)
+
+> diffHours :: Int -> DateTime -> DateTime
+> diffHours x = (`div` 60) . diffMinutes x
 
 > addMinutes' :: Int -> DateTime -> DateTime
 > addMinutes' = addMinutes

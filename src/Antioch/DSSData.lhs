@@ -157,6 +157,38 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >         }
 >        -- TBF: need to cover any other types?
 
+> getSession :: Int -> Connection -> IO Session
+> getSession sessionId cnn = handleSqlError $ do 
+>   result <- quickQuery' cnn query xs 
+>   let s' = toSessionData $ result!!0
+>   s <- updateRcvrs cnn s' 
+>   return s
+>     where
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.id = ?"
+>       xs = [toSql sessionId]
+>       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
+>         defaultSession {
+>             sId = fromSql id 
+>           , sName = fromSql name
+>           , frequency   = fromSql freq
+>           , minDuration = fromSqlMinutes mind
+>           , maxDuration = fromSqlMinutes maxd
+>           , timeBetween = fromSqlMinutes between
+>           , sAlloted    = fromSqlMinutes time 
+>           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
+>           , dec = fromSql v  
+>           , grade = toGradeType fltGrade 
+>           , receivers = [] -- TBF: does scoring support the logic structure!
+>           , periods = [] -- TBF, no history in Carl's DB
+>           , enabled = fromSql e
+>           , authorized = fromSql a
+>           , backup = fromSql b
+>           , band = deriveBand $ fromSql freq
+>           , sClosed = fromSql c
+>           , sType = toSessionType sty
+>         }
+>        -- TBF: need to cover any other types?
+
 Since the Session data structure does not support Nothing, when we get NULLs
 from the DB (Carl didn't give it to us), then we need some kind of default
 value of the right type.
