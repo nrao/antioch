@@ -660,7 +660,7 @@ be confused and raise false alarams.
 >     error = "WARNING: "
 >     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
 >     fixed = if (not $ scheduleHonorsFixed history ps) then error ++ "Schedule does not honor pre-scheduled Periods!\n" else "Pre-scheduled Periods Honored\n"
->     durs = if (not . obeyDurations $ ps) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
+>     durs = if (not . obeyDurations $ psOpen) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
 >     sTime = if (disobeySessionAlloted psOpen /= []) then error ++ "Session Alloted Time NOT Honored: " ++ (show . disobeySessionAlloted $ psOpen) ++ "\n" else "Session Alloted Time Honored\n"
 >     pTime = if (disobeyProjectAlloted psOpen /= []) then error ++ "Project Alloted Time NOT Honored: " ++ (show . disobeyProjectAlloted $ psOpen) ++ "\n" else "Project Alloted Time Honored\n"
 >     tb = if (disobeyTimeBetween psOpen /= []) then error ++ "Time Between NOT Honored: " ++ (show . disobeyTimeBetween $ psOpen) ++ "\n" else "Time Between Honored.\n"
@@ -669,9 +669,9 @@ be confused and raise false alarams.
 >     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
 >     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
 >     decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
->     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
->     rfiFlag = if (disobeyLowRFI ps) == [] then "Low RFI Flags Honored\n" else error ++ "Low RFI Flags NOT Honored: "++ (show . disobeyLowRFI $ ps) ++"\n"
->     lstEx = if (disobeyLSTExclusion ps) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
+>     elevs = if validElevs psOpen then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
+>     rfiFlag = if (disobeyLowRFI psOpen) == [] then "Low RFI Flags Honored\n" else error ++ "Low RFI Flags NOT Honored: "++ (show . disobeyLowRFI $ ps) ++"\n"
+>     lstEx = if (disobeyLSTExclusion psOpen) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
 >     trans = if (disobeyTransit psOpen) == [] then "Transit Flags Honored\n" else error ++ "Transit Flags NOT Honored: " ++ (show . disobeyTransit $ psOpen) ++ "\n"
 >     psOpen = filter (\p -> (sType . session $ p) == Open) ps
 
