@@ -7,6 +7,7 @@ were scored and how that scoring influenced the scheduling of the telescope.
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Weather
+> import Antioch.Utilities (rad2hrs)
 > import Control.Monad.RWS.Strict
 
 Extract the debugging info that was relevant at a specific date and time.
@@ -31,7 +32,8 @@ Reconstruct the scoring function that was in place at a specific date and time.
 > getScoring          :: DateTime -> [Trace] -> Scoring ScoreFunc
 > getScoring dt trace = do
 >     tell [Timestamp dt]
->     raPressure   <- genRightAscensionPressure' raFactors
+>     let accessor s = (round . rad2hrs . ra $ s) `mod` 24
+>     raPressure   <- genRightAscensionPressure' accessor raFactors
 >     freqPressure <- genFrequencyPressure' freqFactors
 >     genScore' raPressure freqPressure
 >   where
