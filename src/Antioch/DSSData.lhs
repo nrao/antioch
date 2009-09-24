@@ -47,16 +47,14 @@ separate query, to deal with multiple allotments (different grades)
 > populateProject cnn project = do
 >     sessions' <- getSessions (pId project) cnn
 >     sessions <- mapM (populateSession cnn) sessions'
->     -- TBF: only for 09B! Then get observer blackouts!
->     blackouts <- getProjectBlackouts (pId project) cnn 
->     let project' = project { pBlackouts = blackouts }
+>     -- TBF: are we getting observer blackouts? not 09B, but 09C!
 >     -- project times
->     allotments <- getProjectAllotments (pId project') cnn
->     let project'' = setProjectAllotments project' allotments
+>     allotments <- getProjectAllotments (pId project) cnn
+>     let project' = setProjectAllotments project allotments
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
->     let project''' = setProjectObservers project'' observers
->     return $ makeProject project'' (pAlloted project''') sessions 
+>     let project'' = setProjectObservers project' observers
+>     return $ makeProject project'' (pAlloted project'') sessions 
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer

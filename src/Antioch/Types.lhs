@@ -114,7 +114,6 @@ Tying the knot.
 >   , thesis          :: !Bool
 >   , maxSemesterTime :: !Minutes
 >   , observers       :: [Observer]
->   , pBlackouts      :: [DateRange] -- TBF: only needed for 09B.  delete me!!!
 >   } deriving Eq
 
 > makeProject :: Project -> Minutes -> [Session] -> Project
@@ -224,7 +223,6 @@ Simple Functions for Periods:
 >   , pAlloted = 0
 >   , maxSemesterTime = 10000000 -- more then enough time
 >   , observers = [defaultObserver]
->   , pBlackouts = []
 >   , pClosed  = False
 >   }
 

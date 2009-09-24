@@ -57,7 +57,6 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects12" 630 (duration . head $ allPeriods)    
 >     assertEqual "test_getProjects13" 3 (length . nub $ map (sType . session) allPeriods) 
 >     assertEqual "test_getProjects14" Fixed (sType . session . head $ allPeriods) 
->     assertEqual "test_getProjects15" True ((length $ concatMap pBlackouts ps) > 0) 
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head . tail $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 

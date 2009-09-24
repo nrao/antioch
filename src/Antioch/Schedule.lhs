@@ -294,16 +294,6 @@ by a duration greater then their session's timebetween.
 >   where
 >     diffTime p1 p2 = diffMinutes (startTime p2) (endTime p1)
 
-Make sure that no periods are scheduled where their project should be blacked
-out.  TBF: this is only valid for 09B!!!
-
-> obeyProjectBlackouts :: [Period] -> [(Period, DateRange)]  
-> obeyProjectBlackouts ps = concatMap disobeysBlackout ps
->   where
->     disobeysBlackout p = filter (\(p, bo) -> (inBlackout p bo)) $ map (\bo-> (p, bo)) (blackouts p)
->     inBlackout p bo = (startTime p) < (snd bo) && (fst bo) < (endTime p)
->     blackouts p = pBlackouts . project . session $ p
-
 Make sure that we don't have a schedule that has more periods scheduled then 
 what we actually scheduled for.  TBF: right now we are scheduling an extra
 15 minutes at the end.

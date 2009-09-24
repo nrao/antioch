@@ -404,19 +404,6 @@ TBF: should we be taking observer.scanioned and on site into account?
 >     obs s = observers . project $ s
 >     isBlackedOut dt obs = any (==True) $ map (inDateRange dt) (blackouts obs)
 
-TBF WTF TBD: delete this after 09B!!!
-For scheduling 09B, we cannot use observerAvailable, because Carl's database
-does not track observers in the same way.  Instead, we will be working
-with project blackouts.  After we are done with 09B, deprecate this!!!
-
-> projectAvailable :: ScoreFunc
-> projectAvailable dt s = boolean "projectAvailable" . Just $ projectAvailable' dt s
-
-If the datetime given falls within one of the session's project's blackout 
-dates, then the project is not available for observing at this time.
-
-> projectAvailable' :: DateTime -> Session -> Bool
-> projectAvailable' dt s = not $ any (==True) $ map (inDateRange dt) (pBlackouts . project $ s)
 
 The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 
@@ -726,7 +713,6 @@ Need to translate a session's factors into the final product score.
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , receiver
->       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
 >       , observerOnSite
 >       , needsLowRFI
 >       , lstExcepted
@@ -757,7 +743,6 @@ Need to translate a session's factors into the final product score.
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , receiver
->       , projectAvailable -- TBF: only for 09B, then use observerAvailable!!!
 >       , observerOnSite
 >       , needsLowRFI
 >       , lstExcepted
