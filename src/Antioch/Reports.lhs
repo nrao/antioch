@@ -814,9 +814,9 @@ This is a specialized version of generatePlots.  The main difference is that
 it calls simulateScheduling instead of simulate, and it writes results to 
 the DB.
 
-> generatePlots09B :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
-> generatePlots09B strategyName outdir sps dt days name simInput quiet = do
->     print $ "Scheduling 09B for " ++ show days ++ " days."
+> generatePlots2db :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
+> generatePlots2db strategyName outdir sps dt days name simInput quiet = do
+>     print $ "Scheduling trimester for " ++ show days ++ " days."
 >     w <- getWeather Nothing
 >     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
 >     let history = filterHistory history' dt days 
@@ -850,14 +850,14 @@ Run generic simulations.
 >   where
 >     start      = fromGregorian 2006 2 1 0 0 0
 
-More specialized: Try to schedule 09B.
+More specialized: Try to schedule specific trimester.
 
-> sim09B' start days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False True
+> sim09B' start days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
 
-> sim09B days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False True
+> sim09B days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
 >     start      = fromGregorian 2009 6 1 0 0 0
 
-> sim09C days filepath = generatePlots09B Pack filepath (statsPlotsToFile filepath "") start days "" False False
+> sim09C days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
 >     start      = fromGregorian 2009 10 1 0 0 0
