@@ -1,3 +1,5 @@
+> {-# OPTIONS -XFlexibleContexts #-}
+
 > module Antioch.Score where
 
 > import Antioch.DateTime
@@ -202,22 +204,22 @@ Generate a scoring function having the pressure factors.
 >     bins    = initBins (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
+> genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> m ScoreFunc
 > genFrequencyPressure' factors = do
 >     tell [FreqPressureHistory factors]
 >     return $ frequencyPressure factors band
 
 > genRightAscensionPressure          :: [Session] -> Scoring ScoreFunc
-> genRightAscensionPressure sessions = genRightAscensionPressure' factors
+> genRightAscensionPressure sessions = genRightAscensionPressure' accessor factors
 >   where
 >     accessor s = (round . rad2hrs . ra $ s) `mod` 24
 >     bins    = initBins (0, 23) accessor sessions
 >     factors = binsToFactors bins
 
-> genRightAscensionPressure' factors = do
+> genRightAscensionPressure' :: (MonadWriter [Trace] m) => (Session -> Int) -> Array Int Float -> m ScoreFunc
+> genRightAscensionPressure' accessor factors = do
 >     tell [RaPressureHistory factors]
 >     return $ rightAscensionPressure factors accessor
->   where
->     accessor s = (round . rad2hrs . ra $ s) `mod` 24
 
 Select the appropriate pressure factor from the array of pressures.
 

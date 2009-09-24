@@ -78,7 +78,7 @@
 >       , frequency = 17.8
 >       , ra = hrs2rad 19.9
 >       , dec = deg2rad 15.5
->       , receivers = [[Rcvr18_22]]
+>       , receivers = [[Rcvr18_26]]
 >       , band = K
 >       }
 >
@@ -91,7 +91,7 @@
 >       , frequency = 22.7
 >       , ra = hrs2rad 12.9
 >       , dec = deg2rad 29.2
->       , receivers = [[Rcvr22_26]]
+>       , receivers = [[Rcvr18_26]]
 >       , band = K
 >       }
 >

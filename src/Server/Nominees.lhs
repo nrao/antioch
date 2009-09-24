@@ -68,8 +68,8 @@
 >                        , if blackout == "true" then Nothing else Just observerAvailable]
 >     liftIO $ print sfs
 >     -- use only backup sessions?
->     -- include completed sessions?
 >     let backup = fromJust . fromJust . lookup "backup" $ params
+>     -- include completed sessions?
 >     let completed = fromJust . fromJust . lookup "completed" $ params
 >     let filter = catMaybes . concat $ [
 >             [Just isTypeOpen]
@@ -91,7 +91,7 @@
 >         sf <- genPartScore sfs . scoreSessions $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print "returning stuff ..."
->     --liftIO $ print nominees
+>     -- liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
 >     liftIO $ print "finished getNominees"
 
