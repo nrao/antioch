@@ -61,11 +61,13 @@ year's worth of weather is in the database, by modifiying the date.
 > getWeatherSafe :: DateTime -> IO Weather
 > getWeatherSafe = getWeather' . Just . dateSafe 
 
-Right now, we only have 2006 in the DB.
+Right now, the only historical weather we have is 2006.
 TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
+However, we are importing the latest weather forecasts into this DB,
+so we've deprecated 'dateSafe'.
 
 > dateSafe :: DateTime -> DateTime
-> dateSafe dt = if (year == 2006) then dt else replaceYear 2006 dt
+> dateSafe dt = dt --if (year == 2006) then dt else replaceYear 2006 dt
 >   where
 >     (year, _, _, _, _, _) = toGregorian dt
 > -- TBF: do this when you have more then one year:

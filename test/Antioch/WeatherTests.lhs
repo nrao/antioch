@@ -22,17 +22,18 @@
 TBF: only 2006 in our Weather DB still!
 
 > test_years = TestCase $ do 
->   test_year dt05 val06
+>   test_year dt05 n
 >   test_year dt06 val06
->   test_year dt07 val06
->   test_year dt08 val06
->   test_year dt09 val06
+>   test_year dt07 n
+>   test_year dt08 n
+>   test_year dt09 n
 >     where
 >       test_year dt val = do
 >          w <- getWeather $ Just dt
 >          wind' <- wind w (60 `addMinutes'` dt)
 >          assertEqual ("test_years_" ++ (toSqlString dt)) val (fromMaybe (-1.0) wind')
 >       val06 = 5.8049664
+>       n     = (-1.0) 
 >       dt05  = fromGregorian 2005 2 1 0 0 0 
 >       dt06  = fromGregorian 2006 2 1 0 0 0 
 >       dt07  = fromGregorian 2007 2 1 0 0 0 
