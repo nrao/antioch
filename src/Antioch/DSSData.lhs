@@ -83,19 +83,6 @@ BOS web services to retrieve reservation dates.
 > setProjectObservers proj obs = proj { observers = obs }
 
 
-TBF: Let's say it again.  This is only for scheduling 09B.  Then we'll
-want to ditch this, and get the observer blackouts.
-
-> getProjectBlackouts :: Int -> Connection -> IO [DateRange]
-> getProjectBlackouts projId cnn = handleSqlError $ do 
->   result <- quickQuery' cnn query xs 
->   return $ toBlackoutList result 
->     where
->       query = "SELECT pb.start_date, pb.end_date FROM project_blackouts_09b AS pb WHERE pb.project_id = ?"
->       xs = [toSql projId]
->       toBlackoutList = map toDateRange
->       toDateRange (start:end:[]) = (sqlToDateTime start, sqlToDateTime end)
-
 We must query for the allotments separately, because if a Project has alloted
 time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
 two allotments, and querying w/ a join will duplicate the project.
@@ -141,11 +128,11 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , maxDuration = fromSqlMinutes maxd
 >           , timeBetween = fromSqlMinutes between
 >           , sAlloted    = fromSqlMinutes time 
->           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
+>           , ra = fromSql h 
 >           , dec = fromSql v  
 >           , grade = toGradeType fltGrade 
->           , receivers = [] -- TBF: does scoring support the logic structure!
->           , periods = [] -- TBF, no history in Carl's DB
+>           , receivers = [] 
+>           , periods = [] -- no history in Carl's DB
 >           , enabled = fromSql e
 >           , authorized = fromSql a
 >           , backup = fromSql b
@@ -153,7 +140,6 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
->        -- TBF: need to cover any other types?
 
 Since the Session data structure does not support Nothing, when we get NULLs
 from the DB (Carl didn't give it to us), then we need some kind of default
@@ -229,13 +215,8 @@ in part because if there are *no* rcvrs, that larger SQL would not return
 >     toRcvrList s = map (toRcvr s)
 >     toRcvr s [x] = toRcvrType s x
 
-TBF: is what we'ere doing here w/ the rcvr and frequency legal?
-
 > toRcvrType :: Session -> SqlValue -> Receiver
 > toRcvrType s val = read . fromSql $ val
-> --toRcvrType s val = if (fromSql val) == ("Rcvr18_26" :: String) then findRcvr18_26 s else read . fromSql $ val
->   where
-> --    findRcvr18_26 s = if frequency s < 22.0 then Rcvr18_22 else Rcvr22_26 
 
 Here, we gather additional information about a session: opportunities, periods,
 observing parameters, etc.
