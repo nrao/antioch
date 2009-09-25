@@ -31,6 +31,7 @@
 >               | Rcvr_PAR
 >               | Zpectrometer
 >               | Holography
+>               | RcvrArray18_26
 >               deriving (Eq, Show, Read)
 
 Sessions store their desired Rcvrs in Conjugate Normal Form (CNF).
