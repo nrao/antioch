@@ -385,18 +385,37 @@ are already in the DB.
 >   result <- mapM (putPeriod cnn) ps
 >   commit cnn
 
+Here we add a new period to the database.  Since Antioch is creating it
+we will set the Period_Accounting.scheduled field
+
 > putPeriod :: Connection -> Period -> IO [[SqlValue]] 
 > putPeriod cnn p = do
->   quickQuery' cnn query xs 
+>   accounting_id <- putPeriodAccounting cnn (duration p)
+>   quickQuery' cnn query (xs accounting_id) 
 >     where
->       xs = [toSql . sId . session $ p
->           , toSql $ (toSqlString . startTime $ p) 
->           , minutesToSqlHrs . duration $ p
->           , toSql . pScore $ p
->           , toSql . toSqlString . pForecast $ p
->           , toSql . pBackup $ p
+>       xs a = [toSql . sId . session $ p
+>             , toSql a
+>             , toSql $ (toSqlString . startTime $ p) 
+>             , minutesToSqlHrs . duration $ p
+>             , toSql . pScore $ p
+>             , toSql . toSqlString . pForecast $ p
+>             , toSql . pBackup $ p
 >             ]
->       query = "INSERT INTO periods VALUES (DEFAULT, ?, ?, ?, ?, ?, ?);"
+>       query = "INSERT INTO periods VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?);"
 
 > minutesToSqlHrs :: Minutes -> SqlValue
 > minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
+
+Creates a new period accounting row, and returns this new rows ID
+
+> putPeriodAccounting :: Connection -> Int -> IO Int
+> putPeriodAccounting cnn scheduled = do
+>   quickQuery' cnn query xs
+>   result <- quickQuery' cnn queryId xsId
+>   return $ toId result
+>     where
+>       xs = [minutesToSqlHrs scheduled]
+>       query = "INSERT INTO periods_accounting VALUES (DEFAULT, ?, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0)"
+>       xsId = []
+>       queryId = "SELECT MAX(id) FROM periods_accounting"
+>       toId [[x]] = fromSql x
