@@ -574,7 +574,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  --, histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
 >  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
->  , plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
+>  --, plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
 >  , histCanceledFreqRatio $ rootPath ++ "/simFracCanceledFreq.png"
 >  , plotBandPressureTime  $ rootPath ++ "/simBandPFTime.png"
 >  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
