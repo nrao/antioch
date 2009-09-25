@@ -57,6 +57,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_averageScore
 >   , test_averageScore2
 >   , test_obsAvailable
+>   , test_obsAvailable2
 >   , test_observerAvailable
 >   , test_needsLowRFI
 >   , test_lstExcepted
@@ -658,6 +659,21 @@ Look at the scores over a range where none are zero.
 >       s2  = defaultSession { project = p }
 >       p   = defaultProject { observers = [o] }
 >       o   = defaultObserver { blackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+
+If none is sanctioned, then there should never be an observer available
+
+> test_obsAvailable2 = TestCase $ do
+>   assertEqual "test_obsAvailable2_1" True  (obsAvailable dt s)
+>   assertEqual "test_obsAvailable2_2" False (obsAvailable dt s2)
+>   assertEqual "test_obsAvailable2_3" False (obsAvailable dt2 s2)
+>     where
+>       dt  = fromGregorian 2006 2 1 0 0 0
+>       dt2 = fromGregorian 2006 2 7 0 0 0
+>       s   = defaultSession
+>       s2  = defaultSession { project = p }
+>       p   = defaultProject { observers = [o] }
+>       o   = defaultObserver { blackouts = bs, sanctioned = False }
 >       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
 
 > test_observerAvailable = TestCase $ do

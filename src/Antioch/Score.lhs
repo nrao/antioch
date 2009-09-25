@@ -393,15 +393,24 @@ Important, because on site observers get a boost.
 >     isOnSite dt o = any (==True) $ map (inDateRange dt) (reservations o) 
 
 Is there an observer available for this time and session?
-TBF: should we be taking observer.scanioned and on site into account?
+Rules (observer available if): 
+   * if a single observer is on site (ignore their black outs)
+   * if a single sancioned observer is not blacked out
 
 > observerAvailable :: ScoreFunc
 > observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
 
 > obsAvailable :: DateTime -> Session -> Bool
-> obsAvailable dt s = not $ all (==True) $ map (isBlackedOut dt) (obs s)
+> obsAvailable dt s = (obsOnSite dt s) || (remoteObsAvailable dt s)
+
+> remoteObsAvailable :: DateTime -> Session -> Bool
+> remoteObsAvailable dt s = not $ allObsBlackedOut dt obs
+>   where
+>     obs = filter sanctioned $ observers . project $ s
+
+> allObsBlackedOut :: DateTime -> [Observer] -> Bool
+> allObsBlackedOut dt obs = all (==True) $ map (isBlackedOut dt) obs
 >   where 
->     obs s = observers . project $ s
 >     isBlackedOut dt obs = any (==True) $ map (inDateRange dt) (blackouts obs)
 
 
