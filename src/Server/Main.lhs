@@ -17,12 +17,16 @@
 > import Network.Salvia.Httpd
 > import Network.Socket                      (inet_addr)
 > import Server.JPeriods
+> import Server.MinObsConditions
 > import Server.RunScheduler
 > import Server.Nominees
 > import Maybe
-> import Antioch.Settings                    (salviaListenerPort)
+> import Antioch.Settings                    (salviaListenerPort, dssDataDB)
 
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani2 user=dss"
+> connect :: IO Connection
+> connect = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
 
 > main = do
 >     print "starting server"
@@ -44,17 +48,13 @@
 >     sessions <- mkSessions
 >     return $ hDefault counter sessions handler
 
-
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
 >           ("/schedule_algo", scheduleAndRedirectHandler) -- deprecated
 >         , ("/runscheduler",  runSchedulerHandler)  
->         , ("/nominees",    getNomineesHandler)  
->         , ("/periods", periodsHandler cnn)        -- Example, not used
+>         , ("/nominees",      getNomineesHandler)  
+>         , ("/moc",           getMOCHandler cnn)  
+>         , ("/periods",       periodsHandler cnn)         -- Example, not used
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn
-
-
-
-
