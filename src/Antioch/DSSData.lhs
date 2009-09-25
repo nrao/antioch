@@ -256,14 +256,23 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
 
-TBF: for now, just set:
+For now, just set:
    * low rfi flag
+   * transit flag
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT) | n == "Night-time Flag" = s { lowRFI = fromSql pBool }    
+>                                                                | n == "Transit" = s { transit = toTransit pBool }
 >                                                                | otherwise = s
 >   where
 >     n = fromSql pName
+>     toTransit t = toTransitType . toTransitBool $ t 
+
+> toTransitBool :: SqlValue -> Bool
+> toTransitBool t = fromSql t
+
+> toTransitType :: Bool -> TransitType
+> toTransitType t = if t then Center else Optional
 
 The DB's observing parameters may support both LST Exclusion flags *and*
 LST Inclusion flags, where as our Session's only support the LST Exclusion
