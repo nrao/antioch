@@ -69,6 +69,9 @@ TBF: currently no observer black out date tables
 TBF: We currently cannot link info in the DSS database to the id's used in the
 BOS web services to retrieve reservation dates.
 
+TBF: Beware original_id, pst_id, username, and contact_instructions
+in the User table can be null.
+
 > getProjectObservers :: Int -> Connection -> IO [Observer]
 > getProjectObservers projId cnn = handleSqlError $ do
 >     -- 0. TBF: get the usernames (or other ID?) associated with this project
@@ -86,6 +89,7 @@ BOS web services to retrieve reservation dates.
 We must query for the allotments separately, because if a Project has alloted
 time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
 two allotments, and querying w/ a join will duplicate the project.
+TBF: field ignore_grade in Allotment table can be null.
 
 > getProjectAllotments :: Int -> Connection -> IO [(Minutes, Grade)]
 > getProjectAllotments projId cnn = handleSqlError $ do 
@@ -116,7 +120,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.project_id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND  t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
 >       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
@@ -124,10 +128,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >             sId = fromSql id 
 >           , sName = fromSql name
 >           , frequency   = fromSql freq
->           , minDuration = fromSqlMinutes mind
->           , maxDuration = fromSqlMinutes maxd
->           , timeBetween = fromSqlMinutes between
->           , sAlloted    = fromSqlMinutes time 
+>           , minDuration = fromSqlMinutes' mind 3
+>           , maxDuration = fromSqlMinutes' maxd 12
+>           , timeBetween = fromSqlMinutes' between 0
+>           , sAlloted    = fromSqlMinutes time
 >           , ra = fromSql h 
 >           , dec = fromSql v  
 >           , grade = toGradeType fltGrade 
@@ -145,12 +149,16 @@ Since the Session data structure does not support Nothing, when we get NULLs
 from the DB (Carl didn't give it to us), then we need some kind of default
 value of the right type.
 
+> fromSqlInt :: SqlValue -> Int
 > fromSqlInt SqlNull = 0
 > fromSqlInt x       = fromSql x
 
-> fromSqlMinutes         :: SqlValue -> Minutes
-> fromSqlMinutes SqlNull = 0
-> fromSqlMinutes x       = sqlHrsToMinutes x
+> fromSqlMinutes :: SqlValue -> Minutes
+> fromSqlMinutes x               = sqlHrsToMinutes x
+
+> fromSqlMinutes' :: SqlValue -> Minutes -> Minutes
+> fromSqlMinutes' SqlNull def     = def
+> fromSqlMinutes' x _             = sqlHrsToMinutes x
 
 > sqlHrsToHrs' :: SqlValue -> Float
 > sqlHrsToHrs' hrs = fromSql hrs
@@ -188,6 +196,7 @@ Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions
 in part because if there are *no* rcvrs, that larger SQL would not return
 *any* result (TBF: this bug is still there w/ the tragets)
+Note, start_date in Receiver_Schedule table can be null.
 
 > updateRcvrs :: Connection -> Session -> IO Session
 > updateRcvrs cnn s = do
