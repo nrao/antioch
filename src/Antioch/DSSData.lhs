@@ -74,17 +74,72 @@ in the User table can be null.
 
 > getProjectObservers :: Int -> Connection -> IO [Observer]
 > getProjectObservers projId cnn = handleSqlError $ do
->     -- 0. TBF: get the usernames (or other ID?) associated with this project
+>     -- 0. Get basic info on observers: username, pst id, sanctioned
+>     observers' <- getObservers projId cnn
 >     -- 1. Use these to lookup the needed info from the BOS web service.
->     -- obs <- getReservationInfo obs'
 >     -- 1. Use these to lookup the needed info from the DSS database
->     -- obs' <- get
+>     observers <- mapM (populateObserver cnn) observers'
 >     -- return obs
->     return []
+>     return observers 
 
 > setProjectObservers :: Project -> [Observer] -> Project
 > setProjectObservers proj obs = proj { observers = obs }
 
+Sets the basic Observer Data Structure info
+
+> getObservers :: Int -> Connection -> IO [Observer]
+> getObservers projId cnn = do
+>   result <- quickQuery' cnn query xs 
+>   return $ toObserverList result 
+>     where
+>       xs = [toSql projId]
+>       query = "select u.id, u.first_name, u.last_name, u.sanctioned, u.username, u.pst_id from investigators as inv, users as u where u.id = inv.user_id AND inv.project_id = ?"
+>       toObserverList = map toObserver
+>       toObserver (id:first:last:sanc:uname:pid:[]) = 
+>         defaultObserver 
+>           { oId = fromSql id
+>           , firstName = fromSql first
+>           , lastName = fromSql last
+>           , sanctioned = fromSql sanc
+>           , username = fromSqlUserName uname
+>           , pstId = fromSqlInt pid }
+
+> fromSqlUserName :: SqlValue -> String
+> fromSqlUserName SqlNull = ""
+> fromSqlUserName name    = fromSql name
+
+Takes Observers with basic info and gets the extras: blackouts, reservations
+
+> populateObserver :: Connection -> Observer -> IO Observer
+> populateObserver cnn observer = do
+>     bs <- getObserverBlackouts cnn observer
+>     res <- getObserverReservations cnn observer
+>     return observer { blackouts = bs } --, reservations = res }
+
+> getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
+> getObserverBlackouts cnn obs = do
+>   result <- quickQuery' cnn query xs
+>   -- convert from sql to haskell types
+>   --let blackoutInfo = toBlackoutInfoList result
+>   -- convert from a description of the blackout to the actual dates
+>   return $ toBlackoutDatesList result
+>     where
+>       xs = [toSql . oId $ obs]
+>       query = "select b.start, b.end, r.repeat, b.until from blackouts as b, repeats as r where r.id = b.repeat_id AND user_id = ?"
+>       toBlackoutDatesList = concatMap toBlackoutDates
+>       toBlackoutDates (_:s:e:r:u:[]) = toDateRangesFromInfo (sqlToDateTime s) (sqlToDateTime e) (fromSql r) -- (fromSql u)
+
+TBF: need to finish this!
+
+> -- toDateRangesFromInfo :: DateTime -> DateTime -> String -> DateTime -> [DateRange]
+> toDateRangesFromInfo :: DateTime -> DateTime -> String -> [DateRange]
+> toDateRangesFromInfo start end repeat | repeat == "Once" = [(start, end)]
+>                                             | otherwise = [(start, end)]
+
+TBF: the BOS service still isn't working!
+
+> getObserverReservations :: Connection -> Observer -> IO [DateRange]
+> getObserverReservations cnn obs = return []
 
 We must query for the allotments separately, because if a Project has alloted
 time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
