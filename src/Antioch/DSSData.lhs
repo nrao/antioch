@@ -114,8 +114,8 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 > populateObserver cnn observer = do
 >     bs <- getObserverBlackouts cnn observer
 >     res <- getObserverReservations cnn observer
->     -- if ((oId observer) == 12) then print (map (\b -> (toSqlString . fst $ b, toSqlString . snd $ b)) bs) else print (oId observer)
->     return observer { blackouts = bs, reservations = res }
+>     --if ((oId observer) == 12) then print (map (\b -> (toSqlString . fst $ b, toSqlString . snd $ b)) bs) else print (oId observer)
+>     return observer { blackouts = bs } --, reservations = res }
 
 > getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
 > getObserverBlackouts cnn obs = do
