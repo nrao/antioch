@@ -30,6 +30,9 @@ connection to the DB correctly.
 >     , test_session2
 >     , test_session_scores
 >     , test_totaltime
+>     , test_toDateRangesFromInfo_1
+>     , test_toDateRangesFromInfo_2
+>     , test_toDateRangesFromInfo_3
 >     ]
 
 > test_getProjectData = TestCase $ do
@@ -218,7 +221,49 @@ generated: it's the input we want to test, really.
 >                          , pForecast = dt }
 
 
+> test_toDateRangesFromInfo_1 = TestCase $ do
+>   let dtrs = toDateRangesFromInfo start end repeat until 
+>   assertEqual "test_toDateRangesFromInfo_1" [(start, end)] dtrs
+>     where
+>       start = fromGregorian 2009 1 1 0 0 0
+>       end   = fromGregorian 2009 1 1 4 0 0
+>       until = fromGregorian 2009 1 1 4 0 0
+>       repeat = "Ounce" 
+>     
 
+> test_toDateRangesFromInfo_2 = TestCase $ do
+>   let dtrs = toDateRangesFromInfo start end repeat until 
+>   assertEqual "test_toDateRangesFromInfo_2" exp dtrs
+>     where
+>       start = fromGregorian 2009 1 1 0 0 0
+>       end   = fromGregorian 2009 1 1 4 0 0
+>       until = fromGregorian 2009 1 23 0 0 0
+>       repeat = "Weekly" 
+>       exp = [(start, end)
+>            , (fromGregorian 2009 1 8 0 0 0
+>            ,  fromGregorian 2009 1 8 4 0 0)
+>            , (fromGregorian 2009 1 15 0 0 0
+>            ,  fromGregorian 2009 1 15 4 0 0)
+>            , (fromGregorian 2009 1 22 0 0 0
+>            ,  fromGregorian 2009 1 22 4 0 0)
+>             ]
+
+> test_toDateRangesFromInfo_3 = TestCase $ do
+>   let dtrs = toDateRangesFromInfo start end repeat until 
+>   assertEqual "test_toDateRangesFromInfo_3" exp dtrs
+>     where
+>       start = fromGregorian 2009 11  2 0 0 0
+>       end   = fromGregorian 2009 11  2 4 0 0
+>       until = fromGregorian 2010  2 23 0 0 0
+>       repeat = "Monthly" 
+>       exp = [(start, end)
+>            , (fromGregorian 2009 12 2 0 0 0
+>            ,  fromGregorian 2009 12 2 4 0 0)
+>            , (fromGregorian 2010  1 2 0 0 0
+>            ,  fromGregorian 2010  1 2 4 0 0)
+>            , (fromGregorian 2010  2 2 0 0 0
+>            ,  fromGregorian 2010  2 2 4 0 0)
+>             ]
 
 Test Utilities: 
 

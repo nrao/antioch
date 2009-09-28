@@ -114,27 +114,54 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 > populateObserver cnn observer = do
 >     bs <- getObserverBlackouts cnn observer
 >     res <- getObserverReservations cnn observer
->     return observer { blackouts = bs } --, reservations = res }
+>     -- if ((oId observer) == 12) then print (map (\b -> (toSqlString . fst $ b, toSqlString . snd $ b)) bs) else print (oId observer)
+>     return observer { blackouts = bs, reservations = res }
 
 > getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
 > getObserverBlackouts cnn obs = do
 >   result <- quickQuery' cnn query xs
->   -- convert from sql to haskell types
->   --let blackoutInfo = toBlackoutInfoList result
->   -- convert from a description of the blackout to the actual dates
 >   return $ toBlackoutDatesList result
 >     where
 >       xs = [toSql . oId $ obs]
->       query = "select b.start, b.end, r.repeat, b.until from blackouts as b, repeats as r where r.id = b.repeat_id AND user_id = ?"
+>       query = "select b.start_date, b.end_date, r.repeat, b.until from blackouts as b, repeats as r where r.id = b.repeat_id AND user_id = ?"
 >       toBlackoutDatesList = concatMap toBlackoutDates
->       toBlackoutDates (_:s:e:r:u:[]) = toDateRangesFromInfo (sqlToDateTime s) (sqlToDateTime e) (fromSql r) -- (fromSql u)
+>       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
 
-TBF: need to finish this!
 
-> -- toDateRangesFromInfo :: DateTime -> DateTime -> String -> DateTime -> [DateRange]
-> toDateRangesFromInfo :: DateTime -> DateTime -> String -> [DateRange]
-> toDateRangesFromInfo start end repeat | repeat == "Once" = [(start, end)]
->                                             | otherwise = [(start, end)]
+When converting repeats to a list of dates, when do these dates start and end?
+
+> blackoutsStart = fromGregorian 2009 9 1 0 0 0
+> blackoutsEnd   = fromGregorian 2010 2 1 0 0 0
+
+These two methods define the start and end of blackouts in case of NULLs in the
+DB.  TBF: this is only good for 09C.
+
+> sqlToBlackoutStart :: SqlValue -> DateTime
+> sqlToBlackoutStart SqlNull = blackoutsStart
+> sqlToBlackoutStart dt = sqlToDateTime dt 
+
+> sqlToBlackoutEnd :: SqlValue -> DateTime
+> sqlToBlackoutEnd SqlNull = blackoutsEnd
+> sqlToBlackoutEnd dt = sqlToDateTime dt 
+
+Convert from a description of the blackout to the actual dates
+
+> toDateRangesFromInfo :: DateTime -> DateTime -> String -> DateTime -> [DateRange]
+> toDateRangesFromInfo start end repeat until | repeat == "Once" = [(start, end)]
+>                                             | repeat == "Weekly" = toWeeklyDateRanges start end until
+>                                             | repeat == "Monthly" = toMonthlyDateRanges start end until
+>                                             | otherwise = [(start, end)] -- WTF
+
+> toWeeklyDateRanges :: DateTime -> DateTime -> DateTime -> [DateRange]
+> toWeeklyDateRanges start end until | start > until = []
+>                                    | otherwise = (start, end):(toWeeklyDateRanges (nextWeek start) (nextWeek end) until)
+>   where
+>     nextWeek dt = addMinutes weekMins dt
+>     weekMins = 7 * 24 * 60
+
+> toMonthlyDateRanges :: DateTime -> DateTime -> DateTime -> [DateRange]
+> toMonthlyDateRanges start end until | start > until = []
+>                                     | otherwise = (start, end):(toMonthlyDateRanges (addMonth start) (addMonth end) until)
 
 TBF: the BOS service still isn't working!
 

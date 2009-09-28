@@ -80,6 +80,21 @@ interest internally.
 >    where
 >      (_, m, d, h, mm, s) = toGregorian dt
 
+> replaceMonth :: Int -> DateTime -> DateTime
+> replaceMonth month dt = fromGregorian y month d h mm s
+>    where
+>      (y, _, d, h, mm, s) = toGregorian dt
+
+Takes into account 12 months a year and wrap-around
+
+> addMonth :: DateTime -> DateTime
+> addMonth dt | month == 12 = replaceYear nextYear $ replaceMonth 1 dt
+>             | otherwise   = replaceMonth nextMonth dt
+>   where
+>      (y, month, d, h, mm, s) = toGregorian dt
+>      nextMonth = month + 1
+>      nextYear = y + 1
+
 Take apart a UTCTime into pieces and parts.
   
 > toGregorian'    :: DateTime -> (Int, Int, Int)
