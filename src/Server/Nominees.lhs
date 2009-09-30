@@ -91,7 +91,7 @@
 >         sf <- genPartScore sfs . scoreSessions $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print "returning stuff ..."
->     -- liftIO $ print nominees
+>     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
 >     liftIO $ print "finished getNominees"
 
@@ -136,7 +136,7 @@
 > jNomineeToJson :: JNominee -> JSValue
 > jNomineeToJson nominee = makeObj $
 >       concatMap field [
->           ("sess_name",      showJSON' . nSessName )
+>           ("sess_name",      showJSON' . nSessName)
 >         , ("proj_name",      showJSON' . nProjName)
 >         , ("score",          showJSON' . nScore)
 >         , ("duration",       showJSON' . nDuration)

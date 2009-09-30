@@ -19,6 +19,7 @@
 > import Server.JPeriods
 > import Server.RunScheduler
 > import Server.Nominees
+> import Server.Scores
 > import Maybe
 > import Antioch.Settings                    (salviaListenerPort)
 
@@ -50,10 +51,11 @@
 >     hPrefixRouter [
 >           ("/schedule_algo", scheduleAndRedirectHandler) -- deprecated
 >         , ("/runscheduler",  runSchedulerHandler)  
->         , ("/nominees",    getNomineesHandler)  
->         , ("/periods", periodsHandler cnn)        -- Example, not used
+>         , ("/nominees",      getNomineesHandler)  
+>         , ("/scores",        getScoresHandler)  
+>         , ("/periods",       periodsHandler cnn) -- Example, not used
 >       ] $ hError NotFound
->     liftIO $ disconnect cnn
+>     liftIO $ disconnect cnn   -- important? some of the above use pre-connected DSSData methods!?
 
 
 

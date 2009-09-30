@@ -145,6 +145,39 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sType = toSessionType sty
 >         }
 
+> getSession :: Int -> IO Session
+> getSession periodId = handleSqlError $ do 
+>   cnn <- connect
+>   result <- quickQuery' cnn query xs 
+>   let s' = toSessionData . head $ result
+>   s <- updateRcvrs cnn s' 
+>   return s
+>     where
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type, periods AS p WHERE s.id = p.session_id AND a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
+>       xs = [toSql periodId]
+>       toSessionDataList = map toSessionData
+>       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
+>         defaultSession {
+>             sId = fromSql id 
+>           , sName = fromSql name
+>           , frequency   = fromSql freq
+>           , minDuration = fromSqlMinutes' mind 3
+>           , maxDuration = fromSqlMinutes' maxd 12
+>           , timeBetween = fromSqlMinutes' between 0
+>           , sAlloted    = fromSqlMinutes time
+>           , ra = fromSql h 
+>           , dec = fromSql v  
+>           , grade = toGradeType fltGrade 
+>           , receivers = [] 
+>           , periods = [] -- no history in Carl's DB
+>           , enabled = fromSql e
+>           , authorized = fromSql a
+>           , backup = fromSql b
+>           , band = deriveBand $ fromSql freq
+>           , sClosed = fromSql c
+>           , sType = toSessionType sty
+>         }
+
 Since the Session data structure does not support Nothing, when we get NULLs
 from the DB (Carl didn't give it to us), then we need some kind of default
 value of the right type.
