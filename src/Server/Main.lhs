@@ -17,13 +17,17 @@
 > import Network.Salvia.Httpd
 > import Network.Socket                      (inet_addr)
 > import Server.JPeriods
+> import Server.MinObsConditions
 > import Server.RunScheduler
 > import Server.Nominees
 > import Server.Scores
 > import Maybe
-> import Antioch.Settings                    (salviaListenerPort)
+> import Antioch.Settings                    (salviaListenerPort, dssDataDB)
 
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani2 user=dss"
+> connect :: IO Connection
+> connect = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
 
 > main = do
 >     print "starting server"
@@ -45,7 +49,6 @@
 >     sessions <- mkSessions
 >     return $ hDefault counter sessions handler
 
-
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
@@ -54,9 +57,6 @@
 >         , ("/nominees",      getNomineesHandler)  
 >         , ("/scores",        getScoresHandler)  
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
+>         , ("/moc",           getMOCHandler cnn)  
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn   -- important? some of the above use pre-connected DSSData methods!?
-
-
-
-

@@ -135,7 +135,12 @@ Tying the knot.
 >     end   = snd r
 
 > data Observer = Observer {
->     sanctioned   :: Bool
+>     oId          :: Int
+>   , firstName    :: String -- for debugging
+>   , lastName     :: String -- for debugging
+>   , username     :: String
+>   , pstId        :: Int
+>   , sanctioned   :: Bool
 >   , reservations :: [DateRange]
 >   , blackouts    :: [DateRange]
 > } deriving (Eq, Show, Read)
@@ -210,7 +215,12 @@ Simple Functions for Periods:
 >   }
 
 > defaultObserver = Observer {
->     sanctioned   = True
+>     oId          = 0 
+>   , firstName    = "" -- for debugging
+>   , lastName     = "" -- for debugging
+>   , username     = ""
+>   , pstId        = 0 
+>   , sanctioned   = True
 >   , reservations = []
 >   , blackouts    = []
 > }

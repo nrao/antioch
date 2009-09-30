@@ -80,4 +80,3 @@ can find.  Nothing in DSS is currently using this code.
 >       , start_time   = fromSql $ xs !! 2
 >       , duration     = fromSql $ xs !! 3
 >       }
-

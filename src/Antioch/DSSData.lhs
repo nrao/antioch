@@ -74,17 +74,99 @@ in the User table can be null.
 
 > getProjectObservers :: Int -> Connection -> IO [Observer]
 > getProjectObservers projId cnn = handleSqlError $ do
->     -- 0. TBF: get the usernames (or other ID?) associated with this project
+>     -- 0. Get basic info on observers: username, pst id, sanctioned
+>     observers' <- getObservers projId cnn
 >     -- 1. Use these to lookup the needed info from the BOS web service.
->     -- obs <- getReservationInfo obs'
 >     -- 1. Use these to lookup the needed info from the DSS database
->     -- obs' <- get
+>     observers <- mapM (populateObserver cnn) observers'
 >     -- return obs
->     return []
+>     return observers 
 
 > setProjectObservers :: Project -> [Observer] -> Project
 > setProjectObservers proj obs = proj { observers = obs }
 
+Sets the basic Observer Data Structure info
+
+> getObservers :: Int -> Connection -> IO [Observer]
+> getObservers projId cnn = do
+>   result <- quickQuery' cnn query xs 
+>   return $ toObserverList result 
+>     where
+>       xs = [toSql projId]
+>       query = "select u.id, u.first_name, u.last_name, u.sanctioned, u.username, u.pst_id from investigators as inv, users as u where u.id = inv.user_id AND inv.project_id = ?"
+>       toObserverList = map toObserver
+>       toObserver (id:first:last:sanc:uname:pid:[]) = 
+>         defaultObserver 
+>           { oId = fromSql id
+>           , firstName = fromSql first
+>           , lastName = fromSql last
+>           , sanctioned = fromSql sanc
+>           , username = fromSqlUserName uname
+>           , pstId = fromSqlInt pid }
+
+> fromSqlUserName :: SqlValue -> String
+> fromSqlUserName SqlNull = ""
+> fromSqlUserName name    = fromSql name
+
+Takes Observers with basic info and gets the extras: blackouts, reservations
+
+> populateObserver :: Connection -> Observer -> IO Observer
+> populateObserver cnn observer = do
+>     bs <- getObserverBlackouts cnn observer
+>     res <- getObserverReservations cnn observer
+>     --if ((oId observer) == 12) then print (map (\b -> (toSqlString . fst $ b, toSqlString . snd $ b)) bs) else print (oId observer)
+>     return observer { blackouts = bs } --, reservations = res }
+
+> getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
+> getObserverBlackouts cnn obs = do
+>   result <- quickQuery' cnn query xs
+>   return $ toBlackoutDatesList result
+>     where
+>       xs = [toSql . oId $ obs]
+>       query = "select b.start_date, b.end_date, r.repeat, b.until from blackouts as b, repeats as r where r.id = b.repeat_id AND user_id = ?"
+>       toBlackoutDatesList = concatMap toBlackoutDates
+>       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
+
+
+When converting repeats to a list of dates, when do these dates start and end?
+
+> blackoutsStart = fromGregorian 2009 9 1 0 0 0
+> blackoutsEnd   = fromGregorian 2010 2 1 0 0 0
+
+These two methods define the start and end of blackouts in case of NULLs in the
+DB.  TBF: this is only good for 09C.
+
+> sqlToBlackoutStart :: SqlValue -> DateTime
+> sqlToBlackoutStart SqlNull = blackoutsStart
+> sqlToBlackoutStart dt = sqlToDateTime dt 
+
+> sqlToBlackoutEnd :: SqlValue -> DateTime
+> sqlToBlackoutEnd SqlNull = blackoutsEnd
+> sqlToBlackoutEnd dt = sqlToDateTime dt 
+
+Convert from a description of the blackout to the actual dates
+
+> toDateRangesFromInfo :: DateTime -> DateTime -> String -> DateTime -> [DateRange]
+> toDateRangesFromInfo start end repeat until | repeat == "Once" = [(start, end)]
+>                                             | repeat == "Weekly" = toWeeklyDateRanges start end until
+>                                             | repeat == "Monthly" = toMonthlyDateRanges start end until
+>                                             | otherwise = [(start, end)] -- WTF
+
+> toWeeklyDateRanges :: DateTime -> DateTime -> DateTime -> [DateRange]
+> toWeeklyDateRanges start end until | start > until = []
+>                                    | otherwise = (start, end):(toWeeklyDateRanges (nextWeek start) (nextWeek end) until)
+>   where
+>     nextWeek dt = addMinutes weekMins dt
+>     weekMins = 7 * 24 * 60
+
+> toMonthlyDateRanges :: DateTime -> DateTime -> DateTime -> [DateRange]
+> toMonthlyDateRanges start end until | start > until = []
+>                                     | otherwise = (start, end):(toMonthlyDateRanges (addMonth start) (addMonth end) until)
+
+TBF: the BOS service still isn't working!
+
+> getObserverReservations :: Connection -> Observer -> IO [DateRange]
+> getObserverReservations cnn obs = return []
 
 We must query for the allotments separately, because if a Project has alloted
 time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
@@ -156,6 +238,38 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type, periods AS p WHERE s.id = p.session_id AND a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
 >       xs = [toSql periodId]
 >       toSessionDataList = map toSessionData
+>       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
+>         defaultSession {
+>             sId = fromSql id 
+>           , sName = fromSql name
+>           , frequency   = fromSql freq
+>           , minDuration = fromSqlMinutes mind
+>           , maxDuration = fromSqlMinutes maxd
+>           , timeBetween = fromSqlMinutes between
+>           , sAlloted    = fromSqlMinutes time 
+>           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
+>           , dec = fromSql v  
+>           , grade = toGradeType fltGrade 
+>           , receivers = [] -- TBF: does scoring support the logic structure!
+>           , periods = [] -- TBF, no history in Carl's DB
+>           , enabled = fromSql e
+>           , authorized = fromSql a
+>           , backup = fromSql b
+>           , band = deriveBand $ fromSql freq
+>           , sClosed = fromSql c
+>           , sType = toSessionType sty
+>         }
+>        -- TBF: need to cover any other types?
+
+> getSession :: Int -> Connection -> IO Session
+> getSession sessionId cnn = handleSqlError $ do 
+>   result <- quickQuery' cnn query xs 
+>   let s' = toSessionData $ result!!0
+>   s <- updateRcvrs cnn s' 
+>   return s
+>     where
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.id = ?"
+>       xs = [toSql sessionId]
 >       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
@@ -289,14 +403,23 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
 
-TBF: for now, just set:
+For now, just set:
    * low rfi flag
+   * transit flag
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT) | n == "Night-time Flag" = s { lowRFI = fromSql pBool }    
+>                                                                | n == "Transit" = s { transit = toTransit pBool }
 >                                                                | otherwise = s
 >   where
 >     n = fromSql pName
+>     toTransit t = toTransitType . toTransitBool $ t 
+
+> toTransitBool :: SqlValue -> Bool
+> toTransitBool t = fromSql t
+
+> toTransitType :: Bool -> TransitType
+> toTransitType t = if t then Center else Optional
 
 The DB's observing parameters may support both LST Exclusion flags *and*
 LST Inclusion flags, where as our Session's only support the LST Exclusion

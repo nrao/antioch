@@ -634,7 +634,11 @@ be confused and raise false alarams.
 >     r9 = reportPreScheduled history
 >     r10 = reportFinalSchedule ps
 >     r11 = reportSessionDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11] 
+>     r12 = reportObserverDetails ss
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12] 
+
+> reportObserverDetails :: [Session] -> String
+> reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
 
 > reportSessionDetails :: [Session] -> String
 > reportSessionDetails ss = "Session Details: \n" ++ (concatMap (\s -> (show s) ++ "\n") ss)
