@@ -210,9 +210,9 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >             sId = fromSql id 
 >           , sName = fromSql name
 >           , frequency   = fromSql freq
->           , minDuration = fromSqlMinutes mind
->           , maxDuration = fromSqlMinutes maxd
->           , timeBetween = fromSqlMinutes between
+>           , minDuration = fromSqlMinutes' mind 3
+>           , maxDuration = fromSqlMinutes' maxd 12
+>           , timeBetween = fromSqlMinutes' between 0
 >           , sAlloted    = fromSqlMinutes time 
 >           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
 >           , dec = fromSql v  
