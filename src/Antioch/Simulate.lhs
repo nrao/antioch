@@ -58,7 +58,6 @@ Sessions that:
 > isBackup _ s = backup s
 
 > isSchedulable :: SelectionCriteria
-> --(a -> Bool) -> [a] -> Bool
 > isSchedulable _ s = all (\f -> f s) [enabled, authorized]
 
 We are explicitly ignoring grade here: it has been decided that a human
