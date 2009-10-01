@@ -517,12 +517,12 @@ we will set the Period_Accounting.scheduled field
 >   quickQuery' cnn query (xs accounting_id) 
 >     where
 >       xs a = [toSql . sId . session $ p
->             , toSql a
 >             , toSql $ (toSqlString . startTime $ p) 
 >             , minutesToSqlHrs . duration $ p
 >             , toSql . pScore $ p
 >             , toSql . toSqlString . pForecast $ p
 >             , toSql . pBackup $ p
+>             , toSql a
 >             ]
 >       query = "INSERT INTO periods VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?);"
 
