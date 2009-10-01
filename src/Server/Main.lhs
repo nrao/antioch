@@ -55,7 +55,7 @@
 >           ("/schedule_algo", scheduleAndRedirectHandler) -- deprecated
 >         , ("/runscheduler",  runSchedulerHandler)  
 >         , ("/nominees",      getNomineesHandler)  
->         , ("/scores",        getScoresHandler)  
+>         , ("/scores",        getScoresHandler cnn)  
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
 >         , ("/moc",           getMOCHandler cnn)  
 >       ] $ hError NotFound

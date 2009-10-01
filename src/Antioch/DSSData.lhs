@@ -227,9 +227,8 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sType = toSessionType sty
 >         }
 
-> getSession :: Int -> IO Session
-> getSession periodId = handleSqlError $ do 
->   cnn <- connect
+> getSessionFromPeriod :: Int -> Connection -> IO Session
+> getSessionFromPeriod periodId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   let s' = toSessionData . head $ result
 >   s <- updateRcvrs cnn s' 

@@ -27,7 +27,7 @@
 > import Text.Printf
 > import Maybe
 > import Antioch.DateTime
-> import Antioch.DSSData                       (getProjects, getSession)
+> import Antioch.DSSData                       (getProjects, getSessionFromPeriod)
 > import Antioch.HardwareSchedule              (getReceiverSchedule)
 > import Antioch.Score
 > import Antioch.Settings                      (proxyListenerPort)
@@ -36,14 +36,14 @@
 > import Antioch.Utilities                     (readMinutes)
 > import Antioch.Weather                       (getWeather, Weather)
 
-> getScoresHandler :: Handler()
-> getScoresHandler = hMethodRouter [
->       (GET,  getScores)
->     , (POST, getScores)
+> getScoresHandler :: Connection -> Handler()
+> getScoresHandler cnn = hMethodRouter [
+>       (GET,  getScores cnn)
+>     -- , (POST, getScores)
 >     ] $ hError NotFound
 
-> getScores :: StateT Context IO ()
-> getScores = do
+> getScores :: Connection -> StateT Context IO ()
+> getScores cnn = do
 >     liftIO $ print "starting getScores"
 >     params <- hParameters
 >     liftIO $ print "got params"
@@ -61,7 +61,7 @@
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
 >     let ss = scoringSessions dt . concatMap sessions $ projs
->     let s = getSession id 
+>     let s = getSessionFromPeriod id cnn 
 >
 >     w <- liftIO $ getWeather . Just $ dt 
 >     rs <- liftIO $ getReceiverSchedule $ Just dt

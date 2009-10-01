@@ -22,7 +22,7 @@
 > import Server.Json
 
 > getMOCHandler :: Connection -> Handler()
-> getMOCHandler cnn= hMethodRouter [
+> getMOCHandler cnn = hMethodRouter [
 >       (GET, getMOC cnn)
 >     ] $ hError NotFound
 
