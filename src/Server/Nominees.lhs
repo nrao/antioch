@@ -73,12 +73,12 @@
 >     let completed = fromJust . fromJust . lookup "completed" $ params
 >     let filter = catMaybes . concat $ [
 >             [Just isTypeOpen]
+>           , [Just isSchedulable]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]]
 >     liftIO $ print filter
 >     let schedSessions = filterSessions dt filter
->     -- TBF should be this AND last trimester
->     let scoreSessions = filterSessions dt [isSchedulableSemester]
+>     let scoreSessions = filterSessions dt [isSchedulableSemester, isGradeA]
 >
 >     -- This is kind of awkward, the various selections the user may
 >     -- specify must be implemented by sessions selection, scoring
@@ -91,7 +91,7 @@
 >         sf <- genPartScore sfs . scoreSessions $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print "returning stuff ..."
->     -- liftIO $ print nominees
+>     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
 >     liftIO $ print "finished getNominees"
 
@@ -136,7 +136,7 @@
 > jNomineeToJson :: JNominee -> JSValue
 > jNomineeToJson nominee = makeObj $
 >       concatMap field [
->           ("sess_name",      showJSON' . nSessName )
+>           ("sess_name",      showJSON' . nSessName)
 >         , ("proj_name",      showJSON' . nProjName)
 >         , ("score",          showJSON' . nScore)
 >         , ("duration",       showJSON' . nDuration)

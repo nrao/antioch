@@ -57,6 +57,9 @@ Sessions that:
 > isBackup :: SelectionCriteria
 > isBackup _ s = backup s
 
+> isSchedulable :: SelectionCriteria
+> isSchedulable _ s = all (\f -> f s) [enabled, authorized]
+
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
@@ -122,7 +125,7 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   return (schedPeriods, obsPeriods)
 
 > schedulableSessions :: DateTime -> [Session] -> [Session]
-> schedulableSessions dt = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester]
+> schedulableSessions dt = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester, isSchedulable]
 
 > scoringSessions :: DateTime -> [Session] -> [Session]
 > scoringSessions dt = filterSessions dt [isSchedulableSemester, isGradeA]
