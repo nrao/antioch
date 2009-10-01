@@ -73,12 +73,12 @@
 >     let completed = fromJust . fromJust . lookup "completed" $ params
 >     let filter = catMaybes . concat $ [
 >             [Just isTypeOpen]
+>           , [Just isSchedulable]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]]
 >     liftIO $ print filter
 >     let schedSessions = filterSessions dt filter
->     -- TBF should be this AND last trimester
->     let scoreSessions = filterSessions dt [isSchedulableSemester]
+>     let scoreSessions = filterSessions dt [isSchedulableSemester, isGradeA]
 >
 >     -- This is kind of awkward, the various selections the user may
 >     -- specify must be implemented by sessions selection, scoring

@@ -729,6 +729,7 @@ Need to translate a session's factors into the final product score.
 >       , needsLowRFI
 >       , lstExcepted
 >       , enoughTimeBetween
+>       , observerAvailable
 >       ] dt s
 
 > genPartScore          :: [ScoreFunc] -> [Session] -> Scoring ScoreFunc
@@ -759,6 +760,7 @@ Need to translate a session's factors into the final product score.
 >       , needsLowRFI
 >       , lstExcepted
 >       --, enoughTimeBetween
+>       --, observerAvailable
 >       ] ++ sfs) dt s
 
 Convenience function for translating go/no-go into a factor.
