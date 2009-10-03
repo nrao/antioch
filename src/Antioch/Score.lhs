@@ -18,6 +18,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
+> import Debug.Trace
 
 Ranking System from Memo 5.2, Section 3
 
@@ -589,7 +590,7 @@ the provided duratin and the session's duration is used.
 >   where
 >     start = maybe (minDuration session) (min . minDuration $ session) lower
 >     stop = maybe (maxDuration session) (min . maxDuration $ session) upper
->     durs  = [0, quarter .. stop]
+>     durs  = [start, start + quarter .. stop]
 >     times = map (`addMinutes'` dt) durs
 >     findBest x y = if (fst x) > (fst y) then x else y
 
