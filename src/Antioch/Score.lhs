@@ -412,6 +412,9 @@ Rules (observer available if):
 >   where
 >     obs = filter sanctioned $ observers . project $ s
 
+Note that this will return True if there are NO observers, but it
+is handled by previously filtering out observerless sessions.
+
 > allObsBlackedOut :: DateTime -> [Observer] -> Bool
 > allObsBlackedOut dt obs = all (==True) $ map (isBlackedOut dt) obs
 >   where 

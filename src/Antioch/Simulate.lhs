@@ -60,6 +60,9 @@ Sessions that:
 > isSchedulable :: SelectionCriteria
 > isSchedulable _ s = all (\f -> f s) [enabled, authorized]
 
+> hasObservers :: SelectionCriteria
+> hasObservers _ s = not . null . observers . project $ s
+
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
@@ -125,10 +128,19 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   return (schedPeriods, obsPeriods)
 
 > schedulableSessions :: DateTime -> [Session] -> [Session]
-> schedulableSessions dt = filterSessions dt [isTypeOpen, hasTimeSchedulable, isNotComplete, isSchedulableSemester, isSchedulable]
+> schedulableSessions dt = filterSessions dt [
+>         isTypeOpen
+>       , hasTimeSchedulable
+>       , isNotComplete
+>       , isSchedulableSemester
+>       , isSchedulable
+>       , hasObservers
+>                                            ]
 
 > scoringSessions :: DateTime -> [Session] -> [Session]
-> scoringSessions dt = filterSessions dt [isSchedulableSemester, isGradeA]
+> scoringSessions dt = filterSessions dt [
+>         isSchedulableSemester
+>       , isGradeA]
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]

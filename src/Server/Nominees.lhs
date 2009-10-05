@@ -73,12 +73,15 @@
 >     let completed = fromJust . fromJust . lookup "completed" $ params
 >     let filter = catMaybes . concat $ [
 >             [Just isTypeOpen]
+>           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
+>           , [Just isSchedulableSemester]
 >           , [Just isSchedulable]
+>           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
->           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]]
+>                                       ]
 >     liftIO $ print filter
 >     let schedSessions = filterSessions dt filter
->     let scoreSessions = filterSessions dt [isSchedulableSemester, isGradeA]
+>     --let scoreSessions = filterSessions dt [isSchedulableSemester, isGradeA]
 >
 >     -- This is kind of awkward, the various selections the user may
 >     -- specify must be implemented by sessions selection, scoring
@@ -88,7 +91,7 @@
 >     w <- liftIO $ getWeather . Just $ dt 
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     nominees <- liftIO $ runScoring w rs $ do
->         sf <- genPartScore sfs . scoreSessions $ ss
+>         sf <- genPartScore sfs . scoringSessions dt $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print "returning stuff ..."
 >     liftIO $ print nominees
@@ -98,8 +101,8 @@
 > genNominees :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> [Session] -> Scoring [JNominee]
 > genNominees sf dt lower upper ss = do
 >     durations <- bestDurations sf dt lower upper ss
->     --liftIO $ print $ take 25 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ durations
->     return $ map toJNominee . take 25 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ durations
+>     --liftIO $ print $ take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ durations
+>     return $ map toJNominee . take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ durations
 >   where
 >     jNomOrder (_, v, _) (_, v', _) = compare v' v
 >     toJNominee (s, v, m) = defaultJNominee {
