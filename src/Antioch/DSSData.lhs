@@ -93,7 +93,7 @@ Sets the basic Observer Data Structure info
 >   return $ toObserverList result 
 >     where
 >       xs = [toSql projId]
->       query = "select u.id, u.first_name, u.last_name, u.sanctioned, u.username, u.pst_id from investigators as inv, users as u where u.id = inv.user_id AND inv.project_id = ?"
+>       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.username, u.pst_id FROM investigators AS inv, users AS u WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
 >       toObserverList = map toObserver
 >       toObserver (id:first:last:sanc:uname:pid:[]) = 
 >         defaultObserver 
@@ -123,7 +123,7 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 >   return $ toBlackoutDatesList result
 >     where
 >       xs = [toSql . oId $ obs]
->       query = "select b.start_date, b.end_date, r.repeat, b.until from blackouts as b, repeats as r where r.id = b.repeat_id AND user_id = ?"
+>       query = "SELECT b.start_date, b.end_date, r.repeat, b.until FROM blackouts AS b, repeats AS r WHERE r.id = b.repeat_id AND user_id = ?"
 >       toBlackoutDatesList = concatMap toBlackoutDates
 >       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
 
@@ -397,7 +397,7 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 >   return s''
 >     where
 >       xs = [toSql . sId $ s]
->       query = "select p.name, p.type, op.string_value, op.integer_value, op.float_value, op.boolean_value, op.datetime_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND op.session_id = ?" 
+>       query = "SELECT p.name, p.type, op.string_value, op.integer_value, op.float_value, op.boolean_value, op.datetime_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND op.session_id = ?" 
 
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
@@ -434,8 +434,8 @@ flags - so we'll have to collapse the DB's 2 types into our 1.
 >       -- TBF: for some reason, I need to have 'Exclude' & 'Include' in the
 >       -- query strings: putting it in xs causes an SQL error ???
 >       xs = [toSql . sId $ s]
->       query = "select p.name, op.float_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
->       query' = "select p.name, op.float_value from observing_parameters as op, parameters as p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND op.session_id = ?" 
+>       query = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
+>       query' = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND op.session_id = ?" 
 
 The 'ex' flag determines whether we are importing LST Exclusion ranges
 or Inclusion ranges.
@@ -522,7 +522,7 @@ Opportunities for Fixed Sessions should be honored via Periods
 >   return $ toPeriodList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities where windows.id = opportunities.window_id and windows.session_id = ?"
+>     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities WHERE windows.id = opportunities.window_id and windows.session_id = ?"
 >     toPeriodList = map toPeriod
 >     toPeriod (wid:wreq:start:durHrs:[]) = 
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
