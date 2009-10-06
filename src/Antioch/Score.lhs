@@ -18,7 +18,6 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
-> import Debug.Trace
 
 Ranking System from Memo 5.2, Section 3
 
@@ -372,7 +371,7 @@ up, all the time.
 > receiver' dt rcvrs rs = evalCNF scheduled rcvrs 
 >   where
 >     scheduled = getReceivers dt rs
->     evalCNF av rs = all (==True) $ map (\rg -> any (==True) $ map (\r -> elem r av) rg) rs
+>     evalCNF av rs = all (\rg -> any (\r -> elem r av) rg) rs
 
 Returns list of receivers that will be up at the given time.
 
@@ -391,10 +390,10 @@ Important, because on site observers get a boost.
 > observerOnSite dt s = factor "observerOnSite" . Just $ if (obsOnSite dt s) then 1.5 else 1.0
 
 > obsOnSite :: DateTime -> Session -> Bool
-> obsOnSite dt s = any (==True) $ map (isOnSite dt) (obs s)
+> obsOnSite dt s = any (isOnSite dt) (obs s)
 >   where 
 >     obs s = observers . project $ s
->     isOnSite dt o = any (==True) $ map (inDateRange dt) (reservations o) 
+>     isOnSite dt o = any (inDateRange dt) (reservations o) 
 
 Is there an observer available for this time and session?
 Rules (observer available if): 
@@ -412,14 +411,13 @@ Rules (observer available if):
 >   where
 >     obs = filter sanctioned $ observers . project $ s
 
-Note that this will return True if there are NO observers, but it
+Note that this will return True if there are NO observers, but this case
 is handled by previously filtering out observerless sessions.
 
 > allObsBlackedOut :: DateTime -> [Observer] -> Bool
-> allObsBlackedOut dt obs = all (==True) $ map (isBlackedOut dt) obs
+> allObsBlackedOut dt obs = all (isBlackedOut dt) obs
 >   where 
->     isBlackedOut dt obs = any (==True) $ map (inDateRange dt) (blackouts obs)
-
+>     isBlackedOut dt obs = any (inDateRange dt) (blackouts obs)
 
 The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 
@@ -489,7 +487,7 @@ have a better chance of being scheduled while the receiver is available.
 > receiverBoost' :: Session -> Bool
 > receiverBoost' s | (grade s) /= GradeA = False
 >                  | otherwise            =
->   any (==True) $ map (\rg -> all (==True) $ map (\r -> elem r boostRcvrs) rg) rgs
+>   any (\rg -> all (\r -> elem r boostRcvrs) rg) rgs
 >   where
 >     rgs = receivers s
 >     boostRcvrs = [Rcvr_1070, Rcvr_342, Rcvr_450, Rcvr_800] --TBF: may change 
