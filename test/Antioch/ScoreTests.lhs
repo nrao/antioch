@@ -366,8 +366,8 @@ BETA: TestProjectCompletion.py test_completion_score
 >     let s = head . filter (\s -> "CV" == (sName s)) . concatMap sessions $ pTestProjects
 >     -- missing window, transit, observerOnSite, and ObserverAvailable
 >     let politicalFactors = score [scienceGrade
->                           , thesisProject
->                           , projectCompletion]
+>                                 , thesisProject
+>                                 , projectCompletion]
 >     fs <- runScoring w [] (politicalFactors dt s)
 >     let result = eval fs
 >     assertEqual "test_politicalFactors" 1.0024 result
@@ -399,6 +399,24 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
 >     assertEqual "test_trackingErrorLimit" 1.0 result
+
+> {-
+> test_scoreFactor = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let s = findPSessionByName "CV"
+>     result <- scoreFactor w [] dt s trackingEfficiency
+>     assertAlmostEqual "test_scoreFactor trackingEfficiency" 3 0.9964174 result 
+>     result <- scoreFactor w [] dt s atmosphericStabilityLimit
+>     assertAlmostEqual "test_scoreFactor atmosphericStabilityLimit" 3 1.0 result 
+
+> test_scoreFactors = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let s = findPSessionByName "CV"
+>     result <- scoreFactors pSessions w [] dt s
+>     assertEqual "test_scoreFactors" [] result 
+> -}
 
 BETA: TestZenithAngleLimit testScore
 
