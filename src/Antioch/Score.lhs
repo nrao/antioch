@@ -590,6 +590,8 @@ the provided duratin and the session's duration is used.
 >     return $ (session, fst result, snd result)
 >   where
 >     start = maybe (minDuration session) (min . minDuration $ session) lower
+>     --start' = trace ((show . minDuration $ session) ++ " " ++ (show start)) start
+>     --stop' = trace ((show . maxDuration $ session) ++ " " ++ (show stop)) stop
 >     stop = maybe (maxDuration session) (min . maxDuration $ session) upper
 >     durs  = [start, start + quarter .. stop]
 >     times = map (`addMinutes'` dt) durs
@@ -714,16 +716,14 @@ Need to translate a session's factors into the final product score.
 >     score (scoringFactors effs raPressure freqPressure) dt s
 
 > {-
-> scoreFactors sessions w rs dt s = do
+> scoreFactors :: [Session] -> Weather -> ReceiverSchedule -> DateTime -> Session -> IO [Factors]
+> scoreFactors sessions w rs dt s = runScoring w rs $ do
 >     effs <- calcEfficiency dt s
 >     raPressure   <- genRightAscensionPressure sessions
 >     freqPressure <- genFrequencyPressure sessions
->     return . sequence . map (scoreFactor w rs dt s) $ scoringFactors effs raPressure freqPressure
-
-> scoreFactor w rs dt s sf = do
->     fs <- runScoring w rs (sf dt s)
->     let result = eval fs
->     return result
+>     let sfactors = scoringFactors effs raPressure freqPressure
+>     let x = map (\sf -> sf dt s) sfactors
+>     return x
 > -}
 
 > scoringFactors :: Maybe (Score, Float)

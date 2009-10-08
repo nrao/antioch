@@ -847,6 +847,20 @@ the DB.
 >     dur     = 60 * 24 * days
 >     int     = 60 * 24 * 2
 
+> schedule2db :: StrategyName -> DateTime -> Int -> IO ()
+> schedule2db strategyName dt days = do
+>     print $ "Scheduling trimester for " ++ show days ++ " days."
+>     w <- getWeather Nothing
+>     (rs, ss, projs, history') <- dbInput dt
+>     let history = filterHistory history' dt days 
+>     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
+>     print . length $ results
+>     -- new schedule to DB; only write the new periods
+>     putPeriods $ results \\ history
+>   where
+>     dur     = 60 * 24 * days
+>     int     = 60 * 24 * 2
+
 Run generic simulations.
 
 > runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True True
@@ -854,6 +868,9 @@ Run generic simulations.
 >     start      = fromGregorian 2006 2 1 0 0 0
 
 More specialized: Try to schedule specific trimester.
+
+> schedulePackDB :: DateTime -> Int -> IO ()
+> schedulePackDB start days = schedule2db Pack start days 
 
 > sim09B' start days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
 

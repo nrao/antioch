@@ -55,7 +55,7 @@ as (example): "2009-06-20 00%3A00%3A00".  To avoid the issue with the time,
 we are rounding off to the nearest day.
 
 > schedule :: [(String, String)] -> IO ()
-> schedule params = sim09B' start days "." 
+> schedule params = schedulePackDB start days
 >   where
 >     start = case start' of
 >                 Just dt -> dt

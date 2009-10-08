@@ -6,7 +6,7 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.PProjects
-> import Control.Monad.Trans  (lift)
+> import Control.Monad.Trans  (lift, liftIO)
 > import Test.HUnit
 > import Data.List            (zip4, zipWith4, zipWith5)
 > import Data.Maybe           (isJust)
@@ -401,20 +401,12 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     assertEqual "test_trackingErrorLimit" 1.0 result
 
 > {-
-> test_scoreFactor = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
->     let dt = fromGregorian 2006 9 2 14 30 0
->     let s = findPSessionByName "CV"
->     result <- scoreFactor w [] dt s trackingEfficiency
->     assertAlmostEqual "test_scoreFactor trackingEfficiency" 3 0.9964174 result 
->     result <- scoreFactor w [] dt s atmosphericStabilityLimit
->     assertAlmostEqual "test_scoreFactor atmosphericStabilityLimit" 3 1.0 result 
-
 > test_scoreFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
->     result <- scoreFactors pSessions w [] dt s
+>     fs <- scoreFactors pSessions w [] dt s
+>     result <- map eval fs
 >     assertEqual "test_scoreFactors" [] result 
 > -}
 
