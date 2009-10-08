@@ -151,11 +151,13 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >     sigmaNight = 2.8
 
 > trackingEfficiency dt s = do
->   w     <- weather
->   meas  <- measuredWind 
->   wind' <- if meas
->            then liftIO $ w2_wind w dt
->            else liftIO $ wind w dt 
+>   w            <- weather
+>   measuredWind <- liftIO $ w2_wind w dt
+>   forecastWind <- liftIO $ wind w dt
+>   -- If the real wind is unavailable, use the forecast wind.
+>   let wind' = case measuredWind of
+>                    Just x  -> Just x
+>                    Nothing -> forecastWind
 >   factor "trackingEfficiency" $ calculateTE wind' dt s
 
 > calculateTE :: Maybe Float -> DateTime -> Session -> Maybe Float
