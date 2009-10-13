@@ -852,6 +852,7 @@ the DB.
 >     print $ "Scheduling trimester for " ++ show days ++ " days."
 >     w <- getWeather Nothing
 >     (rs, ss, projs, history') <- dbInput dt
+>     -- history start earlier?
 >     let history = filterHistory history' dt days 
 >     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     print . length $ results

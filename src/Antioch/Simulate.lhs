@@ -253,8 +253,9 @@ This also exists because it attempts to solve the bugs involving the 'history':
 that is, pre-scheduled periods that can appear any where in time.  
 
 TBF: for the purposes of building a schedule, is this acceptable?
-TBF: are we introducing an effect of cutting off periods at the simulation
-boundary?  
+we introducing an effect of cutting off periods at the simulation
+boundary, and are unable to schedule only until 07:00 EDT (23:00 UT)
+on the terminal day.
 
 > simulateScheduling :: StrategyName -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
 > simulateScheduling sched w rs dt dur int history canceled sessions =

@@ -19,6 +19,8 @@
 
 > type DateTime = Int
 
+> -- edt <- getCurrentTimeZone     -- if running in Green Bank then EDT
+
 > instance Arbitrary UTCTime where
 >     arbitrary       = do
 >         offset <- choose (0, 20000) :: Gen Float
@@ -155,6 +157,9 @@ ODBC and MySQL.
 >   where
 >     (year, month, day, hours, minutes, seconds) = toGregorian dt
 
+> toHttpString    :: DateTime -> String
+> toHttpString dt = formatUTCTime httpFormat . fromSeconds $ dt
+
 > fromSqlString :: String -> Maybe DateTime
 > fromSqlString = fmap toSeconds . parseUTCTime sqlFormat
 
@@ -176,9 +181,15 @@ close enough for our purposes (TBF)?
 > parseUTCTime :: String -> String -> Maybe UTCTime
 > parseUTCTime = parseTime defaultTimeLocale
 
+> formatLocalTime :: String -> LocalTime -> String
+> formatLocalTime = formatTime defaultTimeLocale
+
+> parseLocalTime :: String -> String -> Maybe LocalTime
+> parseLocalTime = parseTime defaultTimeLocale
+
 > sqlFormat = iso8601DateFormat (Just "%T")
 
-> httpFormat = iso8601DateFormat (Just " %HA%MA%S")
+> httpFormat = iso8601DateFormat (Just " %HA%MA%S") -- TBF space needed?
 
 Simple arithmetic.
 

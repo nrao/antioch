@@ -10,6 +10,7 @@
 > import Data.Record.Label
 > import Data.List                             (find, intercalate, sortBy)
 > import Data.Maybe                            (maybeToList)
+> import Data.Time                             (getCurrentTimeZone, localTimeToUTC)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL              (Connection)
 > import Network.Protocol.Http
@@ -50,9 +51,17 @@
 >     liftIO $ print params
 >
 >     -- Interpret options:
+>     -- timezone
+>     let timezone = fromJust . fromJust . lookup "tz" $ params
 >     -- start at ...
 >     let startStr = fromJust . fromJust . lookup "start" $ params
->     let dt = fromJust . fromHttpString $ startStr
+>     liftIO $ print startStr
+>     --let dt = fromJust . fromHttpString $ startStr
+>     edt <- liftIO getCurrentTimeZone
+>     let utc  | timezone == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ startStr
+>              | otherwise        = fromJust . parseUTCTime httpFormat $ startStr
+>     liftIO $ print utc
+>     let dt = toSeconds utc
 >     liftIO $ print dt
 >     -- duration of the hole (if one) ...
 >     let upper = fmap readMinutes . fromJust . lookup "duration" $ params

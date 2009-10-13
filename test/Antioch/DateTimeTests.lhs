@@ -7,9 +7,11 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Score
+> import Data.Time (getCurrentTimeZone, utcToLocalTime, localTimeToUTC)
 
 > tests = TestList [test_secondsToMJD
 >                 , test_addMonth
+>                 , test_translations
 >                  ]
 
 BETA: results compared to using 3rd party libraries used in beta's TimeAgent
@@ -28,3 +30,26 @@ BETA: results compared to using 3rd party libraries used in beta's TimeAgent
 >   assertEqual "test_addMonth_1" dt2 (addMonth dt1)
 >   assertEqual "test_addMonth_2" dt3 (addMonth dt2)
 
+TBF must be some way to factor out the common code in these, but ...
+
+> test_translations =  TestCase $ do
+>     edt <- getCurrentTimeZone -- TBF does this adjust for daylight savings?
+>     let dt = fromGregorian 2009 10 11 12 15 0
+>     -- DateTime <-> UTCTime
+>     let utc = fromSeconds dt
+>     assertEqual "test_translations_1" dt (toSeconds utc)
+>     -- UTCTime <-> LocalTime
+>     let lt = utcToLocalTime edt utc
+>     assertEqual "test_translations_2" utc (localTimeToUTC edt lt)
+>     -- DateTime <-> (Http) String
+>     let dt_http = toHttpString dt
+>     assertEqual "test_translations_3" (Just dt) (fromHttpString dt_http)
+>     -- DateTime <-> (Sql) String
+>     let http_sql = toSqlString dt
+>     assertEqual "test_translations_4" (Just dt) (fromSqlString http_sql)
+>     -- UTCTime <-> (Http) String
+>     let utc_http = formatUTCTime httpFormat utc
+>     assertEqual "test_translations_5" (Just utc) (parseUTCTime httpFormat utc_http)
+>     -- LocalTime <-> (Http) String
+>     let lt_http = formatLocalTime httpFormat lt
+>     assertEqual "test_translations_6" (Just lt) (parseLocalTime httpFormat lt_http)

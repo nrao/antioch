@@ -717,21 +717,18 @@ Need to translate a session's factors into the final product score.
 >     effs <- calcEfficiency dt s
 >     score (scoringFactors effs raPressure freqPressure) dt s
 
-> {-
-> scoreFactors :: [Session] -> Weather -> ReceiverSchedule -> DateTime -> Session -> IO [Factors]
+> --scoreFactors :: [Session] -> Weather -> ReceiverSchedule -> DateTime -> Session -> IO [Factors]
 > scoreFactors sessions w rs dt s = runScoring w rs $ do
 >     effs <- calcEfficiency dt s
 >     raPressure   <- genRightAscensionPressure sessions
 >     freqPressure <- genFrequencyPressure sessions
->     let sfactors = scoringFactors effs raPressure freqPressure
->     let x = map (\sf -> sf dt s) sfactors
->     return x
-> -}
+>     let sfactors = scoringFactors effs raPressure freqPressure -- [ScoreFunc]
+>     return $ map (\sf -> sf dt s) sfactors
 
-> scoringFactors :: Maybe (Score, Float)
->               -> (DateTime -> Session -> Scoring Factors)
->               -> (DateTime -> Session -> Scoring Factors)
->               -> [DateTime -> Session -> Scoring Factors]
+sfactors :: Maybe (Float, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
+sfactors effs rap fp = scoringFactors effs rap fp
+
+> scoringFactors :: Maybe (Score, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
 > scoringFactors effs raPressure freqPressure =
 >        [scienceGrade
 >       , thesisProject
