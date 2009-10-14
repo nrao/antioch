@@ -882,3 +882,18 @@ More specialized: Try to schedule specific trimester.
 > sim09C days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
 >     start      = fromGregorian 2009 10 1 0 0 0
+
+Trying to emulate the Beta Test's Scoring Tab:
+
+> scoringReport :: Int -> DateTime -> Minutes -> IO ()
+> scoringReport sessionId dt dur = do
+>   (rs, ss, projs, history') <- dbInput dt
+>   let s = head $ filter (\sess -> (sId sess) == sessionId) ss
+>   scoringInfo s ss dt dur rs
+ 
+> scoringReportByName :: String -> DateTime -> Minutes -> IO ()
+> scoringReportByName name dt dur = do
+>   (rs, ss, projs, history') <- dbInput dt
+>   let s = head $ filter (\sess -> (sName sess) == name) ss
+>   scoringInfo s ss dt dur rs
+

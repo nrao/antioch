@@ -800,6 +800,38 @@ used to generate pScore (using the time pScore was calculated for, pForecast).
 >     scorePeriod' sf dt = sf dt (session p)
 >     dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
+Basic Utility that attempts to emulate the Beta Test's Scring Tab:
+
+> scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
+> scoringInfo s ss dt dur rs = do
+>   w <- getWeather . Just $ dt
+>   let score' w dt = runScoring w rs $ do
+>       fs <- genScore ss 
+>       sf <- fs dt s
+>       return sf
+>   factors <- mapM (score' w) times
+>   let scores = map eval factors
+>   let info = printFactors $ zip times $ zip scores factors
+>   let report = "Scoring Info for session: " ++ (sName s) ++ "\n\n" ++ info
+>   putStrLn report
+>   writeFile "scoringInfo.txt" report
+>     where
+>       times = [(15*q) `addMinutes'` dt | q <- [0..numQtrs]]
+>       numQtrs = dur `div` 15
+
+> printFactors :: [(DateTime, (Score, Factors))] -> String
+> printFactors factors = concatMap factorsToString factors 
+
+> factorsToString :: (DateTime, (Score, Factors)) -> String
+> factorsToString dtFactors = (toSqlString dt) ++ ":\nscore: " ++ (show score) ++ "\n" ++(concatMap factorToString factors) ++ "\n"
+>   where
+>     dt      = fst dtFactors
+>     factors = snd . snd $ dtFactors
+>     score   = fst . snd $ dtFactors
+
+> factorToString :: Factor -> String
+> factorToString factor = (show factor) ++ "\n" 
+
 Quick Check properties:
 
 > prop_efficiency = forAll genProject $ \p ->
