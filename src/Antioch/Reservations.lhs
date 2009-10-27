@@ -48,8 +48,8 @@ This method parses the results from the service #1 described above.
 
 This returns a Content for each reservation the user has.
 
-> reservations :: CFilter
-> reservations doc = tag "nrao:user" /> tag "nrao:reservation" $ doc
+> filter_reservations :: CFilter
+> filter_reservations doc = tag "nrao:user" /> tag "nrao:reservation" $ doc
 
 For each reservation, get the Content containing the start & end dates.
 
