@@ -7,7 +7,7 @@ import pg
 
 def getForecastType(hour):
     retval = int(hour) / 12 + 1
-    return retval if retval < 6 else None
+    return retval if retval < 9 else None
 
 class CleoDBImport:
 
@@ -19,15 +19,11 @@ class CleoDBImport:
         return speed / 2.237
     
     def getWeather(self):
-        format = "%m/%d/%Y %H:00:00"
-        start = TimeAgent.hour(datetime.utcnow())
-        end   = start + timedelta(hours = 60)
-        start = start.strftime(format)
-        end   = end.strftime(format)
         atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
         print atmo
-        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime"
         system(atmo)
+
+        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime"
         print wind
         system(wind)
 
@@ -127,24 +123,27 @@ class CleoDBImport:
                 self.c.query(q)
 
     def insert(self):
+        print "Inserting data starting at", self.startstamp
         self.c = pg.connect(user = "dss", dbname = self.dbname)
-        print "Inserting data"
         for timestamp, value in self.data:
-            freq = 1
-            if value.has_key('tauCleo') and value.has_key('tSysCleo') and value.has_key('tAtmCleo'):
-                print "%s UT: Inserting weather for %s" % (datetime.utcnow().strftime("%H:%M:%S"), timestamp)
-            else:
-                print "Got wind but not atmosphere forecasts for %s" % timestamp
-                continue
-            
             td               = timestamp - self.startstamp
             forecast_type_id = getForecastType(td.days * 24. + td.seconds / 3600.)
-            if forecast_type_id is not None:
-                weather_date_id  = self.getWeatherDate(timestamp)
-                forecast_id      = self.addForecast(forecast_type_id
-                                                  , weather_date_id
-                                                  , value)
+            if value.has_key('tauCleo') and \
+               value.has_key('tSysCleo') and \
+               value.has_key('tAtmCleo'):
+                if forecast_type_id is None:
+                    continue
+
+                print "%s UT: Inserting weather for %s" % \
+                      (datetime.utcnow().strftime("%H:%M:%S"), timestamp)
+
+                forecast_id = self.addForecast(forecast_type_id
+                                             , self.getWeatherDate(timestamp)
+                                             , value)
                 self.addForecastByFrequency(forecast_id, value)
+            else:
+                print "Got wind but not atmosphere forecasts for %s" % timestamp
+
         self.c.close()
 
     def importDB(self, files):
@@ -152,22 +151,21 @@ class CleoDBImport:
         self.insert()
 
 if __name__ == "__main__":
-    cleo = CleoDBImport()
-    cleo.getWeather()
     try:
         path = sys.argv[1]
     except:
-        assert False, "Please specify path to weather files."
+        raise "Please specify path to weather files."
+
+    cleo = CleoDBImport()
+    cleo.getWeather()
         
-    directories = [d for d in listdir(path) if "Forecasts" in d]
-    directories.sort()
-    f1, f2  = directories[-2:]
-    files = ( 
-              path + f1 + '/time_HotSprings' + f1[9:] + '.txt'
-            , path + f2 + '/time_avrg'       + f2[9:] + '.txt'
-            )
+    f1, f2 = sorted([d for d in listdir(path) if "Forecasts" in d])[-2:]
+    files  = ( 
+               path + f1 + '/time_HotSprings' + f1[9:] + '.txt'
+             , path + f2 + '/time_avrg'       + f2[9:] + '.txt'
+             )
+
     print "Importing weather from the following files..."
     print "\t", files[0]
     print "\t", files[1]
     cleo.importDB(files)
-       
