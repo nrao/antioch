@@ -114,8 +114,7 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 > populateObserver cnn observer = do
 >     bs <- getObserverBlackouts cnn observer
 >     res <- getObserverReservations cnn observer
->     --if ((oId observer) == 12) then print (map (\b -> (toSqlString . fst $ b, toSqlString . snd $ b)) bs) else print (oId observer)
->     return observer { blackouts = bs } --, reservations = res }
+>     return observer { blackouts = bs, reservations = res }
 
 > getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
 > getObserverBlackouts cnn obs = do
@@ -163,10 +162,19 @@ Convert from a description of the blackout to the actual dates
 > toMonthlyDateRanges start end until | start > until = []
 >                                     | otherwise = (start, end):(toMonthlyDateRanges (addMonth start) (addMonth end) until)
 
-TBF: the BOS service still isn't working!
+TBF: the BOS service still isn't working!  So, instead of investing more time
+into a dead language, we are simply reading these from an intermediate table
+in the DSS DB.
 
 > getObserverReservations :: Connection -> Observer -> IO [DateRange]
-> getObserverReservations cnn obs = return []
+> getObserverReservations cnn obs = do 
+>   result <- quickQuery' cnn query xs
+>   return $ toResDatesList result
+>     where
+>       xs = [toSql . oId $ obs]
+>       query = "SELECT start_date, end_date FROM reservations WHERE user_id = ?"
+>       toResDatesList = concatMap toResDates
+>       toResDates (s:e:[]) = [(sqlToDateTime s, sqlToDateTime e)]
 
 We must query for the allotments separately, because if a Project has alloted
 time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
