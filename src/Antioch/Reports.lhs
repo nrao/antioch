@@ -612,7 +612,8 @@ be confused and raise false alarams.
 >   where
 >     end = (dur*24*60) `addMinutes'` start
 >     endTime p = (duration p) `addMinutes'` (startTime p)
->     inWindow p = startTime p >= start && endTime p <= end 
+>     --inWindow p = startTime p >= start && endTime p <= end 
+>     inWindow p = endTime p >= start && startTime p <= end 
 
 > textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
 > textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history quiet = do
@@ -854,6 +855,9 @@ the DB.
 >     (rs, ss, projs, history') <- dbInput dt
 >     -- history start earlier?
 >     let history = filterHistory history' dt days 
+>     liftIO $ print dt
+>     liftIO $ print days
+>     liftIO $ print history
 >     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     print . length $ results
 >     -- new schedule to DB; only write the new periods
