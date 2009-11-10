@@ -717,13 +717,18 @@ Need to translate a session's factors into the final product score.
 >     effs <- calcEfficiency dt s
 >     score (scoringFactors effs raPressure freqPressure) dt s
 
-> --scoreFactors :: [Session] -> Weather -> ReceiverSchedule -> DateTime -> Session -> IO [Factors]
-> scoreFactors sessions w rs dt s = runScoring w rs $ do
->     effs <- calcEfficiency dt s
->     raPressure   <- genRightAscensionPressure sessions
->     freqPressure <- genFrequencyPressure sessions
->     let sfactors = scoringFactors effs raPressure freqPressure -- [ScoreFunc]
->     return $ map (\sf -> sf dt s) sfactors
+> scoreFactors :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
+> scoreFactors s ss dt dur rs = do
+>   w <- getWeather . Just $ dt
+>   let score' w dt = runScoring w rs $ do
+>       fs <- genScore ss 
+>       sf <- fs dt s
+>       return sf
+>   factors <- mapM (score' w) times
+>   return factors
+>     where
+>       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+>       numQtrs = dur `div` 15
 
 sfactors :: Maybe (Float, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
 sfactors effs rap fp = scoringFactors effs rap fp
@@ -804,12 +809,7 @@ Basic Utility that attempts to emulate the Beta Test's Scring Tab:
 
 > scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
 > scoringInfo s ss dt dur rs = do
->   w <- getWeather . Just $ dt
->   let score' w dt = runScoring w rs $ do
->       fs <- genScore ss 
->       sf <- fs dt s
->       return sf
->   factors <- mapM (score' w) times
+>   factors <- scoreFactors s ss dt dur rs
 >   let scores = map eval factors
 >   let info = printFactors $ zip times $ zip scores factors
 >   let report = "Scoring Info for session: " ++ (sName s) ++ "\n\n" ++ info

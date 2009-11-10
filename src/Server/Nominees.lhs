@@ -45,37 +45,36 @@
 
 > getNominees :: StateT Context IO ()
 > getNominees = do
->     liftIO $ print "starting getNominees"
+>     --liftIO $ print "starting getNominees"
 >     params <- hParameters
->     liftIO $ print "got params"
->     liftIO $ print params
+>     --liftIO $ print "got params"
+>     --liftIO $ print params
 >
 >     -- Interpret options:
 >     -- timezone
 >     let timezone = fromJust . fromJust . lookup "tz" $ params
 >     -- start at ...
 >     let startStr = fromJust . fromJust . lookup "start" $ params
->     liftIO $ print startStr
->     --let dt = fromJust . fromHttpString $ startStr
+>     --liftIO $ print startStr
 >     edt <- liftIO getCurrentTimeZone
 >     let utc  | timezone == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ startStr
 >              | otherwise        = fromJust . parseUTCTime httpFormat $ startStr
->     liftIO $ print utc
+>     --liftIO $ print utc
 >     let dt = toSeconds utc
->     liftIO $ print dt
+>     --liftIO $ print dt
 >     -- duration of the hole (if one) ...
 >     let upper = fmap readMinutes . fromJust . lookup "duration" $ params
->     liftIO $ print upper
+>     --liftIO $ print upper
 >     -- ignore minimum duration limit?
 >     let lower = maybe Nothing (\v -> if v == "true" then Just 0 else Nothing) . fromJust . lookup "minimum" $ params
->     liftIO $ print lower
+>     --liftIO $ print lower
 >     -- ignore timeBetween limit?
 >     -- ignore observer blackout times?
 >     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
 >     let blackout = fromJust . fromJust . lookup "blackout" $ params
 >     let sfs = catMaybes [if timeBetween == "true" then Nothing else Just enoughTimeBetween
 >                        , if blackout == "true" then Nothing else Just observerAvailable]
->     liftIO $ print sfs
+>     --liftIO $ print sfs
 >     -- use only backup sessions?
 >     let backup = fromJust . fromJust . lookup "backup" $ params
 >     -- include completed sessions?
@@ -88,7 +87,7 @@
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >                                       ]
->     liftIO $ print filter
+>     --liftIO $ print filter
 >     let schedSessions = filterSessions dt filter
 >     --let scoreSessions = filterSessions dt [isSchedulableSemester, isGradeA]
 >
@@ -102,15 +101,14 @@
 >     nominees <- liftIO $ runScoring w rs $ do
 >         sf <- genPartScore sfs . scoringSessions dt $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
->     liftIO $ print "returning stuff ..."
+>     --liftIO $ print "returning stuff ..."
 >     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
->     liftIO $ print "finished getNominees"
+>     --liftIO $ print "finished getNominees"
 
 > genNominees :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> [Session] -> Scoring [JNominee]
 > genNominees sf dt lower upper ss = do
 >     durations <- bestDurations sf dt lower upper ss
->     --liftIO $ print $ take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ durations
 >     return $ map toJNominee . take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ durations
 >   where
 >     jNomOrder (_, v, _) (_, v', _) = compare v' v

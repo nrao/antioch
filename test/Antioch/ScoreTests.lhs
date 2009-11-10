@@ -9,7 +9,7 @@
 > import Control.Monad.Trans  (lift, liftIO)
 > import Test.HUnit
 > import Data.List            (zip4, zipWith4, zipWith5)
-> import Data.Maybe           (isJust)
+> import Data.Maybe           (isJust, fromJust)
 > import Data.Array.IArray    (elems)
 
 Note: the keyword BETA throughout the unit tests denotes tests whose main
@@ -48,6 +48,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_trackingEfficiency
 >   , test_trackingErrorLimit
 >   , test_zenithAngleLimit
+>   , test_scoreFactors
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
@@ -400,15 +401,17 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
 >     assertEqual "test_trackingErrorLimit" 1.0 result
 
-> {-
 > test_scoreFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
->     fs <- scoreFactors pSessions w [] dt s
->     result <- map eval fs
->     assertEqual "test_scoreFactors" [] result 
-> -}
+>     let dur = 15::Minutes
+>     factors <- scoreFactors s pSessions dt dur []
+>     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
+>     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
+>     assertEqual "test_scoreFactors 2" 1.0 haLimit
+>     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
+>     assertEqual "test_scoreFactors 3" 1.3457081 fPress
 
 BETA: TestZenithAngleLimit testScore
 
