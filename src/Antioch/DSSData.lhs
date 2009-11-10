@@ -548,7 +548,9 @@ are already in the DB.
 >   result <- mapM (putPeriod cnn) ps
 >   commit cnn
 
-Here we add a new period to the database.  Since Antioch is creating it
+Here we add a new period to the database.  
+Initialize the Period in the Pending state (state_id = 1)
+Since Antioch is creating it
 we will set the Period_Accounting.scheduled field
 
 > putPeriod :: Connection -> Period -> IO [[SqlValue]] 
@@ -564,7 +566,8 @@ we will set the Period_Accounting.scheduled field
 >             , toSql . pBackup $ p
 >             , toSql a
 >             ]
->       query = "INSERT INTO periods VALUES (DEFAULT, ?, ?, ?, ?, ?, ?, ?);"
+>       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, 1, false);"
+
 
 > minutesToSqlHrs :: Minutes -> SqlValue
 > minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
@@ -577,8 +580,9 @@ Creates a new period accounting row, and returns this new rows ID
 >   result <- quickQuery' cnn queryId xsId
 >   return $ toId result
 >     where
->       xs = [minutesToSqlHrs scheduled]
->       query = "INSERT INTO periods_accounting VALUES (DEFAULT, ?, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0,  0.0, 0.0, 0.0)"
+>       -- now, scheduled gets set when period is published
+>       xs = [] --[minutesToSqlHrs scheduled]
+>       query = "INSERT INTO periods_accounting (scheduled, not_billable, other_session_weather, other_session_rfi, other_session_other, lost_time_weather, lost_time_rfi, lost_time_other, short_notice, description) VALUES (0.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0, '')"
 >       xsId = []
 >       queryId = "SELECT MAX(id) FROM periods_accounting"
 >       toId [[x]] = fromSql x
