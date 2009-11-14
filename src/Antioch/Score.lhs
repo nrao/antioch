@@ -717,6 +717,13 @@ Need to translate a session's factors into the final product score.
 >     effs <- calcEfficiency dt s
 >     score (scoringFactors effs raPressure freqPressure) dt s
 
+> weatherFactors :: Session -> Weather -> DateTime -> IO Factors
+> weatherFactors s w dt = do
+>   wind' <- wind w dt
+>   opacity' <- opacity w dt . frequency $ s
+>   tsys' <- tsys w dt . frequency $ s
+>   return [("wind", wind'), ("opacity", opacity'), ("tsys", tsys')]
+
 > scoreFactors :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreFactors s ss dt dur rs = do
 >   w <- getWeather . Just $ dt
@@ -724,8 +731,9 @@ Need to translate a session's factors into the final product score.
 >       fs <- genScore ss 
 >       sf <- fs dt s
 >       return sf
->   factors <- mapM (score' w) times
->   return factors
+>   sfactors <- mapM (score' w) times
+>   wfactors <- mapM (weatherFactors s w) times
+>   return . zipWith (++) wfactors  $ sfactors
 >     where
 >       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15

@@ -49,6 +49,7 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 This interface method makes sure that dates don't get passed in
 that the DB has no data for.  Currently all modules are using this.
 
+> getWeather :: Maybe DateTime -> IO Weather
 > getWeather dt = do
 >     now <- maybe getCurrentTimeSafe return dt
 >     case dt of

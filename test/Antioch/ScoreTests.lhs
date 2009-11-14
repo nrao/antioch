@@ -407,11 +407,13 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
 >     factors <- scoreFactors s pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 23 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
 >     assertEqual "test_scoreFactors 3" 1.3457081 fPress
+>     let opacity = fromJust . fromJust . lookup "opacity" . head $ factors
+>     assertEqual "test_scoreFactors 4" 7.844159e-3 opacity
 
 BETA: TestZenithAngleLimit testScore
 
