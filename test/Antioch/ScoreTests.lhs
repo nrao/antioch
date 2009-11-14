@@ -49,6 +49,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_trackingErrorLimit
 >   , test_zenithAngleLimit
 >   , test_scoreFactors
+>   , test_scoreElements
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
@@ -407,13 +408,25 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
 >     factors <- scoreFactors s pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 23 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
 >     assertEqual "test_scoreFactors 3" 1.3457081 fPress
+
+> test_scoreElements = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let s = findPSessionByName "CV"
+>     let dur = 15::Minutes
+>     factors <- scoreElements s pSessions dt dur []
+>     assertEqual "test_scoreElements 1" 23 (length . head $ factors)
+>     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
+>     assertEqual "test_scoreElements 2" 1.0 haLimit
+>     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
+>     assertEqual "test_scoreElements 3" 1.3457081 fPress
 >     let opacity = fromJust . fromJust . lookup "opacity" . head $ factors
->     assertEqual "test_scoreFactors 4" 7.844159e-3 opacity
+>     assertEqual "test_scoreElements 4" 7.844159e-3 opacity
 
 BETA: TestZenithAngleLimit testScore
 

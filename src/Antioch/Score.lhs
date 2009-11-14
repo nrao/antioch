@@ -731,6 +731,19 @@ Need to translate a session's factors into the final product score.
 >       fs <- genScore ss 
 >       sf <- fs dt s
 >       return sf
+>   factors <- mapM (score' w) times
+>   return factors
+>     where
+>       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+>       numQtrs = dur `div` 15
+
+> scoreElements :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
+> scoreElements s ss dt dur rs = do
+>   w <- getWeather . Just $ dt
+>   let score' w dt = runScoring w rs $ do
+>       fs <- genScore ss 
+>       sf <- fs dt s
+>       return sf
 >   sfactors <- mapM (score' w) times
 >   wfactors <- mapM (weatherFactors s w) times
 >   return . zipWith (++) wfactors  $ sfactors
@@ -819,7 +832,8 @@ Basic Utility that attempts to emulate the Beta Test's Scring Tab:
 > scoringInfo s ss dt dur rs = do
 >   factors <- scoreFactors s ss dt dur rs
 >   let scores = map eval factors
->   let info = printFactors $ zip times $ zip scores factors
+>   elements <- scoreElements s ss dt dur rs
+>   let info = printFactors $ zip times $ zip scores elements
 >   let report = "Scoring Info for session: " ++ (sName s) ++ "\n\n" ++ info
 >   putStrLn report
 >   writeFile "scoringInfo.txt" report
