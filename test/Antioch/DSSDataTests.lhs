@@ -103,7 +103,11 @@ session scores zero through out a 24 hr period.
 >     w <- getWeather . Just $ starttime 
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
->     let sess = head ss
+>     let sess' = head ss
+>     -- give it an observer
+>     let p' = project sess'
+>     let p = p' { observers = [defaultObserver] }
+>     let sess = sess' { project = p }
 >     let score' w dt = runScoring w [] $ do
 >         fs <- genScore ss 
 >         s <- fs dt sess
@@ -122,7 +126,11 @@ from the database.
 >     w <- getWeather $ Just start
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
->     let s = head $ filter (\s -> (sName s) == name) ss
+>     -- get the session and give it an observer
+>     let s' = head $ filter (\s -> (sName s) == name) ss
+>     let p' = project s'
+>     let p = p' { observers = [defaultObserver] }
+>     let s = s' { project = p }
 >     let score' w dt = runScoring w [] $ do
 >         fs <- genScore ss 
 >         sf <- fs dt s
@@ -134,7 +142,8 @@ from the database.
 >       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       --start = fromGregorian 2009 6 5 12 0 0 -- 11 PM ET
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [4.8578086,5.0231347,5.079963,5.09792,5.1148014
+>       --expScores = [4.8578086,5.0231347,5.079963,5.09792,5.1148014
+>       expScores = [5.023889,5.0231347,5.079963,5.09792,5.1148014
 >                   ,5.1148014,5.1408505,5.1408505,5.1408505,5.1408505
 >                   ,5.159865,5.1446643,5.128508,5.111317,5.1090546
 >                   ,5.08991,5.047436]
