@@ -151,13 +151,7 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >     sigmaNight = 2.8
 
 > trackingEfficiency dt s = do
->   w            <- weather
->   measuredWind <- liftIO $ w2_wind w dt
->   forecastWind <- liftIO $ wind w dt
->   -- If the real wind is unavailable, use the forecast wind.
->   let wind' = case measuredWind of
->                    Just x  -> Just x
->                    Nothing -> forecastWind
+>   wind' <- getRealOrForecastedWind dt
 >   factor "trackingEfficiency" $ calculateTE wind' dt s
 
 > calculateTE :: Maybe Float -> DateTime -> Session -> Maybe Float
@@ -302,11 +296,7 @@ Translates the total/used times pairs into pressure factors.
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
 
 > trackingErrorLimit dt s = do
->     w     <- weather
->     meas  <- measuredWind
->     wind' <- if meas
->              then liftIO $ w2_wind w dt
->              else liftIO $ wind w dt
+>     wind' <- getRealOrForecastedWind dt
 >     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
 >     
 
@@ -792,6 +782,19 @@ Convenience function for translating go/no-go into a factor.
 
 > boolean :: String -> Maybe Bool -> Scoring Factors
 > boolean name = factor name . fmap (\b -> if b then 1.0 else 0.0)
+
+Uses the datetime used to construct the weather object to determine whether
+to return forecasted wind values, or wind values from weather station 2.
+
+> getRealOrForecastedWind :: DateTime -> Scoring (Maybe Float)
+> getRealOrForecastedWind dt = do
+>   w <- weather
+>   let wDt = forecast w
+>   let useMeasured = if (dt <= wDt) then True else False
+>   wind' <- if useMeasured
+>            then liftIO $ w2_wind w dt
+>            else liftIO $ wind w dt 
+>   return wind'
 
 Convenience function for scoring a Session over it's Period's duration
 Note: The score recorded in the period (pScore) is the average over it's 
