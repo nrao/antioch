@@ -15,6 +15,7 @@
 >   , test_years
 >   , test_WeatherIsJust
 >   , test_dataFirstLine
+>   , test_fetchAnyWind
 >   , test_WindsArePositive
 >   , test_WindsAreReasonable
 >      ]
@@ -88,6 +89,19 @@ TBF: only 2006 in our Weather DB still!
 >   assertEqual "test_dataFirstLine_wind" 6.13935418989 (fromMaybe 0.0 wind')
 >   wind' <- w2_wind w dt
 >   assertEqual "test_dataFirstLine_w2_wind" 6.57004 (fromMaybe 0.0 wind')
+>   
+
+This tests that indeed, if the appropriate forecast is found, an attempt at
+finding any forecast can actually be successful.  To support this test, we
+inserted the following into the 'weather' DB:
+insert into weather_dates values (DEFAULT, '2007-01-01 01:00:00');
+insert into forecasts values (DEFAULT, 3, 12554, 99.99);
+
+> test_fetchAnyWind = TestCase $ do
+>   let dt = fromGregorian 2007 1 1 1 0 0
+>   w <- getWeather $ Just dt
+>   wind <- wind w dt
+>   assertEqual "test_fetchAnyWind" 99.99 (fromMaybe 0.0 wind)
 
 BETA: TestTWeather.testData0_11Night - uses 2007 in date, but server converts this
 to 2006 date.  
