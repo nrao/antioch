@@ -444,7 +444,8 @@ to use in conjunction with Pack tests.
 
 > test_scoreCV2 = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 1 18 0 0
->     let dt = fromGregorian 2006 10 1 18 0 0
+>     -- make sure that we don't use real wind!
+>     let dt = fromGregorian 2006 10 1 18 1 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
@@ -495,10 +496,8 @@ to use in conjunction with Pack tests.
 >     w3Score <- runScoring w [] $ do
 >         sf <- genScore ss
 >         avgScoreForTimeRealWind sf dt 15 s
->     -- since we're using real (measured) wind, the scores should be close
->     -- but not equal
->     assert  (w1Score /= w3Score)
->     assertAlmostEqual "test_avgScoreForTime_2" 4 3.9365761 w3Score
+>     -- since we're using real (measured) wind, the scores should be the same
+>     assertAlmostEqual "test_avgScoreForTime_2" 4 w1Score w3Score
 >   where
 >     dt = fromGregorian 2006 10 1 18 0 0
 >     dt2 = fromGregorian 2006 10 1 0 0 0
