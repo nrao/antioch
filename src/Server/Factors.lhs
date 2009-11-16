@@ -25,6 +25,7 @@
 > import Antioch.Reports
 > import Network.Protocol.Uri 
 > import Network.Salvia.Handlers.Redirect      (hRedirect)
+> --import Data.Time.LocalTime                   (utcToLocalTime)
 > import Text.Printf
 > import Maybe
 > import Antioch.DateTime
@@ -69,10 +70,13 @@
 >
 >     w <- liftIO $ getWeather . Just $ dt 
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     factors <- liftIO $ scoreFactors s ss dt dur rs
->     liftIO $ print (head factors)
->     liftIO $ print (length factors)
->     jsonHandler $ makeObj [("factors", factorsListToJSValue factors)]
+>     factors' <- liftIO $ scoreFactors s ss dt dur rs
+>     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
+>     factors <- liftIO $ scoreElements s ss dt dur rs
+>     let scoresNfactors = zipWith (++) scores factors
+>     liftIO $ print (head scoresNfactors)
+>     liftIO $ print (length scoresNfactors)
+>     jsonHandler $ makeObj [("factors", factorsListToJSValue scoresNfactors)]
 >     liftIO $ print "finished getFactors"
 
 > data JFactor = JFactor {
