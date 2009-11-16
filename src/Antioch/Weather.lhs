@@ -129,7 +129,23 @@ of frequency.
 >     result <- quickQuery' cnn query xs
 >     case result of
 >       [[wind]] -> return $ fromSql' wind
->       _        -> return Nothing
+>       _        -> fetchAnyWind cnn dt ftype --Nothing
+
+> fetchAnyWind :: Connection -> DateTime -> Int -> IO (Maybe Float)
+> fetchAnyWind cnn dt ftype = handleSqlError $ do
+>   print $ "Wind was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
+>   result <- quickQuery' cnn query xs
+>   case result of 
+>     [wind]:_ -> return $ fromSql' wind
+>     _        -> return Nothing
+>     where
+>       xs = [toSql' dt]
+>       query = "SELECT wind_speed \n\
+>              \FROM forecasts \n\
+>              \INNER JOIN weather_dates \n\
+>              \ON weather_date_id = weather_dates.id \n\
+>              \WHERE weather_dates.date = ? \n\
+>              \ORDER BY forecast_type_id"
 
 > getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWind cache cnn ftype dt = withCache key cache $
@@ -168,7 +184,7 @@ on frequency.
 >     result <- quickQuery' cnn query xs
 >     case result of
 >       [[opacity, tsys]] -> return (fromSql' opacity, fromSql' tsys)
->       _                 -> return (Nothing, Nothing)
+>       _                 -> fetchAnyOpacityAndTSys cnn dt freqIdx --return (Nothing, Nothing)
 >   where
 >     -- Crazy nested JOIN across multiple tables to emulate MySQL INNER JOIN!
 >     query = "SELECT opacity, tsys\n\
@@ -178,6 +194,20 @@ on frequency.
 >             \forecast_by_frequency.frequency = ? AND\n\
 >             \forecasts.forecast_type_id = ?"
 >     xs    = [toSql' dt, toSql freqIdx, toSql ftype]
+
+> fetchAnyOpacityAndTSys cnn dt freqIdx = handleSqlError $ do
+>   result <- quickQuery' cnn query xs
+>   case result of
+>     [opacity, tsys]:_ -> return (fromSql' opacity, fromSql' tsys)
+>     _                 -> return (Nothing, Nothing)
+>     where
+>       query = "SELECT opacity, tsys\n\
+>             \FROM forecast_by_frequency\n\
+>             \JOIN (forecasts JOIN weather_dates ON forecasts.weather_date_id = weather_dates.id) ON forecasts.id = forecast_by_frequency.forecast_id\n\
+>             \WHERE weather_dates.date = ? AND\n\
+>             \forecast_by_frequency.frequency = ?\n\
+>             \ORDER BY forecasts.forecast_type_id"
+>       xs    = [toSql' dt, toSql freqIdx]
 
 > getOpacity :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getOpacity cache cnn ftype dt frequency = liftM fst. withCache key cache $
