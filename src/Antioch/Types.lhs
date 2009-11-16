@@ -203,8 +203,8 @@ Simple Functions for Periods:
 >   , dec         = 0.0
 >   , backup      = False
 >   , receivers   = [[Rcvr12_18]]
->   , enabled     = False
->   , authorized  = False
+>   , enabled     = True
+>   , authorized  = True
 >   , grade       = GradeA
 >   , band        = L
 >   , lowRFI      = False
