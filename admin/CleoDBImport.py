@@ -34,13 +34,13 @@ class CleoDBImport:
         # read cleo forecast (ground)
         print 'Process cleo forecast data (ground) ...'
         f          = open(wind_file, 'r')
-        lines      = f.readlines()[1:]
-        windcol    = 6 if len(lines[0].split(' ')) > 10 else 2
+        lines      = f.readlines()
+        windcol    = lines[0].split(' ').index('smphTimeList_avrg')
 
         # Save the first timestamp for later to determine which forecast_type
-        self.startstamp = TimeAgent.hour(TimeAgent.mjd2dt(float(lines[0].split(' ')[0])))
+        self.startstamp = TimeAgent.hour(TimeAgent.mjd2dt(float(lines[1].split(' ')[0])))
         
-        for line in lines:
+        for line in lines[1:]:
             row = line.split(' ')
             timestamp = TimeAgent.hour(TimeAgent.mjd2dt(float(row[0]))) #mjd
             self.data[timestamp] = {}
