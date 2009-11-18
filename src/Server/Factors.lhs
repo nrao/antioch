@@ -66,8 +66,10 @@
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
 >     let ss = scoringSessions dt . concatMap sessions $ projs
->     s <- liftIO $ getSession id cnn 
->
+>     let s = head $ filter (\s -> (sId s) == id) $ concatMap sessions $ projs
+>     liftIO $ print s
+>     liftIO $ print . project $ s
+>     liftIO $ print . observers . project $ s
 >     w <- liftIO $ getWeather . Just $ dt 
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     factors' <- liftIO $ scoreFactors s ss dt dur rs

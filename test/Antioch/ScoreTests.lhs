@@ -60,6 +60,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_averageScore2
 >   , test_obsAvailable
 >   , test_obsAvailable2
+>   , test_obsAvailable3
 >   , test_observerAvailable
 >   , test_needsLowRFI
 >   , test_lstExcepted
@@ -702,6 +703,30 @@ If none is sanctioned, then there should never be an observer available
 >       p   = defaultProject { observers = [o] }
 >       o   = defaultObserver { blackouts = bs, sanctioned = False }
 >       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+
+> test_obsAvailable3 = TestCase $ do
+>   assertEqual "test_obsAvailable3_1" False  (obsAvailable dt s)
+>   w <- getWeather Nothing
+>   fs <- runScoring w [] (observerAvailable dt s)
+>   assertEqual "test_obsAvailable3_2" expFalse (eval fs)
+>     where
+>       dt  = fromGregorian 2006 2 1 0 0 0
+>       bdt1_1 = fromGregorian 2009 11 13 9 0 0
+>       bdt1_2 = fromGregorian 2009 11 17 9 0 0
+>       bdt2_1 = fromGregorian 2009  9 30 9 0 0
+>       bdt2_2 = fromGregorian 2009 10  3 9 0 0
+>       bs = [(bdt1_1, bdt1_2), (bdt2_1, bdt2_2)] 
+>       o   = defaultObserver {oId = 264
+>                            , firstName = "Bengt-Goran"
+>                            , lastName = "Andersson"
+>                            , username = "bgandersson"
+>                            , pstId = 3113
+>                            , sanctioned = False
+>                            , reservations = []
+>                            , blackouts = bs}
+>       p   = defaultProject { observers = [o] }
+>       s   = defaultSession { project = p}
+>       expFalse = 0.0
 
 > test_observerAvailable = TestCase $ do
 >   w <- getWeather Nothing
