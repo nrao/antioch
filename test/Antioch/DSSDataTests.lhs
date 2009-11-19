@@ -12,6 +12,7 @@
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
+> import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
 
 The DB used for these unit tests is the DB used for the simulation of the
 first two weeks of 09B, *w/ out* the resultant periods.
@@ -229,6 +230,23 @@ generated: it's the input we want to test, really.
 >                          , startTime = dt
 >                          , pForecast = dt }
 
+> test_fetchPeriod = TestCase $ do
+>   putPeriods [p1]
+>   cnn <- connect
+>   p' <- fetchPeriod 1 cnn
+>   -- fetchPeriod doesn't set the period's session, so we'l do that
+>   let p = p' {session = s }
+>   print [p1]
+>   print p
+>   disconnect cnn
+>   cleanup "periods"
+>   assertEqual "test_fetchPeriod" p1 p 
+>     where
+>       dt = fromGregorian 2006 1 1 0 0 0
+>       s  = defaultSession { sId = 1 }
+>       p1 = defaultPeriod { session = s
+>                          , startTime = dt
+>                          , pForecast = dt }
 
 > test_toDateRangesFromInfo_1 = TestCase $ do
 >   let dtrs = toDateRangesFromInfo start end repeat until 

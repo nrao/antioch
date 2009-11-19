@@ -511,6 +511,21 @@ Two ways to get Periods from the DB:
 >                     , pBackup = fromSql backup
 >                     }
 
+> fetchPeriod :: Int -> Connection -> IO Period
+> fetchPeriod id cnn = do 
+>   result <- quickQuery' cnn query xs
+>   return . toPeriod . head $ result
+>   where
+>     xs = [toSql id]
+>     query = "SELECT id, session_id, start, duration, score, forecast, backup FROM periods WHERE id = ?"
+>     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
+>       defaultPeriod { startTime = sqlToDateTime start --fromSql start
+>                     , duration = fromSqlMinutes durHrs
+>                     , pScore = fromSql score
+>                     , pForecast = fromSql forecast
+>                     , pBackup = fromSql backup
+>                     }
+
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
 
@@ -567,6 +582,17 @@ we will set the Period_Accounting.scheduled field
 >             , toSql a
 >             ]
 >       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, 1, false);"
+
+> setPeriodScore :: Connection -> Score -> Int -> IO ()
+> setPeriodScore cnn v pid = do
+>   ct <- getCurrentTime
+>   let dt = toSql . toSqlString $ ct
+>   quickQuery' cnn query [value, dt, id]
+>   return ()
+>     where
+>       query = "update periods set score=?, forecast=? where id = ?;"
+>       value = toSql v
+>       id = toSql pid
 
 
 > minutesToSqlHrs :: Minutes -> SqlValue

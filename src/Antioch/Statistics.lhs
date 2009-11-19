@@ -72,7 +72,7 @@ offending period/session/project needs to be revealed.
 > periodSchdFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
 > periodSchdFactors p sf w = do
 >   w' <- newWeather w $ Just $ pForecast p
->   fs <- runScoring w rs $ scorePeriod p sf  
+>   fs <- runScoring w rs $ factorPeriod p sf  
 >   return $ map eval fs
 >     where
 >   rs = [] -- TBF: how to pass this down?
