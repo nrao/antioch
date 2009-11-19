@@ -478,7 +478,7 @@ have a better chance of being scheduled while the receiver is available.
 
 > receiverBoost' :: Session -> Bool
 > receiverBoost' s | (grade s) /= GradeA = False
->                  | otherwise            =
+>                  | otherwise           =
 >   any (\rg -> all (\r -> elem r boostRcvrs) rg) rgs
 >   where
 >     rgs = receivers s
@@ -527,6 +527,21 @@ This is for use when determining best backups to run.
 >         [] -> sum scores
 >         otherwise -> 0.0 -- don't allow zero-scored quarters
 > 
+
+> scorePeriod :: Period -> [Session] -> Weather -> ReceiverSchedule -> IO Score
+> scorePeriod p ss w rs = do
+>   scores <- mapM scorePeriod' $ dts
+>   return $ avg scores
+>   where
+>     s = session p
+>     scorePeriod' dt = do
+>       fs <- runScoring w rs $ genScore ss >>= \f -> f dt s
+>       return $ eval fs
+>     dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
+>     avg xs  = case xs of
+>               []       ->  0.0
+>               (x:[])   ->  x
+>               (x:rem)  ->  (sum rem) / (fromIntegral . length $ rem)
 
 These methods for scoring a session are to be used in conjunction with
 Schedule's 'best' function.
@@ -817,19 +832,19 @@ to return forecasted wind values, or wind values from weather station 2.
 >            else liftIO $ wind w dt 
 >   return wind'
 
-Convenience function for scoring a Session over it's Period's duration
+Convenience function for factoring a Session over it's Period's duration
 Note: The score recorded in the period (pScore) is the average over it's 
 duration.  So, we should be able to reproduce that using this function, 
 the original pool of sessions (for the correct pressures), and the forecast 
 used to generate pScore (using the time pScore was calculated for, pForecast).
 
-> scorePeriod :: Period -> ScoreFunc -> Scoring [Factors]
-> scorePeriod p sf = mapM (scorePeriod' sf) dts
+> factorPeriod :: Period -> ScoreFunc -> Scoring [Factors]
+> factorPeriod p sf = mapM (factorPeriod' sf) dts
 >   where
->     scorePeriod' sf dt = sf dt (session p)
+>     factorPeriod' sf dt = sf dt (session p)
 >     dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
-Basic Utility that attempts to emulate the Beta Test's Scring Tab:
+Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 
 > scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
 > scoringInfo s ss dt dur rs = do
