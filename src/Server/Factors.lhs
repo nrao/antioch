@@ -25,6 +25,7 @@
 > import Antioch.Reports
 > import Network.Protocol.Uri 
 > import Network.Salvia.Handlers.Redirect      (hRedirect)
+> --import Data.Time.LocalTime                   (utcToLocalTime)
 > import Text.Printf
 > import Maybe
 > import Antioch.DateTime
@@ -65,14 +66,19 @@
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
 >     let ss = scoringSessions dt . concatMap sessions $ projs
->     s <- liftIO $ getSession id cnn 
->
+>     let s = head $ filter (\s -> (sId s) == id) $ concatMap sessions $ projs
+>     liftIO $ print s
+>     liftIO $ print . project $ s
+>     liftIO $ print . observers . project $ s
 >     w <- liftIO $ getWeather . Just $ dt 
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     factors <- liftIO $ scoreFactors s ss dt dur rs
->     liftIO $ print (head factors)
->     liftIO $ print (length factors)
->     jsonHandler $ makeObj [("factors", factorsListToJSValue factors)]
+>     factors' <- liftIO $ scoreFactors s ss dt dur rs
+>     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
+>     factors <- liftIO $ scoreElements s ss dt dur rs
+>     let scoresNfactors = zipWith (++) scores factors
+>     liftIO $ print (head scoresNfactors)
+>     liftIO $ print (length scoresNfactors)
+>     jsonHandler $ makeObj [("factors", factorsListToJSValue scoresNfactors)]
 >     liftIO $ print "finished getFactors"
 
 > data JFactor = JFactor {
