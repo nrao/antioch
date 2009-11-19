@@ -136,9 +136,8 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >         1.0
 >   where
 >     c = 299792485.0
->     -- from May 7, 2009
->     epsilonDay   = 0.40
->     epsilonNight = 0.34
+>     epsilonDay   = 0.46
+>     epsilonNight = 0.39
 >     epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
 >     k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
 
