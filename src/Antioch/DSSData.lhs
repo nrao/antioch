@@ -501,7 +501,8 @@ Two ways to get Periods from the DB:
 >   return $ toPeriodList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT id, session_id, start, duration, score, forecast, backup FROM periods WHERE session_id = ?"
+>     -- don't pick up deleted periods!
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup FROM periods AS p, period_states AS state WHERE state.id = p.state_id AND state.abbreviation != 'D' AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
