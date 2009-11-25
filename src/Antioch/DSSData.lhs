@@ -4,11 +4,11 @@
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Reservations
-> import Antioch.Utilities (hrs2rad, deg2rad, printList)
-> import Antioch.Settings (dssDataDB)
-> import Data.List (groupBy, sort, nub)
-> import Data.Char (toUpper)
-> import Maybe (fromJust)
+> import Antioch.Settings                (dssDataDB)
+> import Control.Monad.Trans             (liftIO)
+> import Data.List                       (sort, nub)
+> import Data.Char                       (toUpper)
+> import Maybe                           (fromJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
@@ -589,9 +589,9 @@ we will set the Period_Accounting.scheduled field
 >   ct <- getCurrentTime
 >   let dt = toSql . toSqlString $ ct
 >   quickQuery' cnn query [value, dt, id]
->   return ()
+>   commit cnn
 >     where
->       query = "update periods set score=?, forecast=? where id = ?;"
+>       query = "UPDATE periods SET score = ?, forecast = ? WHERE id = ?;"
 >       value = toSql v
 >       id = toSql pid
 

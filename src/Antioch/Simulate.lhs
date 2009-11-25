@@ -46,7 +46,7 @@ Sessions that:
 >     sem = dt2semester dt
 
 > isNotComplete :: SelectionCriteria
-> isNotComplete _ s = not . sComplete $ s
+> isNotComplete _ s = (not . sComplete $ s) && (not . pComplete . project $ s)
 
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open

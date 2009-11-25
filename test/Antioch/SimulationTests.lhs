@@ -29,6 +29,7 @@
 >    , test_sim_schedMinDuration_famine
 >    , test_sim_schedMinDuration_starvation
 >    , test_sim_timeLeft
+>    , test_schedulableSessions
 >   ]
 >
 
@@ -473,8 +474,41 @@ of pre-scheduled periods (history)
 >       pr4' = pr3 { pClosed = True }
 >       pr4 = makeProject pr4' (pAlloted pr4') [s1'', s2'', s3']
 >       ss4 = sessions pr4
->       
->   
+
+> test_schedulableSessions = TestCase $ do
+>     let s = findPSessionByName "GB"
+>     assertEqual "test_schedulableSessions 1" True (isTypeOpen dt s)
+>     let ts = s {sType = Fixed}
+>     assertEqual "test_schedulableSessions 2" False (isTypeOpen dt ts)
+>     let s = findPSessionByName "LP"
+>     let ts = s {sAlloted = 10*60}
+>     assertEqual "test_schedulableSessions 3" True (hasTimeSchedulable dt ts)
+>     let ts = s {sAlloted = 9*60}
+>     assertEqual "test_schedulableSessions 4" False (hasTimeSchedulable dt ts)
+>     let s = findPSessionByName "GB"
+>     assertEqual "test_schedulableSessions 5" True (isSchedulableSemester dt s)
+>     assertEqual "test_schedulableSessions 6" False (isSchedulableSemester early s)
+>     assertEqual "test_schedulableSessions 7" True (isSchedulableSemester late s)
+>     let s = findPSessionByName "TX"
+>     assertEqual "test_schedulableSessions 8" True (isSchedulable dt s)
+>     let ts = s {enabled = False}
+>     assertEqual "test_schedulableSessions 9" False (isSchedulable dt ts)
+>     let ts = s {authorized = False}
+>     assertEqual "test_schedulableSessions 10" False (isSchedulable dt ts)
+>     let s = findPSessionByName "CV"
+>     assertEqual "test_schedulableSessions 11" True (hasObservers dt s)
+>     let ts = s {project = defaultProject {observers = []}}
+>     assertEqual "test_schedulableSessions 12" False (hasObservers dt ts)
+>     assertEqual "test_schedulableSessions 13" 10 (length ss)
+>     let sss = scoringSessions dt ss
+>     assertEqual "test_schedulableSessions 14" 8 (length sss)
+>     --print . length $ sss
+>     --assertEqual "test_schedulableSessions 0" True True
+>   where
+>     ss = getOpenPSessions
+>     dt = fromGregorian 2006 2 1  7 15 0
+>     early = fromGregorian 2005 11 30  23 45 0
+>     late = fromGregorian 2006 6 30  15 30 0
 
 Test Utilities:
 

@@ -200,6 +200,27 @@ generated: it's the input we want to test, really.
 >                     &&  (validRA s) && (validDec s)
 >       validPeriods allPeriods = not . internalConflicts $ allPeriods
 
+> test_setPeriodScore = TestCase $ do
+>   putPeriods [p1]
+>   cnn <- connect
+>   ct <- getCurrentTime
+>   let forecast = toSql . toSqlString $ ct
+>   result <- quickQuery' cnn "select * from periods" []
+>   -- get id of p1 from result
+>   -- setPeriodScore cnn score id
+>   -- get score and forecast from period id
+>   cleanup "periods"
+>   assertEqual "test_setPeriodScore 1" True True
+>   -- compare score with score in period id
+>   -- compare forecast with forecast in period id
+>     where
+>       id = 1
+>       score = 3.2
+>       dt = fromGregorian 2006 1 1 0 0 0
+>       p1 = defaultPeriod { session = defaultSession { sId = 1 }
+>                          , startTime = dt
+>                          , pForecast = dt }
+
 > test_putPeriods = TestCase $ do
 >   r1 <- getNumRows "periods"
 >   putPeriods [p1]
