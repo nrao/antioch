@@ -1,12 +1,9 @@
 > module Antioch.DailySchedule where
 
 > import Antioch.DateTime
-> --import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
-> --import Antioch.Plots
 > import Antioch.Score
 > import Antioch.Schedule
 > import Antioch.Simulate
-> --import Antioch.Statistics
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hrs, printList)
 > import Antioch.Weather
@@ -14,16 +11,9 @@
 > import Antioch.HardwareSchedule
 > import Antioch.DSSData
 > import Antioch.Settings (dssDataDB)
-> --import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, (\\), find)
 > import Antioch.Reports
-> --import Text.Printf
-> --import System.Random
-> --import System.CPUTime
-> --import Test.QuickCheck hiding (promote, frequency)
-> --import Graphics.Gnuplot.Simple
-
 
 Daily Schedule is a specialty function used in the daily process of actually
 scheduling the GBT every morning.  It is distinct from all the other scheduling
@@ -61,9 +51,9 @@ hour scheduling period.
 >     -- new schedule to DB; only write the new periods
 >     --putPeriods $ results \\ history
 >   where
->     --days = 2 -- not 1, since we will be scheduling an 'overhead'
 >     (year, month, day, _, _, _) = toGregorian dt
 >     toDay dt = fromGregorian year month day 0 0 0
+>     -- TBF: need to correctly start at 8 AM ET - 12/13 UT using conversion
 >     toStart dt = fromGregorian year month day 12 0 0
 
 Actually calls the strategy (ex: Pack) for the days we are interested in, 
