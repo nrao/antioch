@@ -80,6 +80,12 @@ just make sure it gets cut off properly.
 >   -- nothing should get filtered out
 >   let filtered = removeBuffer start (days*24*60) results history
 >   assertEqual "test_runDailySchedule_1_2" exp filtered
+>   -- make sure you work around pre-scheduled ones
+>   results <- runScoring w [] $ runDailySchedule Pack dt days history2 [s]  
+>   assertEqual "test_runDailySchedule_1_3" exp2 results
+>   -- last one should get filtered out
+>   let filtered = removeBuffer start (days*24*60) results history
+>   assertEqual "test_runDailySchedule_1_4" exp3 filtered
 >     where
 >   dt = fromGregorian 2006 2 2 0 0 0
 >   start = fromGregorian 2006 2 2 12 0 0
@@ -88,6 +94,14 @@ just make sure it gets cut off properly.
 >   s = getSchedulableSession 
 >   times = [(start, 2160)]
 >   exp = map (mkPeriod s) times
+>   -- for the history test, place pre-scheduled periods at the end & start 
+>   times2 = [(start, 60), (fromGregorian 2006 2 3 23 0 0, 60)]
+>   history2 = map (mkPeriod s) times2 
+>   times3 = [(head times2)
+>           , (fromGregorian 2006 2 2 13 0 0, (2160 - 120))
+>           , (last times2)]
+>   exp2 = map (mkPeriod s) times3
+>   exp3 = take 2 exp2
 
 Now, make a number of shorter spaced out periods by 
 adjusting max duration and time between.
