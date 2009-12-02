@@ -1,5 +1,6 @@
 > module Antioch.AllTests where
 
+> import qualified Antioch.DailyScheduleTests as DailyScheduleT
 > import qualified Antioch.DateTimeTests as DateTimeT
 > import qualified Antioch.DebugTests as DebugT
 > import qualified Antioch.DSSDataTests as DSSDataT
@@ -18,7 +19,8 @@
 > import Test.HUnit
 
 > tests = TestList [
->     DateTimeT.tests
+>     DailyScheduleT.tests
+>   , DateTimeT.tests
 >   , DebugT.tests
 >   , DSSDataT.tests
 >   , HardwareScheduleT.tests
