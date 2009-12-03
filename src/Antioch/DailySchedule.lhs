@@ -38,19 +38,16 @@ hour scheduling period.
 > dailySchedule :: StrategyName -> DateTime -> Int -> IO ()
 > dailySchedule strategyName dt days = do
 >     w <- getWeather Nothing
->     -- truncate: start at the beginning of the day
->     let day = toDay dt 
->     let start = toStart dt
->     print $ "Daily Schedule, from " ++ (show . toSqlString $ start) ++ " for " ++ (show days) ++ " days."
+>     print $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
 >     -- now get all the input from the DB
->     (rs, ss, projs, history') <- dbInput day
->     let history = filterHistory history' day (days + 1) 
+>     (rs, ss, projs, history') <- dbInput dt
+>     let history = filterHistory history' dt (days + 1) 
 >     print "scheduling around periods: "
 >     printList history
->     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName start days history ss
+>     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName dt days history ss
 >     print "scheduled w/ buffer: "
 >     print . length $ schdWithBuffer
->     let results = removeBuffer start (days*24*60) schdWithBuffer history
+>     let results = removeBuffer dt (days*24*60) schdWithBuffer history
 >     print "removed buffer: "
 >     print . length $ results
 >     -- new schedule to DB; only write the new periods
@@ -59,10 +56,7 @@ hour scheduling period.
 >     printList newPeriods
 >     putPeriods newPeriods
 >   where
->     (year, month, day, _, _, _) = toGregorian dt
->     toDay dt = fromGregorian year month day 0 0 0
->     -- TBF: need to correctly start at 8 AM ET - 12/13 UT using conversion
->     toStart dt = fromGregorian year month day 12 0 0
+>     endTime = getEndTime dt days
 
 Actually calls the strategy (ex: Pack) for the days we are interested in, 
 scheduling a 'buffer' zone, and then removing this 'buffer' to avoid 
@@ -71,15 +65,24 @@ boundary affects.
 > runDailySchedule :: StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Scoring [Period]
 > runDailySchedule strategyName dt days history ss = do
 >   let strategy = getStrategy strategyName 
->   let start = toStart dt
->   sf <- genScore . scoringSessions start $ ss
->   schedPeriods <- strategy sf start (dur + bufferHrs) history . schedulableSessions dt $ ss
+>   sf <- genScore . scoringSessions dt $ ss
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
 >   return schedPeriods
 >     where
->       dur = 24*60*days -- days in minutes 
+>       -- calculate the duration from when we know it will end
+>       endTime = getEndTime dt days
+>       dur = endTime `diffMinutes'` dt 
 >       bufferHrs = 12*60 -- length of buffer in minutes
->       (year, month, day, _, _, _) = toGregorian dt
->       toStart dt = fromGregorian year month day 12 0 0
+
+We can't gaurantee when it will start, but we know that it must end on 
+the last day, by 8 AM ET.
+
+> getEndTime :: DateTime -> Int -> DateTime
+> getEndTime start days = setHour endHour lastDay
+>   where
+>     endHour = 12 -- TBF: 12 UTC == 8 ET.  NOT!
+>     daysMins = 24*60*days -- lastdays in minutes 
+>     lastDay = daysMins `addMinutes'` start 
 
 Remove those periods that are outside the given time range, if they *aren't*
 part of the history of pre-scheduled periods

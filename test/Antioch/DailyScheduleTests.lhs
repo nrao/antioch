@@ -16,6 +16,7 @@
 > tests = TestList [
 >       test_overlap
 >     , test_removeBuffer
+>     , test_removeBuffer_2
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     ]
@@ -87,7 +88,7 @@ just make sure it gets cut off properly.
 >   let filtered = removeBuffer start (days*24*60) results history
 >   assertEqual "test_runDailySchedule_1_4" exp3 filtered
 >     where
->   dt = fromGregorian 2006 2 2 0 0 0
+>   dt = fromGregorian 2006 2 2 12 0 0
 >   start = fromGregorian 2006 2 2 12 0 0
 >   days = 1
 >   history = []
@@ -115,7 +116,7 @@ adjusting max duration and time between.
 >   let filtered = removeBuffer start (days*24*60) results history
 >   assertEqual "test_runDailySchedule_2_2" exp2 filtered
 >     where
->   dt = fromGregorian 2006 2 2 0 0 0
+>   dt = fromGregorian 2006 2 2 12 0 0
 >   start = fromGregorian 2006 2 2 12 0 0
 >   days = 1
 >   history = []

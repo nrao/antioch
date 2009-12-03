@@ -58,11 +58,13 @@ we are rounding off to the nearest day.
 > schedule :: [(String, String)] -> IO ()
 > schedule params = dailySchedulePack start days
 >   where
+>     tz    = getParam "tz" params
+>     time  = if tz == "UTC" then "00:00:00" else "05:00:00" -- TBF: ET??? 
 >     start = case start' of
 >                 Just dt -> dt
 >                 _       -> fromGregorian 2009 6 1 0 0 0 
 >     start'' = take 10 $ getParam "start" params
->     start' = fromSqlString $ start'' ++ " 00:00:00"
+>     start' = fromSqlString $ start'' ++ " " ++ time
 >     days'  = read (getParam "duration" params)::Int
 >     days   = if (days' == 0) then 0 else (days' - 1)
 
