@@ -32,24 +32,32 @@ EST to 7 AM EST + some overhead, then ignore the periods scheduled into the
 overhead until we have a reasonable boundary condition at the end of the 24
 hour scheduling period.
 
+> dailySchedulePack :: DateTime -> Int -> IO ()
+> dailySchedulePack dt days = dailySchedule Pack dt days
+
 > dailySchedule :: StrategyName -> DateTime -> Int -> IO ()
 > dailySchedule strategyName dt days = do
->     --print $ "Scheduling trimester for " ++ show days ++ " days."
 >     w <- getWeather Nothing
 >     -- truncate: start at the beginning of the day
 >     let day = toDay dt 
 >     let start = toStart dt
+>     print $ "Daily Schedule, from " ++ (show . toSqlString $ start) ++ " for " ++ (show days) ++ " days."
 >     -- now get all the input from the DB
 >     (rs, ss, projs, history') <- dbInput day
->     let history = filterHistory history' day days 
+>     let history = filterHistory history' day (days + 1) 
+>     print "scheduling around periods: "
+>     printList history
 >     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName start days history ss
->     liftIO $ print "w/ buffer: "
+>     print "scheduled w/ buffer: "
 >     print . length $ schdWithBuffer
 >     let results = removeBuffer start (days*24*60) schdWithBuffer history
->     liftIO $ print "removed buffer: "
+>     print "removed buffer: "
 >     print . length $ results
 >     -- new schedule to DB; only write the new periods
->     --putPeriods $ results \\ history
+>     let newPeriods = results \\ history
+>     print "writing new periods to DB: " 
+>     printList newPeriods
+>     putPeriods newPeriods
 >   where
 >     (year, month, day, _, _, _) = toGregorian dt
 >     toDay dt = fromGregorian year month day 0 0 0
