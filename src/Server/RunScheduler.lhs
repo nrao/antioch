@@ -15,12 +15,13 @@
 > import qualified Data.ByteString.Lazy.Char8 as L
 > import Server.Json
 > import Server.List
-> import Antioch.Reports
+> --import Antioch.Reports
 > import Network.Protocol.Uri 
 > import Network.Salvia.Handlers.Redirect      (hRedirect)
 > import Maybe
 > import Antioch.Settings                      (proxyListenerPort)
 > import Antioch.DateTime
+> import Antioch.DailySchedule
 
 > scheduleAndRedirectHandler :: Handler ()
 > scheduleAndRedirectHandler = hMethodRouter [
@@ -55,14 +56,15 @@ as (example): "2009-06-20 00%3A00%3A00".  To avoid the issue with the time,
 we are rounding off to the nearest day.
 
 > schedule :: [(String, String)] -> IO ()
-> schedule params = schedulePackDB start days
+> schedule params = dailySchedulePack start days
 >   where
 >     start = case start' of
 >                 Just dt -> dt
 >                 _       -> fromGregorian 2009 6 1 0 0 0 
 >     start'' = take 10 $ getParam "start" params
 >     start' = fromSqlString $ start'' ++ " 00:00:00"
->     days  = read (getParam "duration" params)::Int
+>     days'  = read (getParam "duration" params)::Int
+>     days   = if (days' == 0) then 0 else (days' - 1)
 
 > getParam :: String -> [(String, String)] -> String
 > getParam key params = case pair of
