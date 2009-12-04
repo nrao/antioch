@@ -128,7 +128,7 @@ class TestCleoDBImport(unittest.TestCase):
         tAtm = cleo.data[row][1]['tAtmCleo'][49] # tatm @50 GHz @ ? 
         self.assertEquals(275.21046553, tAtm)
 
-    def testAddForecast(self):
+    def testInsert(self):
 
         # truncat tables of interest
         cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
@@ -147,7 +147,63 @@ class TestCleoDBImport(unittest.TestCase):
             q = "SELECT * FROM %s" % t
             r = cnn.query(q)
             self.assertEquals(0, len(r.dictresult()))
-            
+
+        # create test data
+        dt = datetime(2009, 1, 22, 6, 0, 0)
+        forecast_type_id = 13
+        tauCleo   = [1.0, 2.0, 3.0]
+        tSysCleo  = [4.0, 5.0, 6.0]
+        tAtmCleo  = [7.0, 8.0, 9.0]
+        speed_ms  = 10.0
+        speed_mph = 11.0
+        dataDct = dict(forecast_type_id = forecast_type_id
+                     , speed_ms         = speed_ms
+                     , speed_mph        = speed_mph
+                     , tauCleo          = tauCleo
+                     , tSysCleo         = tSysCleo
+                     , tAtmCleo         = tAtmCleo
+                     )
+        self.cleo.data = [(dt, dataDct)]             
+        
+        # insert the data!
+        self.cleo.insert()
+
+        # test what's in the DB!
+        # first check that only one weather data is in there
+        q = "SELECT * FROM weather_dates"
+        r = cnn.query(q)
+        self.assertEquals(1, len(r.dictresult()))
+        expDt = r.dictresult()[0]['date']
+        self.assertEquals(expDt, str(dt))
+
+        # only one entry in forecasts
+        q = "SELECT * from forecasts"
+        r = cnn.query(q)
+        self.assertEquals(1, len(r.dictresult()))
+        self.assertEquals(speed_ms, r.dictresult()[0]['wind_speed'])
+        self.assertEquals(speed_mph, r.dictresult()[0]['wind_speed_mph'])
+
+        # only three entries in forecast by frequency
+        q = "SELECT * from forecast_by_frequency"
+        r = cnn.query(q)
+        self.assertEquals(3, len(r.dictresult()))
+        for i in range(3):
+            self.assertEquals(tauCleo[i], r.dictresult()[i]['opacity'])
+            self.assertEquals(tAtmCleo[i], r.dictresult()[i]['tsys'])
+
+        # insert the data agains
+        self.cleo.insert()
+
+        # no changes in database
+        q = "SELECT * FROM weather_dates"
+        r = cnn.query(q)
+        self.assertEquals(1, len(r.dictresult()))
+        q = "SELECT * from forecasts"
+        r = cnn.query(q)
+        self.assertEquals(1, len(r.dictresult()))
+        q = "SELECT * from forecast_by_frequency"
+        r = cnn.query(q)
+        self.assertEquals(3, len(r.dictresult()))
 
 if __name__ == "__main__":
     unittest.main()

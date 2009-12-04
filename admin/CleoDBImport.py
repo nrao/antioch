@@ -27,11 +27,19 @@ class CleoDBImport:
         return speed / 2.237
     
     def getForecastTypeId(self, delta):
+        """
+        Translates a time difference in hours into a database-ready,
+        backward-compatible integer identifier, e.g., 1-8 or 9-24 or ...
+        """
         retval = int(delta) / FORECASTDELTA + SIXDELTASTART
         # TBF perhaps retval < SIXDELTASTART always implies SIXDELTASTART?
         return retval if SIXDELTASTART <= retval < MAXFORECASTTYPE else None
 
     def getForecastTypeIdFromTimestamp(self, timestamp):
+        """
+        Translates a datetime using the forecast time into a database-ready,
+        backward-compatible integer identifier, e.g., 1-8 or 9-24 or ...
+        """
         if timestamp >= self.startstamp:
             td = timestamp - self.startstamp
             return self.getForecastTypeId(td.days * 24. + td.seconds / 3600.)
@@ -39,6 +47,7 @@ class CleoDBImport:
             return SIXDELTASTART
         
     def getWeather(self):
+        "Make actual calls to cleo to populate weather data files."
         atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
         print atmo
         system(atmo)
@@ -48,6 +57,10 @@ class CleoDBImport:
         system(wind)
 
     def read(self, files):
+        """
+        Given the existence of cleo data files, parse the files into a
+        data dictionary.
+        """
         forecast_file, wind_file = files
         self.data = {}
         
@@ -131,7 +144,10 @@ class CleoDBImport:
                   , forecast_type_id
                   , weather_date_id
                   , value):
-
+        """
+        Intelligent insert into the forcast table from the data dictionary
+        by checking forecast type and timestamp.
+        """
         speed_mph = value['speed_mph']
         speed_ms = value['speed_ms']
         r = self.c.query("""SELECT wind_speed
@@ -142,7 +158,7 @@ class CleoDBImport:
         if len(r.dictresult()) == 0:
             q = """INSERT
                    INTO forecasts (forecast_type_id, weather_date_id, wind_speed, wind_speed_mph)
-                   VALUES (%s, %s, %s)""" % (forecast_type_id
+                   VALUES (%s, %s, %s, %s)""" % (forecast_type_id
                                            , weather_date_id
                                            , speed_ms
                                            , speed_mph
@@ -154,6 +170,11 @@ class CleoDBImport:
         return r.dictresult()[0]["id"]
 
     def addForecastByFrequency(self, id, value):
+        """
+        Intelligent insert into the forcast_by_frequency table from the
+        data dictionary
+        by checking frequency and forecast id.
+        """
         for i, (tau, tAtm) in enumerate(zip(value['tauCleo']
                                           , value['tAtmCleo']
                                         )):
@@ -170,11 +191,10 @@ class CleoDBImport:
                 self.c.query(q)
 
     def insert(self):
+        "From data dictionary into database."
         print "Inserting data for forecast", self.startstamp
         self.c = pg.connect(user = "dss", dbname = self.dbname)
         for timestamp, value in self.data:
-            #td               = timestamp - self.startstamp
-            #forecast_type_id = self.getForecastType(td.days * 24. + td.seconds / 3600.)
             forecast_type_id = value['forecast_type_id']
             if value.has_key('tauCleo') and \
                value.has_key('tSysCleo') and \
