@@ -17,11 +17,11 @@ windFileHeader = "timeListMJD pwatTimeList_avrg smphTimeList_avrg smph75mTimeLis
 
 class CleoDBImport:
 
-    def __init__(self, forecast_time, dbname):
+    def __init__(self, forecast_hour, dbname):
         self.dbname   = dbname
         self.dbimport = DBImport()
         now = datetime.utcnow()
-        self.startstamp = now.replace(hour=forecast_time, minute=0, second=0, microsecond=0)
+        self.forecast_time = now.replace(hour=forecast_hour, minute=0, second=0, microsecond=0)
 
     def mph2mps(self, speed):
         return speed / 2.237
@@ -40,8 +40,8 @@ class CleoDBImport:
         Translates a datetime using the forecast time into a database-ready,
         backward-compatible integer identifier, e.g., 1-8 or 9-24 or ...
         """
-        if timestamp >= self.startstamp:
-            td = timestamp - self.startstamp
+        if timestamp >= self.forecast_time:
+            td = timestamp - self.forecast_time
             return self.getForecastTypeId(td.days * 24. + td.seconds / 3600.)
         else:
             return SIXDELTASTART
@@ -192,7 +192,7 @@ class CleoDBImport:
 
     def insert(self):
         "From data dictionary into database."
-        print "Inserting data for forecast", self.startstamp
+        print "Inserting data for forecast", self.forecast_time
         self.c = pg.connect(user = "dss", dbname = self.dbname)
         for timestamp, value in self.data:
             forecast_type_id = value['forecast_type_id']
@@ -225,11 +225,11 @@ if __name__ == "__main__":
     except:
         raise "Please specify path to weather files."
     try:
-        forecast_time = sys.argv[2]
+        forecast_hour = sys.argv[2]
     except:
         raise "Please specify forecast time (0, 6, 12, or 18)."
 
-    cleo = CleoDBImport(forecast_time)
+    cleo = CleoDBImport(forecast_hour)
     cleo.getWeather()
         
     f1, f2 = sorted([d for d in listdir(path) if "Forecasts" in d])[-2:]

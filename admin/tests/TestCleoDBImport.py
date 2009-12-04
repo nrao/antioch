@@ -57,7 +57,7 @@ class TestCleoDBImport(unittest.TestCase):
 
     def testRead(self):
         cleo = CleoDBImport(6, "")
-        cleo.startstamp = datetime(2009, 12, 1, 6, 0, 0)
+        cleo.forecast_time = datetime(2009, 12, 1, 6, 0, 0)
         files = ("tests/test_freq_vals.txt", "tests/test_winds.txt")
         cleo.read(files)
 
