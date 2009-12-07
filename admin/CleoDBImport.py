@@ -12,16 +12,20 @@ SIXDELTASTART = 9
 MAXFORECASTTYPE = SIXDELTASTART + MAXFORECASTHOURS/FORECASTDELTA
 
 # headers to be found on first line of each file
-# freqFileHeader is at the bottom of this file - too long!
+# freqFileHeader is at the bottom of this file - line too long for editor!
 windFileHeader = "timeListMJD pwatTimeList_avrg smphTimeList_avrg smph75mTimeList_avrg drctTimeList_avrg presTimeList_avrg tmpcTimeList_avrg humidTimeList_avrg dwpcTimeList_avrg"
 
 class CleoDBImport:
 
-    def __init__(self, forecast_hour, dbname):
+    def __init__(self, forecast_time, dbname, path = "."):
+        
+        # cleo forecast files get written to our current directory,
+        # but we might want to override that for testing
+        self.path     = path
+
         self.dbname   = dbname
         self.dbimport = DBImport()
-        now = datetime.utcnow()
-        self.forecast_time = now.replace(hour=forecast_hour, minute=0, second=0, microsecond=0)
+        self.forecast_time = forecast_time
 
     def mph2mps(self, speed):
         return speed / 2.237
@@ -56,12 +60,15 @@ class CleoDBImport:
         print wind
         system(wind)
 
-    def read(self, files):
+        # where are the files?  See the cleo help:
+        # "The results of this program are a set of files that are 
+        # placed in a newly-created subdirectory of the current dir."
+
+    def read(self, forecast_file, wind_file):
         """
         Given the existence of cleo data files, parse the files into a
         data dictionary.
         """
-        forecast_file, wind_file = files
         self.data = {}
         
         # read cleo forecast (ground)
@@ -69,7 +76,7 @@ class CleoDBImport:
         f          = open(wind_file, 'r')
         lines      = f.readlines()
         header     = lines[0]
-        assert header.strip() == windFileHeader.strip()
+        assert header.strip() == windFileHeader.strip()  
         windcol    = lines[0].split(' ').index('smphTimeList_avrg')
 
         for line in lines[1:]:
@@ -128,8 +135,7 @@ class CleoDBImport:
         """
 
         # look to see if this timestamp already exists
-        r = \
-            self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+        r = self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
 
         if len(r.dictresult()) == 0:
             # it doesn't, insert it
@@ -149,7 +155,7 @@ class CleoDBImport:
         by checking forecast type and timestamp.
         """
         speed_mph = value['speed_mph']
-        speed_ms = value['speed_ms']
+        speed_ms  = value['speed_ms']
         r = self.c.query("""SELECT wind_speed
                             FROM forecasts
                             WHERE forecast_type_id = %s and weather_date_id = %s
@@ -193,6 +199,7 @@ class CleoDBImport:
     def insert(self):
         "From data dictionary into database."
         print "Inserting data for forecast", self.forecast_time
+        #assert self.dbname != "weather"          # TBF temporary!
         self.c = pg.connect(user = "dss", dbname = self.dbname)
         for timestamp, value in self.data:
             forecast_type_id = value['forecast_type_id']
@@ -215,34 +222,46 @@ class CleoDBImport:
 
         self.c.close()
 
-    def importDB(self, files):
-        self.read(files)
+    def findForecastFiles(self):
+        """
+        Finds the files that we would like to import, based off the 
+        assumption that they are the most recent ones in our path.
+        """
+
+        # where are the files?  See the cleo help:
+        # "The results of this program are a set of files that are 
+        # placed in a newly-created subdirectory of the current dir."
+        # but we can override it with the path member
+        print "self.path: ", self.path
+
+        # the last two most recent dirs are the results from our two
+        # commands we fired off in getWeather()
+        f1, f2 = sorted([d for d in listdir(self.path) \
+            if "Forecasts" in d])[-2:]
+
+        # the frequency dependent realted stuff was written first    
+        atmFile =  self.path + "/" + f1 + '/time_HotSprings' + \
+            f1[9:] + '.txt'
+
+        # then came the 'ground' or wind speed stuff     
+        windFile = self.path + "/" + f2 + '/time_avrg' + f2[9:] + '.txt'
+        
+        # TBF: check the FileList* files in each dir for FT's.
+
+        return atmFile, windFile
+
+    def performImport(self):
+        """
+        Higher level function that performs all the steps for importing
+        new forecast values into the DB:
+            * call CLEO forecast commands to produce forecast files
+            * reads in and parses these files into a data dict
+            * inserts data dict contents into DB
+        """    
+        self.getWeather()
+        atmFile, windFile = self.findForecastFiles()
+        self.read(atmFile, windFile)
         self.insert()
 
-if __name__ == "__main__":
-    try:
-        path = sys.argv[1]
-    except:
-        raise "Please specify path to weather files."
-    try:
-        forecast_hour = sys.argv[2]
-    except:
-        raise "Please specify forecast time (0, 6, 12, or 18)."
-
-    cleo = CleoDBImport(forecast_hour)
-    cleo.getWeather()
-        
-    f1, f2 = sorted([d for d in listdir(path) if "Forecasts" in d])[-2:]
-    files  = ( 
-               path + f1 + '/time_HotSprings' + f1[9:] + '.txt'
-             , path + f2 + '/time_avrg'       + f2[9:] + '.txt'
-             )
-
-    print "Importing weather from the following files..."
-    print "\t", files[0]
-    print "\t", files[1]
-    cleo.importDB(files)
-
-
-    
+# freqFileHeader on next line
 freqFileHeader = "timeListMJD OpacityTime1List_HotSprings OpacityTime2List_HotSprings OpacityTime3List_HotSprings OpacityTime4List_HotSprings OpacityTime5List_HotSprings OpacityTime6List_HotSprings OpacityTime7List_HotSprings OpacityTime8List_HotSprings OpacityTime9List_HotSprings OpacityTime10List_HotSprings OpacityTime11List_HotSprings OpacityTime12List_HotSprings OpacityTime13List_HotSprings OpacityTime14List_HotSprings OpacityTime15List_HotSprings OpacityTime16List_HotSprings OpacityTime17List_HotSprings OpacityTime18List_HotSprings OpacityTime19List_HotSprings OpacityTime20List_HotSprings OpacityTime21List_HotSprings OpacityTime22List_HotSprings OpacityTime23List_HotSprings OpacityTime24List_HotSprings OpacityTime25List_HotSprings OpacityTime26List_HotSprings OpacityTime27List_HotSprings OpacityTime28List_HotSprings OpacityTime29List_HotSprings OpacityTime30List_HotSprings OpacityTime31List_HotSprings OpacityTime32List_HotSprings OpacityTime33List_HotSprings OpacityTime34List_HotSprings OpacityTime35List_HotSprings OpacityTime36List_HotSprings OpacityTime37List_HotSprings OpacityTime38List_HotSprings OpacityTime39List_HotSprings OpacityTime40List_HotSprings OpacityTime41List_HotSprings OpacityTime42List_HotSprings OpacityTime43List_HotSprings OpacityTime44List_HotSprings OpacityTime45List_HotSprings OpacityTime46List_HotSprings OpacityTime47List_HotSprings OpacityTime48List_HotSprings OpacityTime49List_HotSprings OpacityTime50List_HotSprings TsysTime1List_HotSprings TsysTime2List_HotSprings TsysTime3List_HotSprings TsysTime4List_HotSprings TsysTime5List_HotSprings TsysTime6List_HotSprings TsysTime7List_HotSprings TsysTime8List_HotSprings TsysTime9List_HotSprings TsysTime10List_HotSprings TsysTime11List_HotSprings TsysTime12List_HotSprings TsysTime13List_HotSprings TsysTime14List_HotSprings TsysTime15List_HotSprings TsysTime16List_HotSprings TsysTime17List_HotSprings TsysTime18List_HotSprings TsysTime19List_HotSprings TsysTime20List_HotSprings TsysTime21List_HotSprings TsysTime22List_HotSprings TsysTime23List_HotSprings TsysTime24List_HotSprings TsysTime25List_HotSprings TsysTime26List_HotSprings TsysTime27List_HotSprings TsysTime28List_HotSprings TsysTime29List_HotSprings TsysTime30List_HotSprings TsysTime31List_HotSprings TsysTime32List_HotSprings TsysTime33List_HotSprings TsysTime34List_HotSprings TsysTime35List_HotSprings TsysTime36List_HotSprings TsysTime37List_HotSprings TsysTime38List_HotSprings TsysTime39List_HotSprings TsysTime40List_HotSprings TsysTime41List_HotSprings TsysTime42List_HotSprings TsysTime43List_HotSprings TsysTime44List_HotSprings TsysTime45List_HotSprings TsysTime46List_HotSprings TsysTime47List_HotSprings TsysTime48List_HotSprings TsysTime49List_HotSprings TsysTime50List_HotSprings TatmTime1List_HotSprings TatmTime2List_HotSprings TatmTime3List_HotSprings TatmTime4List_HotSprings TatmTime5List_HotSprings TatmTime6List_HotSprings TatmTime7List_HotSprings TatmTime8List_HotSprings TatmTime9List_HotSprings TatmTime10List_HotSprings TatmTime11List_HotSprings TatmTime12List_HotSprings TatmTime13List_HotSprings TatmTime14List_HotSprings TatmTime15List_HotSprings TatmTime16List_HotSprings TatmTime17List_HotSprings TatmTime18List_HotSprings TatmTime19List_HotSprings TatmTime20List_HotSprings TatmTime21List_HotSprings TatmTime22List_HotSprings TatmTime23List_HotSprings TatmTime24List_HotSprings TatmTime25List_HotSprings TatmTime26List_HotSprings TatmTime27List_HotSprings TatmTime28List_HotSprings TatmTime29List_HotSprings TatmTime30List_HotSprings TatmTime31List_HotSprings TatmTime32List_HotSprings TatmTime33List_HotSprings TatmTime34List_HotSprings TatmTime35List_HotSprings TatmTime36List_HotSprings TatmTime37List_HotSprings TatmTime38List_HotSprings TatmTime39List_HotSprings TatmTime40List_HotSprings TatmTime41List_HotSprings TatmTime42List_HotSprings TatmTime43List_HotSprings TatmTime44List_HotSprings TatmTime45List_HotSprings TatmTime46List_HotSprings TatmTime47List_HotSprings TatmTime48List_HotSprings TatmTime49List_HotSprings TatmTime50List_HotSprings"

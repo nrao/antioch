@@ -24,7 +24,7 @@ if __name__ == "__main__":
     import sys
     sys.path[1:1] = [".."]
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from CleoDBImport import CleoDBImport
 import unittest
 import pg
@@ -33,8 +33,8 @@ class TestCleoDBImport(unittest.TestCase):
 
     def setUp(self):
         self.dbname = "weather_unit_tests"
-        self.forecast = 6
-        self.cleo = CleoDBImport(self.forecast, self.dbname)
+        self.forecast = datetime.utcnow().replace(hour=6, minute=0, second=0, microsecond=0)
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
     def testGetForecatTypeId(self):
         self.assertEquals(9, self.cleo.getForecastTypeId(5))
@@ -44,22 +44,29 @@ class TestCleoDBImport(unittest.TestCase):
 
     def testGetForecatTypeFromTimestamp(self):
         now = datetime.utcnow()
-        dt = now.replace(hour=self.forecast-1, minute=0, second=0, microsecond=0)
+
+        dt = now.replace(hour=5, minute=0, second=0, microsecond=0)
         self.assertEquals(9, self.cleo.getForecastTypeIdFromTimestamp(dt))
-        dt = now.replace(hour=self.forecast, minute=0, second=0, microsecond=0)
+        dt = now.replace(hour=6, minute=0, second=0, microsecond=0)
         self.assertEquals(9, self.cleo.getForecastTypeIdFromTimestamp(dt))
-        dt = now.replace(hour=self.forecast+1, minute=0, second=0, microsecond=0)
+        dt = now.replace(hour=7, minute=0, second=0, microsecond=0)
         self.assertEquals(9, self.cleo.getForecastTypeIdFromTimestamp(dt))
-        dt = now.replace(hour=self.forecast+5, minute=0, second=0, microsecond=0)
+        dt = now.replace(hour=11, minute=0, second=0, microsecond=0)
         self.assertEquals(9, self.cleo.getForecastTypeIdFromTimestamp(dt))
-        dt = now.replace(hour=self.forecast+6, minute=0, second=0, microsecond=0)
+        dt = now.replace(hour=12, minute=0, second=0, microsecond=0)
         self.assertEquals(10, self.cleo.getForecastTypeIdFromTimestamp(dt))
+
+    def testFindForecastFiles(self):
+
+        files = self.cleo.findForecastFiles()        
+        exp = ('tests/Forecasts_09_12_07_11h40m52s/time_HotSprings_09_12_07_11h40m52s.txt'
+             , 'tests/Forecasts_09_12_07_11h40m57s/time_avrg_09_12_07_11h40m57s.txt')
+        self.assertEquals(exp, files)        
 
     def testRead(self):
         cleo = CleoDBImport(6, "")
         cleo.forecast_time = datetime(2009, 12, 1, 6, 0, 0)
-        files = ("tests/test_freq_vals.txt", "tests/test_winds.txt")
-        cleo.read(files)
+        cleo.read("tests/test_freq_vals.txt", "tests/test_winds.txt")
 
         # Ground File - wind speeds
 
@@ -76,7 +83,7 @@ class TestCleoDBImport(unittest.TestCase):
         self.assertEquals(9.44725, wind_mph)
         # The rest of these we derive from the file
         wind_ms = cleo.data[0][1]['speed_ms']
-        self.assertAlmostEquals(4.3556981244, wind_ms, 4)  # TBF why right?
+        self.assertAlmostEquals(4.3556981244, wind_ms, 4)  
         # Should be a really old forecast
         ftype_id = cleo.data[0][1]['forecast_type_id']
         self.assertEquals(9, ftype_id)
@@ -88,7 +95,7 @@ class TestCleoDBImport(unittest.TestCase):
         wind_mph = cleo.data[52][1]['speed_mph']
         self.assertEquals(15.617, wind_mph)
         wind_ms = cleo.data[52][1]['speed_ms']
-        self.assertAlmostEquals(4.6497772, wind_ms, 4)     # TBF why right?
+        self.assertAlmostEquals(4.6497772, wind_ms, 4)     
         ftype_id = cleo.data[52][1]['forecast_type_id']
         self.assertEquals(16, ftype_id)
         
@@ -99,7 +106,7 @@ class TestCleoDBImport(unittest.TestCase):
         wind_mph = cleo.data[91][1]['speed_mph']
         self.assertEquals(7.42325, wind_mph)
         wind_ms = cleo.data[91][1]['speed_ms']
-        self.assertAlmostEquals(3.888053, wind_ms, 4)     # TBF why right?
+        self.assertAlmostEquals(3.888053, wind_ms, 4)     
         ftype_id = cleo.data[91][1]['forecast_type_id']
         self.assertEquals(23, ftype_id)
 

@@ -1,30 +1,43 @@
 from CleoDBImport  import CleoDBImport
 import os
 import time
+from datetime import datetime
 
-ronPath = "/users/rmaddale/Weather/"
+RONPATH = "/users/rmaddale/Weather/"
+#RONPATH = "./"                           # TBF for development
 # TBF: there is a file for each site; c27, kekn, klwb.  which one to use?
-file = "TS_c27_NAM"
-filePath = ronPath + file
+RONFILE = "TS_c27_NAM"
+#WEATHERDATABASE = "weather_unit_tests"   # TBF for development
+WEATHERDATABASE = "weather"
+
+def process(filePath):
+    "Let CleoDBImport do the thing that it does."
+    # get the forecast time from the contents of the filePath
+    ft = parseForecastTime(open(filePath, 'r').readline())
+
+    # use this forecast time with the import class
+    cleo = CleoDBImport(ft, WEATHERDATABASE).performImport()
+
+def parseForecastTime(line):
+    """
+    Converts strings like '1259928000 12:00:00 04Dec09' 
+    to datetime objects
+    """
+    return datetime.strptime(line.split(' ', 1)[1].rstrip('\n'),
+                             "%H:%M:%S %d%b%y")
+
+filePath = RONPATH + RONPATH
 info = os.stat(filePath)
 previous_change = info.st_mtime
 
 while True:
     # poll the file - when was it last modified?
     info = os.stat(filePath)
-    #print info.st_ctime, info.st_mtime, info.at_time
     if previous_change != info.st_mtime:
-        print "do your thing"
-    else:
-        print "same old, same old"
-    time.sleep(10)
+        process(filePath)
+        # reset so we can wait for the next change
+        previous_change = info.st_mtime
+    time.sleep(30*60)
 
-    # if no change, wait a while, otherwise start import
 
-def process():
-    pass
 
-    # get the forecast time from the contents of the file
-
-    # use this forecast time with the import class
-  
