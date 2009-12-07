@@ -26,7 +26,7 @@ def parseForecastTime(line):
     return datetime.strptime(line.split(' ', 1)[1].rstrip('\n'),
                              "%H:%M:%S %d%b%y")
 
-filePath = RONPATH + RONPATH
+filePath = RONPATH + RONFILE
 info = os.stat(filePath)
 previous_change = info.st_mtime
 
