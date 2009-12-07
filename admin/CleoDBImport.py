@@ -27,6 +27,10 @@ class CleoDBImport:
         self.dbimport = DBImport()
         self.forecast_time = forecast_time
 
+        # take note of when this import is happening
+        self.import_time = datetime.utcnow().replace(second = 0
+                                                   , microsecond = 0)
+
     def mph2mps(self, speed):
         return speed / 2.237
     
@@ -127,6 +131,34 @@ class CleoDBImport:
         self.data = [(timestamp, values) for timestamp, values in self.data.items()]
         self.data.sort(key = lambda x: x[0])
 
+    def addTimeToDB(self, timestamp, table):
+        """
+        Searches for given timestamp value in the given 
+        table.  If it doesn't exist, create it.
+        In any case returns it's ID.
+        """
+
+        select_query = "SELECT id FROM %s WHERE date = '%s'" % \
+            (table, timestamp)
+        insert_query = "INSERT INTO %s (date) VALUES ('%s')" % \
+            (table, timestamp)
+
+        # timestamp already exists?
+        r = self.c.query(select_query)
+        if len(r.dictresult()) == 0:
+            # it doesn't, insert it
+            self.c.query(insert_query)
+            # now get the id of what we just created
+            r = self.c.query(select_query) 
+
+        return r.dictresult()[0]["id"]
+        
+    def addForecastTime(self, timestamp):
+        return self.addTimeToDB(timestamp, "forecast_times")
+
+    def addImportTime(self, timestamp):
+        return self.addTimeToDB(timestamp, "import_times")
+
     def addWeatherDate(self, timestamp):
         """
         Searches for given timestamp value in the weather_dates
@@ -149,6 +181,8 @@ class CleoDBImport:
     def addForecast(self
                   , forecast_type_id
                   , weather_date_id
+                  , forecast_time_id
+                  , import_time_id
                   , value):
         """
         Intelligent insert into the forcast table from the data dictionary
@@ -163,9 +197,11 @@ class CleoDBImport:
 
         if len(r.dictresult()) == 0:
             q = """INSERT
-                   INTO forecasts (forecast_type_id, weather_date_id, wind_speed, wind_speed_mph)
-                   VALUES (%s, %s, %s, %s)""" % (forecast_type_id
+                   INTO forecasts (forecast_type_id, weather_date_id, forecast_time_id, import_time_id, wind_speed, wind_speed_mph)
+                   VALUES (%s, %s, %s, %s, %s, %s)""" % (forecast_type_id
                                            , weather_date_id
+                                           , forecast_time_id
+                                           , import_time_id
                                            , speed_ms
                                            , speed_mph
                                              )
@@ -201,6 +237,12 @@ class CleoDBImport:
         print "Inserting data for forecast", self.forecast_time
         #assert self.dbname != "weather"          # TBF temporary!
         self.c = pg.connect(user = "dss", dbname = self.dbname)
+
+        # for the data we are inserting, record what forecast_time
+        # this is for, and when the import was run.
+        forecast_time_id = self.addForecastTime(self.forecast_time)
+        import_time_id   = self.addImportTime(self.import_time)
+
         for timestamp, value in self.data:
             forecast_type_id = value['forecast_type_id']
             if value.has_key('tauCleo') and \
@@ -215,6 +257,8 @@ class CleoDBImport:
                 weather_dates_id = self.addWeatherDate(timestamp)
                 forecast_id = self.addForecast(forecast_type_id
                                              , weather_dates_id
+                                             , forecast_time_id
+                                             , import_time_id
                                              , value)
                 self.addForecastByFrequency(forecast_id, value)
             else:

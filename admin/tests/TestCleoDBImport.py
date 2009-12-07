@@ -32,8 +32,10 @@ import pg
 class TestCleoDBImport(unittest.TestCase):
 
     def setUp(self):
-        self.dbname = "weather_unit_tests"
+        self.dbname = "weather_pmargani_test"
         self.forecast = datetime.utcnow().replace(hour=6, minute=0, second=0, microsecond=0)
+        self.import_time = datetime.utcnow().replace(second = 0
+                                                   , microsecond = 0)
         self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
     def testGetForecatTypeId(self):
@@ -142,6 +144,8 @@ class TestCleoDBImport(unittest.TestCase):
         tables = ['weather_station2'
                 , 'forecast_by_frequency'
                 , 'forecasts'
+                , 'forecast_times'
+                , 'import_times'
                 , 'weather_dates']
         q = "TRUNCATE TABLE"
         for t in tables:
@@ -176,7 +180,21 @@ class TestCleoDBImport(unittest.TestCase):
         self.cleo.insert()
 
         # test what's in the DB!
-        # first check that only one weather data is in there
+        # first check that only one forecast time is in there
+        q = "SELECT * FROM forecast_times"
+        r = cnn.query(q)
+        self.assertEquals(1, len(r.dictresult()))
+        expDt = r.dictresult()[0]['date']
+        self.assertEquals(expDt, str(self.forecast))
+
+        # first check that only one forecast time is in there
+        q = "SELECT * FROM import_times"
+        r = cnn.query(q)
+        self.assertEquals(1, len(r.dictresult()))
+        expDt = r.dictresult()[0]['date']
+        self.assertEquals(expDt, str(self.import_time))
+
+        # first check that only one forecast time is in there
         q = "SELECT * FROM weather_dates"
         r = cnn.query(q)
         self.assertEquals(1, len(r.dictresult()))
