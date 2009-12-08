@@ -12,7 +12,14 @@
 > tests = TestList [test_secondsToMJD
 >                 , test_addMonth
 >                 , test_translations
+>                 , test_setHour
 >                  ]
+
+> test_setHour = TestCase $ do
+>   let hour = 8
+>   let dt = fromGregorian 2006 10 1 23 10 23
+>   let exp = fromGregorian 2006 10 1 hour 0 0
+>   assertEqual "test_setHour" exp (setHour hour dt)
 
 BETA: results compared to using 3rd party libraries used in beta's TimeAgent
 

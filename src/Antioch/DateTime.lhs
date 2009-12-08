@@ -87,6 +87,11 @@ interest internally.
 >    where
 >      (y, _, d, h, mm, s) = toGregorian dt
 
+> setHour :: Int -> DateTime -> DateTime
+> setHour hour dt = fromGregorian y m d hour 0 0
+>   where
+>      (y, m, d, _, _, _) = toGregorian dt
+   
 Takes into account 12 months a year and wrap-around
 
 > addMonth :: DateTime -> DateTime
