@@ -12,6 +12,7 @@ WEATHERDATABASE = "weather"
 
 def process(filePath):
     "Let CleoDBImport do the thing that it does."
+
     # get the forecast time from the contents of the filePath
     ft = parseForecastTime(open(filePath, 'r').readline())
 
@@ -29,6 +30,8 @@ def parseForecastTime(line):
 filePath = RONPATH + RONFILE
 info = os.stat(filePath)
 previous_change = info.st_mtime
+
+print "Checking %s for inserting weather into %s" % (filePath, WEATHERDATABASE)
 
 while True:
     # poll the file - when was it last modified?
