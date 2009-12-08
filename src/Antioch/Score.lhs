@@ -506,10 +506,12 @@ Compute the score for a given session at given time, but:
 >     scoreLocal w' sf s dt w2
 
 Compute the average score for a given session over an interval:
-   * modfiy the weather to start at the time given
+   * modify the weather to start at the time given
    * use measured wind speeds instead of forecasts
    * reject sessions that have quarters of score zero
-This is for use when determining best backups to run.
+This is for use when determining best backups to run in simulations.
+Note: because this is not used in real scheduling then the fact
+that it does not assume zero for the first quarter does not matter.
 
 > avgScoreForTimeRealWind  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
 > avgScoreForTimeRealWind sf dt dur s = do
@@ -528,20 +530,37 @@ This is for use when determining best backups to run.
 >         otherwise -> 0.0 -- don't allow zero-scored quarters
 > 
 
+Computes the mean score of a range of non-zero quarterly scores where
+the first score is ignored if possible, e.g., if a sessions quarterly
+scores over an hour are [a, b, c, d] then:
+
+minutes              weighted mean score
+-------              -------------------
+0:15                   0
+0:30                   b/2
+0:45                   (b + c)/3
+1:00                   (b + c + d)/4
+
+> weightedMeanScore:: [Score] -> Score
+> weightedMeanScore ss = case ss of
+>                   []      ->  0.0
+>                   (s:[])  ->  s
+>                   (s:rem) ->  (sum rem) / (fromIntegral . length $ ss)
+
+
 > scorePeriod :: Period -> [Session] -> Weather -> ReceiverSchedule -> IO Score
 > scorePeriod p ss w rs = do
 >   scores <- mapM scorePeriod' $ dts
->   return $ avg scores
->   where
->     s = session p
->     scorePeriod' dt = do
->       fs <- runScoring w rs $ genScore ss >>= \f -> f dt s
->       return $ eval fs
->     dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
->     avg xs  = case xs of
->               []       ->  0.0
->               (x:[])   ->  x
->               (x:rem)  ->  (sum rem) / (fromIntegral . length $ rem)
+>   let retval = if 0.0 `elem` scores
+>                then 0.0
+>                else weightedMeanScore scores
+>   return retval
+>     where
+>   s = session p
+>   scorePeriod' dt = do
+>     fs <- runScoring w rs $ genScore ss >>= \f -> f dt s
+>     return $ eval fs
+>   dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
 These methods for scoring a session are to be used in conjunction with
 Schedule's 'best' function.
@@ -554,6 +573,8 @@ Schedule's 'best' function.
 >     return $ eval factors
 
 Compute the average score for a given session over an interval.
+Note: because this is not used in scheduling with Pack then the fact
+that it does not assume zero for the first quarter does not matter.
 
 > averageScore :: BestScore
 > averageScore sf dt s = do
@@ -563,6 +584,8 @@ Compute the average score for a given session over an interval.
 >     dur = minDuration s
 
 Compute the total score for a given session over an interval.
+Note: because this is not used in scheduling with Pack then the fact
+that it does not assume zero for the first quarter does not matter.
 
 > totalScore :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score
 > totalScore sf dt dur s = do
@@ -585,23 +608,30 @@ individual score is zero then the end result must also be zero.
 For a start time, optional minimum/maximum durations, and session,
 find the duration that yields the highest score.
 Note if an alternate duration is provided then the smaller of
-the provided duratin and the session's duration is used.
+the provided duration and the session's duration is used.
 
 > bestDuration :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> Session -> Scoring Nominee
 > bestDuration sf dt lower upper session = do
 >     scores <- mapM (liftM eval . flip sf session) times
->     let sums  = scanl (+) 0.0 . takeWhile (> 0.0) $ scores
+>     --liftIO $ print ("scores " ++ (show scores))
+>     let sums = case scores of
+>                     []     -> []
+>                     (x:[]) -> [0.0::Score]
+>                     (x:xs) -> (0.0:(scanl1 (+) . takeWhile (> 0.0) $ xs))
+>     --liftIO $ print ("sums " ++ (show sums))
+>     --  sds :: [(Score, Minutes)] -- period sums and durations
+>     let sds = dropWhile (\sd -> (snd sd) < shortest) [(s, d) | (s, d) <- zip sums durs]
+>     --liftIO $ print ("sds " ++ (show sds))
 >     --  mds :: [(Score, Minutes)] -- period means and durations
->     let mds   = [(s / ((+1) . fromIntegral $ (d `div` 15)), d) | (s, d) <- zip sums durs]
+>     let mds = [(s / (fromIntegral $ (d `div` 15)), d) | (s, d) <- sds]
+>     --liftIO $ print ("mds " ++ (show mds))
 >     let result = foldl findBest (0.0, 0) mds
 >     return $ (session, fst result, snd result)
 >   where
->     start = maybe (minDuration session) (min . minDuration $ session) lower
->     --start' = trace ((show . minDuration $ session) ++ " " ++ (show start)) start
->     --stop' = trace ((show . maxDuration $ session) ++ " " ++ (show stop)) stop
->     stop = maybe (maxDuration session) (min . maxDuration $ session) upper
->     durs  = [start, start + quarter .. stop]
->     times = map (`addMinutes'` dt) durs
+>     shortest = maybe (minDuration session) (min . minDuration $ session) lower
+>     longest = maybe (maxDuration session) (min . maxDuration $ session) upper
+>     durs   = [quarter, 2*quarter .. longest]
+>     times  = map (`addMinutes'` dt) [0, quarter .. (longest - quarter)]
 >     findBest x y = if (fst x) > (fst y) then x else y
 
 For a start time, optional minimum/maximum durations, and a list
@@ -835,8 +865,9 @@ to return forecasted wind values, or wind values from weather station 2.
 Convenience function for factoring a Session over it's Period's duration
 Note: The score recorded in the period (pScore) is the average over it's 
 duration.  So, we should be able to reproduce that using this function, 
-the original pool of sessions (for the correct pressures), and the forecast 
-used to generate pScore (using the time pScore was calculated for, pForecast).
+the original pool of sessions (for the correct pressures), and the
+forecast used to generate pScore (using the time pScore was calculated
+for, pForecast).
 
 > factorPeriod :: Period -> ScoreFunc -> Scoring [Factors]
 > factorPeriod p sf = mapM (factorPeriod' sf) dts

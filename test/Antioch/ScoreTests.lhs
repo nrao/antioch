@@ -55,7 +55,10 @@ codes weather server used for unit tests (TWeather).
 >   , test_scoreCV2
 >   , test_avgScoreForTime
 >   , test_avgScoreForTime2
+>   , test_weightedMeanScore
 >   , test_score
+>   , test_bestDuration
+>   , test_bestDurations
 >   , test_averageScore
 >   , test_averageScore2
 >   , test_obsAvailable
@@ -545,6 +548,13 @@ to use in conjunction with Pack tests.
 >     --expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
 > 
 
+> test_weightedMeanScore = TestCase $ do
+>     assertEqual "test_weightedMeanScore 0" 0.0 (weightedMeanScore [])
+>     assertEqual "test_weightedMeanScore 1" 17.0 (weightedMeanScore [17.0])
+>     assertEqual "test_weightedMeanScore 2" 6.5 (weightedMeanScore [17.0, 13.0])
+>     assertEqual "test_weightedMeanScore 3" 8.0 (weightedMeanScore [17.0, 13.0, 11.0])
+>     assertEqual "test_weightedMeanScore 4" 7.75 (weightedMeanScore [17.0, 13.0, 11.0, 7.0])
+
 Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_score = TestCase $ do
@@ -594,13 +604,13 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 3.738552, 255)
+>     let expected = (s, 3.7249105, 255)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- override the minimum and maximum
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 3.7120736, 225)
+>     let expected = (s, 3.7109919, 240)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
@@ -614,11 +624,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 10 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertEqual "test_bestDurations 2 v" 3.738552 v
+>     assertEqual "test_bestDurations 2 v" 3.7249105 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertEqual "test_bestDurations 3 v" 3.3932652 v
+>     assertEqual "test_bestDurations 3 v" 3.3876235 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
