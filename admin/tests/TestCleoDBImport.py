@@ -32,7 +32,7 @@ import pg
 class TestCleoDBImport(unittest.TestCase):
 
     def setUp(self):
-        self.dbname = "weather_pmargani_test"
+        self.dbname = "weather_unit_tests"
         self.forecast = datetime.utcnow().replace(hour=6, minute=0, second=0, microsecond=0)
         self.import_time = datetime.utcnow().replace(second = 0
                                                    , microsecond = 0)
@@ -57,6 +57,10 @@ class TestCleoDBImport(unittest.TestCase):
         self.assertEquals(9, self.cleo.getForecastTypeIdFromTimestamp(dt))
         dt = now.replace(hour=12, minute=0, second=0, microsecond=0)
         self.assertEquals(10, self.cleo.getForecastTypeIdFromTimestamp(dt))
+
+
+        dt = self.forecast +  timedelta(days = 3, seconds = (60*60*6))
+        self.assertEquals(22, self.cleo.getForecastTypeIdFromTimestamp(dt))
 
     def testFindForecastFiles(self):
 
@@ -232,3 +236,7 @@ class TestCleoDBImport(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    # for more verbosity:
+    #suite = unittest.TestLoader().loadTestsFromTestCase(TestCleoDBImport)
+    #unittest.TextTestRunner(verbosity=2).run(suite)
+    
