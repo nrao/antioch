@@ -18,9 +18,56 @@
 >   , test_fetchAnyWind
 >   , test_WindsArePositive
 >   , test_WindsAreReasonable
+>   , test_forecastType_1
+>   , test_forecastType_2
 >      ]
 
-TBF: only 2006 in our Weather DB still!
+This module (except for the test-forecastType_2 test) only tests weather
+using dates for the year 2006.  2006 weather is labeled using 12-hour forecasts
+and has a deprecated (and WRONG) method for calculating the forecastType.
+In Dec. of 2009 we started importing weather w/ 6 hour forecasts and 
+calculated the forecastType correctly using the forcast time (time for which
+the weather service made this forecast).
+
+> test_forecastType_1 = TestCase $ do
+>   assertEqual "test_forecastType_1" 1 (forecastType dt1 dt1 dt1)
+>   assertEqual "test_forecastType_2" 1 (forecastType dt2 dt1 dt1)
+>   assertEqual "test_forecastType_3" 1 (forecastType dt3 dt1 dt1)
+>   assertEqual "test_forecastType_4" 1 (forecastType dt4 dt1 dt1)
+>   assertEqual "test_forecastType_5" 2 (forecastType dt5 dt1 dt1)
+>   assertEqual "test_forecastType_6" 2 (forecastType dt6 dt1 dt1)
+>   assertEqual "test_forecastType_7" 2 (forecastType dt7 dt1 dt1)
+>   assertEqual "test_forecastType_8" 3 (forecastType dt8 dt1 dt1)
+>     where
+>   dt1 = fromGregorian 2006 2 2 12 0 0 -- diff = 0 hrs Type = I
+>   dt2 = fromGregorian 2006 2 2 16 0 0 -- 4 hrs I
+>   dt3 = fromGregorian 2006 2 2 20 0 0 -- 8 hrs I
+>   dt4 = fromGregorian 2006 2 3  0 9 0 -- 12:09 II?
+>   dt5 = fromGregorian 2006 2 3  4 0 0 -- 16 hrs II 
+>   dt6 = fromGregorian 2006 2 3  8 0 0 -- 20 hrs II
+>   dt7 = fromGregorian 2006 2 3 12 9 0 -- 24:09 III?
+>   dt8 = fromGregorian 2006 2 3 13 9 0 -- 25:09 III
+
+Test the forecastType function for non-2006 dates:
+
+> test_forecastType_2 = TestCase $ do
+>   assertEqual "test_forecastType_2_1"  9 (forecastType dt1 dt1 dt1)
+>   assertEqual "test_forecastType_2_2"  9 (forecastType dt2 dt1 dt1)
+>   assertEqual "test_forecastType_2_3" 10 (forecastType dt3 dt1 dt1)
+>   assertEqual "test_forecastType_2_4" 11 (forecastType dt4 dt1 dt1)
+>   assertEqual "test_forecastType_2_5" 11 (forecastType dt5 dt1 dt1)
+>   assertEqual "test_forecastType_2_6" 12 (forecastType dt6 dt1 dt1)
+>   assertEqual "test_forecastType_2_7" 13 (forecastType dt7 dt1 dt1)
+>   assertEqual "test_forecastType_2_8" 13 (forecastType dt8 dt1 dt1)
+>     where
+>   dt1 = fromGregorian 2009 12 8 12 0 0 -- diff = 0 hrs Type = I
+>   dt2 = fromGregorian 2009 12 8 16 0 0 -- 4 hrs I 
+>   dt3 = fromGregorian 2009 12 8 20 0 0 -- 8 hrs II
+>   dt4 = fromGregorian 2009 12 9  0 9 0 -- 12:09 III
+>   dt5 = fromGregorian 2009 12 9  4 0 0 -- 16 hrs III 
+>   dt6 = fromGregorian 2009 12 9  8 0 0 -- 20 hrs IV 
+>   dt7 = fromGregorian 2009 12 9 12 9 0 -- 24:09 V
+>   dt8 = fromGregorian 2009 12 9 13 9 0 -- 25:09 V
 
 > test_years = TestCase $ do 
 >   test_year dt05 n
