@@ -838,7 +838,7 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , atmosphericStabilityLimit
 >       , receiver
 >       , observerOnSite
->       , needsLowRFI
+>       --, needsLowRFI
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       --, observerAvailable

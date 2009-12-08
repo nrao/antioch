@@ -68,12 +68,13 @@
 >     -- ignore minimum duration limit?
 >     let lower = maybe Nothing (\v -> if v == "true" then Just 0 else Nothing) . fromJust . lookup "minimum" $ params
 >     --liftIO $ print lower
->     -- ignore timeBetween limit?
->     -- ignore observer blackout times?
+>     let rfi         = fromJust . fromJust . lookup "rfi" $ params
 >     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
->     let blackout = fromJust . fromJust . lookup "blackout" $ params
->     let sfs = catMaybes [if timeBetween == "true" then Nothing else Just enoughTimeBetween
->                        , if blackout == "true" then Nothing else Just observerAvailable]
+>     let blackout    = fromJust . fromJust . lookup "blackout" $ params
+>     let sfs = catMaybes [if rfi == "true" then Nothing else Just needsLowRFI
+>                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
+>                        , if blackout == "true" then Nothing else Just observerAvailable
+>                         ]
 >     --liftIO $ print sfs
 >     -- use only backup sessions?
 >     let backup = fromJust . fromJust . lookup "backup" $ params

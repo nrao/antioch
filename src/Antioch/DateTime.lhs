@@ -222,6 +222,8 @@ Simple arithmetic.
 > diffSeconds :: DateTime -> DateTime -> Int
 > diffSeconds = (-)
 
+TBF hard-coded! need to know when rise and set are
+
 > getRise    :: DateTime -> DateTime
 > getRise dt = 86400 * (dt `div` 86400) + 12 * 3600 + 30 * 60
 
@@ -230,6 +232,8 @@ Simple arithmetic.
 
 > isDayTime    :: DateTime -> Bool
 > isDayTime dt = getRise dt <= dt && dt <= getSet dt
+
+TBF use ET and translate to UT
 
 > isHighRFITime :: DateTime -> Bool
 > isHighRFITime dt = badRFIStart dt <= dt && dt <= badRFIEnd dt
