@@ -23,6 +23,28 @@
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
+This function produces a graph of the wind values taken directly from the
+CLEO forecasts: the wind speed in mph.  This graph can then be compared to
+the graph produced by CLEO forecasts, requesting 'Ground Speed', just sites
+Elkins and Lewisburg, with the average.  An excellent tool for integration
+tests.
+
+> plotWindMPH :: DateTime -> Minutes -> IO ()
+> plotWindMPH dt dur = do
+>   w <- getWeather $ Just dt
+>   winds_mph <- mapM (getWindsMPH' w) $ times
+>   let plotData = zipWith (\a b -> (fromInteger . toInteger $ a, (maybe 0.0 id b))) deltas winds_mph
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "wind_mph", plotData)]
+>     where
+>   title = "wind_mph, starting: " ++ (toSqlString dt)
+>   xl = "delta (hrs)"
+>   yl = "wind (mph)"
+>   fn = "wind_mph.png"
+>   hours = dur `div` 60 
+>   times = [(i*60) `addMinutes'` dt | i <- [0 .. hours]]
+>   deltas = [0 .. hours]
+>   getWindsMPH' w dt = wind_mph w dt 
+
 simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot

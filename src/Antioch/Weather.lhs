@@ -31,6 +31,7 @@
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
 >   , w2_wind         :: DateTime -> IO (Maybe Float)  -- m/s
+>   , wind_mph        :: DateTime -> IO (Maybe Float)  -- mph
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
 >   , totalStringency :: Frequency -> Radians -> IO (Maybe Float)
@@ -84,16 +85,18 @@ so we've deprecated 'dateSafe'.
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
 >     now' <- maybe getCurrentTimeSafe return now
->     (windf, w2_windf)   <- getWinds'
+>     ft   <- getForecastTime conn now'
+>     (windf, w2_windf, wind_mphf)   <- getWinds'
 >     (opacityf, tsysf)   <- getOpacityAndTSys'
 >     stringencyf         <- getTotalStringency'
 >     minOpacityf         <- getMinOpacity'
 >     minTSysf            <- getMinTSysPrime'
 >     return Weather {
->         wind            = pin now' $ windf conn
->       , w2_wind         = pin now' $ w2_windf conn
->       , opacity         = pin now' $ opacityf conn
->       , tsys            = pin now' $ tsysf conn
+>         wind            = pin ft now' $ windf conn
+>       , w2_wind         = pin ft now' $ w2_windf conn
+>       , wind_mph        = pin ft now' $ wind_mphf conn
+>       , opacity         = pin ft now' $ opacityf conn
+>       , tsys            = pin ft now' $ tsysf conn
 >       , totalStringency = stringencyf conn
 >       , minOpacity      = minOpacityf conn
 >       , minTSysPrime    = minTSysf conn
@@ -101,9 +104,14 @@ so we've deprecated 'dateSafe'.
 >       , forecast        = now'
 >       }
 
+forecastType takes both 'now' and a forecastTime since we have to be 
+backwards compatible w/ our unit tests: requests for 2006 weather use a
+deprecated method for computing the forecast_type_id and use 12 hour forecasts,
+where as in Dec. of 2009 we went to 6 hour forecasts and compute the 
+forecast_type_id correctly using the forecast_time from the DB.
 
-> pin              :: DateTime -> (Int -> DateTime -> a) -> DateTime -> a
-> pin now f target = f (forecastType target' now) target'
+> pin :: DateTime -> DateTime -> (Int -> DateTime -> a) -> DateTime -> a
+> pin forecastTime now f target = f (forecastType target' now forecastTime) target'
 >   where
 >     target' = dateSafe target
 
@@ -123,25 +131,25 @@ of frequency.
 
 > getWinds' = do
 >     cache <- newIORef M.empty
->     return (getWind cache, getW2Wind cache)
+>     return (getWind cache, getW2Wind cache, getWindMPH cache)
 
-> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> IO (Maybe Float)
-> fetchWind cnn dt ftype query xs = handleSqlError $ do
+> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> String -> IO (Maybe Float)
+> fetchWind cnn dt ftype query xs column = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
 >       [[wind]] -> return $ fromSql' wind
->       _        -> fetchAnyWind cnn dt ftype --Nothing
+>       _        -> fetchAnyWind cnn dt ftype column --Nothing
 
-> fetchAnyWind :: Connection -> DateTime -> Int -> IO (Maybe Float)
-> fetchAnyWind cnn dt ftype = handleSqlError $ do
->   print $ "Wind was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
+> fetchAnyWind :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
+> fetchAnyWind cnn dt ftype column = handleSqlError $ do
+>   print $ "Wind " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
 >   result <- quickQuery' cnn query xs
 >   case result of 
 >     [wind]:_ -> return $ fromSql' wind
 >     _        -> return Nothing
 >     where
 >       xs = [toSql' dt]
->       query = "SELECT wind_speed \n\
+>       query = "SELECT " ++ column ++ " \n\
 >              \FROM forecasts \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
@@ -150,7 +158,7 @@ of frequency.
 
 > getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs
+>     fetchWind cnn dt' ftype query xs "wind_speed"
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', ftype)
@@ -161,9 +169,22 @@ of frequency.
 >              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
 >     xs    = [toSql' dt', toSql ftype]
 
+> getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+> getWindMPH cache cnn ftype dt = withCache key cache $
+>     fetchWind cnn dt' ftype query xs "wind_speed_mph"
+>   where
+>     dt'   = roundToHour dt
+>     key   = (dt', ftype)
+>     query = "SELECT wind_speed_mph \n\
+>              \FROM forecasts \n\
+>              \INNER JOIN weather_dates \n\
+>              \ON weather_date_id = weather_dates.id \n\
+>              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
+>     xs    = [toSql' dt', toSql ftype]
+
 > getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getW2Wind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs
+>     fetchWind cnn dt' ftype query xs ""
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', 0)
@@ -281,17 +302,59 @@ Creates a connection to the weather forecast database.
 
 
 Helper function to determine the desired forecast type given two DateTimes.
+forecastType takes both 'now' and a forecastTime since we have to be 
+backwards compatible w/ our unit tests: requests for 2006 weather use a
+deprecated method for computing the forecast_type_id and use 12 hour forecasts,
+where as in Dec. of 2009 we went to 6 hour forecasts and compute the 
+forecast_type_id correctly using the forecast_time from the DB.
 
-> forecastType :: DateTime -> DateTime -> Int
-> forecastType target now = 
+> forecastType :: DateTime -> DateTime -> DateTime -> Int
+> forecastType target now ft = case year of
+>                           2006 -> forecastType2006 target now fTypes2006 1
+>                           _    -> forecastType' target ft fTypes 9
+>   where
+>     (year, _, _, _, _, _) = toGregorian target
+>     fTypes2006 = [12, 24, 36, 48, 60]
+>     fTypes = [t*6 | t <- [1 .. 16]]
+
+This method is only for unit tests.
+
+> forecastType2006 :: DateTime -> DateTime -> [Int] -> Int -> Int
+> forecastType2006 target now forecast_types offset =
+>     -- this < is wrong: should be <=; that's why this only is used
+>     -- for unit tests
 >     case dropWhile (< difference) forecast_types of
 >         []     -> length forecast_types
->         (x:xs) -> fromJust (elemIndex x forecast_types) + 1
+>         (x:xs) -> fromJust (elemIndex x forecast_types) + offset
 >   where difference = (target - now) `div` 3600
->         forecast_types = [12, 24, 36, 48, 60]
 
-> prop_constrained target now = forecastType target now `elem` forecast_types
+Get the forecast_type_id that is used to represent the difference between 
+the two given timestamps.  Note that the  
+
+> forecastType' :: DateTime -> DateTime -> [Int] -> Int -> Int
+> forecastType' target origin forecast_types offset = 
+>     case dropWhile (<= difference) forecast_types of
+>         []     -> length forecast_types
+>         (x:xs) -> fromJust (elemIndex x forecast_types) + offset
+>   where difference = (target - origin) `div` 3600
+
+> prop_constrained target now ft = forecastType target now ft `elem` forecast_types
 >   where forecast_types = [1..5]
+
+Get latest forecast time from the DB for given timestamp
+
+> getForecastTime :: Connection -> DateTime -> IO DateTime
+> getForecastTime cnn dt = handleSqlError $ do  
+>   result <- quickQuery' cnn query xs
+>   case result of
+>     [forecastTime]:_ -> return $ sqlToDateTime forecastTime
+>     _                -> return $ fromGregorian 2000 1 1 0 0 0 -- TBF!
+>     where
+>       query = "SELECT date FROM forecast_times WHERE date <= ? ORDER BY date DESC"
+>       xs = [toSql' dt]
+
+> sqlToDateTime :: SqlValue -> DateTime
+> sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
 
 Helper function to get singular Float values out of the database.
 
