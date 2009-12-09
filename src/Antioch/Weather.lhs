@@ -133,23 +133,23 @@ of frequency.
 >     cache <- newIORef M.empty
 >     return (getWind cache, getW2Wind cache, getWindMPH cache)
 
-> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> IO (Maybe Float)
-> fetchWind cnn dt ftype query xs = handleSqlError $ do
+> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> String -> IO (Maybe Float)
+> fetchWind cnn dt ftype query xs column = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
 >       [[wind]] -> return $ fromSql' wind
->       _        -> fetchAnyWind cnn dt ftype --Nothing
+>       _        -> fetchAnyWind cnn dt ftype column --Nothing
 
-> fetchAnyWind :: Connection -> DateTime -> Int -> IO (Maybe Float)
-> fetchAnyWind cnn dt ftype = handleSqlError $ do
->   print $ "Wind was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
+> fetchAnyWind :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
+> fetchAnyWind cnn dt ftype column = handleSqlError $ do
+>   print $ "Wind " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
 >   result <- quickQuery' cnn query xs
 >   case result of 
 >     [wind]:_ -> return $ fromSql' wind
 >     _        -> return Nothing
 >     where
 >       xs = [toSql' dt]
->       query = "SELECT wind_speed \n\
+>       query = "SELECT " ++ column ++ " \n\
 >              \FROM forecasts \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
@@ -158,7 +158,7 @@ of frequency.
 
 > getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs
+>     fetchWind cnn dt' ftype query xs "wind_speed"
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', ftype)
@@ -171,7 +171,7 @@ of frequency.
 
 > getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWindMPH cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs
+>     fetchWind cnn dt' ftype query xs "wind_speed_mph"
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', ftype)
@@ -184,7 +184,7 @@ of frequency.
 
 > getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getW2Wind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs
+>     fetchWind cnn dt' ftype query xs ""
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', 0)
@@ -350,7 +350,7 @@ Get latest forecast time from the DB for given timestamp
 >     [forecastTime]:_ -> return $ sqlToDateTime forecastTime
 >     _                -> return $ fromGregorian 2000 1 1 0 0 0 -- TBF!
 >     where
->       query = "SELECT date FROM forecast_times WHERE date <= ? ORDER BY date"
+>       query = "SELECT date FROM forecast_times WHERE date <= ? ORDER BY date DESC"
 >       xs = [toSql' dt]
 
 > sqlToDateTime :: SqlValue -> DateTime
