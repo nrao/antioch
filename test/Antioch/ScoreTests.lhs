@@ -38,6 +38,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
+>   , test_positionFactors
 >   , test_receiverTemperature
 >   , test_minObservingEff
 >   , test_kineticTemperature
@@ -290,6 +291,14 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     Just zod <- runScoring w [] (zenithOpticalDepth dt1 sLP)
 >     assertEqual "test_zenithOpticalDepth2" 0.007960711 zod 
 
+> test_positionFactors = TestCase $ do
+>     assertEqual "test_hourAngle lp 1" 1.0507135 (hourAngle dt lp)
+>     assertEqual "test_elevation lp 1" 0.46234667 (elevation dt lp)
+>   where
+>     dt = fromGregorian 2009 12 9 16 24 0
+>     ss = concatMap sessions pTestProjects
+>     lp = head $ filter (\s -> "LP" == (sName s)) ss
+
 > test_receiverTemperature = TestCase $ do
 >     let sess = findPSessionByName "LP"
 >     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sess
@@ -424,7 +433,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
 >     factors <- scoreElements s pSessions dt dur []
->     assertEqual "test_scoreElements 1" 23 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 24 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors

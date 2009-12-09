@@ -89,10 +89,17 @@ Ranking System from Memo 5.2, Section 3
 >     w <- weather
 >     liftIO $ opacity w dt (frequency s)
 
-> zenithAngle            :: DateTime -> Session -> Radians
-> zenithAngle dt s = zenithAngleHA s $ lst - ra s
+> hourAngle :: DateTime -> Session -> Radians
+> hourAngle dt s = lst - ra'
 >   where
 >     lst = hrs2rad . utc2lstHours $ dt
+>     ra' = ra s
+
+> elevation :: DateTime -> Session -> Radians
+> elevation dt s = pi/2 - zenithAngle dt s
+
+> zenithAngle            :: DateTime -> Session -> Radians
+> zenithAngle dt s = zenithAngleHA s . hourAngle dt $ s
 
 > zenithAngleAtTransit   :: Session -> Radians
 > zenithAngleAtTransit s = zenithAngleHA s 0.0
@@ -188,10 +195,10 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 > stringency                 :: ScoreFunc
 > stringency _ s = do
 >     w <- weather
->     stringency' <- liftIO $ totalStringency w (frequency s) elevation
+>     stringency' <- liftIO $ totalStringency w (frequency s) elevation'
 >     factor "stringency" stringency'
 >   where
->     elevation = pi/2 - zenithAngleAtTransit s
+>     elevation' = pi/2 - zenithAngleAtTransit s
 
 3.3 Pressure Feedback
 
@@ -752,12 +759,20 @@ Need to translate a session's factors into the final product score.
 >     effs <- calcEfficiency dt s
 >     score (scoringFactors effs raPressure freqPressure) dt s
 
+> positionFactors :: DateTime -> Session -> IO Factors
+> positionFactors dt s = do
+>   let ha' = rad2hrs . hourAngle dt $ s
+>   let elevation' = rad2deg . elevation dt $ s
+>   return [("hourAngle", Just ha'), ("elevation", Just elevation')]
+
 > weatherFactors :: Session -> Weather -> DateTime -> IO Factors
 > weatherFactors s w dt = do
 >   wind' <- wind w dt
+>   wind'' <- wind_mph w dt
 >   opacity' <- opacity w dt . frequency $ s
 >   tsys' <- tsys w dt . frequency $ s
->   return [("wind", wind'), ("opacity", opacity'), ("tsys", tsys')]
+>   return [("wind_mph", wind''), ("wind_ms", wind')
+>         , ("opacity", opacity'), ("tsys", tsys')]
 
 > scoreFactors :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreFactors s ss dt dur rs = do
