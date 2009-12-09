@@ -32,7 +32,8 @@ import pg
 class TestCleoDBImport(unittest.TestCase):
 
     def setUp(self):
-        self.dbname = "weather_unit_tests"
+        # use a special DB because we'll be cleaning this one out everytime.
+        self.dbname = "weather_import_unit_tests"
         self.forecast = datetime.utcnow().replace(hour=6, minute=0, second=0, microsecond=0)
         self.import_time = datetime.utcnow().replace(second = 0
                                                    , microsecond = 0)
