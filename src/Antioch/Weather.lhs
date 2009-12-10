@@ -175,12 +175,17 @@ Note: only applicable for columns 'wind_speed' and 'wind_speed_mph'
 >              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
 >     xs    = [toSql' dt', toSql ftype]
 
+TBF: don't use the cache, since this won't be called very often.
+If we want to use the cache we'll have to come up with a different
+key to distinguics it from the wind_speed values.
+
 > getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> getWindMPH cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs "wind_speed_mph" True
+> --getWindMPH cache cnn ftype dt = withCache key cache $
+> --    fetchWind cnn dt' ftype query xs "wind_speed_mph" True
+> getWindMPH cache cnn ftype dt = fetchWind cnn dt' ftype query xs "wind_speed_mph" True
 >   where
 >     dt'   = roundToHour dt
->     key   = (dt', ftype)
+>     key   = (dt', ftype) -- TBF: this is the same as the wind_speed key
 >     query = "SELECT wind_speed_mph \n\
 >              \FROM forecasts \n\
 >              \INNER JOIN weather_dates \n\
