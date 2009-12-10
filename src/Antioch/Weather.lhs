@@ -49,6 +49,8 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 
 This interface method makes sure that dates don't get passed in
 that the DB has no data for.  Currently all modules are using this.
+DateTime is simply the current time in production use and the
+purported time or origin in testing and simulation.
 
 > getWeather :: Maybe DateTime -> IO Weather
 > getWeather dt = do

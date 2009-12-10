@@ -763,6 +763,7 @@ Need to translate a session's factors into the final product score.
 > positionFactors dt s = do
 >   let ha' = rad2hrs . hourAngle dt $ s
 >   let elevation' = rad2deg . elevation dt $ s
+>   --                     hours                    degrees
 >   return [("hourAngle", Just ha'), ("elevation", Just elevation')]
 
 > weatherFactors :: Session -> Weather -> DateTime -> IO Factors
@@ -774,9 +775,8 @@ Need to translate a session's factors into the final product score.
 >   return [("wind_mph", wind''), ("wind_ms", wind')
 >         , ("opacity", opacity'), ("tsys", tsys')]
 
-> scoreFactors :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
-> scoreFactors s ss dt dur rs = do
->   w <- getWeather . Just $ dt
+> scoreFactors :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
+> scoreFactors s w ss dt dur rs = do
 >   let score' w dt = runScoring w rs $ do
 >       fs <- genScore ss 
 >       sf <- fs dt s
@@ -787,9 +787,8 @@ Need to translate a session's factors into the final product score.
 >       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
 
-> scoreElements :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
-> scoreElements s ss dt dur rs = do
->   w <- getWeather . Just $ dt
+> scoreElements :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
+> scoreElements s w ss dt dur rs = do
 >   let score' w dt = runScoring w rs $ do
 >       fs <- genScore ss 
 >       sf <- fs dt s
@@ -894,9 +893,11 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 
 > scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
 > scoringInfo s ss dt dur rs = do
->   factors <- scoreFactors s ss dt dur rs
+>   now <- getCurrentTime
+>   w <- liftIO $ getWeather . Just $ now 
+>   factors <- scoreFactors s w ss dt dur rs
 >   let scores = map eval factors
->   elements <- scoreElements s ss dt dur rs
+>   elements <- scoreElements s w ss dt dur rs
 >   let info = printFactors $ zip times $ zip scores elements
 >   let report = "Scoring Info for session: " ++ (sName s) ++ "\n\n" ++ info
 >   putStrLn report
