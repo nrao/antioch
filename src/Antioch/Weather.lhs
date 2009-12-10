@@ -133,12 +133,18 @@ of frequency.
 >     cache <- newIORef M.empty
 >     return (getWind cache, getW2Wind cache, getWindMPH cache)
 
-> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> String -> IO (Maybe Float)
-> fetchWind cnn dt ftype query xs column = handleSqlError $ do
+Generic method for pulling wind speeds from the weather DB tables.
+Note column and try parameters: if you don't get any results w/ the
+given query (by forecast id), try again (getting most recent forecast).
+
+> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> String -> Bool -> IO (Maybe Float)
+> fetchWind cnn dt ftype query xs column try = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
 >       [[wind]] -> return $ fromSql' wind
->       _        -> fetchAnyWind cnn dt ftype column --Nothing
+>       _        -> if try then fetchAnyWind cnn dt ftype column else return Nothing
+
+Note: only applicable for columns 'wind_speed' and 'wind_speed_mph'
 
 > fetchAnyWind :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
 > fetchAnyWind cnn dt ftype column = handleSqlError $ do
@@ -158,7 +164,7 @@ of frequency.
 
 > getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs "wind_speed"
+>     fetchWind cnn dt' ftype query xs "wind_speed" True
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', ftype)
@@ -171,7 +177,7 @@ of frequency.
 
 > getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWindMPH cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs "wind_speed_mph"
+>     fetchWind cnn dt' ftype query xs "wind_speed_mph" True
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', ftype)
@@ -184,7 +190,8 @@ of frequency.
 
 > getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getW2Wind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs ""
+>     -- Note: returns Nothing if this first query fails
+>     fetchWind cnn dt' ftype query xs "" False
 >   where
 >     dt'   = roundToHour dt
 >     key   = (dt', 0)
