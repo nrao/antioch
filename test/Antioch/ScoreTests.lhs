@@ -38,7 +38,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
->   , test_positionFactors
+>   , test_positionValues
 >   , test_receiverTemperature
 >   , test_minObservingEff
 >   , test_kineticTemperature
@@ -48,9 +48,11 @@ codes weather server used for unit tests (TWeather).
 >   , test_politicalFactors
 >   , test_trackingEfficiency
 >   , test_trackingErrorLimit
->   , test_zenithAngleLimit
+>   , test_positionFactors
+>   , test_weatherFactors
 >   , test_scoreFactors
 >   , test_scoreElements
+>   , test_zenithAngleLimit
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
@@ -291,9 +293,9 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     Just zod <- runScoring w [] (zenithOpticalDepth dt1 sLP)
 >     assertEqual "test_zenithOpticalDepth2" 0.007960711 zod 
 
-> test_positionFactors = TestCase $ do
->     assertEqual "test_hourAngle lp 1" 1.0507135 (hourAngle dt lp)
->     assertEqual "test_elevation lp 1" 0.46234667 (elevation dt lp)
+> test_positionValues = TestCase $ do
+>     assertEqual "test_positionValues hourAngle" 1.0507135 (hourAngle dt lp)
+>     assertEqual "test_epositionValues elevation" 0.46234667 (elevation dt lp)
 >   where
 >     dt = fromGregorian 2009 12 9 16 24 0
 >     ss = concatMap sessions pTestProjects
@@ -415,12 +417,35 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     [(_, Just result)] <- runScoring w [] (trackingErrorLimit dt s)
 >     assertEqual "test_trackingErrorLimit" 1.0 result
 
-> test_scoreFactors = TestCase $ do
+> test_positionFactors = TestCase $ do
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let s = findPSessionByName "CV"
+>     factors <- positionFactors dt s
+>     let hourAngle = fromJust . fromJust . lookup "hourAngle" $ factors
+>     assertEqual "test_positionFactors hourAngle" (-4.349304) hourAngle
+>     let elevation = fromJust . fromJust . lookup "elevation" $ factors
+>     assertEqual "test_positionFactors elevation" 36.60029 elevation
+
+> test_weatherFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
+>     factors <- weatherFactors s w dt
+>     let wind_mph = fromJust . fromJust . lookup "wind_mph" $ factors
+>     assertEqual "test_weatherFactors wind_mph" 1.0 wind_mph
+>     let wind_ms = fromJust . fromJust . lookup "wind_ms" $ factors
+>     assertEqual "test_weatherFactors wind_ms" 5.6930013 wind_ms
+>     let opacity = fromJust . fromJust . lookup "opacity" $ factors
+>     assertEqual "test_weatherFactors opacity" 9.302652e-3 opacity
+>     let tsys = fromJust . fromJust . lookup "tsys" $ factors
+>     assertEqual "test_weatherFactors tsys" 271.3523 tsys
+
+> test_scoreFactors = TestCase $ do
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
->     factors <- scoreFactors s pSessions dt dur []
+>     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
+>     factors <- scoreFactors s w pSessions dt dur []
 >     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
@@ -428,11 +453,11 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     assertEqual "test_scoreFactors 3" 1.3457081 fPress
 
 > test_scoreElements = TestCase $ do
->     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
->     factors <- scoreElements s pSessions dt dur []
+>     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
+>     factors <- scoreElements s w pSessions dt dur []
 >     assertEqual "test_scoreElements 1" 24 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit

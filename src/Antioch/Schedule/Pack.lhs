@@ -6,7 +6,6 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Weather
 > import Antioch.Generators
 > import Antioch.Utilities
 > import Data.List   (foldl', sort, delete, find)
