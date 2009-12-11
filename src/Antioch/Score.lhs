@@ -538,8 +538,8 @@ that it does not assume zero for the first quarter does not matter.
 > 
 
 Computes the mean score of a range of non-zero quarterly scores where
-the first score is ignored if possible, e.g., if a sessions quarterly
-scores over an hour are [a, b, c, d] then:
+the first score is ignored, e.g., if a sessions quarterly scores across
+an hour are [a, b, c, d] then:
 
 minutes              weighted mean score
 -------              -------------------
@@ -551,8 +551,8 @@ minutes              weighted mean score
 > weightedMeanScore:: [Score] -> Score
 > weightedMeanScore ss = case ss of
 >                   []      ->  0.0
->                   (s:[])  ->  s
->                   (s:rem) ->  (sum rem) / (fromIntegral . length $ ss)
+>                   (_:[])  ->  0.0
+>                   (_:rem) ->  (sum rem) / (fromIntegral . length $ ss)
 
 
 > scorePeriod :: Period -> [Session] -> Weather -> ReceiverSchedule -> IO Score

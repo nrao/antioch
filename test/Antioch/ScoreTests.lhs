@@ -586,7 +586,7 @@ to use in conjunction with Pack tests.
 
 > test_weightedMeanScore = TestCase $ do
 >     assertEqual "test_weightedMeanScore 0" 0.0 (weightedMeanScore [])
->     assertEqual "test_weightedMeanScore 1" 17.0 (weightedMeanScore [17.0])
+>     assertEqual "test_weightedMeanScore 1" 0.0 (weightedMeanScore [17.0])
 >     assertEqual "test_weightedMeanScore 2" 6.5 (weightedMeanScore [17.0, 13.0])
 >     assertEqual "test_weightedMeanScore 3" 8.0 (weightedMeanScore [17.0, 13.0, 11.0])
 >     assertEqual "test_weightedMeanScore 4" 7.75 (weightedMeanScore [17.0, 13.0, 11.0, 7.0])
