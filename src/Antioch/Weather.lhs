@@ -86,7 +86,8 @@ so we've deprecated 'dateSafe'.
 
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
->     now' <- maybe getCurrentTimeSafe return now
+>     now'' <- maybe getCurrentTimeSafe return now
+>     let now' = roundToHour now''
 >     ft   <- getForecastTime conn now'
 >     (windf, w2_windf, wind_mphf)   <- getWinds'
 >     (opacityf, tsysf)   <- getOpacityAndTSys'
@@ -115,7 +116,7 @@ forecast_type_id correctly using the forecast_time from the DB.
 > pin :: DateTime -> DateTime -> (Int -> DateTime -> a) -> DateTime -> a
 > pin forecastTime now f target = f (forecastType target' now forecastTime) target'
 >   where
->     target' = dateSafe target
+>     target' = roundToHour . dateSafe $ target
 
 > toSql' = toSql . toSqlString
 
@@ -166,16 +167,15 @@ Note: only applicable for columns 'wind_speed' and 'wind_speed_mph'
 
 > getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getWind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt' ftype query xs "wind_speed" True
+>     fetchWind cnn dt ftype query xs "wind_speed" True
 >   where
->     dt'   = roundToHour dt
->     key   = (dt', ftype)
+>     key   = (dt, ftype)
 >     query = "SELECT wind_speed \n\
 >              \FROM forecasts \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
->     xs    = [toSql' dt', toSql ftype]
+>     xs    = [toSql' dt, toSql ftype]
 
 TBF: don't use the cache, since this won't be called very often.
 If we want to use the cache we'll have to come up with a different
@@ -183,31 +183,29 @@ key to distinguics it from the wind_speed values.
 
 > getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > --getWindMPH cache cnn ftype dt = withCache key cache $
-> --    fetchWind cnn dt' ftype query xs "wind_speed_mph" True
-> getWindMPH cache cnn ftype dt = fetchWind cnn dt' ftype query xs "wind_speed_mph" True
+> --    fetchWind cnn dt ftype query xs "wind_speed_mph" True
+> getWindMPH cache cnn ftype dt = fetchWind cnn dt ftype query xs "wind_speed_mph" True
 >   where
->     dt'   = roundToHour dt
->     key   = (dt', ftype) -- TBF: this is the same as the wind_speed key
+>     key   = (dt, ftype) -- TBF: this is the same as the wind_speed key
 >     query = "SELECT wind_speed_mph \n\
 >              \FROM forecasts \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
->     xs    = [toSql' dt', toSql ftype]
+>     xs    = [toSql' dt, toSql ftype]
 
 > getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > getW2Wind cache cnn ftype dt = withCache key cache $
 >     -- Note: returns Nothing if this first query fails
->     fetchWind cnn dt' ftype query xs "" False
+>     fetchWind cnn dt ftype query xs "" False
 >   where
->     dt'   = roundToHour dt
->     key   = (dt', 0)
+>     key   = (dt, 0)
 >     query = "SELECT wind_speed \n\
 >              \FROM weather_station2 \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ?"
->     xs    = [toSql' dt']
+>     xs    = [toSql' dt]
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.
@@ -247,19 +245,17 @@ on frequency.
 
 > getOpacity :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getOpacity cache cnn ftype dt frequency = liftM fst. withCache key cache $
->     fetchOpacityAndTSys cnn dt' freqIdx ftype
+>     fetchOpacityAndTSys cnn dt freqIdx ftype
 >   where
->     dt'     = roundToHour dt
 >     freqIdx = freq2Index frequency
->     key     = (dt', freqIdx, ftype)
+>     key     = (dt, freqIdx, ftype)
 
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
->     fetchOpacityAndTSys cnn dt' freqIdx ftype
+>     fetchOpacityAndTSys cnn dt freqIdx ftype
 >   where
->     dt'     = roundToHour dt
 >     freqIdx = freq2Index frequency
->     key     = (dt', freqIdx, ftype)
+>     key     = (dt, freqIdx, ftype)
 
 > getTotalStringency' = caching getTotalStringency
 > getMinOpacity'      = caching getMinOpacity
