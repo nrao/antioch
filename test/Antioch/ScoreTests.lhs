@@ -181,22 +181,38 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
 >    -- session LP
 >    let sess = findPSessionByName "LP"
->    Just result <- minTSysPrime w (frequency sess) (elevation sess)
->    assertAlmostEqual "test_minTsysPrime" 3 15.490067 result 
+>    Just result <- minTSysPrime w (frequency sess) (elevation dt sess)
+>    assertAlmostEqual "test_minTsysPrime 1" 3 15.490067 result 
 >    -- session AS
 >    let sess = findPSessionByName "AS"
->    Just result <- minTSysPrime w (frequency sess) (elevation sess)
->    assertAlmostEqual "test_minTsysPrime" 3 25.958 result 
+>    Just result <- minTSysPrime w (frequency sess) (elevation dt sess)
+>    assertAlmostEqual "test_minTsysPrime 2" 3 25.958 result 
 >    -- sessBug
->    Just result <- minTSysPrime w (frequency sessBug) (elevation sessBug)
->    assertAlmostEqual "test_minTsysPrime" 3 92.365046 result 
+>    Just result <- minTSysPrime w (frequency sessBug) (elevation dt sessBug)
+>    assertAlmostEqual "test_minTsysPrime 3" 3 92.365046 result 
 >    -- sessBug2
->    Just result <- minTSysPrime w (frequency sessBug2) (elevation sessBug2)
->    assertAlmostEqual "test_minTsysPrime" 4 29.858517 result 
+>    Just result <- minTSysPrime w (frequency sessBug2) (elevation dt sessBug2)
+>    assertAlmostEqual "test_minTsysPrime 4" 4 29.858517 result 
 >      where 
->        -- Guard against elevations < 5.0 degrees
->        elevation s = max (deg2rad 5.0)  (pi/2 - zenithAngle dt s)
 >        dt = fromGregorian 2006 10 15 12 0 0
+
+> test_minTsys' = TestCase $ do
+>    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>    let dt = fromGregorian 2006 10 15 12 0 0
+>    -- session LP
+>    let sess = findPSessionByName "LP"
+>    Just result <- minTsys' w dt sess
+>    assertAlmostEqual "test_minTsys' 1" 3 15.490067 result 
+>    -- session AS
+>    let sess = findPSessionByName "AS"
+>    Just result <- minTsys' w dt sess
+>    assertAlmostEqual "test_minTsys' 2" 3 25.958 result 
+>    -- sessBug
+>    Just result <- minTsys' w dt sessBug
+>    assertAlmostEqual "test_minTsys' 3" 3 92.365046 result 
+>    -- sessBug2
+>    Just result <- minTsys' w dt sessBug2
+>    assertAlmostEqual "test_minTsys' 4" 4 29.858517 result 
 
 > test_minimumObservingConditions = TestCase $ do
 >    let dt = fromGregorian 2006 10 13 16 0 0
@@ -431,7 +447,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     factors <- weatherFactors s w dt
->     {-  TBF not in 2006
+>     {-  TBF mph not in 2006
 >     let wind_mph = fromJust . fromJust . lookup "wind_mph" $ factors
 >     assertEqual "test_weatherFactors wind_mph" 1.0 wind_mph
 >     -}

@@ -298,7 +298,9 @@ on frequency.
 >     getFloat conn query [toSql freqIdx, toSql elevIdx]
 >   where
 >     freqIdx = freq2Index frequency
->     elevIdx = round . rad2deg $ elevation
+>     -- guard against Weather server returning nothing for el's < 5.0.
+>     elevation' = max (deg2rad 5.0) elevation
+>     elevIdx = round . rad2deg $ elevation'
 >     key     = (freqIdx, elevIdx)
 >     query   = "SELECT prime FROM t_sys\n\
 >               \WHERE frequency = ? AND elevation = ?"

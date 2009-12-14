@@ -33,7 +33,7 @@ Ranking System from Memo 5.2, Section 3
 >     tk  <- kineticTemperature dt s
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s
->     minTsysPrime' <- liftIO $ minTSysPrime w (frequency s) elevation
+>     minTsysPrime' <- liftIO $ minTSysPrime w (frequency s) elevation'
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
@@ -43,8 +43,7 @@ Ranking System from Memo 5.2, Section 3
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
->     -- gaurd against Weather server returning nothing for el's < 5.0.
->     elevation = max (deg2rad 5.0) (pi/2 - za)
+>     elevation' = (pi/2 - za)
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
@@ -57,6 +56,26 @@ Ranking System from Memo 5.2, Section 3
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >
 >         tsys' = exp opticalDepth * tsys
+
+> minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
+> minTsys' w dt s = do
+>     minTSysPrime w (frequency s) (elevation dt s)
+
+> {-
+> systemNoiseTemperature :: DateTime -> Session -> IO Factor
+> -- Equation 7
+> systemNoiseTemperature dt s = do
+>     let za  = zenithAngle dt s
+>     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
+>     let secant = Just (cos . min 1.5 $ rndZa)
+>     zod <- zenithOpticalDepth dt s
+>     let trx = receiverTemperature dt s
+>     tk  <- kineticTemperature dt s
+>     let opticalDepth = zod / secant
+>     --let opticalDepth = zod / (cos . min 1.5 $ rndZa)
+>     return ("systemNoiseTemperature"
+>           , trx + 5.7 + tk * (1 - exp (-opticalDepth)))
+> -}
 
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
@@ -762,9 +781,9 @@ Need to translate a session's factors into the final product score.
 > positionFactors :: DateTime -> Session -> IO Factors
 > positionFactors dt s = do
 >   let ha' = rad2hrs . hourAngle dt $ s
->   let elevation' = rad2deg . elevation dt $ s
+>   let el' = rad2deg . elevation dt $ s
 >   --                     hours                    degrees
->   return [("hourAngle", Just ha'), ("elevation", Just elevation')]
+>   return [("hourAngle", Just ha'), ("elevation", Just el')]
 
 > weatherFactors :: Session -> Weather -> DateTime -> IO Factors
 > weatherFactors s w dt = do
