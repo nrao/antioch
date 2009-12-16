@@ -97,7 +97,7 @@
 >     -- factors, and/or period selection.
 >     projs <- liftIO getProjects
 >     let ss = concatMap sessions projs
->     w <- liftIO $ getWeather . Just $ dt 
+>     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     nominees <- liftIO $ runScoring w rs $ do
 >         sf <- genPartScore sfs . scoringSessions dt $ ss

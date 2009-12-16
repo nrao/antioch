@@ -70,8 +70,7 @@
 >     liftIO $ print s
 >     liftIO $ print . project $ s
 >     liftIO $ print . observers . project $ s
->     now <- liftIO $ getCurrentTime
->     w <- liftIO $ getWeather . Just $ now 
+>     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     factors' <- liftIO $ scoreFactors s w ss dt dur rs
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'

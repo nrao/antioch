@@ -63,7 +63,7 @@
 >     let ss = scoringSessions dt . concatMap sessions $ projs
 >     let s = getSessionFromPeriod id cnn 
 >
->     w <- liftIO $ getWeather . Just $ dt 
+>     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     scores <- liftIO $ mapM (scoreAt w rs ss s) dts
 >     liftIO $ print scores

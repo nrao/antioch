@@ -912,8 +912,7 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 
 > scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
 > scoringInfo s ss dt dur rs = do
->   now <- getCurrentTime
->   w <- liftIO $ getWeather . Just $ now 
+>   w <- liftIO $ getWeather Nothing
 >   factors <- scoreFactors s w ss dt dur rs
 >   let scores = map eval factors
 >   elements <- scoreElements s w ss dt dur rs
