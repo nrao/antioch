@@ -47,9 +47,11 @@ hour scheduling period.
 >     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName dt days history ss
 >     print "scheduled w/ buffer: "
 >     print . length $ schdWithBuffer
->     let results = removeBuffer dt (days*24*60) schdWithBuffer history
+>     printList schdWithBuffer
+>     let results = removeBuffer dt dur schdWithBuffer history
 >     print "removed buffer: "
 >     print . length $ results
+>     printList results
 >     -- new schedule to DB; only write the new periods
 >     let newPeriods = results \\ history
 >     print "writing new periods to DB: " 
@@ -57,6 +59,7 @@ hour scheduling period.
 >     putPeriods newPeriods
 >   where
 >     endTime = getEndTime dt days
+>     dur = endTime `diffMinutes'` dt 
 
 Actually calls the strategy (ex: Pack) for the days we are interested in, 
 scheduling a 'buffer' zone, and then removing this 'buffer' to avoid 
