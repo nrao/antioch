@@ -4,6 +4,7 @@
 > import Data.Record.Label
 > import Data.List                             (find, intercalate)
 > import Data.Maybe                            (maybeToList)
+> import Data.Time                             (getCurrentTimeZone, localTimeToUTC)
 > import Database.HDBC
 > import Control.Monad.State.Lazy              (StateT)
 > import Database.HDBC.PostgreSQL              (Connection)
@@ -36,10 +37,25 @@ for the given date range.
 > runSchedule :: StateT Context IO ()
 > runSchedule = do
 >     bytes <- contents
->     let params = maybe [] id $ bytes >>= parseQueryParams . L.unpack
->     liftIO $ print params
+>     let params   = maybe [] id $ bytes >>= parseQueryParams . L.unpack
+>     let params'  = getKeyValuePairs params
+>     liftIO $ print params'
+>     let tz       = getParam "tz" params'
+>     let days'    = read (getParam "duration" params')::Int
+>     let days     = if (days' == 0) then 0 else (days' - 1)
+>     let startStr = (take 10 $ getParam "start" params') ++ " 00A00A00"
+>     liftIO $ print startStr
+>     edt <- liftIO getCurrentTimeZone
+>     liftIO $ print edt
+>     liftIO $ print (parseUTCTime httpFormat startStr)
+>     let utc  | tz == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ startStr
+>              | otherwise  = fromJust . parseUTCTime httpFormat $ startStr
+>     liftIO $ print utc
+>     let start = toSeconds utc
+>     liftIO $ print start
 >     -- schedule something! 
->     liftIO $ schedule (getKeyValuePairs params) 
+>     liftIO $ print (fromSeconds start)
+>     liftIO $ dailySchedulePack start days
 >   where
 >     getKeyValuePairs pairs = [(key, value) | (key, Just value) <- pairs]
 
@@ -50,6 +66,8 @@ Just like the name says: run the schedule, then redirect to a new page.
 >     runSchedule
 >     -- now redirect caller back to the scheduling page
 >     hRedirect getSchedulingPage 
+
+> {-
 
 TBF: currently, a date time string entered in a form's text box gets parsed
 as (example): "2009-06-20 00%3A00%3A00".  To avoid the issue with the time,
@@ -67,6 +85,7 @@ we are rounding off to the nearest day.
 >     start' = fromSqlString $ start'' ++ " " ++ time
 >     days'  = read (getParam "duration" params)::Int
 >     days   = if (days' == 0) then 0 else (days' - 1)
+> -}
 
 > getParam :: String -> [(String, String)] -> String
 > getParam key params = case pair of
