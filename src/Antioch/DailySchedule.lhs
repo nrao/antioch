@@ -11,6 +11,8 @@
 > import Antioch.HardwareSchedule
 > import Antioch.DSSData
 > import Antioch.Settings (dssDataDB)
+> import Data.Time           (getCurrentTimeZone, localTimeToUTC)
+> import Data.Time.LocalTime (timeZoneMinutes)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, (\\), find)
 > import Antioch.Reports
@@ -37,14 +39,21 @@ hour scheduling period.
 
 > dailySchedule :: StrategyName -> DateTime -> Int -> IO ()
 > dailySchedule strategyName dt days = do
+>     let workStartMinutes = 8*60  -- TBF when do they get to work?
 >     w <- getWeather Nothing
+>     --edt <- getCurrentTimeZone
+>     --let endTimeMinutes = workStartMinutes - (timeZoneMinutes edt) 
+>     --let endTime = getEndTime dt days endTimeMinutes
+>     --let dur = endTime `diffMinutes'` dt 
+>     endTime <- getEndTime dt days workStartMinutes
+>     let dur = endTime `diffMinutes'` dt 
 >     print $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
 >     -- now get all the input from the DB
 >     (rs, ss, projs, history') <- dbInput dt
 >     let history = filterHistory history' dt (days + 1) 
 >     print "scheduling around periods: "
 >     printList history
->     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName dt days history ss
+>     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName dt dur history ss
 >     print "scheduled w/ buffer: "
 >     print . length $ schdWithBuffer
 >     printList schdWithBuffer
@@ -57,33 +66,37 @@ hour scheduling period.
 >     print "writing new periods to DB: " 
 >     printList newPeriods
 >     putPeriods newPeriods
->   where
->     endTime = getEndTime dt days
->     dur = endTime `diffMinutes'` dt 
+
+Computes the scheduling period finish in UTC on the last day at the
+start hour of the work day in ET.
+
+> getEndTime :: DateTime -> Int -> Minutes -> IO Minutes
+> getEndTime dt days workStart = do
+>     edt <- getCurrentTimeZone
+>     let endTimeMinutes = workStart - (timeZoneMinutes edt) 
+>     return $ getEndTime' dt days endTimeMinutes
 
 Actually calls the strategy (ex: Pack) for the days we are interested in, 
 scheduling a 'buffer' zone, and then removing this 'buffer' to avoid 
 boundary affects.
 
-> runDailySchedule :: StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Scoring [Period]
-> runDailySchedule strategyName dt days history ss = do
+> runDailySchedule :: StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
+> runDailySchedule strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
 >   sf <- genScore . scoringSessions dt $ ss
 >   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
 >   return schedPeriods
 >     where
->       -- calculate the duration from when we know it will end
->       endTime = getEndTime dt days
->       dur = endTime `diffMinutes'` dt 
 >       bufferHrs = 12*60 -- length of buffer in minutes
 
-We can't gaurantee when it will start, but we know that it must end on 
-the last day, by 8 AM ET.
+Given the start of the scheduling period, number of days plus the
+offset on the last day, returns the time in UTC of the end of the
+scheduling period.
 
-> getEndTime :: DateTime -> Int -> DateTime
-> getEndTime start days = setHour endHour lastDay
+> getEndTime' :: DateTime -> Int -> Minutes -> DateTime
+> getEndTime' start days endMinutes = setHour endHour lastDay
 >   where
->     endHour = 12 -- TBF: 12 UTC == 8 ET.  NOT!
+>     endHour = endMinutes `div` 60
 >     daysMins = 24*60*days -- lastdays in minutes 
 >     lastDay = daysMins `addMinutes'` start 
 
