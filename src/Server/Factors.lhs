@@ -35,7 +35,7 @@
 > import Antioch.Settings                      (proxyListenerPort)
 > import Antioch.Simulate
 > import Antioch.Types
-> import Antioch.Utilities                     (readMinutes)
+> import Antioch.Utilities                     (readMinutes, rad2deg, rad2hrs)
 > import Antioch.Weather                       (getWeather)
 
 > getFactorsHandler :: Connection -> Handler()
@@ -46,8 +46,8 @@
 
 > getFactors :: Connection -> StateT Context IO ()
 > getFactors cnn = do
->     liftIO $ print "starting getFactors"
 >     params <- hParameters
+>     liftIO $ print params
 >     -- Interpret options: id, start, tz, duration
 >     let id       = read . fromJust . fromJust . lookup "id" $ params
 >     let startStr = fromJust . fromJust . lookup "start" $ params
@@ -55,31 +55,26 @@
 >     let timezone = fromJust . fromJust . lookup "tz" $ params
 >     -- start at ...
 >     let startStr = fromJust . fromJust . lookup "start" $ params
->     liftIO $ print startStr
 >     edt <- liftIO getCurrentTimeZone
 >     let utc  | timezone == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ startStr
 >              | otherwise        = fromJust . parseUTCTime httpFormat $ startStr
->     liftIO $ print utc
 >     let dt = toSeconds utc
->     liftIO $ print dt
 >     let dur = read . fromJust . fromJust . lookup "duration" $ params
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
 >     let ss = scoringSessions dt . concatMap sessions $ projs
 >     let s = head $ filter (\s -> (sId s) == id) $ concatMap sessions $ projs
->     liftIO $ print s
->     liftIO $ print . project $ s
->     liftIO $ print . observers . project $ s
 >     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     factors' <- liftIO $ scoreFactors s w ss dt dur rs
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
 >     factors <- liftIO $ scoreElements s w ss dt dur rs
 >     let scoresNfactors = zipWith (++) scores factors
->     liftIO $ print (head scoresNfactors)
->     liftIO $ print (length scoresNfactors)
->     jsonHandler $ makeObj [("factors", factorsListToJSValue scoresNfactors)]
->     liftIO $ print "finished getFactors"
+>     jsonHandler $ makeObj [("ra", showJSON . take 5 . show . rad2hrs . ra $ s)
+>                          , ("dec", showJSON . take 5 . show . rad2deg . dec $ s)
+>                          , ("freq", showJSON . take 4 . show . frequency $ s)
+>                          , ("alive", showJSON . schedulableSession dt $ s)
+>                          , ("factors", factorsListToJSValue scoresNfactors)]
 
 > data JFactor = JFactor {
 >       fName     :: String

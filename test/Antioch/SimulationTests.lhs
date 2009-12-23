@@ -111,15 +111,14 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >     int = 60 * 24 * 1
 >     history = []
 >     ss = getOpenPSessions
->     expSs = [lp, cv, cv, as, cv, cv]
+>     expSs = [lp, cv, cv, as, cv]
 >     dts = [ fromGregorian 2006 2 4  6  0 0
 >           , fromGregorian 2006 2 4 10  0 0
 >           , fromGregorian 2006 2 5  3 30 0
 >           , fromGregorian 2006 2 5  5 30 0
->           , fromGregorian 2006 2 5 11 30 0
->           , fromGregorian 2006 2 6  3 30 0]
->     durs = [240, 120, 120, 360, 120, 120]
->     scores = [5.7547455, 3.8890452, 2.928565, 3.9593077, 3.2085283, 2.933338]
+>           , fromGregorian 2006 2 5 11 30 0]
+>     durs = [240, 120, 120, 360, 120]
+>     scores = [5.7547455, 3.8890452, 2.928565, 3.9593077, 3.2085283]
 >     exp = zipWith6 Period expSs dts durs scores (repeat undefined) (repeat False)
 
 Make sure the simulation can handle running out of sessions to schedule, and

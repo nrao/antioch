@@ -31,6 +31,9 @@ codes weather server used for unit tests (TWeather).
 >   , test_zenithAngle2
 >   , test_zenithAngleAtTransit
 >   , test_minTsysPrime
+>   , test_minTsysPrime
+>   , test_systemNoiseTemperature
+>   , test_minTsys'
 >   , test_minimumObservingConditions
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
@@ -49,6 +52,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_trackingEfficiency
 >   , test_trackingErrorLimit
 >   , test_positionFactors
+>   , test_subfactorFactors
 >   , test_weatherFactors
 >   , test_scoreFactors
 >   , test_scoreElements
@@ -195,6 +199,22 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    assertAlmostEqual "test_minTsysPrime 4" 4 29.858517 result 
 >      where 
 >        dt = fromGregorian 2006 10 15 12 0 0
+
+> test_systemNoiseTemperature = TestCase $ do
+>    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
+>    let dt = fromGregorian 2006 10 15 12 0 0
+>    -- session LP
+>    let sess = findPSessionByName "LP"
+>    Just result <- systemNoiseTemperature w dt sess
+>    assertEqual "test_systemNoiseTemperature 1" 15.348079 result 
+>    Just result <- systemNoiseTemperature' w dt sess
+>    assertEqual "test_systemNoiseTemperature' 1" 15.630218 result 
+>    -- session AS
+>    let sess = findPSessionByName "AS"
+>    Just result <- systemNoiseTemperature w dt sess
+>    assertEqual "test_systemNoiseTemperature 2" 25.468143 result 
+>    Just result <- systemNoiseTemperature' w dt sess
+>    assertEqual "test_systemNoiseTemperature' 2" 26.474463 result 
 
 > test_minTsys' = TestCase $ do
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
@@ -436,11 +456,23 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 > test_positionFactors = TestCase $ do
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
->     factors <- positionFactors dt s
+>     factors <- positionFactors s dt
 >     let hourAngle = fromJust . fromJust . lookup "hourAngle" $ factors
 >     assertEqual "test_positionFactors hourAngle" (-4.349304) hourAngle
 >     let elevation = fromJust . fromJust . lookup "elevation" $ factors
 >     assertEqual "test_positionFactors elevation" 36.60029 elevation
+
+> test_subfactorFactors = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let s = findPSessionByName "CV"
+>     factors <- subfactorFactors s w dt
+>     let sysNoiseTemp = fromJust . fromJust . lookup "sysNoiseTemp" $ factors
+>     assertEqual "test_subfactorFactors sysNoiseTemp" 14.862213 sysNoiseTemp
+>     let sysNoiseTempPrime = fromJust . fromJust . lookup "sysNoiseTempPrime" $ factors
+>     assertEqual "test_subfactorFactors sysNoiseTempPrime" 15.093734 sysNoiseTempPrime
+>     let minSysNoiseTempPrime = fromJust . fromJust . lookup "minSysNoiseTempPrime" $ factors
+>     assertEqual "test_subfactorFactors minSysNoiseTempPrime" 14.089174 minSysNoiseTempPrime
 
 > test_weatherFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
@@ -476,13 +508,17 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreElements s w pSessions dt dur []
->     assertEqual "test_scoreElements 1" 24 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 29 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
 >     assertEqual "test_scoreElements 3" 1.3457081 fPress
 >     let opacity = fromJust . fromJust . lookup "opacity" . head $ factors
 >     assertEqual "test_scoreElements 4" 7.844159e-3 opacity
+>     let elevation = fromJust . fromJust . lookup "elevation" . head $ factors
+>     assertEqual "test_scoreElements 5" 36.60029 elevation
+>     let sysNoiseTemp = fromJust . fromJust . lookup "sysNoiseTemp" . head $ factors
+>     assertEqual "test_scoreElements 6" 14.164635 sysNoiseTemp
 
 BETA: TestZenithAngleLimit testScore
 
@@ -508,7 +544,7 @@ BETA: TestSurfaceObservingEfficiency testefficiency
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV" (1.0204386e-3) result  
+>     assertAlmostEqual "test_scoreCV" 5 (1.0204386e-3) result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -641,16 +677,9 @@ plus 40 quarters.
 >                 ,3.2787113,3.278528,3.2781422,3.2795804,3.2791758
 >                 ,3.2789626,3.2785032,3.2757215,3.2750494,3.274302
 >                 ,3.273018,3.2735398,3.2719383,3.2699947,3.2675872,3.2657294]
-> xdefaultScores = [3.2114944,3.2196305,3.2261546,2.8470442,3.0492089
->                 ,3.1299076,3.140008,3.1896837,3.1915457,3.1966023
->                 ,3.1995883,3.2383318,3.239888,3.2477167,3.248886
->                 ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
->                 ,3.2787113,3.278528,3.2783365,3.2795804,3.2791758
->                 ,3.2787383,3.27825,3.2757215,3.2750494,3.273897
->                 ,3.273018,3.2730415,3.271333,3.2699947,3.2675872]
 
 > test_bestDuration = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeather . Just $ origin 
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     bestDur <- runScoring w [] $ do
@@ -665,6 +694,7 @@ plus 40 quarters.
 >     let expected = (s, 3.7109919, 240)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >   where
+>     origin = fromGregorian 2006 10 1 18 0 0
 >     starttime = fromGregorian 2006 10 1 18 0 0
 
 > test_bestDurations = TestCase $ do
@@ -676,11 +706,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 10 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertEqual "test_bestDurations 2 v" 3.7249105 v
+>     assertAlmostEqual "test_bestDurations 2 v" 5 3.7249105 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertEqual "test_bestDurations 3 v" 3.3876235 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.3876235 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0

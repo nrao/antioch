@@ -3,7 +3,6 @@
 >   , getNominees
 >   ) where
  
-> import Control.Monad      (liftM)
 > import Control.Monad.Trans                   (liftIO)
 > import Control.Monad.State.Lazy              (StateT)
 > import Control.Monad.RWS.Strict
@@ -45,29 +44,22 @@
 
 > getNominees :: StateT Context IO ()
 > getNominees = do
->     --liftIO $ print "starting getNominees"
 >     params <- hParameters
->     --liftIO $ print "got params"
->     --liftIO $ print params
+>     liftIO $ print params
 >
 >     -- Interpret options:
 >     -- timezone
 >     let timezone = fromJust . fromJust . lookup "tz" $ params
 >     -- start at ...
 >     let startStr = fromJust . fromJust . lookup "start" $ params
->     --liftIO $ print startStr
 >     edt <- liftIO getCurrentTimeZone
 >     let utc  | timezone == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ startStr
 >              | otherwise        = fromJust . parseUTCTime httpFormat $ startStr
->     --liftIO $ print utc
 >     let dt = toSeconds utc
->     --liftIO $ print dt
 >     -- duration of the hole (if one) ...
 >     let upper = fmap readMinutes . fromJust . lookup "duration" $ params
->     --liftIO $ print upper
 >     -- ignore minimum duration limit?
 >     let lower = maybe Nothing (\v -> if v == "true" then Just 0 else Nothing) . fromJust . lookup "minimum" $ params
->     --liftIO $ print lower
 >     let rfi         = fromJust . fromJust . lookup "rfi" $ params
 >     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
 >     let blackout    = fromJust . fromJust . lookup "blackout" $ params
@@ -75,7 +67,6 @@
 >                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
 >                        , if blackout == "true" then Nothing else Just observerAvailable
 >                         ]
->     --liftIO $ print sfs
 >     -- use only backup sessions?
 >     let backup = fromJust . fromJust . lookup "backup" $ params
 >     -- include completed sessions?
@@ -83,14 +74,11 @@
 >     let filter = catMaybes . concat $ [
 >             [Just isTypeOpen]
 >           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
->           , [Just isSchedulableSemester]
 >           , [Just isSchedulable]
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >                                       ]
->     --liftIO $ print filter
 >     let schedSessions = filterSessions dt filter
->     --let scoreSessions = filterSessions dt [isSchedulableSemester, isGradeA]
 >
 >     -- This is kind of awkward, the various selections the user may
 >     -- specify must be implemented by sessions selection, scoring
@@ -102,7 +90,6 @@
 >     nominees <- liftIO $ runScoring w rs $ do
 >         sf <- genPartScore sfs . scoringSessions dt $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
->     --liftIO $ print "returning stuff ..."
 >     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
 >     --liftIO $ print "finished getNominees"

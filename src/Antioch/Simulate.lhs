@@ -75,6 +75,10 @@ should deal with closing old B projects, etc.
 > filterSessions dt []       ss = ss
 > filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
 
+> meetsCriteria :: DateTime -> Session -> [SelectionCriteria] -> Bool
+> meetsCriteria dt s []       = True
+> meetsCriteria dt s (sc:scs) = (sc dt s) && (meetsCriteria dt s scs)
+
 TBF: this does not work properly in serveral ways:
    * each point in time should be 'scheduled' only once.  This works most of
      the time; for example, if a period is scheduled, but then canceled due 
@@ -127,15 +131,20 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
 
-> schedulableSessions :: DateTime -> [Session] -> [Session]
-> schedulableSessions dt = filterSessions dt [
+> schedulableCriteria :: [SelectionCriteria]
+> schedulableCriteria = [
 >         isTypeOpen
 >       , hasTimeSchedulable
 >       , isNotComplete
->       , isSchedulableSemester
 >       , isSchedulable
 >       , hasObservers
->                                            ]
+>                       ]
+
+> schedulableSessions :: DateTime -> [Session] -> [Session]
+> schedulableSessions dt = filterSessions dt schedulableCriteria
+
+> schedulableSession :: DateTime -> Session -> Bool
+> schedulableSession dt s = meetsCriteria dt s schedulableCriteria
 
 > scoringSessions :: DateTime -> [Session] -> [Session]
 > scoringSessions dt = filterSessions dt [

@@ -634,7 +634,13 @@ be confused and raise false alarams.
 >   where
 >     end = (dur*24*60) `addMinutes'` start
 >     endTime p = (duration p) `addMinutes'` (startTime p)
->     --inWindow p = startTime p >= start && endTime p <= end 
+>     inWindow p = endTime p >= start && startTime p <= end 
+
+> filterHistory' :: [Period] -> DateTime -> Minutes -> [Period]
+> filterHistory' ps start dur = filter inWindow ps
+>   where
+>     end = dur `addMinutes'` start
+>     endTime p = (duration p) `addMinutes'` (startTime p)
 >     inWindow p = endTime p >= start && startTime p <= end 
 
 > textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 

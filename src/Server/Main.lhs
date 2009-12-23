@@ -53,8 +53,7 @@
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
->           ("/schedule_algo", scheduleAndRedirectHandler) -- deprecated
->         , ("/runscheduler",  runSchedulerHandler)  
+>           ("/runscheduler",  runSchedulerHandler)  
 >         , ("/nominees",      getNomineesHandler)  
 >         , ("/scores",        getScoresHandler cnn)  
 >         , ("/factors",       getFactorsHandler cnn)  

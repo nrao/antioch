@@ -9,6 +9,7 @@
 > import Antioch.Utilities
 > import Antioch.Weather
 > import Control.Monad.RWS.Strict
+> import Control.Monad      (liftM2)
 > import Data.Array
 > import Data.Array.IArray  (amap)
 > import Data.Array.ST
@@ -61,21 +62,29 @@ Ranking System from Memo 5.2, Section 3
 > minTsys' w dt s = do
 >     minTSysPrime w (frequency s) (elevation dt s)
 
-> {-
-> systemNoiseTemperature :: DateTime -> Session -> IO Factor
-> -- Equation 7
-> systemNoiseTemperature dt s = do
+> systemNoiseTemperature :: Weather -> DateTime -> Session -> IO (Maybe Float)
+> systemNoiseTemperature w dt s = runScoring w [] $ do
+>     zod <- zenithOpticalDepth dt s
+>     tk  <- kineticTemperature dt s
+>     let trx = receiverTemperature dt s
 >     let za  = zenithAngle dt s
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
->     let secant = Just (cos . min 1.5 $ rndZa)
+>     return $ liftM2 (\x y ->
+>         let opticalDepth = y / (cos . min 1.5 $ rndZa) in
+>         -- Equation 7
+>         trx + 5.7 + x * (1 - exp (-opticalDepth))) tk zod
+
+> systemNoiseTemperature' :: Weather -> DateTime -> Session -> IO (Maybe Float)
+> systemNoiseTemperature' w dt s = runScoring w [] $ do
 >     zod <- zenithOpticalDepth dt s
->     let trx = receiverTemperature dt s
 >     tk  <- kineticTemperature dt s
->     let opticalDepth = zod / secant
->     --let opticalDepth = zod / (cos . min 1.5 $ rndZa)
->     return ("systemNoiseTemperature"
->           , trx + 5.7 + tk * (1 - exp (-opticalDepth)))
-> -}
+>     let trx = receiverTemperature dt s
+>     let za  = zenithAngle dt s
+>     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
+>     return $ liftM2 (\x y ->
+>         let opticalDepth = y / (cos . min 1.5 $ rndZa) in
+>         -- Equation 7
+>         (exp opticalDepth) * (trx + 5.7 + x * (1 - exp (-opticalDepth)))) tk zod
 
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
@@ -548,7 +557,8 @@ that it does not assume zero for the first quarter does not matter.
 >       0 -> return 0.0
 >       otherwise -> return $ sumScores scores / (fromIntegral . length $ scores)
 >   where
->     -- TBF:  Using the measured wind speed for scoring in the future is unrealistic, but damn convent!
+>     -- TBF:  Using the measured wind speed for scoring in the future
+>     -- is unrealistic, but damn convient!
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
 >     sumScores scores = case dropWhile (>0.0) scores of
@@ -639,18 +649,14 @@ the provided duration and the session's duration is used.
 > bestDuration :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> Session -> Scoring Nominee
 > bestDuration sf dt lower upper session = do
 >     scores <- mapM (liftM eval . flip sf session) times
->     --liftIO $ print ("scores " ++ (show scores))
 >     let sums = case scores of
 >                     []     -> []
 >                     (x:[]) -> [0.0::Score]
 >                     (x:xs) -> (0.0:(scanl1 (+) . takeWhile (> 0.0) $ xs))
->     --liftIO $ print ("sums " ++ (show sums))
 >     --  sds :: [(Score, Minutes)] -- period sums and durations
 >     let sds = dropWhile (\sd -> (snd sd) < shortest) [(s, d) | (s, d) <- zip sums durs]
->     --liftIO $ print ("sds " ++ (show sds))
 >     --  mds :: [(Score, Minutes)] -- period means and durations
 >     let mds = [(s / (fromIntegral $ (d `div` 15)), d) | (s, d) <- sds]
->     --liftIO $ print ("mds " ++ (show mds))
 >     let result = foldl findBest (0.0, 0) mds
 >     return $ (session, fst result, snd result)
 >   where
@@ -778,12 +784,21 @@ Need to translate a session's factors into the final product score.
 >     effs <- calcEfficiency dt s
 >     score (scoringFactors effs raPressure freqPressure) dt s
 
-> positionFactors :: DateTime -> Session -> IO Factors
-> positionFactors dt s = do
+> positionFactors :: Session -> DateTime -> IO Factors
+> positionFactors s dt = do
 >   let ha' = rad2hrs . hourAngle dt $ s
 >   let el' = rad2deg . elevation dt $ s
 >   --                     hours                    degrees
 >   return [("hourAngle", Just ha'), ("elevation", Just el')]
+
+> subfactorFactors :: Session -> Weather -> DateTime -> IO Factors
+> subfactorFactors s w dt = do
+>   sysNoiseTemp <- systemNoiseTemperature w dt s
+>   sysNoiseTempPrime <- systemNoiseTemperature' w dt s
+>   minSysNoiseTempPrime <- minTsys' w dt s
+>   return [("sysNoiseTemp",      sysNoiseTemp)
+>         , ("sysNoiseTempPrime", sysNoiseTempPrime)
+>         , ("minSysNoiseTempPrime", minSysNoiseTempPrime)]
 
 > weatherFactors :: Session -> Weather -> DateTime -> IO Factors
 > weatherFactors s w dt = do
@@ -812,9 +827,11 @@ Need to translate a session's factors into the final product score.
 >       fs <- genScore ss 
 >       sf <- fs dt s
 >       return sf
->   sfactors <- mapM (score' w) times
+>   pfactors <- mapM (positionFactors s) times
 >   wfactors <- mapM (weatherFactors s w) times
->   return . zipWith (++) wfactors  $ sfactors
+>   ffactors <- mapM (subfactorFactors s w) times
+>   sfactors <- mapM (score' w) times
+>   return $ zipWith4 (\a b c d -> a ++ b ++ c ++ d) pfactors wfactors ffactors sfactors
 >     where
 >       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
@@ -824,10 +841,8 @@ sfactors effs rap fp = scoringFactors effs rap fp
 
 > scoringFactors :: Maybe (Score, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
 > scoringFactors effs raPressure freqPressure =
->        [scienceGrade
->       , thesisProject
->       , projectCompletion
->       , stringency
+>        [
+>         stringency
 >       , (atmosphericOpacity' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
@@ -838,8 +853,11 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , zenithAngleLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
->       , receiver
+>       , scienceGrade
+>       , thesisProject
+>       , projectCompletion
 >       , observerOnSite
+>       , receiver
 >       , needsLowRFI
 >       , lstExcepted
 >       , enoughTimeBetween
@@ -855,10 +873,7 @@ sfactors effs rap fp = scoringFactors effs rap fp
 > genPartScore' sfs raPressure freqPressure = return $ \dt s -> do
 >     effs <- calcEfficiency dt s
 >     score ([
->         scienceGrade
->       , thesisProject
->       , projectCompletion
->       , stringency
+>         stringency
 >       , (atmosphericOpacity' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
@@ -869,8 +884,11 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , zenithAngleLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
->       , receiver
+>       , scienceGrade
+>       , thesisProject
+>       , projectCompletion
 >       , observerOnSite
+>       , receiver
 >       --, needsLowRFI
 >       , lstExcepted
 >       --, enoughTimeBetween
@@ -889,8 +907,8 @@ to return forecasted wind values, or wind values from weather station 2.
 > getRealOrForecastedWind dt = do
 >   w <- weather
 >   let wDt = forecast w
->   let useMeasured = if (dt <= wDt) then True else False
->   wind' <- if useMeasured
+>   let dt' = roundToHour dt
+>   wind' <- if dt' < wDt
 >            then liftIO $ w2_wind w dt
 >            else liftIO $ wind w dt 
 >   return wind'
