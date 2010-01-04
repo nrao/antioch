@@ -32,7 +32,7 @@
 >     let start     = fromJust . fromHttpString $ getParam "start" params
 >     let sessionId = read $ getParam "session_id" params
 >     session <- liftIO $ getSession sessionId cnn
->     w <- liftIO $ getWeather . Just $ start
+>     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just start
 >     moc <- liftIO $ runScoring w rs $ do
 >         minimumObservingConditions start session

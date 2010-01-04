@@ -6,7 +6,7 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
-> import Antioch.Settings (weatherDB)
+> import Antioch.Settings  (weatherDB)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
 > import Data.Convertible
@@ -15,10 +15,10 @@
 > import Data.Maybe        (fromJust, maybe, isJust, fromMaybe)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
-> import Prelude hiding (catch)
+> import Prelude hiding    (catch)
 > import Test.QuickCheck
 > import qualified Data.Map as M
-> import System.IO.Unsafe (unsafePerformIO)
+> import System.IO.Unsafe  (unsafePerformIO)
 
 > instance Convertible Float SqlValue where
 >     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
