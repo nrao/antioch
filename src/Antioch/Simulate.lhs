@@ -40,10 +40,21 @@ Sessions that:
 
 > type SelectionCriteria = DateTime -> Session -> Bool
 
+Possible factors:
+   - project time available
+   - session time available
+   - project semester time available
+
 > hasTimeSchedulable :: SelectionCriteria
 > hasTimeSchedulable dt s = (sAvail s sem) >= (minDuration s)
 >   where 
 >     sem = dt2semester dt
+
+Possible factors:
+   - project complete flag
+   - session complete flag
+   - project time available
+   - session time available
 
 > isNotComplete :: SelectionCriteria
 > isNotComplete _ s = (not . sComplete $ s) && (not . pComplete . project $ s)

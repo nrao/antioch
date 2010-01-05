@@ -18,12 +18,21 @@ But the devil is in the details.  Like:
    less then the projects total alloted time).  This means that query's into
    the available time of a semester have to specify the semester as well.
 
-   * What Else???
+   * Possible factors:
+      - project/session close flag
+      - project/session time available
+      - project semester time available
 
-The requirements below for project completion are drawn from Project Note 11.3.
-A project is considered closed within the DSS when any of:
-   1. the total amount of time allotted for that project has been billed (less than 15 minutes remains),
-   2. the project is marked as closed by a project investigator or the GBT telescope scheduler,
+The requirements below for project completion are drawn from Project
+Note 11.3.  A project is considered closed within the DSS when any of:
+   1. The total amount of time allotted for that project has been billed
+      (less than 15 minutes remains),
+   2. The project is marked as closed by a project investigator or the
+      GBT telescope scheduler,
+
+Checked factors:
+   - project close flag
+   - project time available
 
 > pComplete :: Project -> Bool
 > pComplete p = (pClosed p) || ((pAvailTotal p) <= quarter )
@@ -38,6 +47,11 @@ A session is considered closed within the DSS when any of:
    2. the session is marked as closed by a project investigator or the GBT telescope scheduler, or
    3. the project to which it belongs is closed.
 
+Checked factors:
+   - project close flag
+   - session close flag
+   - session time available
+
 > sComplete :: Session -> Bool
 > sComplete s = (sClosed s) || (pClosed . project $ s) || ((sAvailTotal s) <= quarter )
 
@@ -50,11 +64,19 @@ Returns the minutes available for scheduling for this session,
 i.e., time that is not encumbered in any way and therefore
 completely open for scheduling, tentative or not.
 
+Checked factors:
+   - session time available
+
 > sAvailTotal :: Session -> Minutes
 > sAvailTotal s = (sAlloted s) - (sUsed s)
 
 The time available to this session might actually be further restricted by 
-the time available to it's project, which may depend on which semester it is.
+the time available to it's project, which may depend on which its semester.
+
+Checked factors:
+   - project time available
+   - session time available
+   - project semester time available
 
 > sAvail :: Session -> String -> Minutes
 > sAvail s sem = min (sAvailTotal s) (pAvail (project s) sem)
@@ -62,12 +84,19 @@ the time available to it's project, which may depend on which semester it is.
 > pUsed :: Project -> Minutes
 > pUsed = sum . map sUsed . sessions
 
+Checked factors:
+   - project time available
+
 > pAvailTotal :: Project -> Minutes
 > pAvailTotal p = (pAlloted p) - (pUsed p) 
 
 Usually, the time available for a project is simply it's total time minus
 the time it has already used up.  But for large projects, it may be allowed
 only a certain amount of time per semester.
+
+Checked factors:
+   - project time available
+   - project semester time available
 
 > pAvail :: Project -> String -> Minutes
 > pAvail p sem = min (pAvailTotal p) (pSemesterRemainingTime p sem)
