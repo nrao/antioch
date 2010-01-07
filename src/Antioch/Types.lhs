@@ -146,16 +146,17 @@ Tying the knot.
 > } deriving (Eq, Show, Read)
 
 > data Period  = Period  {
->     session   :: Session
->   , startTime :: DateTime
->   , duration  :: Minutes
->   , pScore    :: Score  -- Average forecasted score
->   , pForecast :: DateTime
->   , pBackup   :: Bool
+>     session     :: Session
+>   , startTime   :: DateTime
+>   , duration    :: Minutes
+>   , pScore      :: Score  -- Average forecasted score
+>   , pForecast   :: DateTime
+>   , pBackup     :: Bool
+>   , pTimeBilled :: Minutes
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ printName p ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " with " ++ show (pScore p)
+>     show p = "Period: " ++ printName p ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with " ++ show (pScore p)
 >       where 
 >         n = sName . session $ p
 >         printName p = if n == "" then show . sId . session $ p else n
@@ -175,11 +176,13 @@ ignores their numerical scores.
 > periodsEqual :: Period -> Period -> Bool
 > periodsEqual p1 p2 = eqIds p1 p2 &&
 >                      eqStarts p1 p2 &&
->                      eqDurs p1 p2
+>                      eqDurs p1 p2 &&
+>                      eqTB p1 p2
 >   where
 >     eqIds    = (==) `on` session
 >     eqStarts = (==) `on` startTime
 >     eqDurs   = (==) `on` duration
+>     eqTB     = (==) `on` pTimeBilled
 
 Simple Functions for Periods:
 
@@ -194,7 +197,7 @@ Simple Functions for Periods:
 >   , sName       = ""
 >   , project     = defaultProject 
 >   , periods     = [defaultPeriod]
->   , sAlloted   = 0
+>   , sAlloted    = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0
@@ -226,23 +229,24 @@ Simple Functions for Periods:
 > }
 
 > defaultProject = Project {
->     pId       = 0
->   , pName     = ""
->   , semester  = ""
->   , sessions  = [defaultSession]
->   , thesis    = False
->   , pAlloted = 0
+>     pId             = 0
+>   , pName           = ""
+>   , semester        = ""
+>   , sessions        = [defaultSession]
+>   , thesis          = False
+>   , pAlloted        = 0
 >   , maxSemesterTime = 10000000 -- more then enough time
->   , observers = [defaultObserver]
->   , pClosed  = False
+>   , observers       = [defaultObserver]
+>   , pClosed         = False
 >   }
 
 > defaultPeriod = Period {
->     session   = defaultSession
->   , startTime = fromGregorian' 2008 1 1
->   , duration  = 0
->   , pScore    = 0.0
->   , pForecast = undefined
->   , pBackup   = False
+>     session     = defaultSession
+>   , startTime   = fromGregorian' 2008 1 1
+>   , duration    = 0
+>   , pScore      = 0.0
+>   , pForecast   = undefined
+>   , pBackup     = False
+>   , pTimeBilled = 0
 >   }
 

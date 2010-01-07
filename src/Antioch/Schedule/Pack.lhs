@@ -157,12 +157,13 @@ Our Periods need to have Minutes, and average scores.
 
 > toPeriod              :: DateTime -> Candidate Session -> Period
 > toPeriod dt candidate = defaultPeriod {
->     session   = cId candidate
->   , startTime = (quarter * cStart candidate) `addMinutes` dt
->   , duration  = quarter * cDuration candidate
->   , pScore    = (cScore candidate)/(fromIntegral $ cDuration candidate)
->   , pForecast = dt
->   , pBackup   = False
+>     session      = cId candidate
+>   , startTime    = (quarter * cStart candidate) `addMinutes` dt
+>   , duration     = quarter * cDuration candidate
+>   , pScore       = (cScore candidate)/(fromIntegral $ cDuration candidate)
+>   , pForecast    = dt
+>   , pBackup      = False
+>   , pTimeBilled  = quarter * cDuration candidate
 >   }
 
 Candidates, importantly, don't care what unit of time we're working

@@ -238,7 +238,7 @@ schedule deadtime.
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
->     then return $ Just $ Period s (startTime p) (duration p) score (forecast w) True
+>     then return $ Just $ Period s (startTime p) (duration p) score (forecast w) True (pTimeBilled p)
 >     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
 > updateSessions sessions periods = map update sessions

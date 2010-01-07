@@ -502,30 +502,33 @@ Two ways to get Periods from the DB:
 >   where
 >     xs = [toSql . sId $ s]
 >     -- don't pick up deleted periods!
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup FROM periods AS p, period_states AS state WHERE state.id = p.state_id AND state.abbreviation != 'D' AND p.session_id = ?;"
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
->     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
+>     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
->                     , pScore = fromSql score
+>                     , pScore = fromSql sch
+>                     --, pScore = fromSql score
 >                     , pForecast = fromSql forecast
 >                     , pBackup = fromSql backup
+>                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     }
 
 > fetchPeriod :: Int -> Connection -> IO Period
-> fetchPeriod id cnn = do 
+> fetchPeriod id cnn = do
 >   result <- quickQuery' cnn query xs
 >   return . toPeriod . head $ result
 >   where
 >     xs = [toSql id]
->     query = "SELECT id, session_id, start, duration, score, forecast, backup FROM periods WHERE id = ?"
->     toPeriod (id:sid:start:durHrs:score:forecast:backup:[]) =
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND id = ?"
+>     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
 >                     , pForecast = fromSql forecast
 >                     , pBackup = fromSql backup
->                     }
+>                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
+>                     } 
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
