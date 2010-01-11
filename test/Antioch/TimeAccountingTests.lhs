@@ -96,7 +96,7 @@ Construct periods, sessions, projects, then tie the knots!
 
 > proj = defaultProject { pAlloted = 2*60 }   -- 0
 > sess = defaultSession { sAlloted = 2*60, project = proj }
-> mkPeriod s dt = defaultPeriod { session = s, startTime = dt, duration = 60 }
+> mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60 }
 > dt1 = fromGregorian 2006 1 1 3 0 0
 > sem = dt2semester dt1
 

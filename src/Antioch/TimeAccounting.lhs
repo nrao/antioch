@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Debug.Trace
 
 Time Accounting is conceptually simple: sessions and projects have been
 allotted only so much time, and we don't want to schedule them over this
@@ -58,7 +59,7 @@ Checked factors:
 How much time has this session used up in periods?
 
 > sUsed :: Session -> Minutes
-> sUsed = sum . map duration . periods
+> sUsed = sum . map pTimeBilled . periods
 
 Returns the minutes available for scheduling for this session,
 i.e., time that is not encumbered in any way and therefore
@@ -108,7 +109,7 @@ Checked factors:
 > pUsedBySemester p sem = sum $ map (sUsedBySemester sem) $ sessions p
 
 > sUsedBySemester :: String -> Session -> Minutes
-> sUsedBySemester sem s = sum $ map duration $ periodsBySemester s sem 
+> sUsedBySemester sem s = sum $ map pTimeBilled $ periodsBySemester s sem 
 
 > periodsBySemester :: Session -> String -> [Period]
 > periodsBySemester s sem = filter (isSemester sem) $ periods s

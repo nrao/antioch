@@ -397,7 +397,7 @@ BETA: TestStringency.py testScore (first assert)
 >     proj' = defaultProject { pName = "time use test" }
 >     ss''  = [
 >         defaultSession {
->             periods = [defaultPeriod {duration = tt - tl}]
+>             periods = [defaultPeriod {duration = tt - tl, pTimeBilled = tt - tl}]
 >           , sAlloted = tt
 >           }
 >       ]
@@ -949,8 +949,10 @@ If none is sanctioned, then there should never be an observer available
 >       r8 = enoughTimeBetween' tdt6 s3
 >       -- utility
 >       mkPeriod s dt = defaultPeriod { session = s
->                                     , startTime = dt
->                                     , duration = 60 }
+>                                    , startTime = dt
+>                                    , duration = 60
+>                                    , pTimeBilled = 60
+>                                     }
 >       
 
 TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
@@ -1100,7 +1102,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         grades = [GradeA, GradeA, GradeA, GradeA]
 >         genPSess t u ra b g = defaultSession {
 >             sAlloted = t
->           , periods = [defaultPeriod {duration = u}]
+>           , periods = [defaultPeriod {duration = u, pTimeBilled = u}]
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
@@ -1114,7 +1116,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         grades = [GradeA, GradeA, GradeB, GradeB]
 >         genPSess t u ra b g = defaultSession {
 >             sAlloted = t
->           , periods = [defaultPeriod {duration = u}]
+>           , periods = [defaultPeriod {duration = u, pTimeBilled = u}]
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g

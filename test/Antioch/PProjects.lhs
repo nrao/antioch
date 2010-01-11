@@ -57,7 +57,9 @@
 >       , periods = [
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 10 15 9 0 0
->               , duration = 6*60 }
+>               , duration = 6*60
+>               , pTimeBilled = 6*60
+>                }
 >           ]
 >       , sAlloted = 40*60
 >       , minDuration = 4*60
@@ -128,11 +130,13 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 10 16 20 0 0
 >               , duration = 4*60
->               }
+>               , pTimeBilled = 4*60
+>                }
 >           , defaultPeriod {
 >                 startTime = fromGregorian 2006 11 1 20 0 0
 >               , duration = 2*60
->               }
+>               , pTimeBilled = 2*60
+>                }
 >           ]
 >       , sAlloted = 40*60
 >       , minDuration = 2*60
@@ -151,7 +155,9 @@
 >       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 1 18 0 0
->               , duration = 6*60 }
+>               , duration = 6*60
+>               , pTimeBilled = 6*60
+>                }
 >       , sAlloted = 6*60
 >       , minDuration = 6*60
 >       , maxDuration = 6*60
@@ -168,7 +174,9 @@
 >       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 4 11 0 0
->               , duration = 4*60 }
+>               , duration = 4*60
+>               , pTimeBilled = 4*60
+>                }
 >       , sAlloted = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
@@ -185,7 +193,9 @@
 >       , period =
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 5 1 0 0
->               , duration = 5*60 }
+>               , duration = 5*60
+>               , pTimeBilled = 5*60
+>                }
 >       , sAlloted = 5*60
 >       , minDuration = 5*60
 >       , maxDuration = 5*60
