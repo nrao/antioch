@@ -21,12 +21,14 @@ TBF: tests hang when all are run togethor - I don't think I'm handling the
 connection to the DB correctly.
 
 > tests = TestList [
->     --test_fetchPeriods
+>     --  test_fetchPeriods
+>     --, test_fetchPeriod
 >       test_getProjects
 >     -- , test_numPeriods
 >     , test_getProjectData
 >     , test_getProjectsProperties
 >     -- , test_putPeriods
+>     -- , test_setPeriodScore
 >     , test_scoreDSSData
 >     , test_session2
 >     , test_session_scores
@@ -42,6 +44,7 @@ connection to the DB correctly.
 >     assertEqual "test_getProjectData1" 103 (length d)  
 >     assertEqual "test_getProjectData2" "BB240" (pName . head $ d)  
 >     assertEqual "test_getProjectData3" False (thesis . head $ d)  
+>     disconnect cnn
 
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
@@ -198,20 +201,21 @@ generated: it's the input we want to test, really.
 > test_setPeriodScore = TestCase $ do
 >   putPeriods [p1]
 >   cnn <- connect
+>   r <- quickQuery' cnn ("SELECT id FROM periods") []
+>   let id = fromSqlInt . head . head $ r
 >   ct <- getCurrentTime
->   let forecast = toSql . toSqlString $ ct
->   result <- quickQuery' cnn "select * from periods" []
->   -- get id of p1 from result
->   -- setPeriodScore cnn score id
->   -- get score and forecast from period id
+>   setPeriodScore cnn score id
+>
+>   p' <- fetchPeriod id cnn
+>   let p = p' {session = s }
+>   disconnect cnn
 >   cleanup "periods"
->   assertEqual "test_setPeriodScore 1" True True
->   -- compare score with score in period id
->   -- compare forecast with forecast in period id
+>   assertEqual "test_setPeriodScore 1" score (pScore p)
+>   assertEqual "test_setPeriodScore 2" ct (pForecast p)
 >     where
->       id = 1
 >       score = 3.2
 >       dt = fromGregorian 2006 1 1 0 0 0
+>       s  = defaultSession { sId = 1 }
 >       p1 = defaultPeriod { session = defaultSession { sId = 1 }
 >                          , startTime = dt
 >                          , pForecast = dt }
@@ -226,6 +230,7 @@ generated: it's the input we want to test, really.
 >       dt = fromGregorian 2006 1 1 0 0 0
 >       p1 = defaultPeriod { session = defaultSession { sId = 1 }
 >                          , startTime = dt
+>                          , pScore = 0.0
 >                          , pForecast = dt }
 
 > test_fetchPeriods = TestCase $ do
@@ -234,8 +239,6 @@ generated: it's the input we want to test, really.
 >   ps' <- fetchPeriods cnn s
 >   -- fetchPeriods doesn't set the period's session, so we'l do that
 >   let ps = map (\p -> p { session = s }) ps'
->   print [p1]
->   print ps
 >   disconnect cnn
 >   cleanup "periods"
 >   assertEqual "test_fetchPeriods" [p1] ps 
@@ -249,14 +252,15 @@ generated: it's the input we want to test, really.
 > test_fetchPeriod = TestCase $ do
 >   putPeriods [p1]
 >   cnn <- connect
->   p' <- fetchPeriod 1 cnn
->   -- fetchPeriod doesn't set the period's session, so we'l do that
+>   r <- quickQuery' cnn ("SELECT id FROM periods") []
+>   let id = fromSqlInt . head . head $ r
+>   p' <- fetchPeriod id cnn
+>   -- fetchPeriod doesn't set the period's session, so we'll do that
 >   let p = p' {session = s }
->   print [p1]
 >   print p
 >   disconnect cnn
 >   cleanup "periods"
->   assertEqual "test_fetchPeriod" p1 p 
+>   assertEqual "test_fetchPeriod" p1 p
 >     where
 >       dt = fromGregorian 2006 1 1 0 0 0
 >       s  = defaultSession { sId = 1 }

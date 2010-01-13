@@ -156,7 +156,7 @@ Tying the knot.
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ printName p ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with " ++ show (pScore p)
+>     show p = "Period: " ++ printName p ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p)
 >       where 
 >         n = sName . session $ p
 >         printName p = if n == "" then show . sId . session $ p else n

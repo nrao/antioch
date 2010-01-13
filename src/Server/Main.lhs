@@ -21,6 +21,7 @@
 > import Server.RunScheduler
 > import Server.Nominees
 > import Server.Scores
+> import Server.Score
 > import Server.Factors
 > import Maybe
 > import Antioch.Settings                    (salviaListenerPort, dssDataDB)
@@ -56,6 +57,7 @@
 >           ("/runscheduler",  runSchedulerHandler)  
 >         , ("/nominees",      getNomineesHandler)  
 >         , ("/scores",        getScoresHandler cnn)  
+>         , ("/score",         setScoreHandler cnn)  
 >         , ("/factors",       getFactorsHandler cnn)  
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
 >         , ("/moc",           getMOCHandler cnn)  

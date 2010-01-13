@@ -39,7 +39,7 @@
 > getNomineesHandler :: Handler()
 > getNomineesHandler = hMethodRouter [
 >       (GET,  getNominees)
->     , (POST, getNominees)
+>     --, (POST, getNominees)
 >     ] $ hError NotFound
 
 > getNominees :: StateT Context IO ()

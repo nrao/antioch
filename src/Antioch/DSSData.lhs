@@ -520,12 +520,12 @@ Two ways to get Periods from the DB:
 >   return . toPeriod . head $ result
 >   where
 >     xs = [toSql id]
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND id = ?"
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND p.id = ?"
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
->                     , pForecast = fromSql forecast
+>                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
 >                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     } 
