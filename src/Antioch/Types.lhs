@@ -168,7 +168,8 @@ Tying the knot.
 >     (>=) = (>=) `on` startTime
 
 TBF: Until scoring settles down, we want an equality operator for periods that
-ignores their numerical scores.
+ignores their numerical scores.  Note that equality between different periods
+is slightly arbitrary.
 
 > instance Eq Period where
 >     (==) = periodsEqual
@@ -176,13 +177,11 @@ ignores their numerical scores.
 > periodsEqual :: Period -> Period -> Bool
 > periodsEqual p1 p2 = eqIds p1 p2 &&
 >                      eqStarts p1 p2 &&
->                      eqDurs p1 p2 &&
->                      eqTB p1 p2
+>                      eqDurs p1 p2 
 >   where
 >     eqIds    = (==) `on` session
 >     eqStarts = (==) `on` startTime
 >     eqDurs   = (==) `on` duration
->     eqTB     = (==) `on` pTimeBilled
 
 Simple Functions for Periods:
 
