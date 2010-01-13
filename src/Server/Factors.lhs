@@ -74,6 +74,12 @@
 >                          , ("dec", showJSON . take 5 . show . rad2deg . dec $ s)
 >                          , ("freq", showJSON . take 4 . show . frequency $ s)
 >                          , ("alive", showJSON . schedulableSession dt $ s)
+>                          , ("open", showJSON . isTypeOpen dt $ s)
+>                          , ("time", showJSON . hasTimeSchedulable dt $ s)
+>                          , ("not_complete", showJSON . isNotComplete dt $ s)
+>                          , ("enabled", showJSON . not .enabled $ s)
+>                          , ("authorized", showJSON . not .authorized $ s)
+>                          , ("observers", showJSON . hasObservers dt $ s)
 >                          , ("factors", factorsListToJSValue scoresNfactors)]
 
 > data JFactor = JFactor {
