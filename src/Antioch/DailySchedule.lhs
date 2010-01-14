@@ -52,7 +52,7 @@ hour scheduling period.
 >     (rs, ss, projs, history') <- dbInput dt
 >     let history = filterHistory history' dt (days + 1) 
 >     print "scheduling around periods: "
->     printList history
+>     --printList history
 >     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName dt dur history ss
 >     print "scheduled w/ buffer: "
 >     print . length $ schdWithBuffer
