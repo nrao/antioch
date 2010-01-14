@@ -507,9 +507,8 @@ Two ways to get Periods from the DB:
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
->                     , pScore = fromSql sch
->                     --, pScore = fromSql score
->                     , pForecast = fromSql forecast
+>                     , pScore = fromSql score
+>                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
 >                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     }
