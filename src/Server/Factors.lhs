@@ -70,9 +70,9 @@
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
 >     factors <- liftIO $ scoreElements s w ss dt dur rs
 >     let scoresNfactors = zipWith (++) scores factors
->     jsonHandler $ makeObj [("ra", showJSON . take 5 . show . rad2hrs . ra $ s)
->                          , ("dec", showJSON . take 5 . show . rad2deg . dec $ s)
->                          , ("freq", showJSON . take 4 . show . frequency $ s)
+>     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
+>                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
+>                          , ("freq", showJSON . floatStr . frequency $ s)
 >                          , ("alive", showJSON . schedulableSession dt $ s)
 >                          , ("open", showJSON . isTypeOpen dt $ s)
 >                          , ("time", showJSON . hasTimeSchedulable dt $ s)
@@ -81,6 +81,9 @@
 >                          , ("authorized", showJSON . not .authorized $ s)
 >                          , ("observers", showJSON . hasObservers dt $ s)
 >                          , ("factors", factorsListToJSValue scoresNfactors)]
+
+> floatStr :: Float -> String
+> floatStr f = printf "%.2f" f
 
 > data JFactor = JFactor {
 >       fName     :: String
