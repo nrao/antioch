@@ -344,7 +344,12 @@ TBF: is this totaly legit?  and should it be somewhere else?
 >     toUpperFirst x = [toUpper . head $ x] ++ tail x
 
 > toGradeType :: SqlValue -> Grade
-> toGradeType val = if (fromSql val) == (3.0 :: Float) then GradeB else GradeA 
+> toGradeType val
+>   | val' > (3.5::Float) = GradeA
+>   | val' > (2.5::Float) = GradeB
+>   | otherwise  = GradeC
+>     where
+>       val' = fromSql val
 
 Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions

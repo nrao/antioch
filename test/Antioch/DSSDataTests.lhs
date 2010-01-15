@@ -22,8 +22,9 @@ connection to the DB correctly.
 
 > tests = TestList [
 >     --  test_fetchPeriods
+>       test_toGradeType
 >     --, test_fetchPeriod
->       test_getProjects
+>     , test_getProjects
 >     -- , test_numPeriods
 >     , test_getProjectData
 >     , test_getProjectsProperties
@@ -248,6 +249,18 @@ generated: it's the input we want to test, really.
 >       p1 = defaultPeriod { session = s
 >                          , startTime = dt
 >                          , pForecast = dt }
+
+> fromFloat2Sql :: Float ->  SqlValue
+> fromFloat2Sql = toSql
+
+> test_toGradeType = TestCase $ do
+>   assertEqual "test_toGradeType A" GradeA (toGradeType a)
+>   assertEqual "test_toGradeType B" GradeB (toGradeType b)
+>   assertEqual "test_toGradeType C" GradeC (toGradeType c)
+>     where
+>       a = fromFloat2Sql 4.0
+>       b = fromFloat2Sql 3.0
+>       c = fromFloat2Sql 2.0
 
 > test_fetchPeriod = TestCase $ do
 >   putPeriods [p1]
