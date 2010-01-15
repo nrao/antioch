@@ -278,11 +278,14 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 > test_observingEfficiencyLimit = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
+>     -- BETA: differences probably due to Float vs. Double
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     -- BETA: diff probably due to Float vs. Double
->     assertAlmostEqual "test_observingEfficiencyLimit" 4 (2.92284277214e-4) result
+>     assertEqual "test_observingEfficiencyLimit <18" 2.9231957e-4 result
+>     let s = findPSessionByName "GB"
+>     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
+>     assertEqual "test_observingEfficiencyLimit >=18" 1.5857213e-4 result
 
 BETA: TestAtmosphericOpacity.py testefficiency
 

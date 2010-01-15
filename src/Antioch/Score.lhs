@@ -317,7 +317,10 @@ Translates the total/used times pairs into pressure factors.
 >         then fac $ exp (-((obsEff' - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
 >         else fac 1.0
 >   where
->     sigma = 0.02
+>     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)
+>     sigma = if (frequency s) >= 18.0
+>             then 0.1
+>             else 0.02
 >     minObsEff = minObservingEff . frequency $ s
 >     fac = factor "observingEfficiencyLimit" . Just
 

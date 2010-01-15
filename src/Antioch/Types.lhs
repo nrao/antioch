@@ -244,7 +244,7 @@ Simple Functions for Periods:
 >   , startTime   = fromGregorian' 2008 1 1
 >   , duration    = 0
 >   , pScore      = 0.0
->   , pForecast   = undefined
+>   , pForecast   = fromGregorian' 2008 1 1
 >   , pBackup     = False
 >   , pTimeBilled = 0
 >   }

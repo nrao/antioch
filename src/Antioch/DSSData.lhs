@@ -558,7 +558,7 @@ Opportunities for Fixed Sessions should be honored via Periods
 >     toPeriod (wid:wreq:start:durHrs:[]) = 
 >       defaultPeriod { startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
->                     , pForecast = sqlToDateTime start -- undefined is bad!
+>                     , pForecast = sqlToDateTime start
 >                     }
 
 Write Telescope Periods to the database.
