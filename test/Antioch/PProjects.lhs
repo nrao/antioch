@@ -249,7 +249,7 @@
 >   -}
 >   ]
 
-> p1sessions = [ makeSession s (periods s) | s <- p1sessions' ]
+> p1sessions = [ makeSession s [] (periods s) | s <- p1sessions' ]
 > project1 = makeProject project1' (500*60) p1sessions
 
 > project2' = defaultProject {
@@ -293,7 +293,7 @@
 >       }
 >   ]
 
-> p2sessions = [ makeSession s (periods s) | s <- p2sessions' ]
+> p2sessions = [ makeSession s [] (periods s) | s <- p2sessions' ]
 > project2 = makeProject project2' (14*60) p2sessions
 
 Utilities:

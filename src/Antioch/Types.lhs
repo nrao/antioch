@@ -2,6 +2,7 @@
 
 > import Antioch.DateTime
 > import Data.Function (on)
+> import Data.List     (find)
 > import Data.Ix
 
 > type Frequency = Float
@@ -57,6 +58,7 @@ use a single data structure for all sessions.
 >   , sAlloted    :: Minutes
 >   , sClosed     :: Bool
 >   , project     :: Project
+>   , windows     :: [Window]
 >   , periods     :: [Period]
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
@@ -83,27 +85,64 @@ use a single data structure for all sessions.
 > instance Ord Session where
 >     compare = compare `on` sId
 
+> -- TBF ??? sure looks like legacy code to me!
 > --periods' s@(Fixed { }) = [period s]
 > periods' s             = periods s
 
-Need to calculate a windowed session's opportunities from its observation details.
+> data Window  = Window {
+>     wSession     :: Session
+>   , wStart       :: DateTime   -- date
+>   , wDuration    :: Minutes    -- from day count
+>   , wTrialPeId   :: Int        -- peId
+>   , wChosePeId   :: Maybe Int  -- Maybe peId
+>    }
 
-> opportunities s@(Windowed { }) = []
-> opportunities _                = []
+> trialPeriod :: Window -> Maybe Period
+> trialPeriod w = find (\p -> (wTrialPeId w) == (peId p)) (periods . wSession $ w)
+
+> chosePeriod :: Window -> Maybe Period
+> chosePeriod w =
+>     case wChosePeId w of
+>         Nothing -> Nothing
+>         Just i  -> find (\p -> i == (peId p)) (periods . wSession $ w)
+
+> instance Show Window where
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (wDuration w) ++ " days; Default: " ++ show (trialPeriod w) ++ ", Alternate: " ++ show (chosePeriod w)
+>       where 
+>         n = sName . wSession $ w
+>         printName w = if n == "" then show . sId . wSession $ w else n
+
+> instance Ord Window where
+>     (<) = (<) `on` wStart
+>     (>) = (>) `on` wStart
+>     (<=) = (<=) `on` wStart
+>     (>=) = (>=) `on` wStart
+
+> instance Eq Window where
+>     (==) = windowsEqual
+
+> windowsEqual :: Window -> Window -> Bool
+> windowsEqual w1 w2 = eqIds w1 w2 &&
+>                      eqStarts w1 w2 &&
+>                      eqDurs w1 w2 
+>   where
+>     eqIds    = (==) `on` wSession
+>     eqStarts = (==) `on` wStart
+>     eqDurs   = (==) `on` wDuration
+
+Need to calculate a windowed session's opportunities from its observation details.
 
 Tying the knot.
 
-> makeSession      :: Session -> [Period] -> Session
-> --makeSession s@(Fixed { }) [p] = s'
-> --  where
-> --    s' = s { period = p { session = s' } }
-> --    t  = duration p
-> makeSession s ps = s'
+> makeSession      :: Session -> [Window] -> [Period] -> Session
+> makeSession s ws ps = s'
 >   where
->     s' = s { periods = map (\p -> p { session = s' }) ps }
+>     s' = s { windows = map (\w -> w { wSession = s'}) ws
+>            , periods = map (\p -> p { session = s' }) ps
+>            }
 
 > updateSession      :: Session -> [Period] -> Session
-> updateSession s ps = makeSession s $ periods' s ++ ps
+> updateSession s ps = makeSession s (windows s) $ periods' s ++ ps
 
 > data Project = Project {
 >     pId             :: !Int
@@ -146,7 +185,8 @@ Tying the knot.
 > } deriving (Eq, Show, Read)
 
 > data Period  = Period  {
->     session     :: Session
+>     peId        :: Int
+>   , session     :: Session
 >   , startTime   :: DateTime
 >   , duration    :: Minutes
 >   , pScore      :: Score  -- Average forecasted score
@@ -156,7 +196,7 @@ Tying the knot.
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ printName p ++ " at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p)
+>     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p)
 >       where 
 >         n = sName . session $ p
 >         printName p = if n == "" then show . sId . session $ p else n
@@ -195,6 +235,7 @@ Simple Functions for Periods:
 >     sId         = 0
 >   , sName       = ""
 >   , project     = defaultProject 
+>   , windows     = []
 >   , periods     = [defaultPeriod]
 >   , sAlloted    = 0
 >   , minDuration = 0
@@ -240,7 +281,8 @@ Simple Functions for Periods:
 >   }
 
 > defaultPeriod = Period {
->     session     = defaultSession
+>     peId        = 0
+>   , session     = defaultSession
 >   , startTime   = fromGregorian' 2008 1 1
 >   , duration    = 0
 >   , pScore      = 0.0
@@ -249,3 +291,10 @@ Simple Functions for Periods:
 >   , pTimeBilled = 0
 >   }
 
+> defaultWindow  = Window {
+>     wSession     = defaultSession
+>   , wStart       = fromGregorian' 2008 1 1
+>   , wDuration    = 0
+>   , wTrialPeId   = 0
+>   , wChosePeId   = Nothing
+>    }

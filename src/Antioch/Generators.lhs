@@ -336,7 +336,7 @@ TBF: we can make this more sophisticated.
 >     pDur' <- choose (min maxL (minDuration sess), min maxL (maxDuration sess))
 >     let pDur = round2quarter pDur' --quarter * (pDur' `div` quarter)
 >     let fits = minDuration sess <= maxL
->     return $ if not fits then Nothing else Just $ Period sess dt pDur 0.0 dt False pDur
+>     return $ if not fits then Nothing else Just $ Period 0 sess dt pDur 0.0 dt False pDur
 
 Check this generator itself: make sure the periods adhere to expected properties
 

@@ -47,7 +47,6 @@ separate query, to deal with multiple allotments (different grades)
 > populateProject cnn project = do
 >     sessions' <- getSessions (pId project) cnn
 >     sessions <- mapM (populateSession cnn) sessions'
->     -- TBF: are we getting observer blackouts? not 09B, but 09C!
 >     -- project times
 >     allotments <- getProjectAllotments (pId project) cnn
 >     let project' = setProjectAllotments project allotments
@@ -266,7 +265,6 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
->        -- TBF: need to cover any other types?
 
 > getSession :: Int -> Connection -> IO Session
 > getSession sessionId cnn = handleSqlError $ do 
@@ -386,7 +384,7 @@ Note, start_date in Receiver_Schedule table can be null.
 > toRcvrType :: Session -> SqlValue -> Receiver
 > toRcvrType s val = read . fromSql $ val
 
-Here, we gather additional information about a session: opportunities, periods,
+Here, we gather additional information about a session: periods, windows,
 observing parameters, etc.
 TBF: why aren't we getting the rcvr info here?
 
@@ -394,7 +392,8 @@ TBF: why aren't we getting the rcvr info here?
 > populateSession cnn s = do
 >     s' <- setObservingParameters cnn s
 >     ps <- getPeriods cnn s'
->     return $ makeSession s' ps
+>     ws <- getWindows cnn s'
+>     return $ makeSession s' ws ps
 
 The following recursive patterns work for setting the observing params
 that are one-to-one between the DB and the Session (ex: Night Time -> low rfi).  However,
@@ -404,7 +403,6 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters :: Connection -> Session -> IO Session
 > setObservingParameters cnn s = do
 >   result <- quickQuery' cnn query xs 
->   --return $ setObservingParameters' s result
 >   let s' = setObservingParameters' s result
 >   s'' <- setLSTExclusion cnn s'
 >   return s''
@@ -444,8 +442,8 @@ flags - so we'll have to collapse the DB's 2 types into our 1.
 >   result <- quickQuery' cnn query' xs --Inclusion
 >   return $ addLSTExclusion' False s' result
 >     where
->       -- TBF: for some reason, I need to have 'Exclude' & 'Include' in the
->       -- query strings: putting it in xs causes an SQL error ???
+>       -- TBF: for some reason, I need to have 'Exclude' & 'Include' in
+>       -- the query strings: putting it in xs causes an SQL error ???
 >       xs = [toSql . sId $ s]
 >       query = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
 >       query' = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND op.session_id = ?" 
@@ -482,23 +480,30 @@ it an exclusion range.
 >     --isLow (pName:pFloat:[]) = (fromSql pName) == "LST Exclude Low"
 >     lstRangeLow' (pName:pLow:[]) = fromSql pLow
 
-Two ways to get Periods from the DB:
-   * The Periods Table: this is a history of what ever has been scheduled 
-   * The Opportunities Table: this is currently how a fixed session's period
-     "to be scheduled" is saved - as a single opportunity in a single window.
-     However, if we run overlapping simulations, we may have opportunities
-     that have already been created into period table records.  So, we'll
-     need to ignore these.
+> getWindows :: Connection -> Session -> IO [Window]
+> getWindows cnn s = do
+>     dbWindows <- fetchWindows cnn s 
+>     return $ sort $ dbWindows
+
+> fetchWindows :: Connection -> Session -> IO [Window]
+> fetchWindows cnn s = do 
+>   result <- quickQuery' cnn query xs 
+>   return $ toWindowist result
+>   where
+>     xs = [toSql . sId $ s]
+>     query = "SELECT w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w WHERE w.session_id = ?"
+>     toWindowist = map toWindow
+>     toWindow(strt:dur:def:per:[]) =
+>       defaultWindow { wStart = sqlToDateTime strt
+>                     , wDuration = 24*60*(fromSql dur)
+>                     , wTrialPeId = fromJust . fromSql $ def
+>                     , wChosePeId = fromSql per
+>                     }
 
 > getPeriods :: Connection -> Session -> IO [Period]
 > getPeriods cnn s = do
 >     dbPeriods <- fetchPeriods cnn s 
->     optPeriods <- periodsFromOpts cnn s
->     -- the 'nub' removes opportunities that may alreay have been represented
->     -- in the period table
->     -- NOTE: remember that equality between Periods only relies on 
->     -- Session ID, start, and duration.
->     return $ sort . nub $ dbPeriods ++ optPeriods
+>     return $ sort $ dbPeriods
 
 > fetchPeriods :: Connection -> Session -> IO [Period]
 > fetchPeriods cnn s = do 
@@ -510,7 +515,8 @@ Two ways to get Periods from the DB:
 >     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
->       defaultPeriod { startTime = sqlToDateTime start --fromSql start
+>       defaultPeriod { peId = fromSql id
+>                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
 >                     , pForecast = sqlToDateTime forecast
@@ -526,7 +532,8 @@ Two ways to get Periods from the DB:
 >     xs = [toSql id]
 >     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND p.id = ?"
 >     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
->       defaultPeriod { startTime = sqlToDateTime start --fromSql start
+>       defaultPeriod { peId = fromSql id
+>                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
 >                     , pForecast = sqlToDateTime forecast
@@ -536,34 +543,6 @@ Two ways to get Periods from the DB:
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
-
-Opportunities for Fixed Sessions should be honored via Periods
-
-> periodsFromOpts :: Connection -> Session -> IO [Period]
-> periodsFromOpts cnn s = periodsFromOpts' cnn s -- TBF: ignore types for now!!!
-> {-
-> periodsFromOpts cnn s | sType s == Open = return [] 
->                       | sType s == Windowed = return [] 
->                       | sType s == Fixed = periodsFromOpts' cnn s
-> -}
-
-> periodsFromOpts' :: Connection -> Session -> IO [Period]
-> periodsFromOpts' cnn s = do
->   result <- quickQuery' cnn query xs 
->   return $ toPeriodList result
->   where
->     xs = [toSql . sId $ s]
->     query = "SELECT opportunities.window_id, windows.required, opportunities.start_time, opportunities.duration FROM windows, opportunities WHERE windows.id = opportunities.window_id and windows.session_id = ?"
->     toPeriodList = map toPeriod
->     toPeriod (wid:wreq:start:durHrs:[]) = 
->       defaultPeriod { startTime = sqlToDateTime start --fromSql start
->                     , duration = fromSqlMinutes durHrs
->                     , pForecast = sqlToDateTime start
->                     }
-
-Write Telescope Periods to the database.
-TBF: there are no checks here to make sure we aren't adding periods that
-are already in the DB.
 
 > putPeriods :: [Period] -> IO ()
 > putPeriods ps = do

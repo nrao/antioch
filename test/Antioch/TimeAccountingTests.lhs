@@ -80,11 +80,11 @@
 >     where
 >       -- proj completeness doesn't depend on session completeness
 >       s6'' = sess { sClosed = True }
->       s6' = makeSession s6'' ps1
+>       s6' = makeSession s6'' [] ps1
 >       pr6 = makeProject proj (pAlloted proj) [s6']
 >       s6 = head . sessions $ pr6
 >       -- but sess completeness DOES depend on project completeness
->       s7' = makeSession sess ps1 -- sComplete sess == False
+>       s7' = makeSession sess [] ps1 -- sComplete sess == False
 >       pr7' = proj { pClosed = True }
 >       pr7 = makeProject pr7' (pAlloted pr7') [s7']
 >       s7 = head . sessions $ pr7
@@ -103,7 +103,7 @@ Construct periods, sessions, projects, then tie the knots!
 >   -- plenty of time
 > p1 = mkPeriod sess dt1 
 > ps1 = [p1]
-> s1' = makeSession sess ps1 
+> s1' = makeSession sess [] ps1 
 > pr1 = makeProject proj (pAlloted proj) [s1']
 > s1 = head . sessions $ pr1
 
@@ -111,7 +111,7 @@ Construct periods, sessions, projects, then tie the knots!
 > dt2 = fromGregorian 2006 1 1 1 0 0
 > p2 = mkPeriod sess dt2 
 > ps2 = [p1, p2]
-> s2' = makeSession sess ps2
+> s2' = makeSession sess [] ps2
 > pr2 = makeProject proj (pAlloted proj) [s2']
 > s2 = head . sessions $ pr2
 
@@ -119,7 +119,7 @@ Construct periods, sessions, projects, then tie the knots!
 > dt3 = fromGregorian 2006 1 1 2 0 0
 > p3 = mkPeriod sess dt3 
 > ps3 = [p1, p2, p3]
-> s3' = makeSession sess ps3
+> s3' = makeSession sess [] ps3
 > pr3 = makeProject proj (pAlloted proj) [s3']
 > s3 = head . sessions $ pr3
 
@@ -127,7 +127,7 @@ Construct periods, sessions, projects, then tie the knots!
 > proj2 = defaultProject { pAlloted = 60 }
 > sess2 = sess { project = proj2 }
 > ps4 = map (mkPeriod sess2) [dt1, dt2, dt3] -- use 3 * 60
-> s4' = makeSession sess2 ps4 -- sess overbooked by -60
+> s4' = makeSession sess2 [] ps4 -- sess overbooked by -60
 > pr4 = makeProject proj2 (pAlloted proj2) [s4'] -- proj overbooked by -120
 > s4 = head . sessions $ pr4
 
@@ -135,7 +135,7 @@ Construct periods, sessions, projects, then tie the knots!
 > proj3 = defaultProject { pAlloted = 4*60, maxSemesterTime = 2*60 }
 > sess3 = defaultSession { sAlloted = 4*60, project = proj3 }
 > ps5 = map (mkPeriod sess3) [dt1, dt2, dt3] -- use 3 * 60
-> s5' = makeSession sess3 ps5 -- sess still has 1*60 left
+> s5' = makeSession sess3 [] ps5 -- sess still has 1*60 left
 > -- project overbooked for 09B by -60, but has 60 avail in other semester
 > pr5 = makeProject proj3 (pAlloted proj3) [s5'] 
 > s5 = head . sessions $ pr5

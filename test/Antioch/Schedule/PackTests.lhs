@@ -13,7 +13,7 @@
 > import Antioch.Utilities
 > import Test.HUnit
 > import Control.Monad.Reader
-> import Data.List (sort, zipWith7)
+> import Data.List (sort)
 > import Data.Maybe (fromMaybe)
 
 > tests = TestList [
@@ -667,9 +667,9 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 12 * 60
 >     dts' = quarterDateTimes starttime duration 
->     fixed1 = Period defaultSession starttime 30 0.0 starttime False 30
+>     fixed1 = Period 0 defaultSession starttime 30 0.0 starttime False 30
 >     ft2 = (11*60) `addMinutes'` starttime
->     fixed2 = Period defaultSession ft2 30 0.0 starttime False 30
+>     fixed2 = Period 0 defaultSession ft2 30 0.0 starttime False 30
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
@@ -783,7 +783,7 @@ TBF: are the candidate values for cStart & cDur correct?
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft = 120 `addMinutes'` starttime
->     fixed = Period defaultSession ft 30 0.0 ft False 30
+>     fixed = Period 0 defaultSession ft 30 0.0 ft False 30
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed]
 >     -- TBF: are the candidate values for cStart & cDur correct?
@@ -797,9 +797,9 @@ Same test, >1 fixed
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft = 120 `addMinutes'` starttime
->     fixed1 = Period defaultSession ft 30 0.0 ft False 30
+>     fixed1 = Period 0 defaultSession ft 30 0.0 ft False 30
 >     ft2 = 270 `addMinutes'` starttime
->     fixed2 = Period defaultSession ft2 30 0.0 ft2 False 30
+>     fixed2 = Period 0 defaultSession ft2 30 0.0 ft2 False 30
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed1,fixed2]
 >     -- TBF: are the candidate values for cStart & cDur correct?
@@ -827,7 +827,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
->     expPeriod = Period candidate expStartTime 135 39.949707 expStartTime False 135
+>     expPeriod = Period 0 candidate expStartTime 135 39.949707 expStartTime False 135
 
 > test_PackTransit1 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -850,8 +850,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                }
 >     expStartTime1 = fromGregorian 2006 11 9 6 30 0
 >     expStartTime2 = fromGregorian 2006 11 10 4 45 0
->     expPeriod1 = Period candidate expStartTime1 360 3.142498 expStartTime1 False 360
->     expPeriod2 = Period candidate expStartTime2 360 3.1426687 expStartTime2 False 360
+>     expPeriod1 = Period 0 candidate expStartTime1 360 3.142498 expStartTime1 False 360
+>     expPeriod2 = Period 0 candidate expStartTime2 360 3.1426687 expStartTime2 False 360
 
 > test_PackTransit2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -872,7 +872,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , transit = Partial
 >                                }
 >     expStartTime = fromGregorian 2006 2 19 21 30 0
->     expPeriod = Period candidate expStartTime 360 3.0658152 expStartTime False 360
+>     expPeriod = Period 0 candidate expStartTime 360 3.0658152 expStartTime False 360
 
 > test_PackBt = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -919,10 +919,10 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     expStartTime1 = fromGregorian 2006 11 8 21 45 0
 >     expStartTime2 = fromGregorian 2006 11 8 22 45 0
 >     expStartTime3 = fromGregorian 2006 11 8 22 30 0
->     expPeriod1 = Period candidate1 expStartTime1 135 2.7750003 expStartTime1 False 135
->     expPeriod2_1 = Period candidate2 expStartTime1 60 2.3257873 expStartTime1 False 60
->     expPeriod2_2 = Period candidate2 expStartTime2 60 3.1227193 expStartTime2 False 60
->     expPeriod3 = Period candidate3 expStartTime3 60 2.3257873 expStartTime3 False 60
+>     expPeriod1 = Period 0 candidate1 expStartTime1 135 2.7750003 expStartTime1 False 135
+>     expPeriod2_1 = Period 0 candidate2 expStartTime1 60 2.3257873 expStartTime1 False 60
+>     expPeriod2_2 = Period 0 candidate2 expStartTime2 60 3.1227193 expStartTime2 False 60
+>     expPeriod3 = Period 0 candidate3 expStartTime3 60 2.3257873 expStartTime3 False 60
 
 Create a long schedule from a reproducable randomly created set of sessions.
 The main value of this test is to catch changes in the packing algorithm that 
@@ -939,7 +939,7 @@ produce changes in the final result.
 >     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 24*60
->     expPeriods = zipWith7 Period ss times durs scores times (repeat False) durs
+>     expPeriods = zipWith8 Period (repeat 0) ss times durs scores times (repeat False) durs
 >       where
 >         names = ["CV", "AS", "WV", "GB"]
 >         ids = map getPSessionId names
@@ -1068,9 +1068,9 @@ TBF: Scores not right due to negative score for F1 !!!
 >     sess = concatMap sessions pTestProjects
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     ft1 = (4*60)  `addMinutes'` starttime
->     fixed = Period defaultSession {sId = 0} ft1 60 0.0 ft1 False 60
+>     fixed = Period 0 defaultSession {sId = 0} ft1 60 0.0 ft1 False 60
 >     duration = 5*60
->     p1 = Period defaultSession {sId = getPSessionId "CV"} starttime (4*60) 62.88887 starttime False (4*60)
+>     p1 = Period 0 defaultSession {sId = getPSessionId "CV"} starttime (4*60) 62.88887 starttime False (4*60)
 >     expPeriods  = [p1, fixed]
 
 This is the original test that exposed many of the bugs with packing
@@ -1090,11 +1090,11 @@ around fixed periods.
 >     ft2 = (10*60) `addMinutes'` starttime
 >     dur1 = 2*60
 >     dur2 = 4*60
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 ft1 False dur1
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 dur2 0.0 ft2 False dur2
+>     fixed1 = Period 0 ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 ft1 False dur1
+>     fixed2 = Period 0 ds {sId = 1001, sName = "1001"} ft2 dur2 0.0 ft2 False dur2
 >     fixed = [fixed1, fixed2]
 >     duration = 24*60
->     expPeriods = zipWith7 Period ss times durs scores times (repeat False) durs
+>     expPeriods = zipWith8 Period (repeat 0) ss times durs scores times (repeat False) durs
 >       where
 >         names = ["CV", "WV", "GB"]
 >         ids' = map getPSessionId names
@@ -1141,14 +1141,14 @@ Same as above, but with even more fixed periods
 >     d1 = (2*60)
 >     d2 = (4*60)
 >     d3 = (2*60)
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d1 0.0 ft1 False d1
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d2 0.0 ft2 False d2
->     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d3 0.0 ft3 False d3
+>     fixed1 = Period 0 ds {sId = 1000, sName = "1000"} ft1 d1 0.0 ft1 False d1
+>     fixed2 = Period 0 ds {sId = 1001, sName = "1001"} ft2 d2 0.0 ft2 False d2
+>     fixed3 = Period 0 ds {sId = 1002, sName = "1002"} ft3 d3 0.0 ft3 False d3
 >     fixed = [fixed1, fixed2, fixed3]
 >     unsortedFixed = [fixed3, fixed1, fixed2]
 >     duration = 24*60
->     open1 = Period (ds {sId =  getPSessionId "CV"}) starttime 240 3.5829883 starttime False 240
->     open2 = Period (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 45 0) 360 10.263064 starttime False 360
+>     open1 = Period 0 (ds {sId =  getPSessionId "CV"}) starttime 240 3.5829883 starttime False 240
+>     open2 = Period 0 (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 45 0) 360 10.263064 starttime False 360
 >     expPeriods = [open1, fixed1, fixed2, open2, fixed3]
 >     sCV = findPSessionByName "CV"
 >     dts = [(i*quarter) `addMinutes'` starttime | i <- [0..((240 `div` quarter)-1)]]
@@ -1180,9 +1180,9 @@ revealed a bug where scores are turning negative in pact.
 >     duration = (20*60) + 30
 >     ds = defaultSession {sId = 0, sName = "fixed"}
 >     ss = getOpenPSessions
->     fixed1 = Period ds (fromGregorian 2006 10 6  3  0 0) 255 0.0 starttime False 255
->     fixed2 = Period ds (fromGregorian 2006 10 6  9 45 0) 270 0.0 starttime False 270
->     fixed3 = Period ds (fromGregorian 2006 10 6 16 30 0) 255 0.0 starttime False 255
+>     fixed1 = Period 0 ds (fromGregorian 2006 10 6  3  0 0) 255 0.0 starttime False 255
+>     fixed2 = Period 0 ds (fromGregorian 2006 10 6  9 45 0) 270 0.0 starttime False 270
+>     fixed3 = Period 0 ds (fromGregorian 2006 10 6 16 30 0) 255 0.0 starttime False 255
 >     fixed = [fixed1, fixed2, fixed3]
 >     numFixed ps = length $ filter (\p -> ("fixed" == (sName . session $ p))) ps
 
@@ -1206,7 +1206,7 @@ Same as test_Pack1 except only 2 hours of sAlloted instead of 24
 >                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
->     expPeriod = Period candidate expStartTime 120 1.5167294 expStartTime False 120
+>     expPeriod = Period 0 candidate expStartTime 120 1.5167294 expStartTime False 120
 
 > test_Pack_overlapped_fixed = TestCase $ do
 >     w <- getWeather . Just $ starttime 
@@ -1224,15 +1224,15 @@ Same as test_Pack1 except only 2 hours of sAlloted instead of 24
 >     ft3 = (22*60) `addMinutes'` starttime -- overlaps end boundary
 >     ft4 = (24*60*3) `addMinutes'` starttime -- outside range
 >     d = (4*60)
->     fixed1 = Period ds {sId = 1000, sName = "1000"} ft1 d 0.0 starttime False d
->     fixed2 = Period ds {sId = 1001, sName = "1001"} ft2 d 0.0 starttime False d
->     fixed3 = Period ds {sId = 1002, sName = "1002"} ft3 d 0.0 starttime False d
->     fixed4 = Period ds {sId = 1003, sName = "1003"} ft4 d 0.0 starttime False d
+>     fixed1 = Period 0 ds {sId = 1000, sName = "1000"} ft1 d 0.0 starttime False d
+>     fixed2 = Period 0 ds {sId = 1001, sName = "1001"} ft2 d 0.0 starttime False d
+>     fixed3 = Period 0 ds {sId = 1002, sName = "1002"} ft3 d 0.0 starttime False d
+>     fixed4 = Period 0 ds {sId = 1003, sName = "1003"} ft4 d 0.0 starttime False d
 >     fixed = [fixed1, fixed2, fixed3, fixed4]
->     open1 = Period (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 210 3.5666382 starttime False 210
->     open2 = Period (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 375 3.373124 starttime False 375
->     open3 = Period (ds {sName = "WV", sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 2 15 0) 345 11.547832 starttime False 360
->     open4 = Period (ds {sName = "GB", sId = getPSessionId "GB"}) (fromGregorian 2006 11 9 8 0 0) 120 6.4604607 starttime False 360
+>     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 210 3.5666382 starttime False 210
+>     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 375 3.373124 starttime False 375
+>     open3 = Period 0 (ds {sName = "WV", sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 2 15 0) 345 11.547832 starttime False 360
+>     open4 = Period 0 (ds {sName = "GB", sId = getPSessionId "GB"}) (fromGregorian 2006 11 9 8 0 0) 120 6.4604607 starttime False 360
 >     expPeriods = [open1, open2, fixed2, open3, open4, fixed3]
 
 The beta test code runs packing using TScore, which is essentially a
@@ -1311,7 +1311,7 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
 >     duration = 6*60
 >     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
->     expPeriod = Period testSession starttime  (6*60) expScore starttime False (6*60)
+>     expPeriod = Period 0 testSession starttime  (6*60) expScore starttime False (6*60)
 
 > test_TestPack_pack1withHistory = TestCase $ do
 >     let periods = pack randomScore starttime duration [fixed] [testSession]
@@ -1322,8 +1322,8 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
 >     duration = 6*60
 >     fixedSession = defaultSession {sId = 1001}
->     fixed = Period fixedSession starttime (3*60) 0.0 starttime False (3*60)
->     p2 = Period testSession ((3*60) `addMinutes'` starttime) (3*60) 0.0 starttime False (3*60)
+>     fixed = Period 0 fixedSession starttime (3*60) 0.0 starttime False (3*60)
+>     p2 = Period 0 testSession ((3*60) `addMinutes'` starttime) (3*60) 0.0 starttime False (3*60)
 >     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
 
 
@@ -1340,8 +1340,8 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 >     duration = 9*60
 >     expScore1 = 5.2450013
 >     expScore2 = 4.7073417
->     expPeriod1 = Period testSession starttime  (6*60) expScore1 starttime False (6*60)
->     expPeriod2 = Period testSession starttime2 (3*60) expScore2 starttime False (3*60)
+>     expPeriod1 = Period 0 testSession starttime  (6*60) expScore1 starttime False (6*60)
+>     expPeriod2 = Period 0 testSession starttime2 (3*60) expScore2 starttime False (3*60)
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Here, packing duration (7 hrs) > session maxDur (6 hrs)
@@ -1357,8 +1357,8 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 >     duration = 7*60
 >     expScore1 = 5.478371 -- 4.8132718634 * (2 * 4) python: mean, here: sum
 >     expScore2 = 2.891944 -- 5.2704045983 * (5 * 4) 
->     expPeriod1 = Period testSession starttime  (5*60) expScore1 starttime False (5*60)
->     expPeriod2 = Period testSession starttime2 (2*60) expScore2 starttime False (2*60)
+>     expPeriod1 = Period 0 testSession starttime  (5*60) expScore1 starttime False (5*60)
+>     expPeriod2 = Period 0 testSession starttime2 (2*60) expScore2 starttime False (2*60)
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Now, we change the test by packing using TWO sessions:
@@ -1379,8 +1379,8 @@ epsilon, and so is "correct".
 >     starttime2 = (6*60) `addMinutes'` pythonTestStarttime 
 >     duration = 12*60
 >     sessions = [testSession, testSession2]
->     expPeriod1 = Period testSession2 starttime  (6*60) 5.2450013 starttime False (6*60)
->     expPeriod2 = Period testSession2 starttime2 (6*60) 4.889503 starttime False (6*60)
+>     expPeriod1 = Period 0 testSession2 starttime  (6*60) 5.2450013 starttime False (6*60)
+>     expPeriod2 = Period 0 testSession2 starttime2 (6*60) 4.889503 starttime False (6*60)
 >     expPeriods = [expPeriod1, expPeriod2]
 
 Session data to pack:
@@ -1415,4 +1415,3 @@ This is the list of random numbers generated on the python side:
 
 > randomList :: [Score]
 > randomList = [7.1331340485018409, 2.4934096782883213, 7.6572318406256947, 5.046714456152789, 6.8446511584066618, 4.0781524926716983, 2.7252730440470305, 4.9143871264557122, 7.1636843840447568, 6.9446361985339973, 4.8230123064175849, 3.4473390258899297, 6.3350439397544198, 2.8207298844712874, 5.1058061299127466, 2.4985974189931035, 7.7080423642050198, 7.158122187895521, 2.5448732889679264, 5.0495207342152231, 2.6078672746394629, 4.5245768464312714, 4.6630376376658127, 4.9814692299184458, 3.9230995086978351, 3.124772317749299, 4.3545291190078173, 3.9156803332050671, 4.7649071147900779, 3.2957866086525902, 2.5266837648837353, 4.1279381958049832, 2.846086056357267, 7.9501503718916222, 5.0040843232701224, 6.2997134589932822, 2.8066033004458157, 3.3695805540586292, 7.1911605255609041, 5.1902010664882869, 6.0641085042114264, 3.1763244030347106, 5.5648306304235842, 4.8999056732443051, 4.8385202083992347, 7.821359353269389, 6.8195409456787983, 6.5591857654180128, 6.0411887011958951, 7.3687373406644578, 3.925478958851746, 6.1593368290906056, 6.2553947135435362, 2.9056687203569784, 2.0240197872208707, 7.0209407927591698, 7.5301119472143458, 6.5565343260879541, 7.4360080633805605, 5.5085736431979573, 3.2467669017752971, 2.4987826901996266, 2.5630089003230587, 2.7377288186642774, 5.1937658979896675, 3.8563605554932829, 4.4845133909067876, 2.130284284547066, 2.9602689950032728, 5.0062212541991116, 5.9676442585520162, 2.2570001356632856, 6.8411971054101093, 2.7563438298968426, 4.7276830627264941, 3.582367067990142, 3.9523405698149894, 6.8553413853738157, 5.0858901299373809, 4.1812254209649007, 7.2192209080032637, 6.4402617123341059, 6.6274389533438569, 6.3186576885368311, 4.6516827521820217, 4.0545997777170779, 6.865594825435954, 6.4993202696106422, 5.6206213173954378, 4.597663643263302, 5.3082458395844654, 6.4621121691512515, 2.8828921454728942, 2.8137617782918687, 4.6148063504374415, 3.3878648645377645, 5.3193346648162638, 2.1265679616606326, 4.3173508768876703, 2.477299227172681]
-

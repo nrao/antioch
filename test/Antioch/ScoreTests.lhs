@@ -404,7 +404,7 @@ BETA: TestStringency.py testScore (first assert)
 >           , sAlloted = tt
 >           }
 >       ]
->     ss'   = [ makeSession s (periods s) | s <- ss'' ]
+>     ss'   = [ makeSession s [] (periods s) | s <- ss'' ]
 
 BETA: TestProjectCompletion.py test_completion_score
 
@@ -927,12 +927,12 @@ If none is sanctioned, then there should never be an observer available
 >       -- session has no timebetween - no problem
 >       s2' = defaultSession { timeBetween = 0 }
 >       ps2 = map (mkPeriod s2') [dt1, dt2, dt3]
->       s2 = makeSession s2' ps2
+>       s2 = makeSession s2' [] ps2
 >       r2 = enoughTimeBetween' tdt1 s2
 >       -- now potential problems - session w/ timebetween & periods
 >       s3' = defaultSession { timeBetween = 60 }
 >       ps3 = map (mkPeriod s3') [dt1, dt2, dt3]
->       s3 = makeSession s3' ps3
+>       s3 = makeSession s3' [] ps3
 >       -- overlap case
 >       r3 = enoughTimeBetween' tdt1 s3
 >       -- vanilla test - far after last period ends
