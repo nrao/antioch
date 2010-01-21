@@ -368,11 +368,11 @@ Translates the total/used times pairs into pressure factors.
 > thesisProject _ s = factor "thesisProject" . Just $
 >     if thesis . project $ s then 1.05 else 1.0
 
+> grade2Score :: Grade -> Score
+> grade2Score g = g / 4.0
+
 > scienceGrade _ s = factor "scienceGrade" . Just $
->     case grade s of
->         GradeA -> 1.0
->         GradeB -> 0.9
->         GradeC -> 0.1
+>     grade2Score . grade $ s
 
 3.x Other Factors *not* listed in Memo 5.2
 
@@ -515,7 +515,7 @@ have a better chance of being scheduled while the receiver is available.
 > receiverBoost _ s = factor "receiverBoost" . Just $ if receiverBoost' s then 1.05 else 1.0
 
 > receiverBoost' :: Session -> Bool
-> receiverBoost' s | (grade s) /= GradeA = False
+> receiverBoost' s | (grade s) < 3.8     = False
 >                  | otherwise           =
 >   any (\rg -> all (\r -> elem r boostRcvrs) rg) rgs
 >   where

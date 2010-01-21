@@ -9,6 +9,7 @@
 > type Minutes   = Int
 > type Score     = Float
 > type Radians   = Float
+> type Grade     = Float
 
 > quarter = 15 :: Minutes
 
@@ -41,7 +42,6 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 
 > type ReceiverGroup = [Receiver]
 
-> data Grade = GradeC | GradeB | GradeA deriving (Eq, Ord, Show, Read)
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
@@ -248,7 +248,7 @@ Simple Functions for Periods:
 >   , receivers   = [[Rcvr12_18]]
 >   , enabled     = True
 >   , authorized  = True
->   , grade       = GradeA
+>   , grade       = 4.0
 >   , band        = L
 >   , lowRFI      = False
 >   , lstExclude  = []

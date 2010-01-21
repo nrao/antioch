@@ -180,7 +180,7 @@ time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
 two allotments, and querying w/ a join will duplicate the project.
 TBF: field ignore_grade in Allotment table can be null.
 
-> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Grade)]
+> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Float)]
 > getProjectAllotments projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   return $ toAllotmentList result 
@@ -188,13 +188,13 @@ TBF: field ignore_grade in Allotment table can be null.
 >       query = "SELECT a.total_time, a.grade FROM allotment AS a, projects AS p, projects_allotments AS pa WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
 >       xs = [toSql projId]
 >       toAllotmentList = map toAllotment
->       toAllotment (time:fltGrade:[]) = (fromSqlMinutes time, toGradeType fltGrade)
+>       toAllotment (time:grade:[]) = (fromSqlMinutes time, fromSql grade)
 
 TBF: WTF! In Antioch, do we need to be taking into account grades at the 
 project level?  For now, we are ignoring grade and summing the different
 hours togethor to get the total time.
 
-> setProjectAllotments :: Project -> [(Minutes, Grade)] -> Project
+> setProjectAllotments :: Project -> [(Minutes, Float)] -> Project
 > setProjectAllotments p [] = p
 > setProjectAllotments p (x:xs) = setProjectAllotments (p {pAlloted = (pAlloted p) + (fst x)} ) xs
 
@@ -212,7 +212,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND  t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:time:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -223,7 +223,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sAlloted    = fromSqlMinutes time
 >           , ra = fromSql h 
 >           , dec = fromSql v  
->           , grade = toGradeType fltGrade 
+>           , grade = fromSql grade
 >           , receivers = [] 
 >           , periods = [] -- no history in Carl's DB
 >           , enabled = fromSql e
@@ -244,7 +244,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type, periods AS p WHERE s.id = p.session_id AND a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
 >       xs = [toSql periodId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:time:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -255,7 +255,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sAlloted    = fromSqlMinutes time 
 >           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
 >           , dec = fromSql v  
->           , grade = toGradeType fltGrade 
+>           , grade = fromSql grade
 >           , receivers = [] -- TBF: does scoring support the logic structure!
 >           , periods = [] -- TBF, no history in Carl's DB
 >           , enabled = fromSql e
@@ -275,7 +275,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >     where
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.id = ?"
 >       xs = [toSql sessionId]
->       toSessionData (id:name:mind:maxd:between:freq:time:fltGrade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:time:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -286,7 +286,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , sAlloted    = fromSqlMinutes time
 >           , ra = fromSql h 
 >           , dec = fromSql v  
->           , grade = toGradeType fltGrade 
+>           , grade = fromSql grade
 >           , receivers = [] 
 >           , periods = [] -- no history in Carl's DB
 >           , enabled = fromSql e
@@ -340,14 +340,6 @@ TBF: is this totaly legit?  and should it be somewhere else?
 > toSessionType val = read . toUpperFirst $ fromSql val
 >   where
 >     toUpperFirst x = [toUpper . head $ x] ++ tail x
-
-> toGradeType :: SqlValue -> Grade
-> toGradeType val
->   | val' > (3.5::Float) = GradeA
->   | val' > (2.5::Float) = GradeB
->   | otherwise  = GradeC
->     where
->       val' = fromSql val
 
 Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions

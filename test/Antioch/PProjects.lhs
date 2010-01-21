@@ -273,7 +273,7 @@
 >       , ra = hrs2rad 6.4
 >       , dec = deg2rad 10.4
 >       , receivers = [[Rcvr26_40]]
->       , grade = GradeB
+>       , grade = 3.0
 >       , band = A
 >       }
 >
@@ -288,7 +288,7 @@
 >       , ra = hrs2rad 4.2
 >       , dec = deg2rad 17.4
 >       , receivers = [[Rcvr26_40]]
->       , grade = GradeB
+>       , grade = 3.0
 >       , band = A
 >       }
 >   ]

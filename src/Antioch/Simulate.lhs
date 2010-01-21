@@ -63,7 +63,7 @@ Possible factors:
 > isTypeOpen _ s = sType s == Open
 
 > isGradeA :: SelectionCriteria
-> isGradeA _ s = grade s >= GradeA
+> isGradeA _ s = grade s >= 3.8
 
 > isBackup :: SelectionCriteria
 > isBackup _ s = backup s

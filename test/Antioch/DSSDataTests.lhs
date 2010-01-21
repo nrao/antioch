@@ -22,9 +22,8 @@ connection to the DB correctly.
 
 > tests = TestList [
 >     --  test_fetchPeriods
->       test_toGradeType
 >     --, test_fetchPeriod
->     , test_getProjects
+>       test_getProjects
 >     -- , test_numPeriods
 >     , test_getProjectData
 >     , test_getProjectsProperties
@@ -148,7 +147,7 @@ from the database.
 >       name = "GBT09B-010-02"
 >       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [8.345419,8.629439,8.727069,8.757916,8.786918,8.786918,8.831668,8.831668,8.831668,8.831668,8.864333,8.838221,8.810465,8.780932,8.777044,8.744155,8.671187]
+>       expScores = [6.9545164,7.1912,7.2725573,7.2982635,7.3224306,7.3224306,7.3597226,7.3597226,7.3597226,7.3597226,7.3869443,7.3651834,7.342054,7.317443,7.3142033,7.2867956,7.2259903]
 
 Test a specific session's attributes:
 
@@ -156,7 +155,7 @@ Test a specific session's attributes:
 >   ps <- getProjects 
 >   let ss = concatMap sessions ps
 >   let s = head $ filter (\s -> (sName s == "GBT09A-081-02")) ss
->   assertEqual "test_session2_1" GradeB (grade s)
+>   assertEqual "test_session2_1" 3.0 (grade s)
 >   assertEqual "test_session2_2" Open (sType s)
 >   assertEqual "test_session2_3" 124 (sId s)
 >   assertEqual "test_session2_4" "GBT09A-081-02" (sName s)
@@ -184,7 +183,7 @@ generated: it's the input we want to test, really.
 >   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
 >   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
 >   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
->   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == GradeB) ss) )
+>   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == 3.0) ss) )
 >   assertEqual "test_getProjects_properties_5" 46 (length $ filter lowRFI ss)
 >   let lsts = filter (\s -> (length . lstExclude $ s) > 0) ss
 >   assertEqual "test_getProjects_properties_6" 4 (length lsts)
@@ -309,15 +308,6 @@ example in comments.
 
 > fromFloat2Sql :: Float ->  SqlValue
 > fromFloat2Sql = toSql
-
-> test_toGradeType = TestCase $ do
->   assertEqual "test_toGradeType A" GradeA (toGradeType a)
->   assertEqual "test_toGradeType B" GradeB (toGradeType b)
->   assertEqual "test_toGradeType C" GradeC (toGradeType c)
->     where
->       a = fromFloat2Sql 4.0
->       b = fromFloat2Sql 3.0
->       c = fromFloat2Sql 2.0
 
 > test_fetchPeriod = TestCase $ do
 >   putPeriods [p1]

@@ -83,8 +83,8 @@ Test the case where a bady performing TP is replaced with a backup
 >     -- want this to be scheduled when GB's MOC fails.  The other complication
 >     -- is that we want this 'backup' to score low enough so that it doesn't
 >     -- get scheduled regularly, but it has a score > 0.0 so that it can
->     -- replace the session GB: thus the GradeC.
->     backup = gb {frequency = 9.0, sName = "backup", sId = 1001, grade = GradeC, backup = True}
+>     -- replace the session GB: thus the Grade C.
+>     backup = gb {frequency = 9.0, sName = "backup", sId = 1001, grade = 2.0, backup = True}
 >     ss = backup:ss'
 >     expSs = [as, backup, lp, lp, gb, cv]
 >     dts = [ fromGregorian 2006 2 4 6  0 0

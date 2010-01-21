@@ -168,7 +168,7 @@ Only 20 percent of the low freq. sessions are backups
 >     t          <- genSemester
 >     b          <- genBand t
 >     let r      = band2Receiver b
->     g          <- genGrade [GradeA, GradeA, GradeB, GradeC, GradeC]
+>     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
 >     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
@@ -222,8 +222,6 @@ only schedule Periods of length minDuration.
 >     s  <- genSession
 >     ss <- genSessions n
 >     return $ s : ss
-
-> prop_Grade s = grade s `elem` [GradeA, GradeB, GradeC]
 
 Assumes a single scalar rcvr group
 

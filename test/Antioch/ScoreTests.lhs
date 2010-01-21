@@ -973,7 +973,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >   assertEqual "test_receiverBoost_10" False (receiverBoost' s10)
 >     where
 >       boost = Rcvr_1070
->       s = defaultSession { grade = GradeA }
+>       s = defaultSession { grade = 4.0 }
 >       -- just L band
 >       s1 = s { receivers = [[Rcvr1_2]] }
 >       -- L or S
@@ -993,7 +993,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       -- L or (boost and C)
 >       s9 = s { receivers = [[Rcvr1_2,boost], [Rcvr1_2,Rcvr2_3]] }
 >       -- Grade B's don't get the boost
->       s10 = defaultSession { receivers = [[boost]], grade = GradeB }
+>       s10 = defaultSession { receivers = [[boost]], grade = 3.0 }
 
 > test_receiverBoost2 = TestCase $ do
 >   assertEqual "test_receiverBoost2_1"  False (receiverBoost' s1)
@@ -1005,7 +1005,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >     where
 >       b1 = Rcvr_1070
 >       b2 = Rcvr_450
->       s = defaultSession { grade = GradeA }
+>       s = defaultSession { grade = 4.0 }
 >       -- just L band
 >       s1 = s { receivers = [[Rcvr1_2]] }
 >       -- L or S
@@ -1102,7 +1102,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         useds  = [ 2*60,  8*60,  5*60, 12*60]
 >         ras    = [  5.4,  10.1,   4.9,  18.1]
 >         bands  = [    L,     C,     X,     L]
->         grades = [GradeA, GradeA, GradeA, GradeA]
+>         grades = [4.0, 4.0, 4.0, 4.0]
 >         genPSess t u ra b g = defaultSession {
 >             sAlloted = t
 >           , periods = [defaultPeriod {duration = u, pTimeBilled = u}]
@@ -1116,7 +1116,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         useds  = [ 2*60,  8*60,  5*60, 12*60]
 >         ras    = [  5.4,  10.1,   4.9,  18.1]
 >         bands  = [    L,     C,     X,     L]
->         grades = [GradeA, GradeA, GradeB, GradeB]
+>         grades = [4.0, 4.0, 4.0, 4.0]
 >         genPSess t u ra b g = defaultSession {
 >             sAlloted = t
 >           , periods = [defaultPeriod {duration = u, pTimeBilled = u}]
