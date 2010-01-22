@@ -180,7 +180,7 @@ time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
 two allotments, and querying w/ a join will duplicate the project.
 TBF: field ignore_grade in Allotment table can be null.
 
-> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Float)]
+> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Grade)]
 > getProjectAllotments projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   return $ toAllotmentList result 
@@ -194,7 +194,7 @@ TBF: WTF! In Antioch, do we need to be taking into account grades at the
 project level?  For now, we are ignoring grade and summing the different
 hours togethor to get the total time.
 
-> setProjectAllotments :: Project -> [(Minutes, Float)] -> Project
+> setProjectAllotments :: Project -> [(Minutes, Grade)] -> Project
 > setProjectAllotments p [] = p
 > setProjectAllotments p (x:xs) = setProjectAllotments (p {pAlloted = (pAlloted p) + (fst x)} ) xs
 
@@ -321,6 +321,9 @@ value of the right type.
 > sqlHrsToMinutes :: SqlValue -> Minutes
 > sqlHrsToMinutes hrs = hrsToMinutes . sqlHrsToHrs' $ hrs
 
+> fromSqlId :: SqlValue -> Maybe Int
+> fromSqlId SqlNull = Nothing
+> fromSqlId x       = Just . fromSql $ x
 
 TBF: is this totaly legit?  and should it be somewhere else?
 
@@ -480,16 +483,16 @@ it an exclusion range.
 > fetchWindows :: Connection -> Session -> IO [Window]
 > fetchWindows cnn s = do 
 >   result <- quickQuery' cnn query xs 
->   return $ toWindowist result
+>   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
 >     query = "SELECT w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w WHERE w.session_id = ?"
->     toWindowist = map toWindow
+>     toWindowList = map toWindow
 >     toWindow(strt:dur:def:per:[]) =
->       defaultWindow { wStart = sqlToDateTime strt
+>       defaultWindow { wStart = sqlToDate strt
 >                     , wDuration = 24*60*(fromSql dur)
->                     , wTrialPeId = fromJust . fromSql $ def
->                     , wChosePeId = fromSql per
+>                     , wTrialPeId = fromSqlId def
+>                     , wChosePeId = fromSqlId per
 >                     }
 
 > getPeriods :: Connection -> Session -> IO [Period]
@@ -535,6 +538,9 @@ it an exclusion range.
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
+
+> sqlToDate :: SqlValue -> DateTime
+> sqlToDate dt = fromJust . fromSqlDateString . fromSql $ dt
 
 > putPeriods :: [Period] -> IO ()
 > putPeriods ps = do

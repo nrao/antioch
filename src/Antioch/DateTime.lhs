@@ -168,6 +168,9 @@ ODBC and MySQL.
 > fromSqlString :: String -> Maybe DateTime
 > fromSqlString = fmap toSeconds . parseUTCTime sqlFormat
 
+> fromSqlDateString :: String -> Maybe DateTime
+> fromSqlDateString = fmap toSeconds . parseUTCTime sqlDateFormat
+
 > fromHttpString :: String -> Maybe DateTime
 > fromHttpString = fmap toSeconds . parseUTCTime httpFormat
 
@@ -193,6 +196,8 @@ close enough for our purposes (TBF)?
 > parseLocalTime = parseTime defaultTimeLocale
 
 > sqlFormat = iso8601DateFormat (Just "%T")
+
+> sqlDateFormat = iso8601DateFormat (Just "")
 
 > httpFormat = iso8601DateFormat (Just " %HA%MA%S") -- TBF space needed?
 

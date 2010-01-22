@@ -257,6 +257,7 @@ example in comments.
 >   assertEqual "test_populateSession 5" (4*60) (pTimeBilled . head . periods $ ios)
 >   assertEqual "test_populateSession 7" Nothing (chosePeriod . head . windows $ ios)
 >   assertEqual "test_populateSession 8" (Just . head . periods $ ios) (trialPeriod . head . windows $ ios)
+>   assertEqual "test_populateSession 9" (fromGregorian 2009 6 10 0 0 0) (wStart . head . windows $ ios)
 >     where
 >       sId =  194
 >       pId = 1760
@@ -271,7 +272,7 @@ example in comments.
 >     where
 >       s' = defaultSession { sAlloted = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
->       w' = defaultWindow { wDuration = 7, wTrialPeId = peId p' }
+>       w' = defaultWindow { wDuration = 7, wTrialPeId = Just . peId $ p' }
 
 > test_getPeriods = TestCase $ do
 >   cnn <- connect

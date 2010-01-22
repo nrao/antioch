@@ -93,12 +93,15 @@ use a single data structure for all sessions.
 >     wSession     :: Session
 >   , wStart       :: DateTime   -- date
 >   , wDuration    :: Minutes    -- from day count
->   , wTrialPeId   :: Int        -- peId
+>   , wTrialPeId   :: Maybe Int  -- Maybe peId
 >   , wChosePeId   :: Maybe Int  -- Maybe peId
 >    }
 
 > trialPeriod :: Window -> Maybe Period
-> trialPeriod w = find (\p -> (wTrialPeId w) == (peId p)) (periods . wSession $ w)
+> trialPeriod w =
+>     case wTrialPeId w of
+>         Nothing -> Nothing
+>         Just i  -> find (\p -> i == (peId p)) (periods . wSession $ w)
 
 > chosePeriod :: Window -> Maybe Period
 > chosePeriod w =
@@ -107,7 +110,7 @@ use a single data structure for all sessions.
 >         Just i  -> find (\p -> i == (peId p)) (periods . wSession $ w)
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (wDuration w) ++ " days; Default: " ++ show (trialPeriod w) ++ ", Alternate: " ++ show (chosePeriod w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (wDuration w) ++ " days; Trial: " ++ show (trialPeriod w) ++ ", Chose: " ++ show (chosePeriod w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -295,6 +298,6 @@ Simple Functions for Periods:
 >     wSession     = defaultSession
 >   , wStart       = fromGregorian' 2008 1 1
 >   , wDuration    = 0
->   , wTrialPeId   = 0
+>   , wTrialPeId   = Nothing
 >   , wChosePeId   = Nothing
 >    }
