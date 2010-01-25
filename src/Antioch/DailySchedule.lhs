@@ -114,7 +114,7 @@ part of the history of pre-scheduled periods
 >     Nothing -> True
 
 > overlap :: DateTime -> Int -> Period -> Bool
-> overlap start dur p = s1 < e2 &&  s2 < e1
+> overlap start dur p = s1 < e2 && s2 < e1
 >   where
 >     s1 = startTime p
 >     e1 = periodEndTime p

@@ -68,8 +68,8 @@ Possible factors:
 > isBackup :: SelectionCriteria
 > isBackup _ s = backup s
 
-> isSchedulable :: SelectionCriteria
-> isSchedulable _ s = all (\f -> f s) [enabled, authorized]
+> isApproved :: SelectionCriteria
+> isApproved _ s = all (\f -> f s) [enabled, authorized]
 
 > hasObservers :: SelectionCriteria
 > hasObservers _ s = not . null . observers . project $ s
@@ -147,7 +147,7 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >         isTypeOpen
 >       , hasTimeSchedulable
 >       , isNotComplete
->       , isSchedulable
+>       , isApproved
 >       , hasObservers
 >                       ]
 

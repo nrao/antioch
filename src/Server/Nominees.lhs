@@ -74,7 +74,7 @@
 >     let filter = catMaybes . concat $ [
 >             [Just isTypeOpen]
 >           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
->           , [Just isSchedulable]
+>           , [Just isApproved]
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >                                       ]

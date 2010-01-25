@@ -491,11 +491,11 @@ of pre-scheduled periods (history)
 >     assertEqual "test_schedulableSessions 6" False (isSchedulableSemester early s)
 >     assertEqual "test_schedulableSessions 7" True (isSchedulableSemester late s)
 >     let s = findPSessionByName "TX"
->     assertEqual "test_schedulableSessions 8" True (isSchedulable dt s)
+>     assertEqual "test_schedulableSessions 8" True (isApproved dt s)
 >     let ts = s {enabled = False}
->     assertEqual "test_schedulableSessions 9" False (isSchedulable dt ts)
+>     assertEqual "test_schedulableSessions 9" False (isApproved dt ts)
 >     let ts = s {authorized = False}
->     assertEqual "test_schedulableSessions 10" False (isSchedulable dt ts)
+>     assertEqual "test_schedulableSessions 10" False (isApproved dt ts)
 >     let s = findPSessionByName "CV"
 >     assertEqual "test_schedulableSessions 11" True (hasObservers dt s)
 >     let ts = s {project = defaultProject {observers = []}}
