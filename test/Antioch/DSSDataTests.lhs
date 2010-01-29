@@ -61,11 +61,6 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 0 (length allPeriods)    
->     --assertEqual "test_getProjects10" 137 (length allPeriods)    
->     --assertEqual "test_getProjects11" (fromGregorian 2009 6 1 11 0 0) (startTime . head $ allPeriods)    
->     --assertEqual "test_getProjects12" 630 (duration . head $ allPeriods)    
->     --assertEqual "test_getProjects13" 3 (length . nub $ map (sType . session) allPeriods) 
->     --assertEqual "test_getProjects14" Fixed (sType . session . head $ allPeriods) 
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head . tail $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
@@ -255,24 +250,39 @@ example in comments.
 >   assertEqual "test_populateSession 3" (fromGregorian 2009 6 15 12 0 0) (startTime p)
 >   assertEqual "test_populateSession 4" (4*60) (duration . head . periods $ ios)
 >   assertEqual "test_populateSession 5" (4*60) (pTimeBilled . head . periods $ ios)
->   assertEqual "test_populateSession 7" Nothing (chosePeriod . head . windows $ ios)
->   assertEqual "test_populateSession 8" (Just . head . periods $ ios) (trialPeriod . head . windows $ ios)
+>   assertEqual "test_populateSession 7" Nothing (wPeriod . head . windows $ ios)
+>   assertEqual "test_populateSession 8" (Just . head . periods $ ios) (wPeriod . head . windows $ ios)
 >   assertEqual "test_populateSession 9" (fromGregorian 2009 6 10 0 0 0) (wStart . head . windows $ ios)
 >     where
 >       sId =  194
 >       pId = 1760
+
+> mkSqlLst  :: Int -> DateTime -> Int -> Int -> Int -> Int -> String -> [SqlValue]
+> mkSqlLst id strt dur def per pid st =
+>     [toSql id
+>    , toSql . toSqlString $ strt
+>    , toSql dur
+>    , if def == 0
+>      then SqlNull
+>      else toSql def
+>    , if per == 0
+>      then SqlNull
+>      else toSql def
+>    , toSql pid
+>    , toSql st
+>     ]
 
 > test_makeSession = TestCase $ do
 >   let s = makeSession s' [w'] [p']
 >   assertEqual "test_makeSession 1" s' s
 >   assertEqual "test_makeSession 2" s (session . head . periods $ s)
 >   assertEqual "test_makeSession 3" p' (head . periods $ s)
->   assertEqual "test_makeSession 4" Nothing (chosePeriod . head . windows $ s)
->   assertEqual "test_makeSession 5" (head . periods $ s) (fromJust . trialPeriod . head . windows $ s)
+>   assertEqual "test_makeSession 4" (Just p') (wPeriod . head . windows $ s)
+>   assertEqual "test_makeSession 5" (head . periods $ s) (fromJust . wPeriod . head . windows $ s)
 >     where
 >       s' = defaultSession { sAlloted = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
->       w' = defaultWindow { wDuration = 7, wTrialPeId = Just . peId $ p' }
+>       w' = defaultWindow { wDuration = 7, wPeriodId = peId p' }
 
 > test_getPeriods = TestCase $ do
 >   cnn <- connect

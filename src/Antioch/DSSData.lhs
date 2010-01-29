@@ -45,15 +45,16 @@ separate query, to deal with multiple allotments (different grades)
 
 > populateProject :: Connection -> Project -> IO Project
 > populateProject cnn project = do
->     sessions' <- getSessions (pId project) cnn
->     sessions <- mapM (populateSession cnn) sessions'
+>     sessions <- getSessions (pId project) cnn
+>     sessions' <- mapM (populateSession cnn) sessions
 >     -- project times
 >     allotments <- getProjectAllotments (pId project) cnn
 >     let project' = setProjectAllotments project allotments
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
 >     let project'' = setProjectObservers project' observers
->     return $ makeProject project'' (pAlloted project'') sessions 
+>     --let sessions'' = filter hasWindows sessions' TBF belong in Simulate?
+>     return $ makeProject project'' (pAlloted project'') sessions'
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer
@@ -321,10 +322,6 @@ value of the right type.
 > sqlHrsToMinutes :: SqlValue -> Minutes
 > sqlHrsToMinutes hrs = hrsToMinutes . sqlHrsToHrs' $ hrs
 
-> fromSqlId :: SqlValue -> Maybe Int
-> fromSqlId SqlNull = Nothing
-> fromSqlId x       = Just . fromSql $ x
-
 TBF: is this totaly legit?  and should it be somewhere else?
 
 > deriveBand :: Float -> Band
@@ -486,13 +483,12 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w WHERE w.session_id = ?"
+>     query = "SELECT w.start_date, w.duration, p.id FROM windows as w, periods as p, period_states as s WHERE w.default_period_id = p.id AND w.period_id is NULL AND p.state_id = s.id AND s.abbreviation = 'P' AND w.session_id = ?;"
 >     toWindowList = map toWindow
->     toWindow(strt:dur:def:per:[]) =
+>     toWindow(strt:dur:pid:[]) =
 >       defaultWindow { wStart = sqlToDate strt
 >                     , wDuration = 24*60*(fromSql dur)
->                     , wTrialPeId = fromSqlId def
->                     , wChosePeId = fromSqlId per
+>                     , wPeriodId = fromSql pid
 >                     }
 
 > getPeriods :: Connection -> Session -> IO [Period]

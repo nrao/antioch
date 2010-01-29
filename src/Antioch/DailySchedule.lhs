@@ -5,7 +5,7 @@
 > import Antioch.Schedule
 > import Antioch.Simulate
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg, rad2hrs, printList)
+> import Antioch.Utilities (rad2deg, rad2hrs, printList, overlie)
 > import Antioch.Weather
 > import Antioch.Debug
 > import Antioch.HardwareSchedule
@@ -84,7 +84,7 @@ boundary affects.
 > runDailySchedule strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
 >   sf <- genScore . scoringSessions dt $ ss
->   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history . filter (isSchedulableType dt dur) . schedulableSessions dt $ ss
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes
@@ -106,18 +106,10 @@ part of the history of pre-scheduled periods
 > removeBuffer :: DateTime -> Minutes -> [Period] -> [Period] -> [Period]
 > removeBuffer dt dur ps history = filter (not . remove) ps
 >   where
->     remove p = (not $ overlap dt dur p)  && (notInHistory p history)
+>     remove p = (not $ overlie dt dur p)  && (notInHistory p history)
 
 > notInHistory :: Period -> [Period] -> Bool
 > notInHistory p ps = case find (==p) ps of
 >     Just _  -> False
 >     Nothing -> True
-
-> overlap :: DateTime -> Int -> Period -> Bool
-> overlap start dur p = s1 < e2 && s2 < e1
->   where
->     s1 = startTime p
->     e1 = periodEndTime p
->     s2 = start
->     e2 = dur `addMinutes` start  
 

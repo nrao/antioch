@@ -72,6 +72,14 @@ Translates a relative sidereal time (lst) at the given absolute solar time
 > between :: Ord a => a -> a -> a -> Bool
 > between v min max = min <= v && v <= max
 
+> overlie :: DateTime -> Minutes -> Period -> Bool
+> overlie start dur p = s1 < e2 && s2 < e1
+>   where
+>     s1 = startTime p
+>     e1 = periodEndTime p
+>     s2 = start
+>     e2 = dur `addMinutes` start  
+
 > printList :: Show a => [a] -> IO ()
 > printList = putStrLn . showList'
 

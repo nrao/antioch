@@ -6,11 +6,11 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester)
+> import Antioch.Utilities    (between, showList', dt2semester, overlie)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust)
+> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 
 > simulate06 :: StrategyName -> IO ([Period], [Trace])
@@ -73,6 +73,30 @@ Possible factors:
 
 > hasObservers :: SelectionCriteria
 > hasObservers _ s = not . null . observers . project $ s
+
+Is a session a candidate for scheduling dependent on its type
+and if windowed the period of time to be scheduled?
+
+> isSchedulableType :: DateTime -> Minutes -> Session -> Bool
+> isSchedulableType dt dur s
+>   -- Open
+>   | isTypeOpen dt s     = True
+>   | sType s == Windowed = checkWindows (windows s)
+>     where
+>       checkWindows ws
+>         -- Windowed with no windows overlapping the scheduling range
+>         | ws' == [] = False
+>         -- Windowed with windows overlapping the scheduling range, but
+>         -- its period does not overlap the scheduling range
+>         | otherwise = and . map checkWindow $ ws'
+>           where ws' = filter intersect ws
+>       checkWindow w = overlie (wStart w) (wDuration w) (maybe defaultPeriod id . wPeriod $ w)
+>
+>       intersect w = wBegin < dtEnd && dt < wEnd
+>         where
+>           wBegin = wStart w
+>           wEnd   = 24*60*(wDuration w) `addMinutes` wBegin 
+>           dtEnd = dur `addMinutes` dt
 
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
@@ -142,10 +166,13 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
 
+Note, selection by type is handled separately by isSchedulableType
+because it requires arguments describing the time period being
+scheduled.
+
 > schedulableCriteria :: [SelectionCriteria]
 > schedulableCriteria = [
->         isTypeOpen
->       , hasTimeSchedulable
+>         hasTimeSchedulable
 >       , isNotComplete
 >       , isApproved
 >       , hasObservers

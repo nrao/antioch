@@ -14,26 +14,12 @@
 > import System.Random
 
 > tests = TestList [
->       test_overlap
->     , test_removeBuffer
+>       test_removeBuffer
 >     , test_removeBuffer_2
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     ]
 
-> test_overlap = TestCase $ do
->   assertEqual "test_overlap_1" True  (overlap dt1 dur1 p1)
->   assertEqual "test_overlap_2" True  (overlap dt1 dur2 p1)
->   assertEqual "test_overlap_3" True  (overlap dt1 dur1 p2)
->   assertEqual "test_overlap_4" False (overlap dt2 dur1 p1)
->     where
->   dt1 = fromGregorian 2006 6 1 12 0 0
->   dur1 = 4*60
->   p1 = defaultPeriod {startTime = dt1, duration = dur1}
->   dur2 = 6*60
->   p2 = defaultPeriod {startTime = dt1, duration = dur2}
->   dt2 = fromGregorian 2006 6 1 20 0 0
->   
 > test_removeBuffer = TestCase $ do
 >   -- simplest case
 >   let result = removeBuffer start dur ps history
