@@ -74,29 +74,26 @@ Possible factors:
 > hasObservers :: SelectionCriteria
 > hasObservers _ s = not . null . observers . project $ s
 
-Is a session a candidate for scheduling dependent on its type
-and if windowed the period of time to be scheduled?
+Filter candidate sessions dependent on its type.
 
 > isSchedulableType :: DateTime -> Minutes -> Session -> Bool
 > isSchedulableType dt dur s
 >   -- Open
 >   | isTypeOpen dt s     = True
->   | sType s == Windowed = checkWindows (windows s)
+>   | sType s == Windowed = activeWindows (windows s)
 >     where
->       checkWindows ws
+>       activeWindows ws
 >         -- Windowed with no windows overlapping the scheduling range
->         | ws' == [] = False
->         -- Windowed with windows overlapping the scheduling range, but
->         -- its period does not overlap the scheduling range
->         | otherwise = and . map checkWindow $ ws'
->           where ws' = filter intersect ws
->       checkWindow w = overlie (wStart w) (wDuration w) (maybe defaultPeriod id . wPeriod $ w)
+>         -- or those windows that are overlapped by the scheduling range
+>         -- also overlap their default periods.
+>         | filter schedulableWindow ws == [] = False
+>         | otherwise                         = True
 >
->       intersect w = wBegin < dtEnd && dt < wEnd
->         where
->           wBegin = wStart w
->           wEnd   = 24*60*(wDuration w) `addMinutes` wBegin 
->           dtEnd = dur `addMinutes` dt
+>       schedulableWindow w = (intersect w) && (withNoDefault $ w)
+>       intersect w = wStart w < dtEnd && dt < wEnd w
+>       withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
+>       wEnd w = (wDuration w) `addMinutes` (wStart w)
+>       dtEnd = dur `addMinutes` dt
 
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
@@ -180,6 +177,17 @@ scheduled.
 
 > schedulableSessions :: DateTime -> [Session] -> [Session]
 > schedulableSessions dt = filterSessions dt schedulableCriteria
+
+> clearWindowedTimeBilled :: Session -> Session
+> clearWindowedTimeBilled s
+>   | (windows s) == [] = s
+>   | otherwise         = makeSession s (windows s) ps
+>       where
+>         ps = map clear . periods $ s
+>         clear p
+>           | elem (peId p) pIds = p { pTimeBilled = 0 }
+>           | otherwise          = p
+>         pIds = [wPeriodId w | w <- (windows s)]
 
 > schedulableSession :: DateTime -> Session -> Bool
 > schedulableSession dt s = meetsCriteria dt s schedulableCriteria

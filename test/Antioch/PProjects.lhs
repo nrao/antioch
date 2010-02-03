@@ -207,49 +207,89 @@
 >       }
 >   -}
 >
->   {-  TBF on hold until actually scoring/scheduling windowed sessions
->   , defaultWindowed {
+>   , defaultSession {
 >         sId = 12
 >       , sName = "TestWindowed1"
->       , sAlloted = 4*60
+>       , windows = [
+>             defaultWindow {
+>                 wStart = fromGregorian' 2006 10 1
+>               , wDuration = 7*24*60
+>               , wPeriodId = 100
+>                }
+>           , defaultWindow {
+>                 wStart = fromGregorian' 2006 10 22
+>               , wDuration = 7*24*60
+>               , wPeriodId = 101
+>                }
+>           ]
+>       , periods = [
+>             defaultPeriod {
+>                 peId = 100
+>               , startTime = fromGregorian 2006 10 4 17 15 0
+>               , duration = 4*60
+>               , pTimeBilled = 4*60
+>                }
+>           , defaultPeriod {
+>                 peId = 101
+>               , startTime = fromGregorian 2006 10 27 17 45 0
+>               , duration = 4*60
+>               , pTimeBilled = 4*60
+>                }
+>           ]
+>       , sAlloted = 2*4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 67.8
->       , ra = hrs2rad 12.3
->       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
+>       , ra = hrs2rad 14.3
+>       , dec = deg2rad 13.3
+>       , receivers = [[Rcvr_PAR]]
 >       , band = W
+>       , sType = Windowed
 >       }
 >
->   , defaultWindowed {
+>   , defaultSession {
 >         sId = 13
 >       , sName = "TestWindowed2"
->       , sAlloted = 6*60
->       , minDuration = 6*60
->       , maxDuration = 6*60
->       , frequency = 67.8
->       , ra = hrs2rad 12.3
->       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
->       , band = W
->       }
->
->   , defaultWindowed {
->         sId = 14
->       , sName = "TestWindowed3"
->       , sAlloted = 4*60
->       , minDuration = 4*60
->       , maxDuration = 4*60
->       , frequency = 2.0
->       , ra = hrs2rad 17.3
->       , dec = deg2rad 30.4
->       , receivers = [Rcvr2_3]
+>       , windows = [
+>             defaultWindow {
+>                 wStart = fromGregorian' 2006 9 22
+>               , wDuration = 7*24*60
+>               , wPeriodId = 200
+>                }
+>           , defaultWindow {
+>                 wStart = fromGregorian' 2006 10 15
+>               , wDuration = 7*24*60
+>               , wPeriodId = 201
+>                }
+>           ]
+>       , periods = [
+>             defaultPeriod {
+>                 peId = 200
+>               , startTime = fromGregorian 2006 9 28 2 0 0
+>               , duration = 3*60
+>               , pTimeBilled = 3*60
+>                }
+>           , defaultPeriod {
+>                 peId = 201
+>               , startTime = fromGregorian 2006 10 20 6 30 0
+>               , duration = 3*60
+>               , pTimeBilled = 3*60
+>                }
+>           ]
+>       , sAlloted = 2*3*60
+>       , minDuration = 3*60
+>       , maxDuration = 3*60
+>       , timeBetween = 14*60
+>       , frequency = 2.4
+>       , ra = hrs2rad 0.9
+>       , dec = deg2rad 16.1
+>       , receivers = [[Rcvr2_3]]
 >       , band = S
+>       , sType = Windowed
 >       }
->   -}
 >   ]
 
-> p1sessions = [ makeSession s [] (periods s) | s <- p1sessions' ]
+> p1sessions = [ makeSession s (windows s) (periods s) | s <- p1sessions' ]
 > project1 = makeProject project1' (500*60) p1sessions
 
 > project2' = defaultProject {
@@ -293,7 +333,7 @@
 >       }
 >   ]
 
-> p2sessions = [ makeSession s [] (periods s) | s <- p2sessions' ]
+> p2sessions = [ makeSession s (windows s) (periods s) | s <- p2sessions' ]
 > project2 = makeProject project2' (14*60) p2sessions
 
 Utilities:

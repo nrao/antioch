@@ -84,7 +84,7 @@ boundary affects.
 > runDailySchedule strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
 >   sf <- genScore . scoringSessions dt $ ss
->   schedPeriods <- strategy sf dt (dur + bufferHrs) history . filter (isSchedulableType dt dur) . schedulableSessions dt $ ss
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history . filter (isSchedulableType dt dur) . schedulableSessions dt . map clearWindowedTimeBilled $ ss
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes

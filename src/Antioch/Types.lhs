@@ -96,7 +96,7 @@ use a single data structure for all sessions.
 >    }
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (wDuration w) ++ " days; Period: " ++ show (wPeriod w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (flip div (24*60) . wDuration $ w) ++ " days; Period: " ++ show (wPeriod w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n

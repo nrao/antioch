@@ -30,6 +30,8 @@
 >    , test_sim_schedMinDuration_starvation
 >    , test_sim_timeLeft
 >    , test_schedulableSessions
+>    , test_clearWindowedTimeBilled
+>    , test_isSchedulableType
 >   ]
 >
 
@@ -511,13 +513,39 @@ of pre-scheduled periods (history)
 >     early = fromGregorian 2005 11 30  23 45 0
 >     late = fromGregorian 2006 6 30  15 30 0
 
+> test_clearWindowedTimeBilled = TestCase $ do
+>     let s = tw2
+>     let s' = clearWindowedTimeBilled s
+>     -- because pTimeBilled is not checked in session equivalence
+>     assertEqual "test_clearWindowedTimeBilled 1" s s'
+>     assertEqual "test_clearWindowedTimeBilled 2" 180 (pTimeBilled . fromJust . wPeriod . head . windows $ s)
+>     assertEqual "test_clearWindowedTimeBilled 3" 0 (pTimeBilled . fromJust . wPeriod . head . windows $ s')
+>     -- should be nop
+>     let cv' = clearWindowedTimeBilled cv
+>     assertEqual "test_clearWindowedTimeBilled 4" cv cv'
+
+> test_isSchedulableType = TestCase $ do
+>     -- session is Open, who cares about windows?
+>     assertEqual "test_isSchedulableType 1" True  (isSchedulableType undefined undefined cv)
+>     -- session is Windowed, but no windows inside the scheduling range
+>     assertEqual "test_isSchedulableType 2" False (isSchedulableType dt (24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range
+>     assertEqual "test_isSchedulableType 3" True  (isSchedulableType dt (4*24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range,
+>     -- but with the window's period also in the scheduling range
+>     assertEqual "test_isSchedulableType 4" False (isSchedulableType dt (8*24*60) tw2)
+>       where
+>         dt = fromGregorian 2006 10 13  0 0 0
+
 Test Utilities:
 
-> lp = findPSessionByName "LP"
-> cv = findPSessionByName "CV"
-> as = findPSessionByName "AS"
-> gb = findPSessionByName "GB"
-> va = findPSessionByName "VA"
-> tx = findPSessionByName "TX"
-> wv = findPSessionByName "WV"
+> lp  = findPSessionByName "LP"
+> cv  = findPSessionByName "CV"
+> as  = findPSessionByName "AS"
+> gb  = findPSessionByName "GB"
+> va  = findPSessionByName "VA"
+> tx  = findPSessionByName "TX"
+> wv  = findPSessionByName "WV"
+> tw1 = findPSessionByName "TestWindowed1"
+> tw2 = findPSessionByName "TestWindowed2"
 

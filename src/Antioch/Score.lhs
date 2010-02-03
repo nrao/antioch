@@ -403,6 +403,16 @@ up, all the time.
 >     scheduled = getReceivers dt rs
 >     evalCNF av rs = all (\rg -> any (\r -> elem r av) rg) rs
 
+> inWindows :: ScoreFunc
+> inWindows dt s = factor "inWindows" . Just $ result
+>   where
+>     result
+>       | sType s == Open          = 1.0
+>       | any inWindow (windows s) = 1.0
+>       | otherwise                = 0.0
+>     inWindow w = (wStart w) <= dt && dt < (wEnd w)
+>     wEnd w = (wDuration w) `addMinutes` (wStart w)
+
 Returns list of receivers that will be up at the given time.
 
 > getReceivers :: DateTime -> ReceiverSchedule -> [Receiver]
@@ -865,6 +875,7 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , lstExcepted
 >       , enoughTimeBetween
 >       , observerAvailable
+>       , inWindows
 >        ]
 
 > genPartScore          :: [ScoreFunc] -> [Session] -> Scoring ScoreFunc
@@ -896,6 +907,7 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       --, observerAvailable
+>       , inWindows
 >       ] ++ sfs) dt s
 
 Convenience function for translating go/no-go into a factor.

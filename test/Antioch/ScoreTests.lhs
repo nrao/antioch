@@ -55,6 +55,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_subfactorFactors
 >   , test_weatherFactors
 >   , test_scoreFactors
+>   , test_inWindows
 >   , test_scoreElements
 >   , test_zenithAngleLimit
 >   , test_surfaceObservingEfficiency
@@ -64,6 +65,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_avgScoreForTime2
 >   , test_weightedMeanScore
 >   , test_score
+>   , test_score_window
 >   , test_bestDuration
 >   , test_bestDurations
 >   , test_averageScore
@@ -426,7 +428,7 @@ BETA: TestProjectCompletion.py test_completion_score
 >                                 , projectCompletion]
 >     fs <- runScoring w [] (politicalFactors dt s)
 >     let result = eval fs
->     assertEqual "test_politicalFactors" 1.0024 result
+>     assertEqual "test_politicalFactors" 1.0052 result
 
 BETA: TestTrackingEfficiency.py testefficiencyHaskell
 
@@ -499,11 +501,21 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
 >     assertEqual "test_scoreFactors 3" 1.3457081 fPress
+
+> test_inWindows = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 9 20 1 0 0
+>     let dt = fromGregorian 2006 9 21 23 45 0
+>     let s = findPSessionByName "TestWindowed2"
+>     [(_, Just result)] <- runScoring w [] (inWindows dt s)
+>     assertEqual "test_inWindows out" 0.0 result 
+>     let dt = fromGregorian 2006 9 22 0 0 0
+>     [(_, Just result)] <- runScoring w [] (inWindows dt s)
+>     assertEqual "test_inWindows in" 1.0 result 
 
 > test_scoreElements = TestCase $ do
 >     let dt = fromGregorian 2006 9 2 14 30 0
@@ -511,7 +523,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreElements s w pSessions dt dur []
->     assertEqual "test_scoreElements 1" 29 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 30 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -560,7 +572,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 3.9704554 result  
+>     assertAlmostEqual "test_scoreCV2" 3 3.981546 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -650,10 +662,6 @@ Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_score = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     let score' w dt = runScoring w [] $ do
->         fs <- genScore [sess]
->         s <- fs dt sess
->         return $ eval s
 >     scores <- mapM (score' w) times
 >     assertEqual "test_score" expected scores
 >   where
@@ -669,6 +677,20 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , maxDuration = 6*60
 >                           }
 >     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0)
+
+> test_score_window = TestCase $ do
+>     w <- getWeather . Just $ starttime 
+>     scores <- mapM (score' w) times
+>     assertEqual "test_score_window" expected scores
+>   where
+>     starttime = fromGregorian 2006 9 27 9 45 0
+>     score' w dt = runScoring w [] $ do
+>         fs <- genScore [sess]
+>         s  <- fs dt sess
+>         return $ eval s
+>     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     sess = findPSessionByName "TestWindowed2"
+>     expected = take 97 $ [1.0235145,1.022359,1.0209842,1.019458,1.0174463] ++ (repeat 0.0)
 
 For defaultSession w/ sAlloted = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
@@ -688,13 +710,13 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 3.7249105, 255)
+>     let expected = (s, 3.7353153, 255)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- override the minimum and maximum
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 3.7109919, 240)
+>     let expected = (s, 3.7213578, 240)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -706,14 +728,14 @@ plus 40 quarters.
 >     bestDurs <- runScoring w [] $ do
 >         sf <- genScore ss
 >         bestDurations sf starttime Nothing Nothing ss
->     assertEqual "test_bestDurations 1" 10 (length bestDurs)
+>     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertAlmostEqual "test_bestDurations 2 v" 5 3.7249105 v
+>     assertAlmostEqual "test_bestDurations 2 v" 5 3.7353153 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.3876235 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 2.9076982 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0

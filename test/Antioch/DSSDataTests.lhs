@@ -9,6 +9,7 @@
 > import Antioch.Generators (internalConflicts, internalConflicts', validRA, validDec)
 > import Maybe
 > import List (nub, sort)
+> import Data.List (find)
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
@@ -104,7 +105,7 @@ session scores zero through out a 24 hr period.
 >     w <- getWeather . Just $ starttime 
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
->     let sess' = head ss
+>     let sess' = fromJust . find (\s -> (sType s) == Open) $ ss
 >     -- give it an observer
 >     let p' = project sess'
 >     let p = p' { observers = [defaultObserver] }
@@ -114,7 +115,7 @@ session scores zero through out a 24 hr period.
 >         s <- fs dt sess
 >         return $ eval s
 >     scores <- mapM (score' w) times
->     let nonZeros = filter (/=0.0) scores
+>     let nonZeros = filter (/= 0.0) scores
 >     assertEqual "test_scoreDSSData" True ((length nonZeros) /= 0)
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
