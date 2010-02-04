@@ -89,7 +89,8 @@ use a single data structure for all sessions.
 > periods' s             = periods s
 
 > data Window  = Window {
->     wSession     :: Session
+>     wId          :: Int
+>   , wSession     :: Session
 >   , wStart       :: DateTime   -- date
 >   , wDuration    :: Minutes    -- from day count
 >   , wPeriodId    :: Int        -- default period id
@@ -287,7 +288,8 @@ Simple Functions for Periods:
 >   }
 
 > defaultWindow  = Window {
->     wSession     = defaultSession
+>     wId          = 0
+>   , wSession     = defaultSession
 >   , wStart       = fromGregorian' 2008 1 1
 >   , wDuration    = 0
 >   , wPeriodId    = 0

@@ -395,7 +395,7 @@ Test Utilities:
 > cleanup :: String -> IO () 
 > cleanup tableName = do
 >     cnn <- connect
->     run cnn ("TRUNCATE TABLE " ++ tableName) []
+>     run cnn ("TRUNCATE TABLE " ++ tableName ++ " CASCADE") []
 >     commit cnn
 >     disconnect cnn
 
