@@ -573,7 +573,6 @@ we will set the Period_Accounting.scheduled field
 > updateWindow cnn p = handleSqlError $ do
 >   -- select the period to get its period id
 >   result <- quickQuery' cnn pquery pxs 
->   print result
 >   let periodId = fromSqlInt . head . head $ result
 >   -- search session's windows for first intersecting window
 >   let window = find (\w -> overlie (wStart w) (wDuration w) p) (windows . session $ p)
@@ -584,16 +583,15 @@ we will set the Period_Accounting.scheduled field
 >       pquery = "SELECT p.id FROM periods AS p WHERE p.session_id = ? AND p.start = ? AND p.duration = ?;"
 >       pxs = [toSql . sId . session $ p
 >            , toSql . toSqlString . startTime $ p
->            , toSql . duration $ p
+>            , minutesToSqlHrs . duration $ p
 >             ]
 
 > updateWindow' :: Connection -> Int -> Int -> IO ()
 > updateWindow' cnn periodId windowId = handleSqlError $ do
 >   result <- quickQuery' cnn wquery wxs
->   print result
 >   return ()
 >     where
->       wquery = "UPDATE windows SET period_id = ? WHERE id = ?:"
+>       wquery = "UPDATE windows SET period_id = ? WHERE id = ?;"
 >       wxs = [toSql periodId, toSql windowId]
 
 > setPeriodScore :: Connection -> Score -> Int -> IO ()
