@@ -410,8 +410,10 @@ up, all the time.
 >       | sType s == Open          = 1.0
 >       | any inWindow (windows s) = 1.0
 >       | otherwise                = 0.0
->     inWindow w = (wStart w) <= dt && dt < (wEnd w)
->     wEnd w = (wDuration w) `addMinutes` (wStart w)
+>     inWindow w = (wStart w) <= dt && dt <= (wEnd w)
+>     -- window ends 1 minute before midnight of the last day
+>     wEnd w = (wLength w) `addMinutes` (wStart w)
+>     wLength w = (wDuration w) + ((60 * 24) - 1)
 
 Returns list of receivers that will be up at the given time.
 
