@@ -49,9 +49,10 @@
 >     let id       = read . getParam "id" $ params'
 >
 >     -- get target period, start time, and scoring sessions
->     p <- liftIO $ fetchPeriod id cnn
->     let dt = startTime p
 >     projs <- liftIO getProjects
+>     let ps = concatMap periods $ concatMap sessions projs
+>     let p = head $ filter (\p -> (peId p) == id) ps
+>     let dt = startTime p
 >     let ss = scoringSessions dt . concatMap sessions $ projs
 >
 >     w <- liftIO $ getWeather Nothing
