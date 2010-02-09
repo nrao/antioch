@@ -81,6 +81,7 @@ Filter candidate sessions dependent on its type.
 >   -- Open
 >   | isTypeOpen dt s     = True
 >   | sType s == Windowed = activeWindows (windows s)
+>   | otherwise           = False -- must be Fixed.  
 >     where
 >       activeWindows ws
 >         -- Windowed with no windows overlapping the scheduling range
@@ -355,6 +356,7 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 >   sf <- genScore . scoringSessions dt $ sessions
 >   schedPeriods <- strategy sf dt dur history . schedulableSessions dt $ sessions
 >   return schedPeriods
+
 
 Utilities:
 
