@@ -611,7 +611,7 @@ minutes              weighted mean score
 >   scorePeriod' dt = do
 >     fs <- runScoring w rs $ genScore ss >>= \f -> f dt s
 >     return $ eval fs
->   dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
+>   dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..(((duration p) `div` quarter)-1)]]
 
 These methods for scoring a session are to be used in conjunction with
 Schedule's 'best' function.
