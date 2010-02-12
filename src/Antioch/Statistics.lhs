@@ -96,7 +96,7 @@ offending period/session/project needs to be revealed.
 > periodRA = promote sessionRA
 
 > sessionRAHrs :: [Session] -> [(Radians, Float)]
-> sessionRAHrs =  histogram [0..24] . ((fractionalHours . sAlloted) `vs` (rad2hrs . ra))
+> sessionRAHrs =  histogram [0..24] . ((fractionalHours . sAllottedT) `vs` (rad2hrs . ra))
 
 > periodRAHrs :: [Period] -> [(Radians, Float)]
 > periodRAHrs = histogram [0..24] . ((fractionalHours . duration) `vs` (rad2hrs . ra . session))
@@ -110,13 +110,13 @@ offending period/session/project needs to be revealed.
 > periodDec = promote sessionDec
 
 > sessionDecHrs :: [Session] -> [(Radians, Float)]
-> sessionDecHrs =  histogram [-40..90] . ((fractionalHours . sAlloted) `vs` (rad2deg . dec))
+> sessionDecHrs =  histogram [-40..90] . ((fractionalHours . sAllottedT) `vs` (rad2deg . dec))
 
 > periodDecHrs :: [Period] -> [(Float, Float)]
 > periodDecHrs = histogram [-40..90] . ((fractionalHours . duration) `vs` (rad2deg . dec . session)) 
 
 > sessionFreq :: [Session] -> [(Float, Minutes)]
-> sessionFreq = histogram [1.0..50.0] . (sAlloted `vs` frequency)
+> sessionFreq = histogram [1.0..50.0] . (sAllottedT `vs` frequency)
 
 > sessionFreqHrs :: [Session] -> [(Float, Float)]
 > sessionFreqHrs = histogramToHours . sessionFreq
@@ -211,7 +211,7 @@ What is the maximum amount of time that can be scheduled using the min duration.
 > sessionMinDurMaxTime = histogram [0, quarter..(13*60)] . (maxNumTPTime `vs` minDuration)
 >   where
 >     maxNumTPTime s = maxNumTPs s * minDuration s
->     maxNumTPs s = sAlloted s `div` minDuration s
+>     maxNumTPs s = sAllottedT s `div` minDuration s
 
 Example of scatter plot data w/ datetime:
 
@@ -225,7 +225,7 @@ Compare allocated hours by frequency to observed hours by frequency.
 > periodBand = histogram [L .. Q] . ((fractionalHours . duration) `vs` (band . session))
 
 > sessionBand :: [Session] -> [(Band, Float)]
-> sessionBand = histogram [L .. Q] . ((fractionalHours . sAlloted) `vs` band)
+> sessionBand = histogram [L .. Q] . ((fractionalHours . sAllottedT) `vs` band)
 
 > sessionAvBand :: [Session] -> [(Band, Float)]
 > sessionAvBand = histogram [L .. Q] . ((fractionalHours . availableTime) `vs` band)
@@ -305,7 +305,7 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >     sigmas     = [killBad (sqrt (x / y)) | (x, y) <- zip sRatios sMinutes]
 
 > totalHrs      :: [Session] -> (Session -> Bool) -> Float
-> totalHrs ss f = fractionalHours . sum $ [sAlloted s | s <- ss, f s]
+> totalHrs ss f = fractionalHours . sum $ [sAllottedT s | s <- ss, f s]
 
 > totalPeriodHrs      :: [Period] -> (Period -> Bool) -> Float
 > totalPeriodHrs ps f = fractionalHours . sum $ [duration p | p <- ps, f p]
@@ -383,7 +383,7 @@ original slot (this will be overwritting a backup period, or a blank).
 > getTotalHours = fractionalHours . sum . map duration
 
 > totalSessionHrs :: [Session] -> Float
-> totalSessionHrs = fractionalHours . sum . map sAlloted
+> totalSessionHrs = fractionalHours . sum . map sAllottedT
 
 If you were scheduling with the scheduleMinDuration strategy, how much
 time could you really schedule with these sessions?
@@ -393,7 +393,7 @@ time could you really schedule with these sessions?
 
 > availableTime s
 >     | minDuration s == 0 = 0
->     | otherwise          = minDuration s * (sAlloted s `div` minDuration s)
+>     | otherwise          = minDuration s * (sAllottedT s `div` minDuration s)
 
 > crossCheckSimulationBreakdown :: Float -> Float -> Float -> Float -> Float -> Float -> Float -> Float -> String
 > crossCheckSimulationBreakdown simulated scheduled observed canceled obsBackup totalDead schedDead failedBackup =

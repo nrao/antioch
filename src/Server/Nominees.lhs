@@ -88,7 +88,7 @@
 >     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     nominees <- liftIO $ runScoring w rs $ do
->         sf <- genPartScore sfs . scoringSessions dt $ ss
+>         sf <- genPartScore dt sfs . scoringSessions dt $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]

@@ -24,7 +24,8 @@ codes weather server used for unit tests (TWeather).
 >   , test_frequencyPressure
 >   , test_frequencyPressureComparison
 >   , test_rightAscensionPressure
->   , test_initBins
+>   , test_initBins1
+>   , test_initBins2
 >   , test_receiver
 >   , test_getReceivers
 >   , test_zenithAngle
@@ -104,22 +105,22 @@ tested time period
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 > test_frequencyPressure = TestCase $ do
->     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
+>     freqPressure <- runScoring undefined [] $ genFrequencyPressure defaultStartTime pSessions
 >     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
 
 Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
 > test_frequencyPressureComparison = TestCase $ do
->     freqPressure <- runScoring undefined [] $ genFrequencyPressure pSessions
+>     freqPressure <- runScoring undefined [] $ genFrequencyPressure defaultStartTime pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 1.0 (freqPressure undefined . head $ ss)
 >   where
 >     ss = concatMap sessions pTestProjects
 
 > test_rightAscensionPressure = TestCase $ do
->     raPressure <- runScoring undefined [] $ genRightAscensionPressure pSessions
+>     raPressure <- runScoring undefined [] $ genRightAscensionPressure defaultStartTime pSessions
 >     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.25729 (raPressure undefined . head $ pSessions)
 
-> test_initBins = TestCase $ do
+> test_initBins1 = TestCase $ do
 >     assertEqual "test_initBins1" expected result
 >   where
 >     accessor s = (round . rad2hrs . ra $ s) `mod` 24
@@ -127,7 +128,15 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
 >                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)
 >                 ,(1200,720),(0,0),(0,0),(0,0),(0,0),(0,0)]
->     result    = elems $ initBins (0, 23) accessor pSessions
+>     result    = elems $ initBins defaultStartTime (0, 23) accessor pSessions
+
+> test_initBins2 = TestCase $ do
+>     assertEqual "test_initBins2" expected result
+>   where
+>     expected  = [(1920,840),(0,0),(1080,480)
+>                 ,(600,300),(0,0),(0,0)
+>                 ,(0,0),(0,0),(0,0)]
+>     result    = elems $ initBins defaultStartTime (minBound, maxBound) band pSessions
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
@@ -401,7 +410,7 @@ BETA: TestStringency.py testScore (first assert)
 >     ss''  = [
 >         defaultSession {
 >             periods = [defaultPeriod {duration = tt - tl, pTimeBilled = tt - tl}]
->           , sAlloted = tt
+>           , sAllottedT = tt
 >           }
 >       ]
 >     ss'   = [ makeSession s [] (periods s) | s <- ss'' ]
@@ -503,7 +512,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
->     assertEqual "test_scoreFactors 3" 1.3457081 fPress
+>     assertEqual "test_scoreFactors 3" 1.9724026 fPress
 
 > test_scoreElements = TestCase $ do
 >     let dt = fromGregorian 2006 9 2 14 30 0
@@ -515,7 +524,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
->     assertEqual "test_scoreElements 3" 1.3457081 fPress
+>     assertEqual "test_scoreElements 3" 1.9724026 fPress
 >     let opacity = fromJust . fromJust . lookup "opacity" . head $ factors
 >     assertEqual "test_scoreElements 4" 7.844159e-3 opacity
 >     let elevation = fromJust . fromJust . lookup "elevation" . head $ factors
@@ -545,9 +554,9 @@ BETA: TestSurfaceObservingEfficiency testefficiency
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
+>     fs <- runScoring w [] $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV" 5 (1.0204386e-3) result  
+>     assertAlmostEqual "test_scoreCV" 5 (1.2004913e-3) result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -558,7 +567,7 @@ to use in conjunction with Pack tests.
 >     let dt = fromGregorian 2006 10 1 18 1 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
->     fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
+>     fs <- runScoring w [] $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
 >     assertAlmostEqual "test_scoreCV2" 3 3.9704554 result  
 
@@ -566,19 +575,19 @@ to use in conjunction with Pack tests.
 >     -- score on top of weather
 >     w <- getWeather $ Just dt
 >     fs <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         sf dt s
 >     let w1Score = eval fs
 >     -- use different forecast; should get different score
 >     w <- getWeather $ Just dt2
 >     fs <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore dt2 ss
 >         sf dt s
 >     let w2Score = eval fs
 >     assert (w1Score /= w2Score) 
 >     -- now try to get the original score again, despite current weather obj
 >     w3Score <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         scoreForTime sf dt False s
 >     assertEqual "test_avgScoreForTime" w1Score w3Score
 >   where
@@ -592,19 +601,19 @@ to use in conjunction with Pack tests.
 >     -- score on top of weather
 >     w <- getWeather $ Just dt
 >     fs <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         sf dt s
 >     let w1Score = eval fs
 >     -- use different forecast; should get different score
 >     w <- getWeather $ Just dt2
 >     fs <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         sf dt s
 >     let w2Score = eval fs
 >     assert (w1Score /= w2Score) 
 >     -- now try to get the original score again, despite current weather obj
 >     w3Score <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         avgScoreForTimeRealWind sf dt 15 s
 >     -- since we're using real (measured) wind, the scores should be the same
 >     assertAlmostEqual "test_avgScoreForTime_2" 4 w1Score w3Score
@@ -621,11 +630,11 @@ to use in conjunction with Pack tests.
 >     -- score over a wide range of time, that includes zeros, and see
 >     -- how it zeros out the scores.
 >     avgScore <- runScoring w [] $ do
->         sf <- genScore [s]
+>         sf <- genScore starttime [s]
 >         avgScoreForTimeRealWind sf starttime (24*60) s
 >     -- now limit the time window to an area w/ non-zero scores
 >     avgScore2 <- runScoring w [] $ do
->         sf <- genScore [s]
+>         sf <- genScore starttime2 [s]
 >         avgScoreForTimeRealWind sf starttime2 (4*60) s
 >     assertEqual "test_avgScoreForTime2_1" 0.0 avgScore
 >     assertEqual "test_avgScoreForTime2_2" True (avgScore2 /= 0.0)
@@ -633,7 +642,7 @@ to use in conjunction with Pack tests.
 >     dummytime  = fromGregorian 2006 11 7 12 0 0
 >     starttime  = fromGregorian 2006 11 8 12 0 0
 >     starttime2 = fromGregorian 2006 11 8 22 0 0
->     s = defaultSession {sAlloted = 24*60, minDuration=2*60, maxDuration=6*60}
+>     s = defaultSession {sAllottedT = 24*60, minDuration=2*60, maxDuration=6*60}
 >     -- scoring using a weather from starttime gives these scores for this
 >     -- session in 24 hours
 >     --expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
@@ -651,7 +660,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 > test_score = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     let score' w dt = runScoring w [] $ do
->         fs <- genScore [sess]
+>         fs <- genScore dt [sess]
 >         s <- fs dt sess
 >         return $ eval s
 >     scores <- mapM (score' w) times
@@ -659,21 +668,22 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     score' w dt = runScoring w [] $ do
->         fs <- genScore [sess]
+>         fs <- genScore dt [sess]
 >         s  <- fs dt sess
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = defaultSession { sName = "singleton"
->                           , sAlloted = 24*60
+>                           , sAllottedT = 24*60
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           }
 >     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0)
 
-For defaultSession w/ sAlloted = 24*60; start time is  2006 11 8 12 0 0
+For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
+> defaultScores = [1.0231233,1.0257152,1.0271497,0.9070161,0.971422,0.99204177,1.000349,1.015552,1.017332,1.0183789,1.0193303,1.034254,1.0344627,1.0348538,1.0350356,1.0438207,1.0438207,1.0438837,1.0438837,1.0445373,1.0445373,1.0444789,1.044356,1.0448142,1.0446854,1.0446174,1.044471,1.0435848,1.0433707,1.0431327,1.0427235,1.0428898,1.0423796,1.0417604,1.0409935,1.0404016]
+> defaultScoresx = [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
 >                 ,3.1139324,3.140008,3.187729,3.1933162,3.1966023
 >                 ,3.1995883,3.2464328,3.247088,3.2483156,3.248886
 >                 ,3.2764618,3.2764618,3.2766595,3.2766595,3.2787113
@@ -686,13 +696,13 @@ plus 40 quarters.
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     bestDur <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
 >     let expected = (s, 3.7249105, 255)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- override the minimum and maximum
 >     bestDur <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
 >     let expected = (s, 3.7109919, 240)
 >     assertEqual "test_bestDuration 2" expected bestDur
@@ -704,7 +714,7 @@ plus 40 quarters.
 >     w <- getWeather . Just $ starttime 
 >     let ss = concatMap sessions pTestProjects
 >     bestDurs <- runScoring w [] $ do
->         sf <- genScore ss
+>         sf <- genScore starttime ss
 >         bestDurations sf starttime Nothing Nothing ss
 >     assertEqual "test_bestDurations 1" 10 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
@@ -721,7 +731,7 @@ plus 40 quarters.
 > test_averageScore = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     let score' w dt = runScoring w [] $ do
->         fs <- genScore [sess]
+>         fs <- genScore dt [sess]
 >         s <- fs dt sess
 >         return $ eval s
 >     scores <- mapM (score' w) times
@@ -729,12 +739,12 @@ plus 40 quarters.
 >     let expected = 0.0
 >     assertEqual "test_score1" expected scoreTotal
 >     avgScore <- runScoring w [] $ do
->         fs <- genScore [sess]
+>         fs <- genScore starttime [sess]
 >         averageScore fs starttime sess
 >     assertEqual "test_score2" expected avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     sess = defaultSession { sAlloted = 24*60 
+>     sess = defaultSession { sAllottedT = 24*60 
 >                           , minDuration = 2*60 
 >                           , maxDuration = 6*60
 >                           }
@@ -745,20 +755,19 @@ Look at the scores over a range where none are zero.
 > test_averageScore2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
 >     (scoreTotal, scoreTotal', avgScore) <- runScoring w [] $ do
->         sf <- genScore [sess]
+>         sf <- genScore starttime [sess]
 >         scores <- lift $ mapM (score' w sf) times
 >         let scoreTotal = addScores scores
 >         scoreTotal' <- totalScore sf dt dur sess
 >         avgScore <- averageScore sf dt sess
 >         return (scoreTotal, scoreTotal', avgScore)
->     --assertAlmostEqual "test_averageScore2_addScores" 3 expectedTotal scoreTotal
 >     assertEqual "test_averageScore2_addScores" expectedTotal scoreTotal
 >     assertAlmostEqual "test_averageScore2_totalScore" 3  expectedTotal scoreTotal'
 >     assertAlmostEqual "test_averageScore2_avgScore" 3 expectedAvg avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     dur = 2*60
->     sess = defaultSession { sAlloted = 24*60 
+>     sess = defaultSession { sAllottedT = 24*60 
 >                           , minDuration = dur 
 >                           , maxDuration = 6*60
 >                           }
@@ -768,7 +777,7 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 24.975002 :: Score  
+>     expectedTotal = 7.9565783 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 > test_obsAvailable = TestCase $ do
@@ -1104,8 +1113,10 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         bands  = [    L,     C,     X,     L]
 >         grades = [4.0, 4.0, 4.0, 4.0]
 >         genPSess t u ra b g = defaultSession {
->             sAlloted = t
->           , periods = [defaultPeriod {duration = u, pTimeBilled = u}]
+>             sAllottedS = t
+>           , periods = [defaultPeriod {duration = u
+>                                     , pState = Scheduled
+>                                     , pTimeBilled = u}]
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
@@ -1118,8 +1129,10 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         bands  = [    L,     C,     X,     L]
 >         grades = [4.0, 4.0, 4.0, 4.0]
 >         genPSess t u ra b g = defaultSession {
->             sAlloted = t
->           , periods = [defaultPeriod {duration = u, pTimeBilled = u}]
+>             sAllottedS = t
+>           , periods = [defaultPeriod {duration = u
+>                                     , pState = Scheduled
+>                                     , pTimeBilled = u}]
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g

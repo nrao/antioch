@@ -83,7 +83,7 @@ boundary affects.
 > runDailySchedule :: StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > runDailySchedule strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
->   sf <- genScore . scoringSessions dt $ ss
+>   sf <- genScore dt . scoringSessions dt $ ss
 >   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
 >   return schedPeriods
 >     where

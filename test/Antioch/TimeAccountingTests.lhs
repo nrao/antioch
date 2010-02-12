@@ -11,49 +11,62 @@
 > import Test.HUnit
 
 > tests = TestList [
->     test_sUsed
->   , test_sAvailTotal
->   , test_sAvail
+>     test_sCommittedT
+>   , test_sUsedT
+>   , test_sAvailT
+>   , test_sAvailS
 >   , test_sAvail2
 >   , test_sAvail3
 >   , test_sComplete
 >   , test_sComplete2
 >     ]
 
-> test_sUsed = TestCase $ do
->   assertEqual "test_sUsed_1" (1*60) (sUsed s1) 
->   assertEqual "test_sUsed_2" (2*60) (sUsed s2) 
->   assertEqual "test_sUsed_3" (3*60) (sUsed s3) 
+> test_sCommittedT = TestCase $ do
+>   assertEqual "test_sCommittedT_1" (1*60) (sCommittedT s1) 
+>   assertEqual "test_sCommittedT_2" (2*60) (sCommittedT s2) 
+>   assertEqual "test_sCommittedT_3" (3*60) (sCommittedT s3) 
+>   assertEqual "test_sCommittedT_4" (3*60) (sCommittedT s4) 
+>   assertEqual "test_sCommittedT_5" (3*60) (sCommittedT s5) 
 
-> test_sAvailTotal = TestCase $ do
->   assertEqual "test_sAvailTotal_1" (1*60) (sAvailTotal s1) 
->   assertEqual "test_sAvailTotal_2" (0*60) (sAvailTotal s2) 
->   assertEqual "test_sAvailTotal_3" (-60)  (sAvailTotal s3) 
+> test_sUsedT = TestCase $ do
+>   assertEqual "test_sUsedT_1" (0*60) (sUsedT s1) 
+>   assertEqual "test_sUsedT_2" (0*60) (sUsedT s2) 
+>   assertEqual "test_sUsedT_3" (1*60) (sUsedT s3) 
+>   assertEqual "test_sUsedT_4" (0*60) (sUsedT s4) 
+>   assertEqual "test_sUsedT_5" (3*60) (sUsedT s5) 
 
-> test_sAvail = TestCase $ do
->   assertEqual "test_sAvail_1" (1*60) (sAvail s1 sem) 
->   assertEqual "test_sAvail_2" (0*60) (sAvail s2 sem) 
->   assertEqual "test_sAvail_3" (-60)  (sAvail s3 sem) 
+> test_sAvailT = TestCase $ do
+>   assertEqual "test_sAvailT_1" (1*60) (sAvailT s1) 
+>   assertEqual "test_sAvailT_2" (0*60) (sAvailT s2) 
+>   assertEqual "test_sAvailT_3" (-1*60)  (sAvailT s3) 
+>   assertEqual "test_sAvailT_4" (-1*60)  (sAvailT s4) 
+>   assertEqual "test_sAvailT_5" (1*60)  (sAvailT s5) 
+
+> test_sAvailS = TestCase $ do
+>   assertEqual "test_sAvailS_1" (1*60) (sAvailS sem s1)
+>   assertEqual "test_sAvailS_2" (1*60) (sAvailS sem s2)
+>   assertEqual "test_sAvailS_3" (1*60)  (sAvailS sem s3)
+>   assertEqual "test_sAvailS_4" (1*60)  (sAvailS sem s4)
+>   assertEqual "test_sAvailS_5" (3*60)  (sAvailS sem s5)
 
 > test_sAvail2 = TestCase $ do
->   assertEqual "test_sAvail2_1" 0 (pAvail pr2 sem) 
->   assertEqual "test_sAvail2_2" (-120) (pAvail pr4 sem) -- should be same 
->   assertEqual "test_sAvail2_3" (-120) (pAvail (project s4) sem) -- as this! 
->   assertEqual "test_sAvail2_4" (60) (pAlloted (project s4)) 
->   assertEqual "test_sAvail2_5" (-60)  (sAvailTotal s4) 
->   assertEqual "test_sAvail2_6" (-120) (sAvail s4 sem) 
+>   assertEqual "test_sAvail2_1" (1*60) (pAvailS sem pr1)
+>   assertEqual "test_sAvail2_1" (1*60) (pAvailS sem pr2)
+>   assertEqual "test_sAvail2_1" (1*60) (pAvailS sem pr3)
+>   assertEqual "test_sAvail2_2" (0) (pAvailS sem pr4) -- should be same 
+>   assertEqual "test_sAvail2_3" (0) (pAvailS sem (project s4)) -- as this! 
+>   assertEqual "test_sAvail2_4" (60) (pAllottedT (project s4)) 
 
 > test_sAvail3 = TestCase $ do
->   assertEqual "test_sAvail3_1" (3*60) (sUsed s5) 
->   assertEqual "test_sAvail3_2" (1*60) (sAvailTotal s5) 
->   assertEqual "test_sAvail3_3" (3*60) (pUsed pr5) 
->   assertEqual "test_sAvail3_4" (1*60) (pAvailTotal pr5) 
->   assertEqual "test_sAvail3_5" (-60)  (pSemesterRemainingTime pr5 sem) 
->   assertEqual "test_sAvail3_6" (2*60) (pSemesterRemainingTime pr5 "09C") 
->   assertEqual "test_sAvail3_7" (-60)  (pAvail pr5 sem) 
->   assertEqual "test_sAvail3_8" (1*60) (pAvail pr5 "09C") 
->   assertEqual "test_sAvail3_9" (-60)  (sAvail s5 sem) 
->   assertEqual "test_sAvail3_10" (1*60) (sAvail s5 "09C") 
+>   assertEqual "test_sAvail3_1" (3*60) (sCommittedT s5) 
+>   assertEqual "test_sAvail3_2" (1*60) (sAvailT s5) 
+>   assertEqual "test_sAvail3_3" (3*60) (pCommittedT pr5) 
+>   assertEqual "test_sAvail3_3" (3*60) (pCommittedT pr3) 
+>   assertEqual "test_sAvail3_4" (1*60) (pAvailT pr5) 
+>   assertEqual "test_sAvail3_5" (3*60)  (pAvailS sem pr5)
+>   assertEqual "test_sAvail3_6" (4*60) (pAvailS "09C" pr5)
+>   assertEqual "test_sAvail3_7" (3*60)  (sAvailS sem s5)
+>   assertEqual "test_sAvail3_8" (4*60) (sAvailS "09C" s5)
 
 > test_sComplete = TestCase $ do
 >   assertEqual "test_sComplete_1"  False (sComplete s1) 
@@ -81,12 +94,12 @@
 >       -- proj completeness doesn't depend on session completeness
 >       s6'' = sess { sClosed = True }
 >       s6' = makeSession s6'' [] ps1
->       pr6 = makeProject proj (pAlloted proj) [s6']
+>       pr6 = makeProject proj (pAllottedT proj) [s6']
 >       s6 = head . sessions $ pr6
 >       -- but sess completeness DOES depend on project completeness
 >       s7' = makeSession sess [] ps1 -- sComplete sess == False
 >       pr7' = proj { pClosed = True }
->       pr7 = makeProject pr7' (pAlloted pr7') [s7']
+>       pr7 = makeProject pr7' (pAllottedT pr7') [s7']
 >       s7 = head . sessions $ pr7
 >       dt = fromGregorian 2006 2 1  7 15 0
 
@@ -94,17 +107,18 @@ Utilities:
 
 Construct periods, sessions, projects, then tie the knots!
 
-> proj = defaultProject { pAlloted = 2*60 }   -- 0
-> sess = defaultSession { sAlloted = 2*60, project = proj }
-> mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60 }
-> dt1 = fromGregorian 2006 1 1 3 0 0
+> proj = defaultProject { pAllottedT = 2*60, pAllottedS = 2*60 }   -- 0
+> sess = defaultSession { sAllottedT = 2*60, sAllottedS = 2*60, project = proj }
+> mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60, pState = Pending }
+> mkPeriod' s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60, pState = Scheduled }
+> dt1 = fromGregorian 2006 2 1 3 0 0
 > sem = dt2semester dt1
 
 >   -- plenty of time
 > p1 = mkPeriod sess dt1 
 > ps1 = [p1]
 > s1' = makeSession sess [] ps1 
-> pr1 = makeProject proj (pAlloted proj) [s1']
+> pr1 = makeProject proj (pAllottedT proj) [s1']
 > s1 = head . sessions $ pr1
 
 > -- use up exactly the alloted time
@@ -112,30 +126,31 @@ Construct periods, sessions, projects, then tie the knots!
 > p2 = mkPeriod sess dt2 
 > ps2 = [p1, p2]
 > s2' = makeSession sess [] ps2
-> pr2 = makeProject proj (pAlloted proj) [s2']
+> pr2 = makeProject proj (pAllottedT proj) [s2']
 > s2 = head . sessions $ pr2
 
 > -- use too much time
 > dt3 = fromGregorian 2006 1 1 2 0 0
-> p3 = mkPeriod sess dt3 
+> p3 = mkPeriod' sess dt3 
 > ps3 = [p1, p2, p3]
 > s3' = makeSession sess [] ps3
-> pr3 = makeProject proj (pAlloted proj) [s3']
+> pr3 = makeProject proj (pAllottedT proj) [s3']
 > s3 = head . sessions $ pr3
 
 > -- use too much time, especailly project time
-> proj2 = defaultProject { pAlloted = 60 }
+> proj2 = defaultProject { pAllottedT = 60 }
 > sess2 = sess { project = proj2 }
 > ps4 = map (mkPeriod sess2) [dt1, dt2, dt3] -- use 3 * 60
 > s4' = makeSession sess2 [] ps4 -- sess overbooked by -60
-> pr4 = makeProject proj2 (pAlloted proj2) [s4'] -- proj overbooked by -120
+> pr4 = makeProject proj2 (pAllottedT proj2) [s4'] -- proj overbooked by -120
 > s4 = head . sessions $ pr4
 
 > -- use too much time for one semester
-> proj3 = defaultProject { pAlloted = 4*60, maxSemesterTime = 2*60 }
-> sess3 = defaultSession { sAlloted = 4*60, project = proj3 }
-> ps5 = map (mkPeriod sess3) [dt1, dt2, dt3] -- use 3 * 60
+> proj3 = defaultProject { pAllottedT = 4*60, pAllottedS = 2*60 }
+> sess3 = defaultSession { sAllottedT = 4*60, sAllottedS = 4*60, project = proj3 }
+> ps5 = map (mkPeriod' sess3) [dt1, dt2, dt3] -- use 3 * 60
 > s5' = makeSession sess3 [] ps5 -- sess still has 1*60 left
+
 > -- project overbooked for 09B by -60, but has 60 avail in other semester
-> pr5 = makeProject proj3 (pAlloted proj3) [s5'] 
+> pr5 = makeProject proj3 (pAllottedT proj3) [s5'] 
 > s5 = head . sessions $ pr5

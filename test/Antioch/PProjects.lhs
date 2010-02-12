@@ -19,7 +19,7 @@
 >   , pName = "TestDB"
 >   , semester = "06A"
 >   -- , timeLeft = 28740
->   , pAlloted = 33812
+>   , pAllottedT = 33812
 > }
 
 > p1sessions' = [
@@ -27,7 +27,8 @@
 >         sId = 1
 >       , sName = "GB"
 >       , periods = []
->       , sAlloted = 80*60
+>       , sAllottedT = 80*60
+>       , sAllottedS = 80*60
 >       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 27.5
@@ -41,7 +42,8 @@
 >         sId = 2
 >       , sName = "CV"
 >       , periods = []
->       , sAlloted = 60*60
+>       , sAllottedT = 60*60
+>       , sAllottedS = 60*60
 >       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 4.3
@@ -57,11 +59,13 @@
 >       , periods = [
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 10 15 9 0 0
+>               , pState = Scheduled
 >               , duration = 6*60
 >               , pTimeBilled = 6*60
 >                }
 >           ]
->       , sAlloted = 40*60
+>       , sAllottedT = 40*60
+>       , sAllottedS = 40*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 5.4
@@ -74,7 +78,8 @@
 >   , defaultSession {
 >         sId = 4
 >       , sName = "TX"
->       , sAlloted = 40*60
+>       , sAllottedT = 40*60
+>       , sAllottedS = 40*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 17.8
@@ -87,7 +92,8 @@
 >   , defaultSession {
 >         sId = 5
 >       , sName = "VA"
->       , sAlloted = 30*60
+>       , sAllottedT = 30*60
+>       , sAllottedS = 30*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 22.7
@@ -100,7 +106,8 @@
 >   , defaultSession {
 >         sId = 6
 >       , sName = "WV"
->       , sAlloted = 120*60
+>       , sAllottedT = 120*60
+>       , sAllottedS = 120*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 34.9
@@ -113,7 +120,8 @@
 >   , defaultSession {
 >         sId = 7
 >       , sName = "AS"
->       , sAlloted = 40*60
+>       , sAllottedT = 40*60
+>       , sAllottedS = 40*60
 >       , minDuration = 6*60
 >       , maxDuration = 8*60
 >       , frequency = 0.5
@@ -129,16 +137,19 @@
 >       , periods = [
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 10 16 20 0 0
+>               , pState = Scheduled
 >               , duration = 4*60
 >               , pTimeBilled = 4*60
 >                }
 >           , defaultPeriod {
 >                 startTime = fromGregorian 2006 11 1 20 0 0
+>               , pState = Scheduled
 >               , duration = 2*60
 >               , pTimeBilled = 2*60
 >                }
 >           ]
->       , sAlloted = 40*60
+>       , sAllottedT = 40*60
+>       , sAllottedS = 40*60
 >       , minDuration = 2*60
 >       , maxDuration = 6*60
 >       , frequency = 67.8
@@ -158,7 +169,8 @@
 >               , duration = 6*60
 >               , pTimeBilled = 6*60
 >                }
->       , sAlloted = 6*60
+>       , sAllottedT = 6*60
+>       , sAllottedS = 6*60
 >       , minDuration = 6*60
 >       , maxDuration = 6*60
 >       , frequency = 67.8
@@ -177,7 +189,8 @@
 >               , duration = 4*60
 >               , pTimeBilled = 4*60
 >                }
->       , sAlloted = 4*60
+>       , sAllottedT = 4*60
+>       , sAllottedS = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 67.8
@@ -196,7 +209,8 @@
 >               , duration = 5*60
 >               , pTimeBilled = 5*60
 >                }
->       , sAlloted = 5*60
+>       , sAllottedT = 5*60
+>       , sAllottedS = 5*60
 >       , minDuration = 5*60
 >       , maxDuration = 5*60
 >       , frequency = 67.8
@@ -211,7 +225,8 @@
 >   , defaultWindowed {
 >         sId = 12
 >       , sName = "TestWindowed1"
->       , sAlloted = 4*60
+>       , sAllottedT = 4*60
+>       , sAllottedS = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 67.8
@@ -224,7 +239,8 @@
 >   , defaultWindowed {
 >         sId = 13
 >       , sName = "TestWindowed2"
->       , sAlloted = 6*60
+>       , sAllottedT = 6*60
+>       , sAllottedS = 6*60
 >       , minDuration = 6*60
 >       , maxDuration = 6*60
 >       , frequency = 67.8
@@ -237,7 +253,8 @@
 >   , defaultWindowed {
 >         sId = 14
 >       , sName = "TestWindowed3"
->       , sAlloted = 4*60
+>       , sAllottedT = 4*60
+>       , sAllottedS = 4*60
 >       , minDuration = 4*60
 >       , maxDuration = 4*60
 >       , frequency = 2.0
@@ -258,7 +275,7 @@
 >   , semester = "06A"
 >   , thesis = True
 >   -- , timeLeft = 14*60
->   -- , pAlloted = 14*60
+>   -- , pAllottedT = 14*60
 > }
 
 > p2sessions' = [
@@ -266,7 +283,8 @@
 >         sId = 15
 >       , sName = "GB_thesis"
 >       , periods = []
->       , sAlloted = 80*60
+>       , sAllottedT = 80*60
+>       , sAllottedS = 80*60
 >       , minDuration = 2*60
 >       , maxDuration = 8*60
 >       , frequency = 27.5
@@ -281,7 +299,8 @@
 >         sId = 16
 >       , sName = "WV_thesis"
 >       , periods = []
->       , sAlloted = 120*60
+>       , sAllottedT = 120*60
+>       , sAllottedS = 120*60
 >       , minDuration = 4*60
 >       , maxDuration = 6*60
 >       , frequency = 34.9
@@ -295,6 +314,8 @@
 
 > p2sessions = [ makeSession s [] (periods s) | s <- p2sessions' ]
 > project2 = makeProject project2' (14*60) p2sessions
+
+> defaultStartTime = fromGregorian' 2006 10 1
 
 Utilities:
 

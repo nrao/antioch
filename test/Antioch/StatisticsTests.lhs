@@ -66,9 +66,9 @@
 >           ]
 >     durs = [60, 120, 60, 120]
 >     schd = zipWith3 mkPeriod ss dts durs 
->     mkPeriod s start dur = Period 0 s start dur 0.0 undefined False dur
+>     mkPeriod s start dur = Period 0 s start dur 0.0 Pending undefined False dur
 >     fixed1 = [(schd!!1)]
->     fixed2 = [Period 0 s2 (dts!!1) 30 0.0 undefined False 30]
+>     fixed2 = [Period 0 s2 (dts!!1) 30 0.0 Pending undefined False 30]
 
 > test_count = TestCase $ do
 >     assertEqual "StatisticsTests_test_count1" exp1 cnt1
@@ -157,8 +157,8 @@ what bin it shows up in.
 >     assertEqual "test_sessionFreqHrs" 1.0 (snd (freqHist!!1))
 >     assertEqual "test_sessionFreqHrs" 1.0 (snd (freqHist!!2))
 >   where
->     s1 = defaultSession { sAlloted = 60, frequency = 2.0 }
->     s2 = defaultSession { sAlloted = 60, frequency = 2.2 }
+>     s1 = defaultSession { sAllottedT = 60, frequency = 2.0 }
+>     s2 = defaultSession { sAllottedT = 60, frequency = 2.2 }
 >     freqHist = sessionFreqHrs [s1, s2]
 
 > test_periodFreq = TestCase $ do
@@ -298,8 +298,8 @@ what bin it shows up in.
 >   dur2 = 240
 >   end1 = dur1 `addMinutes'` dt1
 >   end2 = dur2 `addMinutes'` dt2
->   p1 = Period 0 defaultSession dt1 dur1 0.0 undefined False dur1
->   p2 = Period 0 defaultSession dt2 dur2 0.0 undefined False dur2
+>   p1 = Period 0 defaultSession dt1 dur1 0.0 Pending undefined False dur1
+>   p2 = Period 0 defaultSession dt2 dur2 0.0 Pending undefined False dur2
 >   ps = [p1, p2]
 >   exp = [(start, 90), (end1, 120), (end2, (14*60)+30)]
 
@@ -341,7 +341,7 @@ Test utilities
 >   dur = 60
 >   dts = [(2*i*60) `addMinutes'` start | i <- [1..5]]
 >   observed = zipWith mkPeriod dts [True, True, True, False, False] 
->   mkPeriod dt backup = Period 0 defaultSession dt dur 0.0 undefined backup dur
+>   mkPeriod dt backup = Period 0 defaultSession dt dur 0.0 Pending undefined backup dur
 >   canceled' = take 3 observed
 >   canceledDts = [start, (5*60) `addMinutes'` start]
 >   failedBackups = zipWith mkPeriod canceledDts [False, False]

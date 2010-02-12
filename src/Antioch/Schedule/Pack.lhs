@@ -13,7 +13,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
-> import Debug.Trace
+> --import Debug.Trace
 
 > epsilon  =  1.0e-4 :: Score
 
@@ -128,9 +128,9 @@ Convert an open session `s` into a schedulable item by scoring it with
 >         iId      = s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
->       , iMaxDur  = numSteps $ min (maxDuration s) (sAvail s sem)
->       , iSTimAv  = numSteps $ sAvail s sem
->       , iPTimAv  = numSteps $ pAvail (project s) sem
+>       , iMaxDur  = numSteps $ min (maxDuration s) (sAvailS sem s)
+>       , iSTimAv  = numSteps $ sAvailS sem s
+>       , iPTimAv  = numSteps $ pAvailS sem (project s)
 >       , iTimeBt  = numSteps $ timeBetween s
 >       , iTrType  = transit s
 >       , iTrnsts  = if (transit s) == Optional

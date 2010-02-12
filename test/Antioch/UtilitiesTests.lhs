@@ -26,11 +26,15 @@
 >   assertEqual "test_dt2semester_1" "09A"  (dt2semester dt09A)
 >   assertEqual "test_dt2semester_1" "05C"  (dt2semester dt05C)
 >   assertEqual "test_dt2semester_1" "06C"  (dt2semester dt06C)
+>   assertEqual "test_dt2semester_1" "12C"  (dt2semester dt12C)
+>   assertEqual "test_dt2semester_1" "12C"  (dt2semester dt12C')
 >     where
 >   dt06B = fromGregorian 2006 6  10 0 0 0
 >   dt06C = fromGregorian 2006 10 10 0 0 0
 >   dt05C = fromGregorian 2006 1  10 0 0 0
 >   dt09A = fromGregorian 2009 2  10 0 0 0
+>   dt12C = fromGregorian 2013 1  31 0 0 0
+>   dt12C' = fromGregorian 2012 10  1 0 0 0
 
 BETA: compare against TimeAgent.Absolute2RelativeLST
 from antioch.util import TimeAgent

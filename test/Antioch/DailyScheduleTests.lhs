@@ -149,11 +149,12 @@ Utilities:
 >   where
 >     -- simplest session that can be scheduled at anytime
 >     -- TBF: hour angle limit fails on this occassionally - shouldn't happen
->     proj' = defaultProject { pAlloted = 100*60 }
->     s' = defaultSession { sAlloted = 100*60
->                      , minDuration = 2*60
->                      , maxDuration = 100*60
->                      , frequency = 2.0
->                      , ra = 0.0 
->                      , dec = 1.5 --1.2217 -- always up
->                       }
+>     proj' = defaultProject { pAllottedT = 100*60 }
+>     s' = defaultSession { sAllottedT = 100*60
+>                         , sAllottedS = 100*60
+>                         , minDuration = 2*60
+>                         , maxDuration = 100*60
+>                         , frequency = 2.0
+>                         , ra = 0.0 
+>                         , dec = 1.5 --1.2217 -- always up
+>                          }

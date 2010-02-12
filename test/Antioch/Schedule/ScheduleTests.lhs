@@ -31,7 +31,7 @@ similar test in SimulationTests.
 > test_schedMinDuration = TestCase $ do
 >     w <- getWeather $ Just wdt
 >     result <- runScoring w rs $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
 >     assertEqual "ScheduleTests_test_schedMinDuration" exp result
 >   where
@@ -42,7 +42,7 @@ similar test in SimulationTests.
 >     history = []
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
->     timeLeft s = ((sAlloted s) - (sUsed s)) > (minDuration s)
+>     timeLeft s = ((sAllottedT s) - (sCommittedT s)) > (minDuration s)
 >     gb = findPSessionByName "GB"
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
@@ -54,14 +54,14 @@ similar test in SimulationTests.
 >           , fromGregorian 2006 2 1 16 30 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores (repeat undefined) (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) (repeat undefined) (repeat False) durs
 
 TBF: don't run as a test yet - it fails, but we don't know its status.
 
 > schedMinDurationWithHistory = TestCase $ do
 >     w <- getWeather $ Just wdt
 >     result <- runScoring w rs $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
 >     print result
 >     assertEqual "ScheduleTests_test_schedMinDuration" exp result
@@ -70,10 +70,10 @@ TBF: don't run as a test yet - it fails, but we don't know its status.
 >     dt  = fromGregorian 2006 2  1  0 0 0
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 1
->     history = [Period 0 tx (fromGregorian 2006 2 1 2 30 0) 120 0.0 undefined False 120]
+>     history = [Period 0 tx (fromGregorian 2006 2 1 2 30 0) 120 0.0 Pending undefined False 120]
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
->     timeLeft s = ((sAlloted s) - (sUsed s)) > (minDuration s)
+>     timeLeft s = ((sAllottedT s) - (sCommittedT s)) > (minDuration s)
 >     gb = findPSessionByName "GB"
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
@@ -85,7 +85,7 @@ TBF: don't run as a test yet - it fails, but we don't know its status.
 >           , fromGregorian 2006 2 1 16 30 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores (repeat undefined) (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) (repeat undefined) (repeat False) durs
 
 This test ensures that the scheduleMinDuratin strategy can handle running
 out of stuff to schedule, and doesn't over schedule sessions.
@@ -94,7 +94,7 @@ TBF: reveils bug.
 > test_schedMinDuration_starvation = TestCase $ do
 >     w <- getWeather $ Just wdt
 >     result <- runScoring w rs $ do
->         sf <- genScore ss
+>         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
 >     assertEqual "ScheduleTests_test_schedMinDuration_starvation" exp result
 >   where
@@ -103,21 +103,21 @@ TBF: reveils bug.
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 2
 >     history = []
->     s = defaultSession {minDuration = 120, sAlloted = 240}
+>     s = defaultSession {minDuration = 120, sAllottedT = 240}
 >     ss = [s]
->     exp = [Period 0 s (fromGregorian 2006 2 1 16 15 0) 120 0.0 undefined False 120
->          , Period 0 s (fromGregorian 2006 2 1 18 15 0) 120 0.0 undefined False 120]
+>     exp = [Period 0 s (fromGregorian 2006 2 1 16 15 0) 120 0.0 Pending undefined False 120
+>          , Period 0 s (fromGregorian 2006 2 1 18 15 0) 120 0.0 Pending undefined False 120]
 
 > test_best = TestCase $ do
 >       w      <- getWeather . Just $ dt
 >       (s, score) <- runScoring w [] $ do
->           sf <- genScore sess
+>           sf <- genScore dt sess
 >           best (averageScore sf dt2) sess 
 >       assertEqual "ScheduleTests_test_best1" expSession s
 >       assertEqual "ScheduleTests_test_best2" expScore score
 >       -- make sure it can handle just one session
 >       (s, score) <- runScoring w [] $ do
->           sf <- genScore sess
+>           sf <- genScore dt sess
 >           best (averageScore sf dt2) [(head sess)] 
 >       assertEqual "ScheduleTests_test_best3" expSession s
 >       assertEqual "ScheduleTests_test_best4" expScore score
@@ -128,7 +128,7 @@ TBF: reveils bug.
 >   where
 >     sess = getOpenPSessions
 >     expSession = head sess
->     expScore = 9.133636
+>     expScore = 10.566579
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 
@@ -146,7 +146,7 @@ TBF: constrain has not been fully implemented yet
 >     assertEqual "ScheduleTests_test_constrain_6" ss (constrain [] (bookedSession:ss))
 >     -- now confuse things by placing identical periods in both the
 >     -- periods list, *and* the session's periods
->     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period 0 s' dt 1 0.0 undefined False 1] (almostBookedSession:ss))
+>     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period 0 s' dt 1 0.0 Pending undefined False 1] (almostBookedSession:ss))
 >     
 >   where
 >     dt  = fromGregorian 2006 2 1 0 0 0
@@ -154,11 +154,11 @@ TBF: constrain has not been fully implemented yet
 >     ss = getOpenPSessions
 >     cv = findPSessionByName "CV"
 >     ssMinusCV = ss \\ [cv]
->     s' = defaultSession {sId = 1000, sAlloted = 2, minDuration = 1}
->     almostBookedSession = s' {periods = [Period 0 s' dt 1 0.0 undefined False 1]}
->     bookedSession = s' {periods = [Period 0 s' dt 1 0.0 undefined False 1, Period 0 s' dt2 1 0.0 undefined False 1]}
->     p1 = Period 0 cv dt (minDuration cv) 0.0 undefined False (minDuration cv)
->     maxNumTPs = (sAlloted cv) `div` (minDuration cv)
+>     s' = defaultSession {sId = 1000, sAllottedT = 2, minDuration = 1}
+>     almostBookedSession = s' {periods = [Period 0 s' dt 1 0.0 Pending undefined False 1]}
+>     bookedSession = s' {periods = [Period 0 s' dt 1 0.0 Pending undefined False 1, Period 0 s' dt2 1 0.0 Pending undefined False 1]}
+>     p1 = Period 0 cv dt (minDuration cv) 0.0 Pending undefined False (minDuration cv)
+>     maxNumTPs = (sAllottedT cv) `div` (minDuration cv)
 >     maxTPs' = replicate maxNumTPs p1
 >     dts = [(hr*60) `addMinutes'` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 
 >     maxTPs = zipWith adjustPeriod maxTPs' dts
@@ -171,7 +171,7 @@ TBF: this is not passing - but was it meant to copy a python test?
 > test_schedule_open = TestCase $ do
 >       w      <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >       result <- runScoring w rs $ do
->           sf <- genScore ss
+>           sf <- genScore dt ss
 >           pack sf dt dur history ss
 >       assertEqual "test_schedule_open" expected result
 >   where
@@ -303,12 +303,12 @@ TBF: this is not passing - but was it meant to copy a python test?
 
 > test_disobeySessionAlloted = TestCase $ do
 >   assertEqual "test_disobeySAlloted_1" 0 $ length . disobeySessionAlloted $ []
->   assertEqual "test_disobeySAlloted_2" 0 $ length . disobeySessionAlloted $ periods s1 
->   assertEqual "test_disobeySAlloted_3" 0 $ length . disobeySessionAlloted $ periods s2 
+>   assertEqual "test_disobeySAlloted_2" [s1] $ disobeySessionAlloted $ periods s1 
+>   assertEqual "test_disobeySAlloted_3" [s1] $ disobeySessionAlloted $ periods s2 
 >   assertEqual "test_disobeySAlloted_4" [s3] $ disobeySessionAlloted $ periods s3 
 >     where
->       proj = defaultProject { pAlloted = 2*60 }   -- 0
->       sess = defaultSession { sAlloted = 2*60, project = proj }
+>       proj = defaultProject { pAllottedT = 2*60 }   -- 0
+>       sess = defaultSession { sAllottedT = 2*60, project = proj }
 >       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60 }
 >       dt1 = fromGregorian 2006 1 1 3 0 0
 >       sem = dt2semester dt1
@@ -316,19 +316,19 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       p1 = mkPeriod sess dt1 
 >       ps1 = [p1]
 >       s1' = makeSession sess [] ps1 
->       pr1 = makeProject proj (pAlloted proj) [s1']
+>       pr1 = makeProject proj (pAllottedT proj) [s1']
 >       s1 = head . sessions $ pr1
 >       -- use up exactly the alloted time
 >       dt2 = fromGregorian 2006 1 1 1 0 0
 >       p2 = mkPeriod sess dt2 
 >       ps2 = [p1, p2]
 >       s2' = makeSession sess [] ps2
->       pr2 = makeProject proj (pAlloted proj) [s2']
+>       pr2 = makeProject proj (pAllottedT proj) [s2']
 >       s2 = head . sessions $ pr2
 >       -- use too much time
 >       dt3 = fromGregorian 2006 1 1 2 0 0
 >       p3 = mkPeriod sess dt3 
 >       ps3 = [p1, p2, p3]
 >       s3' = makeSession sess [] ps3
->       pr3 = makeProject proj (pAlloted proj) [s3']
+>       pr3 = makeProject proj (pAllottedT proj) [s3']
 >       s3 = head . sessions $ pr3

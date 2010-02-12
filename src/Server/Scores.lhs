@@ -80,7 +80,7 @@
 > scoreAt :: Weather -> ReceiverSchedule -> [Session] -> IO Session -> DateTime -> IO Score
 > scoreAt w rs ss s dt = do
 >     s' <- liftIO s
->     fs <- runScoring w rs $ genScore ss >>= \f -> f dt s'
+>     fs <- runScoring w rs $ genScore dt ss >>= \f -> f dt s'
 >     return . eval  $ fs
 
 > data JScores = JScores {

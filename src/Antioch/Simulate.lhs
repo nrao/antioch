@@ -12,6 +12,7 @@
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
+> --import Debug.Trace
 
 > simulate06 :: StrategyName -> IO ([Period], [Trace])
 > simulate06 strategyName = do
@@ -46,8 +47,14 @@ Possible factors:
    - project semester time available
 
 > hasTimeSchedulable :: SelectionCriteria
-> hasTimeSchedulable dt s = (sAvail s sem) >= (minDuration s)
+> hasTimeSchedulable dt s = sAvail > 0 &&
+>                           sAvail >= minDur &&
+>                           pAvail > 0 &&
+>                           pAvail >= minDur
 >   where 
+>     pAvail = pAvailS sem . project $ s
+>     sAvail = sAvailS sem s
+>     minDur = minDuration s
 >     sem = dt2semester dt
 
 Possible factors:
@@ -57,7 +64,10 @@ Possible factors:
    - session time available
 
 > isNotComplete :: SelectionCriteria
-> isNotComplete _ s = (not . sComplete $ s) && (not . pComplete . project $ s)
+> isNotComplete _ s = not . sComplete $ s
+
+> isNotTerminated :: SelectionCriteria
+> isNotTerminated _ s = not . sTerminated $ s
 
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open
@@ -71,12 +81,16 @@ Possible factors:
 > isApproved :: SelectionCriteria
 > isApproved _ s = all (\f -> f s) [enabled, authorized]
 
+> isAuthorized :: SelectionCriteria
+> isAuthorized _ s = authorized s
+
 > hasObservers :: SelectionCriteria
 > hasObservers _ s = not . null . observers . project $ s
 
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
+> -- TBF is this needed?
 > isSchedulableSemester :: SelectionCriteria 
 > isSchedulableSemester dt s = (semester $ project s) <= current_semester
 >    where
@@ -137,7 +151,7 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
 >   let schedSessions = schedulableSessions dt sessions
->   sf <- genScore . scoringSessions dt $ sessions
+>   sf <- genScore dt . scoringSessions dt $ sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
 >   return (schedPeriods, obsPeriods)
@@ -157,10 +171,13 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > schedulableSession :: DateTime -> Session -> Bool
 > schedulableSession dt s = meetsCriteria dt s schedulableCriteria
 
+> -- TBF this is so wrong, need requirements!
 > scoringSessions :: DateTime -> [Session] -> [Session]
 > scoringSessions dt = filterSessions dt [
->         isSchedulableSemester
->       , isGradeA]
+>         isAuthorized
+>       , isGradeA
+>       , isNotTerminated
+>        ]
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
@@ -238,7 +255,7 @@ schedule deadtime.
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
->     then return $ Just $ Period 0 s (startTime p) (duration p) score (forecast w) True (pTimeBilled p)
+>     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pTimeBilled p)
 >     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
 
 > updateSessions sessions periods = map update sessions
@@ -317,7 +334,7 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 > runSimSchedStrategy strategyName dt dur sessions history = do
 >   tell [Timestamp dt]
 >   let strategy = getStrategy strategyName 
->   sf <- genScore . scoringSessions dt $ sessions
+>   sf <- genScore dt . scoringSessions dt $ sessions
 >   schedPeriods <- strategy sf dt dur history . schedulableSessions dt $ sessions
 >   return schedPeriods
 
@@ -339,7 +356,7 @@ Utilities:
 >   where
 >     ss' = filter (\s-> (sName s) == name) ss
 >     report ss' = if (length ss') == 1 then report' . head $ ss' else name ++ " is not present!!!!!!!!!!"
->     report' s = (sName s) ++ ": " ++ (show . sAlloted $ s) ++ ", " ++ (show . sUsed $ s) ++ ", " ++ (show $ (sAlloted s) - (sUsed s))
+>     report' s = (sName s) ++ ": " ++ (show . sAllottedT $ s) ++ ", " ++ (show . sCommittedT $ s) ++ ", " ++ (show $ (sAllottedT s) - (sCommittedT s))
 
 Scores the named session for the interval spanned.
 
@@ -350,9 +367,9 @@ Scores the named session for the interval spanned.
 
 > scoreThisSession' :: Session -> DateTime -> Minutes -> [Session] -> Scoring [Score]
 > scoreThisSession' s dt dur ss = do
->     sf <- genScore ss
+>     sf <- genScore dt ss
 >     let score' s dt = do
->         fs <- genScore ss 
+>         fs <- genScore dt ss 
 >         sc <- fs dt s
 >         return $ eval sc
 >     scores <- mapM (score' s) times
