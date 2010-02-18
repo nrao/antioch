@@ -80,6 +80,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_receiverBoost
 >   , test_receiverBoost2
 >   , test_observerOnSite
+>   , test_scorePeriod
 >   ]
 
 > benchmark = do
@@ -1062,6 +1063,31 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       pr2 = defaultProject { observers = [o2, o3] }
 >       s2  = defaultSession { project = pr2 }
 
+> test_scorePeriod = TestCase $ do
+>   -- do explicitly what scorePeriod is supposed to do
+>   w <- getWeather $ Just startDt
+>   scores <- mapM (scoreSession w) dts
+>   let weightedAvgScore = (sum . tail $ scores) / 4.0
+>   -- now 
+>   periodScore <- scorePeriod p ss w []
+>   assertEqual "test_scorePeriod_1" weightedAvgScore periodScore
+>   where
+>     startDt = fromGregorian 2006 2 1 0 0 0
+>     scoreSession w dt = do
+>       fs <- runScoring w [] $ genScore ss >>= \f -> f dt s
+>       return $ eval fs
+>     ss = pSessions
+>     s = head ss
+>     -- do this explicitly to avoid mistakes
+>     mins = [0, 15, 30, 45] -- 60 minutes!
+>     dts = map (\m -> addMinutes m startDt) mins
+>     -- create a period that covers this same time range
+>     p = defaultPeriod { session = s
+>                       , startTime = startDt
+>                       , duration = 60
+>                       , pForecast = startDt
+>                       }
+ 
 Test utilities
 
 > assertAlmostEqual :: String -> Int -> Float -> Float -> IO ()
