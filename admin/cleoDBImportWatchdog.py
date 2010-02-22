@@ -40,7 +40,11 @@ def hasRecentImport():
 
 def sendWarning():
 
-    to_list = ['pmargani@nrao.edu']
+    to_list = ['pmargani@nrao.edu'
+             , 'ashelton@nrao.edu'
+             , 'mclark@nrao.edu'
+             , 'rcreager@nrao.edu'
+             ]
     # TBF: more detailed comments here?
     subject = "Warning: Weather has not been imported recently"
     body = """
