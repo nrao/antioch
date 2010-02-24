@@ -113,3 +113,14 @@ part of the history of pre-scheduled periods
 >     Just _  -> False
 >     Nothing -> True
 
+
+> simDailySchedulePack :: DateTime -> Int -> Int -> IO ()
+> simDailySchedulePack start packDays simDays 
+>     | packDays > simDays = return ()
+>     | otherwise = do 
+>         dailySchedulePack start packDays
+>         simDailySchedulePack (nextDay start) packDays (simDays - 1)
+>   where
+>     nextDay dt = addMinutes (1 * 24 * 60) dt 
+> 
+
