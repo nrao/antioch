@@ -599,15 +599,14 @@ minutes              weighted mean score
 >                   (_:rem) ->  (sum rem) / (fromIntegral . length $ ss)
 
 
-> scorePeriod :: Period -> [Session] -> Weather -> ReceiverSchedule -> IO Score
-> scorePeriod p ss w rs = do
+> scorePeriod :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> IO Score
+> scorePeriod p s ss w rs = do
 >   scores <- mapM scorePeriod' $ dts
 >   let retval = if 0.0 `elem` scores
 >                then 0.0
 >                else weightedMeanScore scores
 >   return retval
 >     where
->   s = session p
 >   scorePeriod' dt = do
 >     fs <- runScoring w rs $ genScore ss >>= \f -> f dt s
 >     return $ eval fs
@@ -861,8 +860,8 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , (atmosphericOpacity' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
->       , raPressure
->       , freqPressure
+>       , raPressure -- period dependent
+>       , freqPressure -- period dependent
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
@@ -870,12 +869,12 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , atmosphericStabilityLimit
 >       , scienceGrade
 >       , thesisProject
->       , projectCompletion
+>       , projectCompletion -- period dependent
 >       , observerOnSite
 >       , receiver
 >       , needsLowRFI
 >       , lstExcepted
->       , enoughTimeBetween
+>       , enoughTimeBetween -- period dependent
 >       , observerAvailable
 >       , inWindows
 >        ]

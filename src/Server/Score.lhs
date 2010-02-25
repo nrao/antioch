@@ -50,14 +50,16 @@
 >
 >     -- get target period, start time, and scoring sessions
 >     projs <- liftIO getProjects
->     let ps = concatMap periods $ concatMap sessions projs
+>     let sess = concatMap sessions projs
+>     let ps = concatMap periods sess
 >     let p = head $ filter (\p -> (peId p) == id) ps
+>     let name = sName . session $ p
+>     let s = head $ filter (\s -> (sName s) == name) sess 
 >     let dt = startTime p
->     let ss = scoringSessions dt . concatMap sessions $ projs
->
->     w <- liftIO $ getWeather Nothing
+>     let ss = scoringSessions dt sess
+>     w <- liftIO $ getWeather $ Just . pForecast $ p 
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     score <- liftIO $ scorePeriod p ss w rs
+>     score <- liftIO $ scorePeriod p s ss w rs
 >     liftIO $ setPeriodScore cnn score id
 >     liftIO $ print score
 >     jsonHandler $ makeObj [("success", showJSON "ok")]

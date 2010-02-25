@@ -768,12 +768,13 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                           , cDuration = 12 -- quarters
 >                           , cScore = 20.0
 >                           }
->     result = toPeriod dt c
+>     result = toPeriod dt dt1 c
 >     expected = defaultPeriod { session = defaultSession
 >                              , startTime = dt1
 >                              , duration = quarter * 12
 >                              , pScore = 20.0
 >                              , pTimeBilled = quarter * 12
+>                              , pForecast = dt1
 >                              }
 
 TBF: are the candidate values for cStart & cDur correct?
