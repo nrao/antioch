@@ -81,6 +81,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_receiverBoost2
 >   , test_observerOnSite
 >   , test_scorePeriod
+>   , test_mustang
 >   ]
 
 > benchmark = do
@@ -1087,6 +1088,95 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >                       , duration = 60
 >                       , pForecast = startDt
 >                       }
+
+> test_mustang = TestCase $ do
+>     assertEqual "test_mustang_1" True (usesMustang ms)
+>     assertEqual "test_mustang_2" False (usesMustang ds)
+>     w <- getWeather $ Just dtNight
+>
+>     -- Factor: Stringency
+>     fs <- runScoring w [] (stringency dtDay ds)
+>     assertEqual "test_mustang_3" True (eval fs /= 9.0)
+>     fs <- runScoring w [] (stringency dtDay ms)
+>     assertEqual "test_mustang_4" 9.0 (eval fs)
+>
+>     -- Factor: surfaceObservingEfficiency
+>     fs <- runScoring w [] (surfaceObservingEfficiency dtNight ms)
+>     assertEqual "test_mustang_5" 1.0 (eval fs) 
+>     fs <- runScoring w [] (surfaceObservingEfficiency dtNight ds)
+>     assertEqual "test_mustang_6" 1.0 (eval fs) 
+>     fs <- runScoring w [] (surfaceObservingEfficiency dtDay ms)
+>     -- TBF: 0.18 != 0.28
+>     assertEqual "test_mustang_61" 0.18385674 (eval fs) 
+>     fs <- runScoring w [] (surfaceObservingEfficiency dtDay ds)
+>     assertEqual "test_mustang_62" 0.99666023 (eval fs) 
+>
+>     -- Factor: trackingEfficiency
+>     fs <- runScoring w [] (trackingEfficiency dtNight ds)
+>     assertEqual "test_mustang_7" 0.9963897 (eval fs) --0.9980611 (eval fs) 
+>     -- TBF: check this value
+>     fs <- runScoring w [] (trackingEfficiency dtNight ms)
+>     assertEqual "test_mustang_8" 0.73873913 (eval fs) -- 0.8946233 (eval fs) 
+
+>     -- Factor: trackingErrorLimit
+>     fs <- runScoring w [] (trackingErrorLimit dtNight ds)
+>     assertEqual "test_mustang_9" 1.0 (eval fs) 
+>     fs <- runScoring w [] (trackingErrorLimit dtDay ds)
+>     assertEqual "test_mustang_10" 1.0 (eval fs) 
+>     --wind_ms <- wind w dtDay
+>     --wind_w2 <- w2_wind w dtDay
+>     --print $ "wind: day " ++ (show $ wind_ms) ++ " " ++ (show wind_w2)
+>     fs <- runScoring w [] (trackingErrorLimit dtDay ms)
+>     assertEqual "test_mustang_11" 1.0 (eval fs) 
+>     --wind_ms <- wind w dtNight
+>     --wind_w2 <- w2_wind w dtNight
+>     --print $ "wind: night " ++ (show $ wind_ms) ++ " " ++ (show wind_w2)
+>     fs <- runScoring w [] (trackingErrorLimit dtNight ms)
+>     assertEqual "test_mustang_12" 0.0 (eval fs) --1.0 (eval fs) 
+>     
+>     -- Factor: observingEfficiencyLimit
+>     fs <- runScoring w [] (observingEfficiencyLimit dtNight ds)
+>     assertEqual "test_mustang_13" 1.0 (eval fs) 
+>     fs <- runScoring w [] (observingEfficiencyLimit dtDay ds)
+>     assertEqual "test_mustang_14" 1.0 (eval fs) 
+>     fs <- runScoring w [] (observingEfficiencyLimit dtNight ms)
+>     assertEqual "test_mustang_15" False (eval fs < epsilon) 
+>     fs <- runScoring w [] (observingEfficiencyLimit dtDay ms)
+>     assertEqual "test_mustang_15_2" False (eval fs < epsilon) 
+>
+>     -- Factor: Hour Angle Limit
+>     fs <- runScoring w [] (hourAngleLimit dtNight ds)
+>     assertEqual "test_mustang_16" 1.0 (eval fs ) 
+>     fs <- runScoring w [] (hourAngleLimit dtDay ds)
+>     assertEqual "test_mustang_17" 1.0 (eval fs ) 
+>     fs <- runScoring w [] (hourAngleLimit dtNight ms)
+>     assertEqual "test_mustang_18" 1.0 (eval fs ) 
+>     fs <- runScoring w [] (hourAngleLimit dtDay ms)
+>     assertEqual "test_mustang_19" 1.0 (eval fs ) 
+>     
+>     -- Factor : atmosphericEfficiency
+>     fs <- runScoring w [] (atmosphericOpacity dtNight ds)
+>     assertEqual "test_mustang_20" 0.9742651 (eval fs ) 
+>     fs <- runScoring w [] (atmosphericOpacity dtDay ds)
+>     assertEqual "test_mustang_21" 0.9747749 (eval fs ) 
+>     fs <- runScoring w [] (atmosphericOpacity dtNight ms)
+>     assertEqual "test_mustang_22" 0.83687115 (eval fs ) 
+>     fs <- runScoring w [] (atmosphericOpacity dtDay ms)
+>     assertEqual "test_mustang_23" 0.7528943 (eval fs ) 
+>     
+>     -- Factor: Frequncy Pressure 
+
+>   where
+>     epsilon = 1.0e-5
+>     ms = defaultSession { receivers = [[Rcvr_PAR]]
+>                         , frequency = 90.0 
+>                         , dec = 1.5 -- always up
+>                         }
+>     ds = defaultSession { frequency = 4.0 
+>                         , dec = 1.5
+>                         }
+>     dtDay = fromGregorian 2006 2 1 14 0 0 
+>     dtNight = fromGregorian 2006 2 1 5 0 0 
  
 Test utilities
 

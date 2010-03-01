@@ -31,15 +31,21 @@ Ranking System from Memo 5.2, Section 3
 > calcEfficiency      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
 >     let trx = receiverTemperature dt s
->     tk  <- kineticTemperature dt s
+>     -- MUSTANG uses kt @ 30 GHz
+>     tk  <- if not . usesMustang $ s then kineticTemperature dt s else kineticTemperature dt s { frequency = 30.0 }
 >     w   <- weather
->     zod <- zenithOpticalDepth dt s
->     minTsysPrime' <- liftIO $ minTSysPrime w (frequency s) elevation'
+>     -- MUSTANG computes opticalDepth using zod @ 30 GHz
+>     zod <- if not . usesMustang $ s then zenithOpticalDepth dt s else zenithOpticalDepth dt s { frequency = 30.0 }
+>     -- MUSTANG computes minTsysPrime instead of looking it up
+>     lookupMinTsysPrime <-  liftIO $ minTSysPrime w (frequency s) elevation'
+>     let mustangMinTsysPrime = if usesMustang s then Just $ calcMustangTSysPrime za else Nothing
+>     let minTsysPrime' = if usesMustang s then mustangMinTsysPrime else lookupMinTsysPrime
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
 >         minTsysPrime'' <- minTsysPrime'
->         let [eff, effTransit] = map (calcEff trx tk' minTsysPrime'' zod') [za, zat]
+>         -- MUSTANG uses rcvr temp of 120.0 K
+>         let [eff, effTransit] = if not . usesMustang $ s then  map (calcEff trx tk' minTsysPrime'' zod') [za, zat] else map (mustangCalcEff 120.0 tk' minTsysPrime'' zod') [za, zat]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -57,6 +63,30 @@ Ranking System from Memo 5.2, Section 3
 >         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >
 >         tsys' = exp opticalDepth * tsys
+>     mustangCalcEff trx tk minTsysPrime' zod_30 za = (minTsysPrime' / tsys') ^2
+>       where
+>         -- Round off to the nearest degree to align with hist. min. opacities
+>         rndZa = deg2rad . realToFrac . round . rad2deg $ za
+>         -- Equation 4 & 6
+>         opticalDepth = ((zod_30 - 0.023)*6.0) / (cos . min 1.5 $ rndZa)
+>
+>         -- Equation 7
+>         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
+>
+>         tsys' = exp opticalDepth * tsys
+
+From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
+
+> calcMustangTSysPrime :: Radians -> Float
+> calcMustangTSysPrime za = exp opticalDepth * tsys
+>   where
+>     trx = 120.0
+>     tk = 260.0
+>     -- Round off to the nearest degree to align with hist. min. opacities
+>     rndZa = deg2rad . realToFrac . round . rad2deg $ za
+>     opticalDepth = 0.04 / (cos . min 1.5 $ rndZa)
+>     -- Equation 7
+>     tsys = trx + 5.7  + tk * (1 - exp (-opticalDepth))
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
@@ -117,6 +147,14 @@ Ranking System from Memo 5.2, Section 3
 >     w <- weather
 >     liftIO $ opacity w dt (frequency s)
 
+For calculating the atmospheric efficiency, MUSTANG uses
+
+> mustangZenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
+> mustangZenithOpticalDepth dt s = do
+>     w <- weather
+>     liftIO $ opacity w dt (frequency s)
+
+
 > hourAngle :: DateTime -> Session -> Radians
 > hourAngle dt s = lst - ra'
 >   where
@@ -164,17 +202,21 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >     if isDayTime dt
 >     then
 >         -- Equation 9
->         exp (-(k * frequency s ^ 2 * epsilonFactor))
+>         --exp (-(k * frequency s ^ 2 * epsilonFactor))
+>         exp (-(k * freq ^ 2 * epsilonFactor))
 >         -- Equation 10
 >         -- exp (-((fromIntegral . round . frequency $ s)/69.2) ^ 2)
 >     else
 >         1.0
 >   where
 >     c = 299792485.0
->     epsilonDay   = 0.46
->     epsilonNight = 0.39
+>     -- As of 2009-12-16: day = 400, night = 340 (microns)
+>     epsilonDay   = 0.46 -- both epsilons from Memo 5.2
+>     epsilonNight = 0.39 -- TBF: need to update these!
 >     epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
 >     k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
+>     -- TBF: temp fix for MUSTANG - make sure we use 90 GHz
+>     freq = if usesMustang s then 90.0 else frequency s 
 
 > theta :: Float -> Float
 > theta f = 740.0 / f
@@ -192,18 +234,25 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 > calculateTE :: Maybe Float -> DateTime -> Session -> Maybe Float
 > calculateTE wind dt s = do
 >     wind' <- wind
+>     -- Equation 12 - uses f
 >     let rmsTE' = rmsTrackingError dt wind'
->     -- Equation 12
->     return $ (1.0 + 4.0 * log 2.0 * (rmsTE' / theta') ^ 2) ^^ (-2)
+>     let f = (rmsTE' / theta')
+>     -- Equation 27 - uses fv (TBF: temp. fix for MUSTANG)
+>     -- here we differ by Eq. 27 by dividing variableTrackingError by 2
+>     let fv = (variableTrackingError wind' / 2) / theta'
+>     let rt = if (usesMustang s) then fv else f
+>     return $ (1.0 + 4.0 * log 2.0 * rt ^ 2) ^^ (-2)
 >   where
 >     theta' = theta . frequency $ s
+
 
 > minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
 > minimumObservingConditions dt s = do
 >    w  <- weather
 >    w' <- liftIO $ newWeather w (Just dt)
 >    local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
->      let minObs = minObservingEff (frequency s) 
+>      -- TBF: temporary fix for MUSTANG
+>      let minObs = if usesMustang s then 0.5 else minObservingEff . frequency $ s
 >      fs <- observingEfficiency dt s
 >      let obsEff' = eval fs
 >      [(_, trkErrLimit')] <- trackingErrorLimit dt s
@@ -224,7 +273,9 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 > stringency _ s = do
 >     w <- weather
 >     stringency' <- liftIO $ totalStringency w (frequency s) elevation'
->     factor "stringency" stringency'
+>     -- TBF: temporary fix for MUSTANG
+>     let stringency'' = if usesMustang s then (Just 9.0) else stringency'
+>     factor "stringency" stringency''
 >   where
 >     elevation' = pi/2 - zenithAngleAtTransit s
 
@@ -235,13 +286,18 @@ Generate a scoring function having the pressure factors.
 > genFrequencyPressure          :: [Session] -> Scoring ScoreFunc
 > genFrequencyPressure sessions = genFrequencyPressure' factors
 >   where
->     bins    = initBins (minBound, maxBound) band sessions
+>     bins    = initBins (minBound, maxBound) getBand sessions
 >     factors = binsToFactors bins
+
+TBF: temporary fix for MUSTANG
+
+> getBand :: Session -> Band
+> getBand s = if usesMustang s then Q else band s
 
 > genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> m ScoreFunc
 > genFrequencyPressure' factors = do
 >     tell [FreqPressureHistory factors]
->     return $ frequencyPressure factors band
+>     return $ frequencyPressure factors getBand
 
 > genRightAscensionPressure          :: [Session] -> Scoring ScoreFunc
 > genRightAscensionPressure sessions = genRightAscensionPressure' accessor factors
@@ -321,10 +377,14 @@ Translates the total/used times pairs into pressure factors.
 >     sigma = if (frequency s) >= 18.0
 >             then 0.1
 >             else 0.02
->     minObsEff = minObservingEff . frequency $ s
+>     -- TBF: temporary fix for MUSTANG
+>     minObsEff = if usesMustang s then 0.5 else minObservingEff . frequency $ s
 >     fac = factor "observingEfficiencyLimit" . Just
 
-> hourAngleLimit        dt s = efficiencyHA dt s >>= \effHA -> hourAngleLimit' effHA dt s
+> hourAngleLimit        dt s = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
+>   where
+>     s' = if usesMustang s then s { frequency = 40.0 } else s
+
 > hourAngleLimit' effHA dt s =
 >     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
@@ -341,14 +401,23 @@ Translates the total/used times pairs into pressure factors.
 > calculateTRELimit :: Maybe Float -> DateTime -> Session -> Maybe Bool
 > calculateTRELimit wind dt s = do
 >         wind' <- wind
->         -- Equation 26
->         let fv = rmsTrackingError dt wind' / (theta . frequency $ s)
->         return $ fv <= maxErr
+>         -- Equation 25
+>         let f25 = rmsTrackingError dt wind' / (theta . frequency $ s)
+>         -- Equation 26, but with variableTracking divided by 2
+>         let f26 = (variableTrackingError wind' / 2) / (theta . frequency $ s)
+>         -- TBF: temporary fix for MUSTANG
+>         let f = if usesMustang s then f26 else f25
+>         return $ f <= maxErr
 >   where
 >     maxErr = 0.2 
 
 >  -- Equation 11
 > rmsTrackingError dt w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
+
+>  -- Equation 15
+> variableTrackingError w = sqrt (variableTE ^ 2 + (abs w / 2.1) ^ 4)
+>   where
+>     variableTE = 1.2
 
 > atmosphericStabilityLimit _ _ =
 >                            factor "atmosphericStabilityLimit" . Just $ 1.0
@@ -818,10 +887,12 @@ Need to translate a session's factors into the final product score.
 > weatherFactors s w dt = do
 >   wind' <- wind w dt
 >   wind'' <- wind_mph w dt
->   opacity' <- opacity w dt . frequency $ s
->   tsys' <- tsys w dt . frequency $ s
+>   opacity' <- opacity w dt freq
+>   tsys' <- tsys w dt freq 
 >   return [("wind_mph", wind''), ("wind_ms", wind')
 >         , ("opacity", opacity'), ("tsys", tsys')]
+>     where
+>   freq = if usesMustang s then 30.0 else frequency s
 
 > scoreFactors :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreFactors s w ss dt dur rs = do
@@ -860,8 +931,8 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , (atmosphericOpacity' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
->       , raPressure -- period dependent
->       , freqPressure -- period dependent
+>       , raPressure
+>       , freqPressure
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
@@ -869,12 +940,12 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , atmosphericStabilityLimit
 >       , scienceGrade
 >       , thesisProject
->       , projectCompletion -- period dependent
+>       , projectCompletion
 >       , observerOnSite
 >       , receiver
 >       , needsLowRFI
 >       , lstExcepted
->       , enoughTimeBetween -- period dependent
+>       , enoughTimeBetween
 >       , observerAvailable
 >       , inWindows
 >        ]
@@ -970,6 +1041,13 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 
 > factorToString :: Factor -> String
 > factorToString factor = (show factor) ++ "\n" 
+
+Utility for the MUSTANG temporary fix: no matter what the combination, 
+returns true if Rcvr_PAR is listed as one of it's rcvrs.
+TBF: we aren't using the frequncy here, is that okay?
+
+> usesMustang :: Session -> Bool
+> usesMustang s = any (==True) $ map (any (==Rcvr_PAR)) $ receivers s
 
 Quick Check properties:
 

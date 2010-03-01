@@ -48,7 +48,7 @@
 >     int = 60 * 24 * 1
 >     history = []
 >     cnl = []
->     ss = getOpenPSessions
+>     ss =  filter (\s -> (sName s) /= "MH") getOpenPSessions
 >     expSs = [gb, gb, va, va, tx, tx, gb, wv, gb, lp, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
@@ -190,7 +190,7 @@ Can't simulate anything because the project doesn't have enough time!
 >     int = 60 * 24 * 1
 >     history = []
 >     cnl = []
->     ss = getOpenPSessions
+>     ss =  filter (\s -> (sName s) /= "MH") getOpenPSessions
 >     expSs = [gb, va, va, tx, tx, wv, gb, lp, cv, tx]
 >     dts = [ fromGregorian 2006 2 1  1 30 0
 >           , fromGregorian 2006 2 1  4 30 0

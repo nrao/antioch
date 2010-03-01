@@ -40,7 +40,7 @@ similar test in SimulationTests.
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 1
 >     history = []
->     ss' = getOpenPSessions
+>     ss' = filter (\s -> (sName s) /= "MH") getOpenPSessions
 >     ss = filter timeLeft ss'
 >     timeLeft s = ((sAlloted s) - (sUsed s)) > (minDuration s)
 >     gb = findPSessionByName "GB"
@@ -54,7 +54,8 @@ similar test in SimulationTests.
 >           , fromGregorian 2006 2 1 16 30 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores (repeat undefined) (repeat False) durs
+>     --exp = zipWith8 Period (repeat 0) expSs dts durs scores (repeat undefined) (repeat False) durs
+>     exp = zipWith8 Period (repeat 0) expSs dts durs scores dts (repeat False) durs
 
 TBF: don't run as a test yet - it fails, but we don't know its status.
 
@@ -64,7 +65,7 @@ TBF: don't run as a test yet - it fails, but we don't know its status.
 >         sf <- genScore ss
 >         scheduleMinDuration sf dt dur history ss
 >     print result
->     assertEqual "ScheduleTests_test_schedMinDuration" exp result
+>     assertEqual "ScheduleTests_test_schedMinDuration_with_history" exp result
 >   where
 >     rs  = []
 >     dt  = fromGregorian 2006 2  1  0 0 0
