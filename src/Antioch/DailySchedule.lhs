@@ -5,7 +5,7 @@
 > import Antioch.Schedule
 > import Antioch.Simulate
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg, rad2hrs, printList)
+> import Antioch.Utilities (rad2deg, rad2hrs, printList, overlie)
 > import Antioch.Weather
 > import Antioch.Debug
 > import Antioch.HardwareSchedule
@@ -67,6 +67,7 @@ hour scheduling period.
 >     printList newPeriods
 >     putPeriods newPeriods
 
+
 Computes the scheduling period finish in UTC on the last day at the
 start hour of the work day in ET.
 
@@ -106,18 +107,56 @@ part of the history of pre-scheduled periods
 > removeBuffer :: DateTime -> Minutes -> [Period] -> [Period] -> [Period]
 > removeBuffer dt dur ps history = filter (not . remove) ps
 >   where
->     remove p = (not $ overlap dt dur p)  && (notInHistory p history)
+>     remove p = (not $ overlie dt dur p)  && (notInHistory p history)
 
 > notInHistory :: Period -> [Period] -> Bool
 > notInHistory p ps = case find (==p) ps of
 >     Just _  -> False
 >     Nothing -> True
 
-> overlap :: DateTime -> Int -> Period -> Bool
-> overlap start dur p = s1 < e2 && s2 < e1
+Very basic function for calling Daily Schedule multiple times.
+NOTE: you may want to change getWeather in dailySchedule to use the
+start time if you use this function.
+TBF: this also needs to be refactored to merge this with Simulations.lhs
+
+> simDailySchedulePack :: DateTime -> Int -> Int -> IO ()
+> simDailySchedulePack start packDays simDays 
+>     | packDays > simDays = return ()
+>     | otherwise = do 
+>         dailySchedulePack start packDays
+>         simDailySchedulePack (nextDay start) packDays (simDays - 1)
 >   where
->     s1 = startTime p
->     e1 = periodEndTime p
->     s2 = start
->     e2 = dur `addMinutes` start  
+>     nextDay dt = addMinutes (1 * 24 * 60) dt 
+
+Debugging Utilities:
+
+Use these for making sure the recently created Periods can reproduce their
+scores.
+NOTE: currently, all period-dependent scoring factors must be ignored in order
+to reproduce scores.
+
+> scoreThesePeriods :: [Period] -> IO ()
+> scoreThesePeriods     [] = return ()
+> scoreThesePeriods (p:ps) = do 
+>     scoreThisPeriod' p
+>     scoreThesePeriods ps
+
+> scoreThisPeriod' p = scoreThisPeriod (sName . session $ p) (startTime p)
+
+> scoreThisPeriod :: String -> DateTime -> IO ()
+> scoreThisPeriod sessName dt = do
+>     -- get the session in question
+>     projs <- getProjects
+>     let ss = concatMap sessions projs
+>     let s = head $ filter (\s -> (sName s) == sessName) ss
+>     -- now get it's period
+>     let ps = periods s
+>     let p = head $ filter (\p -> (startTime p) == dt) ps
+>     --print $ "session : " ++ (show . session $ p)
+>     w <- getWeather $ Just . pForecast $ p
+>     -- make sure we can reproduce the period's score
+>     periodScore <- scorePeriod p s ss w []
+>     print " "
+>     print $ "result: " ++ (show periodScore) ++ " vs. " ++ (show . pScore $ p)
+>     print " "
 

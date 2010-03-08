@@ -6,11 +6,11 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester)
+> import Antioch.Utilities    (between, showList', dt2semester, overlie)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust)
+> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 
 > simulate06 :: StrategyName -> IO ([Period], [Trace])
@@ -86,6 +86,28 @@ Possible factors:
 > hasObservers :: SelectionCriteria
 > hasObservers _ s = not . null . observers . project $ s
 
+Filter candidate sessions dependent on its type.
+
+> isSchedulableType :: DateTime -> Minutes -> Session -> Bool
+> isSchedulableType dt dur s
+>   -- Open
+>   | isTypeOpen dt s     = True
+>   | sType s == Windowed = activeWindows (windows s)
+>   | otherwise           = False -- must be Fixed.  
+>     where
+>       activeWindows ws
+>         -- Windowed with no windows overlapping the scheduling range
+>         -- or those windows that are overlapped by the scheduling range
+>         -- also overlap their default periods.
+>         | filter schedulableWindow ws == [] = False
+>         | otherwise                         = True
+>
+>       schedulableWindow w = (intersect w) && (withNoDefault $ w)
+>       intersect w = wStart w < dtEnd && dt < wEnd w
+>       withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
+>       wEnd w = (wDuration w) `addMinutes` (wStart w)
+>       dtEnd = dur `addMinutes` dt
+
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
@@ -158,10 +180,13 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods'
 >   return (schedPeriods, obsPeriods)
 
+Note, selection by type is handled separately by isSchedulableType
+because it requires arguments describing the time period being
+scheduled.
+
 > schedulableCriteria :: [SelectionCriteria]
 > schedulableCriteria = [
->         isTypeOpen
->       , hasTimeSchedulable
+>         hasTimeSchedulable
 >       , isNotComplete
 >       , isApproved
 >       , hasObservers
@@ -169,6 +194,17 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 
 > schedulableSessions :: DateTime -> [Session] -> [Session]
 > schedulableSessions dt = filterSessions dt schedulableCriteria
+
+> clearWindowedTimeBilled :: Session -> Session
+> clearWindowedTimeBilled s
+>   | (windows s) == [] = s
+>   | otherwise         = makeSession s (windows s) ps
+>       where
+>         ps = map clear . periods $ s
+>         clear p
+>           | elem (peId p) pIds = p { pTimeBilled = 0 }
+>           | otherwise          = p
+>         pIds = [wPeriodId w | w <- (windows s)]
 
 > schedulableSession :: DateTime -> Session -> Bool
 > schedulableSession dt s = meetsCriteria dt s schedulableCriteria
@@ -352,6 +388,7 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 >   -- publish
 >   let schedPeriods' = map (\p -> p {pState = Scheduled}) schedPeriods
 >   return schedPeriods'
+
 
 Utilities:
 

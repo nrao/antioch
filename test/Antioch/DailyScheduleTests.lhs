@@ -14,26 +14,13 @@
 > import System.Random
 
 > tests = TestList [
->       test_overlap
->     , test_removeBuffer
+>       test_removeBuffer
 >     , test_removeBuffer_2
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
+>     , test_runDailySchedule_3
 >     ]
 
-> test_overlap = TestCase $ do
->   assertEqual "test_overlap_1" True  (overlap dt1 dur1 p1)
->   assertEqual "test_overlap_2" True  (overlap dt1 dur2 p1)
->   assertEqual "test_overlap_3" True  (overlap dt1 dur1 p2)
->   assertEqual "test_overlap_4" False (overlap dt2 dur1 p1)
->     where
->   dt1 = fromGregorian 2006 6 1 12 0 0
->   dur1 = 4*60
->   p1 = defaultPeriod {startTime = dt1, duration = dur1}
->   dur2 = 6*60
->   p2 = defaultPeriod {startTime = dt1, duration = dur2}
->   dt2 = fromGregorian 2006 6 1 20 0 0
->   
 > test_removeBuffer = TestCase $ do
 >   -- simplest case
 >   let result = removeBuffer start dur ps history
@@ -131,7 +118,17 @@ adjusting max duration and time between.
 >   exp = map (mkPeriod s) times
 >   exp2 = take 2 exp
 
-
+> test_runDailySchedule_3 = TestCase $ do
+>   w <- getWeather Nothing
+>   let ss = concatMap sessions pTestProjects
+>   let ps = concatMap periods ss
+>   results <- runScoring w [] $ runDailySchedule Pack dt minutes ps ss
+>   assertEqual "test_runDailySchedule_3" p (head $ results)
+>     where
+>       dt = fromGregorian 2006 10 20 4 0 0
+>       days = 1
+>       minutes = (24*60*days)::Minutes
+>       p = (periods . findPSessionByName $ "TestWindowed2") !! 1
 
 Utilities:
 

@@ -102,8 +102,10 @@
 >     jNomOrder (_, v, _) (_, v', _) = compare v' v
 >     toJNominee (s, v, m) = defaultJNominee {
 >                                 nSessName = Just . sName $ s
+>                               , nSessType = Just . take 1 . show . sType $ s
 >                               , nProjName = Just . pName . project $ s
 >                               , nScore    = Just v
+>                               , nScoreStr = Just . scoreStr $ v
 >                               , nDuration = Just m
 >                               , nDurStr   = Just . durationStr hr $ mn
 >                                            }
@@ -111,16 +113,20 @@
 
 > data JNominee = JNominee {
 >       nSessName :: Maybe String
+>     , nSessType :: Maybe String
 >     , nProjName :: Maybe String
 >     , nScore    :: Maybe Score
+>     , nScoreStr :: Maybe String
 >     , nDuration :: Maybe Minutes
 >     , nDurStr   :: Maybe String
 > } deriving Show
 
 > defaultJNominee = JNominee {
 >       nSessName = Nothing
+>     , nSessType = Nothing
 >     , nProjName = Nothing
 >     , nScore    = Nothing
+>     , nScoreStr = Nothing
 >     , nDuration = Nothing
 >     , nDurStr   = Nothing
 > }
@@ -135,8 +141,10 @@
 > jNomineeToJson nominee = makeObj $
 >       concatMap field [
 >           ("sess_name",      showJSON' . nSessName)
+>         , ("sess_type",      showJSON' . nSessType)
 >         , ("proj_name",      showJSON' . nProjName)
 >         , ("score",          showJSON' . nScore)
+>         , ("scoreStr",       showJSON' . nScoreStr)
 >         , ("duration",       showJSON' . nDuration)
 >         , ("durationStr",    showJSON' . nDurStr)
 >       ]
@@ -145,6 +153,9 @@
 
 > durationStr :: Int -> Int -> String
 > durationStr h m = printf "%d:%02d" h m
+
+> scoreStr :: Float -> String
+> scoreStr s = printf "%.3f" s
 
 > showJSON' :: JSON a => Maybe a -> Maybe JSValue
 > showJSON' = fmap showJSON

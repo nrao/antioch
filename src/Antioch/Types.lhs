@@ -81,7 +81,6 @@ use a single data structure for all sessions.
 >   , transit     :: TransitType
 >   } deriving Show
 
-
 > instance Eq Session where
 >     (==) = (==) `on` sId
 
@@ -93,27 +92,15 @@ use a single data structure for all sessions.
 > periods' s             = periods s
 
 > data Window  = Window {
->     wSession     :: Session
+>     wId          :: Int
+>   , wSession     :: Session
 >   , wStart       :: DateTime   -- date
 >   , wDuration    :: Minutes    -- from day count
->   , wTrialPeId   :: Maybe Int  -- Maybe peId
->   , wChosePeId   :: Maybe Int  -- Maybe peId
+>   , wPeriodId    :: Int        -- default period id
 >    }
 
-> trialPeriod :: Window -> Maybe Period
-> trialPeriod w =
->     case wTrialPeId w of
->         Nothing -> Nothing
->         Just i  -> find (\p -> i == (peId p)) (periods . wSession $ w)
-
-> chosePeriod :: Window -> Maybe Period
-> chosePeriod w =
->     case wChosePeId w of
->         Nothing -> Nothing
->         Just i  -> find (\p -> i == (peId p)) (periods . wSession $ w)
-
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (wDuration w) ++ " days; Trial: " ++ show (trialPeriod w) ++ ", Chose: " ++ show (chosePeriod w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (flip div (24*60) . wDuration $ w) ++ " days; Period: " ++ show (wPeriod w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -126,6 +113,12 @@ use a single data structure for all sessions.
 
 > instance Eq Window where
 >     (==) = windowsEqual
+
+> wPeriod :: Window -> Maybe Period
+> wPeriod w = find (\p -> (wPeriodId w) == (peId p)) (periods . wSession $ w)
+
+> hasWindows :: Session -> Bool
+> hasWindows s = (sType s) == Windowed && (windows s) /= []
 
 > windowsEqual :: Window -> Window -> Bool
 > windowsEqual w1 w2 = eqIds w1 w2 &&
@@ -303,9 +296,9 @@ Simple Functions for Periods:
 >   }
 
 > defaultWindow  = Window {
->     wSession     = defaultSession
+>     wId          = 0
+>   , wSession     = defaultSession
 >   , wStart       = defaultStartTime
 >   , wDuration    = 0
->   , wTrialPeId   = Nothing
->   , wChosePeId   = Nothing
+>   , wPeriodId    = 0
 >    }

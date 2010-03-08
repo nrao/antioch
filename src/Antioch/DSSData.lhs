@@ -5,8 +5,9 @@
 > import Antioch.Score
 > import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB)
+> import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
-> import Data.List                       (sort, nub)
+> import Data.List                       (sort, nub, find)
 > import Data.Char                       (toUpper)
 > import Maybe                           (fromJust)
 > import Database.HDBC
@@ -45,15 +46,15 @@ separate query, to deal with multiple allotments (different grades)
 
 > populateProject :: Connection -> Project -> IO Project
 > populateProject cnn project = do
->     sessions' <- getSessions (pId project) cnn
->     sessions <- mapM (populateSession cnn) sessions'
+>     sessions <- getSessions (pId project) cnn
+>     sessions' <- mapM (populateSession cnn) sessions
 >     -- project times
 >     allotments <- getProjectAllotments (pId project) cnn
 >     let project' = setProjectAllotments project allotments
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
 >     let project'' = setProjectObservers project' observers
->     return $ makeProject project'' (pAllottedT project'') sessions 
+>     return $ makeProject project'' (pAllottedT project'') sessions'
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer
@@ -324,10 +325,6 @@ value of the right type.
 > sqlHrsToMinutes :: SqlValue -> Minutes
 > sqlHrsToMinutes hrs = hrsToMinutes . sqlHrsToHrs' $ hrs
 
-> fromSqlId :: SqlValue -> Maybe Int
-> fromSqlId SqlNull = Nothing
-> fromSqlId x       = Just . fromSql $ x
-
 TBF: is this totaly legit?  and should it be somewhere else?
 
 > deriveBand :: Float -> Band
@@ -495,13 +492,13 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w WHERE w.session_id = ?"
+>     query = "SELECT w.id, w.start_date, w.duration, p.id FROM windows as w, periods as p, period_states as s WHERE w.default_period_id = p.id AND w.period_id is NULL AND p.state_id = s.id AND s.abbreviation = 'P' AND w.session_id = ?;"
 >     toWindowList = map toWindow
->     toWindow(strt:dur:def:per:[]) =
->       defaultWindow { wStart = sqlToDate strt
+>     toWindow(id:strt:dur:pid:[]) =
+>       defaultWindow { wId       = fromSql id
+>                     , wStart    = sqlToDate strt
 >                     , wDuration = 24*60*(fromSql dur)
->                     , wTrialPeId = fromSqlId def
->                     , wChosePeId = fromSqlId per
+>                     , wPeriodId = fromSql pid
 >                     }
 
 > getPeriods :: Connection -> Session -> IO [Period]
@@ -559,17 +556,20 @@ it an exclusion range.
 > putPeriods ps = do
 >   cnn <- connect
 >   result <- mapM (putPeriod cnn) ps
->   commit cnn
+>   return ()
 
 Here we add a new period to the database.  
 Initialize the Period in the Pending state (state_id = 1)
 Since Antioch is creating it
 we will set the Period_Accounting.scheduled field
 
-> putPeriod :: Connection -> Period -> IO [[SqlValue]] 
+> putPeriod :: Connection -> Period -> IO ()
 > putPeriod cnn p = do
 >   accounting_id <- putPeriodAccounting cnn (duration p)
 >   quickQuery' cnn query (xs accounting_id) 
+>   commit cnn
+>   updateWindow cnn p
+>   commit cnn
 >     where
 >       xs a = [toSql . sId . session $ p
 >             , toSql $ (toSqlString . startTime $ p) 
@@ -580,6 +580,31 @@ we will set the Period_Accounting.scheduled field
 >             , toSql a
 >             ]
 >       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, 1, false);"
+
+> updateWindow :: Connection -> Period -> IO ()
+> updateWindow cnn p = handleSqlError $ do
+>   -- select the period to get its period id
+>   result <- quickQuery' cnn pquery pxs 
+>   let periodId = fromSqlInt . head . head $ result
+>   -- search session's windows for first intersecting window
+>   let window = find (\w -> overlie (wStart w) (wDuration w) p) (windows . session $ p)
+>   if window == Nothing then return ()
+>                        -- update window with the period_id
+>                        else updateWindow' cnn periodId (wId . fromJust $ window)
+>     where
+>       pquery = "SELECT p.id FROM periods AS p WHERE p.session_id = ? AND p.start = ? AND p.duration = ?;"
+>       pxs = [toSql . sId . session $ p
+>            , toSql . toSqlString . startTime $ p
+>            , minutesToSqlHrs . duration $ p
+>             ]
+
+> updateWindow' :: Connection -> Int -> Int -> IO ()
+> updateWindow' cnn periodId windowId = handleSqlError $ do
+>   result <- quickQuery' cnn wquery wxs
+>   return ()
+>     where
+>       wquery = "UPDATE windows SET period_id = ? WHERE id = ?;"
+>       wxs = [toSql periodId, toSql windowId]
 
 > setPeriodScore :: Connection -> Score -> Int -> IO ()
 > setPeriodScore cnn v pid = do

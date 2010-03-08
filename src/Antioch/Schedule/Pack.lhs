@@ -8,6 +8,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Generators
 > import Antioch.Utilities
+> import Antioch.Weather
 > import Data.List   (foldl', sort, delete, find)
 > import Data.Maybe  (fromMaybe, isNothing, maybeToList, isJust, fromJust)
 > import Test.QuickCheck hiding (frequency)
@@ -36,10 +37,13 @@ to generate `items` for input to the `packWorker` function.
 
 > pack :: ScoreFunc -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > pack sf dt dur fixed sessions = do
+>     -- make sure the resultant periods record the proper weather origin
+>     w <- weather
+>     let dtw = forecast w
 >     let dts = quarterDateTimes dt dur
 >     let sched = toSchedule dts . sort $ fixed
 >     items <- mapM (toItem dt dur sf (mask dts sched)) sessions
->     return $! restoreFixed fixed dt dur $ map (toPeriod dt) . packWorker sched $ items
+>     return $! restoreFixed fixed dt dur $ map (toPeriod dt dtw) . packWorker sched $ items
 
 Some things have to be corrected before this 'schedule' can be returned:
    * pre-scheduled Periods on the time boundraries have been cut off
@@ -155,13 +159,13 @@ Remember: Candidates have unitless times, and their scores are cumulative.
 Our Periods need to have Minutes, and average scores.
 
 
-> toPeriod              :: DateTime -> Candidate Session -> Period
-> toPeriod dt candidate = defaultPeriod {
+> toPeriod              :: DateTime -> DateTime -> Candidate Session -> Period
+> toPeriod dt dtw candidate = defaultPeriod {
 >     session      = cId candidate
 >   , startTime    = (quarter * cStart candidate) `addMinutes` dt
 >   , duration     = quarter * cDuration candidate
 >   , pScore       = (cScore candidate)/(fromIntegral $ cDuration candidate)
->   , pForecast    = dt
+>   , pForecast    = dtw -- the weather origin used to create this period
 >   , pBackup      = False
 >   , pTimeBilled  = quarter * cDuration candidate
 >   }

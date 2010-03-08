@@ -19,6 +19,7 @@
 >           , test_LST2
 >           , test_LST3
 >           , test_LST3'
+>           , test_overlie
 >                  ]
 
 > test_dt2semester = TestCase $ do
@@ -103,6 +104,26 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >       ((00, 00, 07), (2006, 5, 5, 14, 26, 12)),
 >       ((00, 00, 08), (2006, 5, 5, 14, 26, 13))
 >       ]
+
+> test_overlie = TestCase $ do
+>   assertEqual "test_overlie_1" True  (overlie dt1 dur1 p1)
+>   assertEqual "test_overlie_2" True  (overlie dt1 dur2 p1)
+>   assertEqual "test_overlie_3" True  (overlie dt1 dur1 p2)
+>   assertEqual "test_overlie_4" False (overlie dt2 dur1 p1)
+>   assertEqual "test_overlie_5" False (overlie dt3 dur1 p1)
+>   assertEqual "test_overlie_6" True  (overlie dt3 dur2 p1)
+>   assertEqual "test_overlie_7" True  (overlie dt4 dur1 p2)
+>   assertEqual "test_overlie_8" True  (overlie dt4 dur2 p2)
+>   assertEqual "test_overlie_9" False (overlie dt2 dur2 p1)
+>     where
+>   dt1 = fromGregorian 2006 6 1 12 0 0
+>   dur1 = 4*60
+>   p1 = defaultPeriod {startTime = dt1, duration = dur1}
+>   dur2 = 6*60
+>   p2 = defaultPeriod {startTime = dt1, duration = dur2}
+>   dt2 = fromGregorian 2006 6 1 20 0 0
+>   dt3 = fromGregorian 2006 6 1 8 0 0
+>   dt4 = fromGregorian 2006 6 1 13 0 0
 
 > test_LST3 = TestCase $ do
 >   mapM_ (runUtc2LstTest "test_LST3") times

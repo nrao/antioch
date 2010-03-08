@@ -30,6 +30,8 @@
 >    , test_sim_schedMinDuration_starvation
 >    , test_sim_timeLeft
 >    , test_schedulableSessions
+>    , test_clearWindowedTimeBilled
+>    , test_isSchedulableType
 >   ]
 >
 
@@ -46,7 +48,7 @@
 >     int = 60 * 24 * 1
 >     history = []
 >     cnl = []
->     ss = getOpenPSessions
+>     ss =  filter (\s -> (sName s) /= "MH") getOpenPSessions
 >     expSs = [gb, gb, va, va, tx, tx, gb, wv, gb, lp, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
@@ -192,18 +194,18 @@ Can't simulate anything because the project doesn't have enough time!
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, va, tx, tx, wv, gb, lp, cv, tx]
+>     expSs = [gb, va, tx, tx, wv, mh, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1  1 30 0
 >           , fromGregorian 2006 2 1  6 30 0
 >           , fromGregorian 2006 2 1 12 30 0
 >           , fromGregorian 2006 2 1 17 30 0
 >           , fromGregorian 2006 2 1 22 30 0
 >           , fromGregorian 2006 2 2  4 30 0
->           , fromGregorian 2006 2 2  7 30 0
+>           , fromGregorian 2006 2 2 10  0 0
 >           , fromGregorian 2006 2 2 12  0 0
 >           , fromGregorian 2006 2 2 14 15 0
 >            ]
->     durs = [300, 360, 300, 240, 360, 180, 270, 135, 360]
+>     durs = [300, 360, 300, 240, 360, 330, 120, 135, 360]
 >     scores = replicate 10 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
@@ -267,7 +269,6 @@ pre-scheduled periods
 >     ss = getOpenPSessions
 >     fixed1 = Period 0 lp (fromGregorian 2006 2 1 7 30 0) 240 0.0 Pending dt False 240
 >     history = [fixed1]
->     --expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
 >     expSs = [gb, lp, tx, tx, wv, gb, lp, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 7 30 0
@@ -525,13 +526,40 @@ of pre-scheduled periods (history)
 >     early = fromGregorian 2005 11 30  23 45 0
 >     late = fromGregorian 2006 6 30  15 30 0
 
+> test_clearWindowedTimeBilled = TestCase $ do
+>     let s = tw2
+>     let s' = clearWindowedTimeBilled s
+>     -- because pTimeBilled is not checked in session equivalence
+>     assertEqual "test_clearWindowedTimeBilled 1" s s'
+>     assertEqual "test_clearWindowedTimeBilled 2" 180 (pTimeBilled . fromJust . wPeriod . head . windows $ s)
+>     assertEqual "test_clearWindowedTimeBilled 3" 0 (pTimeBilled . fromJust . wPeriod . head . windows $ s')
+>     -- should be nop
+>     let cv' = clearWindowedTimeBilled cv
+>     assertEqual "test_clearWindowedTimeBilled 4" cv cv'
+
+> test_isSchedulableType = TestCase $ do
+>     -- session is Open, who cares about windows?
+>     assertEqual "test_isSchedulableType 1" True  (isSchedulableType undefined undefined cv)
+>     -- session is Windowed, but no windows inside the scheduling range
+>     assertEqual "test_isSchedulableType 2" False (isSchedulableType dt (24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range
+>     assertEqual "test_isSchedulableType 3" True  (isSchedulableType dt (4*24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range,
+>     -- but with the window's period also in the scheduling range
+>     assertEqual "test_isSchedulableType 4" False (isSchedulableType dt (8*24*60) tw2)
+>       where
+>         dt = fromGregorian 2006 10 13  0 0 0
+
 Test Utilities:
 
-> lp = findPSessionByName "LP"
-> cv = findPSessionByName "CV"
-> as = findPSessionByName "AS"
-> gb = findPSessionByName "GB"
-> va = findPSessionByName "VA"
-> tx = findPSessionByName "TX"
-> wv = findPSessionByName "WV"
+> lp  = findPSessionByName "LP"
+> cv  = findPSessionByName "CV"
+> as  = findPSessionByName "AS"
+> gb  = findPSessionByName "GB"
+> mh  = findPSessionByName "MH"
+> va  = findPSessionByName "VA"
+> tx  = findPSessionByName "TX"
+> wv  = findPSessionByName "WV"
+> tw1 = findPSessionByName "TestWindowed1"
+> tw2 = findPSessionByName "TestWindowed2"
 

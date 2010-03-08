@@ -73,14 +73,15 @@
 >     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)
->                          , ("alive", showJSON . schedulableSession dt $ s)
->                          , ("open", showJSON . isTypeOpen dt $ s)
+>                          , ("alive", showJSON . alive dt dur $ s)
+>                          , ("type", showJSON . isSchedulableType dt dur $ s)
 >                          , ("time", showJSON . hasTimeSchedulable dt $ s)
 >                          , ("not_complete", showJSON . isNotComplete dt $ s)
->                          , ("enabled", showJSON . not .enabled $ s)
->                          , ("authorized", showJSON . not .authorized $ s)
+>                          , ("enabled", showJSON . enabled $ s)
+>                          , ("authorized", showJSON . authorized $ s)
 >                          , ("observers", showJSON . hasObservers dt $ s)
 >                          , ("factors", factorsListToJSValue scoresNfactors)]
+>       where alive dt dur s = (hasTimeSchedulable dt s) && (isSchedulableType dt dur s)
 
 > floatStr :: Float -> String
 > floatStr f = printf "%.2f" f
