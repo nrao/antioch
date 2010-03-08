@@ -900,7 +900,7 @@ Run generic simulations.
 
 > runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
->     start      = fromGregorian 2010 2 9 0 0 0
+>     start      = fromGregorian 2010 2 1 0 0 0
 
 More specialized: Try to schedule specific trimester.
 

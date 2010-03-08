@@ -106,7 +106,7 @@ tested time period
 
 > test_frequencyPressure = TestCase $ do
 >     freqPressure <- runScoring undefined [] $ genFrequencyPressure defaultStartTime pSessions
->     assertScoringResult "test_frequencyPressure" Nothing 5 1.35154 (freqPressure undefined . head $ pSessions)
+>     assertScoringResult "test_frequencyPressure" Nothing 5 2.1132288 (freqPressure undefined . head $ pSessions)
 
 Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
@@ -118,7 +118,7 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
 > test_rightAscensionPressure = TestCase $ do
 >     raPressure <- runScoring undefined [] $ genRightAscensionPressure defaultStartTime pSessions
->     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.25729 (raPressure undefined . head $ pSessions)
+>     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.5259848 (raPressure undefined . head $ pSessions)
 
 > test_initBins1 = TestCase $ do
 >     assertEqual "test_initBins1" expected result
@@ -128,7 +128,8 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >                 ,(0,0),(0,0),(0,0),(0,0),(1080,480),(0,0)
 >                 ,(0,0),(0,0),(0,0),(0,0),(0,0),(0,0)
 >                 ,(1200,720),(0,0),(0,0),(0,0),(0,0),(0,0)]
->     result    = elems $ initBins defaultStartTime (0, 23) accessor pSessions
+>     result    = elems $ initBins startTime (0, 23) accessor pSessions
+>     startTime = fromGregorian' 2008 1 15
 
 > test_initBins2 = TestCase $ do
 >     assertEqual "test_initBins2" expected result
@@ -136,7 +137,8 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     expected  = [(1920,840),(0,0),(1080,480)
 >                 ,(600,300),(0,0),(0,0)
 >                 ,(0,0),(0,0),(0,0)]
->     result    = elems $ initBins defaultStartTime (minBound, maxBound) band pSessions
+>     result    = elems $ initBins startTime (minBound, maxBound) band pSessions
+>     startTime = fromGregorian' 2008 1 15
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
@@ -569,7 +571,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 3.9704554 result  
+>     assertAlmostEqual "test_scoreCV2" 3 4.671027 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -698,13 +700,13 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 3.7249105, 255)
+>     let expected = (s, 4.382157, 255)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- override the minimum and maximum
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 3.7109919, 240)
+>     let expected = (s, 4.3657823, 240)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -719,7 +721,7 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 10 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertAlmostEqual "test_bestDurations 2 v" 5 3.7249105 v
+>     assertAlmostEqual "test_bestDurations 2 v" 5 4.382157 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
@@ -1114,6 +1116,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         grades = [4.0, 4.0, 4.0, 4.0]
 >         genPSess t u ra b g = defaultSession {
 >             sAllottedS = t
+>           , sAllottedT = t
 >           , periods = [defaultPeriod {duration = u
 >                                     , pState = Scheduled
 >                                     , pTimeBilled = u}]
@@ -1130,6 +1133,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         grades = [4.0, 4.0, 4.0, 4.0]
 >         genPSess t u ra b g = defaultSession {
 >             sAllottedS = t
+>           , sAllottedT = t
 >           , periods = [defaultPeriod {duration = u
 >                                     , pState = Scheduled
 >                                     , pTimeBilled = u}]

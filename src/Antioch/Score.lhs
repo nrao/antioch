@@ -19,7 +19,6 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
-> import Debug.Trace
 
 Ranking System from Memo 5.2, Section 3
 
@@ -237,8 +236,7 @@ Generate a scoring function having the pressure factors.
 > genFrequencyPressure dt sessions = genFrequencyPressure' factors
 >   where
 >     bins    = initBins dt (minBound, maxBound) band sessions
->     bins' = trace ("frequency " ++ (show bins)) bins
->     factors = binsToFactors bins'
+>     factors = binsToFactors bins
 
 > genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> m ScoreFunc
 > genFrequencyPressure' factors = do
@@ -250,8 +248,7 @@ Generate a scoring function having the pressure factors.
 >   where
 >     accessor s = (round . rad2hrs . ra $ s) `mod` 24
 >     bins    = initBins dt (0, 23) accessor sessions
->     bins' = trace ("RA " ++ (show bins)) bins
->     factors = binsToFactors bins'
+>     factors = binsToFactors bins
 
 > genRightAscensionPressure' :: (MonadWriter [Trace] m) => (Session -> Int) -> Array Int Float -> m ScoreFunc
 > genRightAscensionPressure' accessor factors = do
@@ -274,16 +271,58 @@ for each slice for computing pressures.
 > initBins :: Ix a => DateTime -> (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
 > initBins dt bounds f xs = runSTArray $ initBins' dt bounds f $ xs
 
+For a specific RA or band we need:
+  n = approved observing hours
+  d = hours already done
+  r = remaining hours
+i.e., n = d + r, where pressure = 1 + ln( n / d).
+
+All of this applies to a given semester and grade B or higher sessions.
+
+The value d is easy, simply add up all the time billed for every period
+completed for the current semester across ALL sessions.
+
+The value n is more difficult because the "approved" hours -- depending
+on the definition -- changes over the semester.  During the semester,
+sessions go in and/or out of being completed, authorized, and enabled.
+So which ones to add up for the total approved hours for a given
+RA or band?
+
+Our solution is to derive n indirectly by first computing r, which
+will guarantee the relationship n = d + r.  For all authorized and not
+completed sessions, the value r is the minimum of the session's (total
+and semester) allotted time minus the sum of all completed
+time billed, i.e., sFutureS.  Now pressure = 1 + ln( (d + r) / d )
+
+Note:
+    - As sessions become completed, their hours still are used in the
+      computation, but now via the factor d instead of being distributed
+      between d and r.
+    - Unauthorizing a session will reduce the allotted time, but the hours
+      done continue to factor into pressure.
+    - Sessions used for computing d are only limited by grade, and their
+      periods are limited to the semester.
+    - Sessions used for computing r are limited to authorized and
+      not completed, and their periods are limited to the semester.
+
+The result is that the computing of pressures become somewhat dynamic
+without ignoring  successful observation time.
+
 > initBins' dt bounds f xs = do
 >     arr <- newArray bounds (0, 0)
 >     for xs $ \x -> do
->         let sem = dt2semester dt
 >         let bin = f x
 >         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + sAllottedS x, c + sUsedS sem x)
+>         writeArray arr bin $! (t + rho dt x + sPastS dt x, c + sPastS dt x)
 >     return arr
 >   where
 >     for xs f = foldr ((>>) . f) (return ()) xs
+>     rho dt s
+>       -- the max prevents against negative remainders, i.e.,
+>       -- over-scheduled sessions
+>       | isActive s = max 0 (sFutureS dt s)
+>       | otherwise  = 0
+>     isActive s = (authorized s) && (not . sComplete $ s)
 
 Translates the total/used times pairs into pressure factors.
 
@@ -784,9 +823,6 @@ Need to translate a session's factors into the final product score.
 
 > genScore          :: DateTime -> [Session] -> Scoring ScoreFunc
 > genScore dt sessions = do
->     --liftIO $ print "============================================"
->     --liftIO $ printList . map (\s -> sName s) $ sessions
->     -- liftIO $ printList . filter (\s -> (sName s) == "GBT09C-008-01") $ sessions
 >     raPressure   <- genRightAscensionPressure dt sessions
 >     freqPressure <- genFrequencyPressure dt sessions
 >     genScore' raPressure freqPressure

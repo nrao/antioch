@@ -2,7 +2,6 @@
 
 > import Data.Fixed                 (div')
 > import Data.Function              (on)
-> import Data.Maybe                 (fromJust)
 > import Data.Time.Calendar hiding  (fromGregorian, toGregorian)
 > import Data.Time.Clock hiding     (getCurrentTime)
 > import Data.Time.Format

@@ -526,6 +526,7 @@ it an exclusion range.
 >                     , pState = deriveState . fromSql $ state
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
+>                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
 >                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     }
 
@@ -544,6 +545,7 @@ it an exclusion range.
 >                     , pState = deriveState . fromSql $ state
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
+>                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
 >                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     } 
 

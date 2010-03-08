@@ -12,7 +12,6 @@
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
-> --import Debug.Trace
 
 > simulate06 :: StrategyName -> IO ([Period], [Trace])
 > simulate06 strategyName = do
@@ -72,8 +71,8 @@ Possible factors:
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open
 
-> isGradeA :: SelectionCriteria
-> isGradeA _ s = grade s >= 3.8
+> isGradeA_B :: SelectionCriteria
+> isGradeA_B _ s = grade s >= 2.8
 
 > isBackup :: SelectionCriteria
 > isBackup _ s = backup s
@@ -130,12 +129,13 @@ TBF: this does not work properly in serveral ways:
 >             --liftIO $ putStrLn $ debugSimulation schedPeriods obsPeriods t1
 >             let sessions' = updateSessions sessions obsPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>             -- This writeFile is a necessary hack to force evaluation
+>             -- of the pressure histories.
 >             liftIO $ writeFile "/dev/null" (show t1)
 >             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse schedPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
 >       where
->         -- make sure we avoid an infinite loop in the case that a period of time
->         -- can't be scheduled with anyting
+>         -- make sure we avoid an infinite loop in the case that a
+>         -- period of time can't be scheduled with anyting
 >         hint   = int `div` 2
 >         start' = case history of
 >             (h:_) -> duration h `addMinutes'` startTime h
@@ -153,7 +153,9 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 >   let schedSessions = schedulableSessions dt sessions
 >   sf <- genScore dt . scoringSessions dt $ sessions
 >   schedPeriods <- strategy sf dt dur history schedSessions
->   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods
+>   -- publish
+>   let schedPeriods' = map (\p -> p {pState = Scheduled}) schedPeriods
+>   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods'
 >   return (schedPeriods, obsPeriods)
 
 > schedulableCriteria :: [SelectionCriteria]
@@ -171,19 +173,15 @@ Run the strategy to produce a schedule, then replace with backups where necessar
 > schedulableSession :: DateTime -> Session -> Bool
 > schedulableSession dt s = meetsCriteria dt s schedulableCriteria
 
-> -- TBF this is so wrong, need requirements!
 > scoringSessions :: DateTime -> [Session] -> [Session]
 > scoringSessions dt = filterSessions dt [
->         isAuthorized
->       , isGradeA
->       , isNotTerminated
+>         isGradeA_B
 >        ]
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
 >   where
 >     schd = "Scheduled: \n" ++ (showList' schdPs) ++ "\n"
->     --freqs = show $ map (frequency . session) schedPeriods
 >     obs = "Observed: \n" ++ (showList' obsPs) ++ "\n"
 >     backups = [p | p <- obsPs, pBackup p]
 >     bcks = if length backups == 0 then "" else  "Backups: \n" ++ (showList' backups) ++ "\n"
@@ -256,8 +254,21 @@ schedule deadtime.
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
 >     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pTimeBilled p)
->     else return Nothing -- no decent backups, must be bad wthr -> Deadtime
+>     else return Nothing -- no decent backups, must be bad weather -> Deadtime
 
+> updateSessionPeriods :: [Session] -> [Period] -> [Session]
+> updateSessionPeriods ss nps = map update ss
+>   where
+>     -- replace all the session's original periods from new periods (nps)
+>     update s = makeSession s (windows s) rps
+>       where
+>         -- the session's original periods
+>         sps = periods s
+>         -- the session's replacement periods:
+>         --     originals not in nps and equivalent in nps
+>         rps = (sps \\ nps) ++ (filter (\p -> elem p sps) nps)
+
+> updateSessions :: [Session] -> [Period] -> [Session]
 > updateSessions sessions periods = map update sessions
 >   where
 >     pss      = partitionWith session periods
@@ -302,22 +313,24 @@ on the terminal day.
 >         | dur == 0  = return (pAcc, tAcc)
 >         | otherwise  = do
 >             w' <- liftIO $ newWeather w $ Just dt
->             -- schedPeriods only includes those periods from the history that
->             -- are contained in or overlap (dt - (dt + int)).
+>             -- schedPeriods only includes those periods from the history
+>             -- that are contained in or overlap (dt - (dt + int)).
 >             (schedPeriods, t1) <- runScoring' w' rs $ runSimSchedStrategy sched dt int' sessions history
 >             -- take out the 'history' out of the result from the strategy
 >             let newlyScheduledPeriods = schedPeriods \\ history
->             --liftIO $ print $ "newly scheduled periods: " ++ (show newlyScheduledPeriods)
->             let sessions' = updateSessions sessions newlyScheduledPeriods
+>             let newHistory = filter (\p -> elem p history) schedPeriods
+>             let sessions' = updateSessionPeriods sessions newHistory
+>             let sessions'' = updateSessions sessions' newlyScheduledPeriods
 >             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->             -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>             -- This writeFile is a necessary hack to force evaluation
+>             -- of the pressure histories.
 >             liftIO $ writeFile "/dev/null" (show t1)
 >             -- We must always pass on the whole history, because Periods
 >             -- not covered in the time range we are simulating would be
 >             -- other wise lost.
->             -- Note: by using nub, we aren't catching geniune bugs involving 
->             -- the creation of identical Periods.
->             simulate' w' (hint `addMinutes'` dt) (dur - hint) (nub . sort $ schedPeriods ++ history) sessions' (nub . sort $ schedPeriods ++ history) $! (tAcc ++ t1)
+>             -- Note: by using nub, we aren't catching geniune bugs
+>             -- involving the creation of identical Periods.
+>             simulate' w' (hint `addMinutes'` dt) (dur - hint) (nub . sort $ schedPeriods ++ history) sessions'' (nub . sort $ schedPeriods ++ history) $! (tAcc ++ t1)
 >       where
 >         -- must handle if duration is less then the sim. interval
 >         -- ex: sim intervals are often 2 days - must be able to sim 1 day
@@ -336,7 +349,9 @@ observing: not checking MOC, not trying to replace cancelations w/ backups.
 >   let strategy = getStrategy strategyName 
 >   sf <- genScore dt . scoringSessions dt $ sessions
 >   schedPeriods <- strategy sf dt dur history . schedulableSessions dt $ sessions
->   return schedPeriods
+>   -- publish
+>   let schedPeriods' = map (\p -> p {pState = Scheduled}) schedPeriods
+>   return schedPeriods'
 
 Utilities:
 

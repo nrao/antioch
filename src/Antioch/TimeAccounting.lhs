@@ -3,19 +3,29 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
-> --import Debug.Trace
 
 The names of the core functions for time accounting consist of three fields:
-    [ p | s ] [ Allotted | Committed | Used | Avail ] [ S | T ]
+    [ p | s ]
+    [ Allotted | Committed | Used | Past | Avail | Remain | Future ]
+    [ S | T ]
   where:
     p = project
     s = session
+    -
+    Allotted = apportioned time for the project or session
+    Committed = pTimeBilled in its Pending/Scheduled/Completed periods
+    Used = pTimeBilled in its Scheduled/Completed periods
+    Past = pTimeBilled in its Scheduled/Completed periods started
+           prior to the scheduling time
+    Avail = Allotted* minus Committed
+    Remain = Allotted* minus Used
+    Future = Allotted* minus Past
+    -
     S = Semester
     T = Total
-    Allotted = apportioned time for the project or session
-    Committed = pTimeBilled in Pending and Scheduled periods
-    Used = pTimeBilled in Scheduled periods
-    Avail = Allotted minus Committed
+
+* - semester Avail/Remain time uses the minimum of the semester and
+    total allotted time.
 
 Time Accounting is conceptually simple: sessions and projects have been
 allotted only so much time, and we don't want to schedule them over this
@@ -48,7 +58,7 @@ Checked factors:
    - project time available
 
 > pComplete :: Project -> Bool
-> pComplete p = (pClosed p) || ((pAvailT p) <= quarter )
+> pComplete p = (pClosed p) || ((pAvailT p) < quarter )
 > -- NOTE: project completeness is NOT dependent on session completeness:
 > --  where
 > --    allSessClosed p = all (==True) $ map sClosed $ sessions p
@@ -66,7 +76,7 @@ Checked factors:
    - session time available
 
 > sComplete :: Session -> Bool
-> sComplete s = (sTerminated s) || ((sAvailT s) <= quarter )
+> sComplete s = (sTerminated s) || ((sAvailT s) < quarter )
 
 > sTerminated :: Session -> Bool
 > sTerminated s = (sClosed s) || (pClosed . project $ s)
@@ -80,13 +90,22 @@ How much time has this session used up in periods?
 > sCommittedS sem s = sum $ map pTimeBilled $ periodsBySemester sem s
 
 > sUsedT :: Session -> Minutes
-> sUsedT = sum . map pTimeBilled . filter isCommitted . periods
+> sUsedT = sum . map pTimeBilled . filter isUsed . periods
 
 > sUsedS :: SemesterName -> Session -> Minutes
-> sUsedS sem s = sum $ map pTimeBilled . filter isCommitted . periodsBySemester sem $ s 
+> sUsedS sem s = sum $ map pTimeBilled . filter isUsed . periodsBySemester sem $ s 
 
-> isCommitted :: Period -> Bool
-> isCommitted p = (pState p) `elem` [Scheduled, Complete]
+> isUsed :: Period -> Bool
+> isUsed p = (pState p) `elem` [Scheduled, Complete]
+
+> sPastT :: DateTime -> Session -> Minutes
+> sPastT dt = sum . map pTimeBilled . filter (isPast dt) . periods
+
+> sPastS :: DateTime -> Session -> Minutes
+> sPastS dt s = sum $ map pTimeBilled . filter (isPast dt) . periodsBySemester (dt2semester dt) $ s
+
+> isPast :: DateTime -> Period -> Bool
+> isPast dt p = isUsed p && (startTime p) < dt
 
 How much time has this project used up in periods?
 
@@ -100,7 +119,13 @@ How much time has this project used up in periods?
 > pUsedT p = sum . map sUsedT . sessions $ p
 
 > pUsedS :: SemesterName -> Project -> Minutes
-> pUsedS sem p= sum . map (sUsedS sem) . sessions $ p
+> pUsedS sem p = sum . map (sUsedS sem) . sessions $ p
+
+> pPastT :: DateTime -> Project -> Minutes
+> pPastT dt p = sum . map (sPastT dt) . sessions $ p
+
+> pPastS :: DateTime -> Project -> Minutes
+> pPastS dt p = sum . map (sPastS dt) . sessions $ p
 
 Returns the minutes available for scheduling for this session,
 i.e., time that is not encumbered in any way and therefore
@@ -111,6 +136,12 @@ Checked factors:
 
 > sAvailT :: Session -> Minutes
 > sAvailT s = (sAllottedT s) - (sCommittedT s)
+
+> sRemainT :: Session -> Minutes
+> sRemainT s = (sAllottedT s) - (sUsedT s)
+
+> sFutureT :: DateTime -> Session -> Minutes
+> sFutureT dt s = (sAllottedT s) - (sPastT dt s)
 
 The time available to this session might actually be further restricted by 
 the time available to it's project, which may depend on which its semester.
@@ -123,11 +154,23 @@ Checked factors:
 > sAvailS :: SemesterName -> Session -> Minutes
 > sAvailS sem s = min (sAllottedT s) (sAllottedS s) - (sCommittedS sem s)
 
+> sRemainS :: SemesterName -> Session -> Minutes
+> sRemainS sem s = min (sAllottedT s) (sAllottedS s) - (sUsedS sem s)
+
+> sFutureS :: DateTime -> Session -> Minutes
+> sFutureS dt s = min (sAllottedT s) (sAllottedS s) - (sPastS dt s)
+
 Checked factors:
    - project time available
 
 > pAvailT :: Project -> Minutes
 > pAvailT p = (pAllottedT p) - (pCommittedT p)
+
+> pRemainT :: Project -> Minutes
+> pRemainT p = (pAllottedT p) - (pUsedT p)
+
+> pFutureT :: DateTime -> Project -> Minutes
+> pFutureT dt p = (pAllottedT p) - (pPastT dt p)
 
 Usually, the time available for a project is simply it's total time minus
 the time it has already used up.  But for large projects, it may be allowed
@@ -139,6 +182,9 @@ Checked factors:
 
 > pAvailS :: SemesterName -> Project -> Minutes
 > pAvailS sem p = min (pAllottedT p) (pAllottedS p) - (pCommittedS sem p)
+
+> pRemainS :: SemesterName -> Project -> Minutes
+> pRemainS sem p = min (pAllottedT p) (pAllottedS p) - (pUsedS sem p)
 
 > periodsBySemester :: SemesterName -> Session -> [Period]
 > periodsBySemester sem s = filter (isSemester sem) $ periods s

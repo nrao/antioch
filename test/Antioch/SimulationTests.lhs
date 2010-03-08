@@ -47,7 +47,7 @@
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, gb, va, va, tx, tx, gb, wv, gb, lp, cv, tx, tx]
+>     expSs = [gb, gb, va, va, tx, tx, gb, wv, gb, lp, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 3 30 0
 >           , fromGregorian 2006 2 1 5 30 0
@@ -60,8 +60,8 @@
 >           , fromGregorian 2006 2 2  6 15 0
 >           , fromGregorian 2006 2 2 10 15 0
 >           , fromGregorian 2006 2 2 12 15 0
->           , fromGregorian 2006 2 2 16 15 0 ]
->     durs = [120, 120, 240, 240, 240, 240, 120, 240, 120, 240, 120, 240, 240]
+>           , fromGregorian 2006 2 2 14 15 0 ]
+>     durs = [120, 120, 240, 240, 240, 240, 120, 240, 120, 240, 120, 120, 240]
 >     scores = replicate 13 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 
@@ -192,18 +192,18 @@ Can't simulate anything because the project doesn't have enough time!
 >     history = []
 >     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
+>     expSs = [gb, va, tx, tx, wv, gb, lp, cv, tx]
 >     dts = [ fromGregorian 2006 2 1  1 30 0
 >           , fromGregorian 2006 2 1  6 30 0
 >           , fromGregorian 2006 2 1 12 30 0
 >           , fromGregorian 2006 2 1 17 30 0
 >           , fromGregorian 2006 2 1 22 30 0
 >           , fromGregorian 2006 2 2  4 30 0
->           , fromGregorian 2006 2 2  7 45 0
+>           , fromGregorian 2006 2 2  7 30 0
 >           , fromGregorian 2006 2 2 12  0 0
->           , fromGregorian 2006 2 2 16 30 0
+>           , fromGregorian 2006 2 2 14 15 0
 >            ]
->     durs = [300, 360, 300, 240, 360, 195, 255, 270, 240]
+>     durs = [300, 360, 300, 240, 360, 180, 270, 135, 360]
 >     scores = replicate 10 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
@@ -516,9 +516,8 @@ of pre-scheduled periods (history)
 >     assertEqual "test_schedulableSessions 12" False (hasObservers dt ts)
 >     assertEqual "test_schedulableSessions 13" 10 (length ss)
 >     let sss = scoringSessions dt ss
->     assertEqual "test_schedulableSessions 14" 8 (length sss)
+>     assertEqual "test_schedulableSessions 14" 10 (length sss)
 >     --print . length $ sss
->     --assertEqual "test_schedulableSessions 0" True True
 >   where
 >     ss = getOpenPSessions
 >     dt = fromGregorian 2006 10 1  7 15 0
