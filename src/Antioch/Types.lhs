@@ -10,6 +10,7 @@
 > type Score     = Float
 > type Radians   = Float
 > type Grade     = Float
+> type SemesterName  = String
 
 > quarter = 15 :: Minutes
 
@@ -46,6 +47,7 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
+> data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
 
 TBF: Initially, Open, Fixed, and Windowed all share the same contents.
 Ideally, we need to evolve these as we go and add new items and remove
@@ -55,7 +57,8 @@ use a single data structure for all sessions.
 > data Session = Session {
 >     sId         :: Int
 >   , sName       :: String
->   , sAlloted    :: Minutes
+>   , sAllottedT  :: Minutes
+>   , sAllottedS  :: Minutes
 >   , sClosed     :: Bool
 >   , project     :: Project
 >   , windows     :: [Window]
@@ -143,23 +146,23 @@ Tying the knot.
 > data Project = Project {
 >     pId             :: !Int
 >   , pName           :: !String
->   , pAlloted        :: !Minutes
+>   , pAllottedT      :: !Minutes
+>   , pAllottedS      :: !Minutes
 >   , pClosed         :: !Bool
 >   , semester        :: !String
 >   , sessions        :: [Session]
 >   , thesis          :: !Bool
->   , maxSemesterTime :: !Minutes
 >   , observers       :: [Observer]
 >   } deriving Eq
 
 > makeProject :: Project -> Minutes -> [Session] -> Project
 > makeProject p tt ss = p'
 >   where
->     p' = p { pAlloted = tt, sessions = map (\s -> s { project = p' }) ss }
->     t  = sum . map sAlloted $ ss
+>     p' = p { pAllottedT = tt, pAllottedS = tt, sessions = map (\s -> s { project = p' }) ss }
+>     t  = sum . map sAllottedT $ ss
 
 > instance Show Project where
->     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAlloted $ p) ++ ") Sessions: " ++ show [ sAlloted s | s <- sessions p] 
+>     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAllottedT $ p) ++ ") Sessions: " ++ show [ sAllottedT s | s <- sessions p] 
 
 > type DateRange = (DateTime, DateTime)
 
@@ -186,13 +189,14 @@ Tying the knot.
 >   , startTime   :: DateTime
 >   , duration    :: Minutes
 >   , pScore      :: Score  -- Average forecasted score
+>   , pState      :: StateType
 >   , pForecast   :: DateTime
 >   , pBackup     :: Bool
 >   , pTimeBilled :: Minutes
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p)
+>     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p) ++ " " ++ show (pState p) ++ "  band: " ++ (show . band . session $ p) ++ "  RA: " ++ (show . (\x -> 12*x/pi) . ra . session $ p) ++ "  grade: " ++ (show . grade . session $ p)
 >       where 
 >         n = sName . session $ p
 >         printName p = if n == "" then show . sId . session $ p else n
@@ -233,7 +237,8 @@ Simple Functions for Periods:
 >   , project     = defaultProject 
 >   , windows     = []
 >   , periods     = [defaultPeriod]
->   , sAlloted    = 0
+>   , sAllottedT  = 0
+>   , sAllottedS  = 0
 >   , minDuration = 0
 >   , maxDuration = 0
 >   , timeBetween = 0
@@ -270,18 +275,21 @@ Simple Functions for Periods:
 >   , semester        = ""
 >   , sessions        = [defaultSession]
 >   , thesis          = False
->   , pAlloted        = 0
->   , maxSemesterTime = 10000000 -- more then enough time
+>   , pAllottedT      = 0
+>   , pAllottedS      = 10000000 -- more then enough time
 >   , observers       = [defaultObserver]
 >   , pClosed         = False
 >   }
 
+> defaultStartTime = fromGregorian' 2008 1 1
+
 > defaultPeriod = Period {
 >     peId        = 0
 >   , session     = defaultSession
->   , startTime   = fromGregorian' 2008 1 1
+>   , startTime   = defaultStartTime
 >   , duration    = 0
 >   , pScore      = 0.0
+>   , pState      = Pending
 >   , pForecast   = fromGregorian' 2008 1 1
 >   , pBackup     = False
 >   , pTimeBilled = 0
@@ -290,7 +298,7 @@ Simple Functions for Periods:
 > defaultWindow  = Window {
 >     wId          = 0
 >   , wSession     = defaultSession
->   , wStart       = fromGregorian' 2008 1 1
+>   , wStart       = defaultStartTime
 >   , wDuration    = 0
 >   , wPeriodId    = 0
 >    }

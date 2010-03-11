@@ -283,10 +283,10 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 
 Generate a scoring function having the pressure factors.
 
-> genFrequencyPressure          :: [Session] -> Scoring ScoreFunc
-> genFrequencyPressure sessions = genFrequencyPressure' factors
+> genFrequencyPressure :: DateTime -> [Session] -> Scoring ScoreFunc
+> genFrequencyPressure dt sessions = genFrequencyPressure' factors
 >   where
->     bins    = initBins (minBound, maxBound) getBand sessions
+>     bins    = initBins dt (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
 
 TBF: temporary fix for MUSTANG
@@ -299,11 +299,11 @@ TBF: temporary fix for MUSTANG
 >     tell [FreqPressureHistory factors]
 >     return $ frequencyPressure factors getBand
 
-> genRightAscensionPressure          :: [Session] -> Scoring ScoreFunc
-> genRightAscensionPressure sessions = genRightAscensionPressure' accessor factors
+> genRightAscensionPressure :: DateTime -> [Session] -> Scoring ScoreFunc
+> genRightAscensionPressure dt sessions = genRightAscensionPressure' accessor factors
 >   where
 >     accessor s = (round . rad2hrs . ra $ s) `mod` 24
->     bins    = initBins (0, 23) accessor sessions
+>     bins    = initBins dt (0, 23) accessor sessions
 >     factors = binsToFactors bins
 
 > genRightAscensionPressure' :: (MonadWriter [Trace] m) => (Session -> Int) -> Array Int Float -> m ScoreFunc
@@ -324,18 +324,61 @@ Select the appropriate pressure factor from the array of pressures.
 Creates an array indexed by band or hour angle with the hours total and used
 for each slice for computing pressures.
 
-> initBins             :: Ix a => (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
-> initBins bounds f xs = runSTArray $ initBins' bounds f $ xs
+> initBins :: Ix a => DateTime -> (a, a) -> (Session -> a) -> [Session] -> Array a (Int, Int)
+> initBins dt bounds f xs = runSTArray $ initBins' dt bounds f $ xs
 
-> initBins' bounds f xs = do
+For a specific RA or band we need:
+  n = approved observing hours
+  d = hours already done
+  r = remaining hours
+i.e., n = d + r, where pressure = 1 + ln( n / d).
+
+All of this applies to a given semester and grade B or higher sessions.
+
+The value d is easy, simply add up all the time billed for every period
+completed for the current semester across ALL sessions.
+
+The value n is more difficult because the "approved" hours -- depending
+on the definition -- changes over the semester.  During the semester,
+sessions go in and/or out of being completed, authorized, and enabled.
+So which ones to add up for the total approved hours for a given
+RA or band?
+
+Our solution is to derive n indirectly by first computing r, which
+will guarantee the relationship n = d + r.  For all authorized and not
+completed sessions, the value r is the minimum of the session's (total
+and semester) allotted time minus the sum of all completed
+time billed, i.e., sFutureS.  Now pressure = 1 + ln( (d + r) / d )
+
+Note:
+    - As sessions become completed, their hours still are used in the
+      computation, but now via the factor d instead of being distributed
+      between d and r.
+    - Unauthorizing a session will reduce the allotted time, but the hours
+      done continue to factor into pressure.
+    - Sessions used for computing d are only limited by grade, and their
+      periods are limited to the semester.
+    - Sessions used for computing r are limited to authorized and
+      not completed, and their periods are limited to the semester.
+
+The result is that the computing of pressures become somewhat dynamic
+without ignoring  successful observation time.
+
+> initBins' dt bounds f xs = do
 >     arr <- newArray bounds (0, 0)
 >     for xs $ \x -> do
 >         let bin = f x
 >         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + sAlloted x, c + sUsed x)
+>         writeArray arr bin $! (t + rho dt x + sPastS dt x, c + sPastS dt x)
 >     return arr
 >   where
 >     for xs f = foldr ((>>) . f) (return ()) xs
+>     rho dt s
+>       -- the max prevents against negative remainders, i.e.,
+>       -- over-scheduled sessions
+>       | isActive s = max 0 (sFutureS dt s)
+>       | otherwise  = 0
+>     isActive s = (authorized s) && (not . sComplete $ s)
 
 Translates the total/used times pairs into pressure factors.
 
@@ -428,8 +471,8 @@ Translates the total/used times pairs into pressure factors.
 
 > projectCompletion _ s = let
 >     weight = 1000.0
->     total = fromIntegral (pAlloted . project $ s)
->     left  = total - fromIntegral (pUsed  . project $ s)
+>     total = fromIntegral (pAllottedT . project $ s)
+>     left  = total - fromIntegral (pCommittedT  . project $ s)
 >     percent = if total <= 0.0 then 0.0 else 100.0*(total - left)/total
 >     in factor "projectCompletion" . Just $
 >     if percent <= 0.0 then 1.0 else 1.0 + percent/weight
@@ -676,10 +719,12 @@ minutes              weighted mean score
 >                else weightedMeanScore scores
 >   return retval
 >     where
+>   s = session p
+>   st = startTime p
 >   scorePeriod' dt = do
->     fs <- runScoring w rs $ genScore ss >>= \f -> f dt s
+>     fs <- runScoring w rs $ genScore st ss >>= \f -> f dt s
 >     return $ eval fs
->   dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..(((duration p) `div` quarter)-1)]]
+>   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
 These methods for scoring a session are to be used in conjunction with
 Schedule's 'best' function.
@@ -857,10 +902,10 @@ Need to translate a session's factors into the final product score.
 >         | s < 1.0e-6    = 0.0
 >         | otherwise     = s * f
 
-> genScore          :: [Session] -> Scoring ScoreFunc
-> genScore sessions = do
->     raPressure   <- genRightAscensionPressure sessions
->     freqPressure <- genFrequencyPressure sessions
+> genScore          :: DateTime -> [Session] -> Scoring ScoreFunc
+> genScore dt sessions = do
+>     raPressure   <- genRightAscensionPressure dt sessions
+>     freqPressure <- genFrequencyPressure dt sessions
 >     genScore' raPressure freqPressure
 
 > genScore' raPressure freqPressure = return $ \dt s -> do
@@ -897,7 +942,7 @@ Need to translate a session's factors into the final product score.
 > scoreFactors :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreFactors s w ss dt dur rs = do
 >   let score' w dt = runScoring w rs $ do
->       fs <- genScore ss 
+>       fs <- genScore dt ss 
 >       sf <- fs dt s
 >       return sf
 >   factors <- mapM (score' w) times
@@ -909,7 +954,7 @@ Need to translate a session's factors into the final product score.
 > scoreElements :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreElements s w ss dt dur rs = do
 >   let score' w dt = runScoring w rs $ do
->       fs <- genScore ss 
+>       fs <- genScore dt ss 
 >       sf <- fs dt s
 >       return sf
 >   pfactors <- mapM (positionFactors s) times
@@ -950,10 +995,10 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , inWindows
 >        ]
 
-> genPartScore          :: [ScoreFunc] -> [Session] -> Scoring ScoreFunc
-> genPartScore sfs sessions = do
->     raPressure   <- genRightAscensionPressure sessions
->     freqPressure <- genFrequencyPressure sessions
+> genPartScore          :: DateTime -> [ScoreFunc] -> [Session] -> Scoring ScoreFunc
+> genPartScore dt sfs sessions = do
+>     raPressure   <- genRightAscensionPressure dt sessions
+>     freqPressure <- genFrequencyPressure dt sessions
 >     genPartScore' sfs raPressure freqPressure
 
 > genPartScore' sfs raPressure freqPressure = return $ \dt s -> do
@@ -1092,13 +1137,15 @@ Quick Check properties:
 > prop_frequencyPressure = forAll genProject $ \p ->
 >   let es = map (getScoringResult fp) (sessions p) in greaterOrEqToOne es
 >     where
->       fp = getPressureFunction genFrequencyPressure
+>       dt = fromGregorian 2006 6 1 0 0 0
+>       fp = getPressureFunction (genFrequencyPressure dt)
 >       greaterOrEqToOne xs = dropWhile (>=1) xs == []
 
 > prop_rightAscensionPressure = forAll genProject $ \p ->
 >   let es = map (getScoringResult fp) (sessions p) in greaterOrEqToOne es
 >     where
->       fp = getPressureFunction genRightAscensionPressure
+>       dt = fromGregorian 2006 6 1 0 0 0
+>       fp = getPressureFunction (genRightAscensionPressure dt)
 >       greaterOrEqToOne xs = dropWhile (>=1) xs == []
 
 Utilities for QuickCheck properties:

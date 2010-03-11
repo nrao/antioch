@@ -497,8 +497,10 @@ will they be using?
 >     dt = replaceYear 2006 . startTime $ p
 
 > historicalObsScore w ps = do
->     w' <- newWeather w . Just $ fromGregorian' 2006 1 1
->     runScoring w' [] $ genScore (map session ps) >>= \sf -> mapM (getScore sf) ps
+>     w' <- newWeather w . Just $ dt
+>     runScoring w' [] $ genScore dt (map session ps) >>= \sf -> mapM (getScore sf) ps
+>       where
+>         dt = fromGregorian' 2006 1 1
 
 Attributes
 
@@ -809,7 +811,7 @@ be confused and raise false alarams.
 >     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
 >     let history = filterHistory history' dt days 
 >     putStrLn $ "Number of sessions: " ++ show (length ss)
->     putStrLn $ "Total Time: " ++ show (sum (map sAlloted ss)) ++ " minutes"
+>     putStrLn $ "Total Time: " ++ show (sum (map sAllottedT ss)) ++ " minutes"
 >     start <- getCPUTime
 >     -- TBF: better way of switching between the two types of simulations?
 >     (results, trace) <- simulate strategyName w rs dt dur int history [] ss
@@ -896,9 +898,9 @@ the DB.
 
 Run generic simulations.
 
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" True True
+> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" False True
 >   where
->     start      = fromGregorian 2006 2 1 0 0 0
+>     start      = fromGregorian 2010 2 1 0 0 0
 
 More specialized: Try to schedule specific trimester.
 

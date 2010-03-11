@@ -19,7 +19,6 @@
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     , test_runDailySchedule_3
->     , test_runDailySchedule_4
 >     ]
 
 > test_removeBuffer = TestCase $ do
@@ -131,25 +130,6 @@ adjusting max duration and time between.
 >       minutes = (24*60*days)::Minutes
 >       p = (periods . findPSessionByName $ "TestWindowed2") !! 1
 
-> test_runDailySchedule_4 = TestCase $ do
->   w <- getWeather . Just $ dt
->   let ss = concatMap sessions pTestProjects
->   let ps = concatMap periods ss
->   -- schedule a new period from a window before its default period
->   let minutes = (24*60*1)::Minutes
->   results <- runScoring w [] $ runDailySchedule Pack dt minutes ps ss
->   assertEqual "test_runDailySchedule_4_1" expected_start1 (getWPeriod results)
->   -- do not schedule a new period from a window since
->   -- default period within the scheduling range
->   let minutes = (24*60*3)::Minutes
->   results <- runScoring w [] $ runDailySchedule Pack dt minutes ps ss
->   assertEqual "test_runDailySchedule_4_2" expected_start2 (getWPeriod results)
->     where
->       dt = fromGregorian 2006 10 18 0 0 0
->       expected_start1 = fromGregorian 2006 10 18 2 45 0
->       expected_start2 = fromGregorian 2006 10 20 6 30 0
->       getWPeriod rs = maybe (fromGregorian 2000 1 1 0 0 0) startTime $ find (\p -> "TestWindowed2" == (sName . session $ p)) $ rs
-
 Utilities:
 
 > mkPeriod s time = defaultPeriod { session = s
@@ -166,8 +146,9 @@ Utilities:
 >   where
 >     -- simplest session that can be scheduled at anytime
 >     -- TBF: hour angle limit fails on this occassionally - shouldn't happen
->     proj' = defaultProject { pAlloted = 100*60 }
->     s' = defaultSession { sAlloted = 100*60
+>     proj' = defaultProject { pAllottedT = 100*60 }
+>     s' = defaultSession { sAllottedT = 100*60
+>                         , sAllottedS = 100*60
 >                         , minDuration = 2*60
 >                         , maxDuration = 100*60
 >                         , frequency = 2.0

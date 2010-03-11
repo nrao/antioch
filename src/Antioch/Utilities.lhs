@@ -86,7 +86,7 @@ Translates a relative sidereal time (lst) at the given absolute solar time
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
 
-> dt2semester :: DateTime -> String
+> dt2semester :: DateTime -> SemesterName
 > dt2semester dt = yearStr ++ (drop 1 sem)
 >   where
 >     (year, month, _) = toGregorian' dt
@@ -100,10 +100,10 @@ Translates a relative sidereal time (lst) at the given absolute solar time
 > readMinutes :: String -> Minutes
 > readMinutes = read
 
-> zipWith8                :: (a->b->c->d->e->f->g->h->i) -> [a]->[b]->[c]->[d]->[e]->[f]->[g]->[h]->[i]
-> zipWith8 z (a:as) (b:bs) (c:cs) (d:ds) (e:es) (f:fs) (g:gs) (h:hs)
->                    =  z a b c d e f g h : zipWith8 z as bs cs ds es fs gs hs
-> zipWith8 _ _ _ _ _ _ _ _ _ = []
+> zipWith9                :: (a->b->c->d->e->f->g->h->i->j) -> [a]->[b]->[c]->[d]->[e]->[f]->[g]->[h]->[i]->[j]
+> zipWith9 z (a:as) (b:bs) (c:cs) (d:ds) (e:es) (f:fs) (g:gs) (h:hs) (i:is)
+>                    =  z a b c d e f g h i : zipWith9 z as bs cs ds es fs gs hs is
+> zipWith9 _ _ _ _ _ _ _ _ _ _ = []
 
 QuickCheck Properties:
 

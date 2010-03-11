@@ -26,7 +26,7 @@
 >    , test_sim_schedMinDuration
 >    -- test_sim_schedMinDuration_backup TBF: broken
 >    , test_sim_schedMinDuration_fail_backup
->    , test_sim_schedMinDuration_famine
+>    -- , test_sim_schedMinDuration_famine
 >    , test_sim_schedMinDuration_starvation
 >    , test_sim_timeLeft
 >    , test_schedulableSessions
@@ -65,7 +65,7 @@
 >           , fromGregorian 2006 2 2 14 15 0 ]
 >     durs = [120, 120, 240, 240, 240, 240, 120, 240, 120, 240, 120, 120, 240]
 >     scores = replicate 13 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores dts (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 
 Test the case where a bady performing TP is replaced with a backup
 
@@ -97,8 +97,8 @@ Test the case where a bady performing TP is replaced with a backup
 >           , fromGregorian 2006 2 6 3 30 0 ]
 >     durs = [360, 120, 240, 240, 120, 120]
 >     scores = replicate 6 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores dts (repeat False) durs
->     canceled = Period 0 gb (fromGregorian 2006 2 5 2 30 0) 120 0.0 (head dts) False 120
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
+>     canceled = Period 0 gb (fromGregorian 2006 2 5 2 30 0) 120 0.0 Pending (head dts) False 120
 
 Now have the same session fail it's MOC, but there is no backup - make deadtime
 
@@ -121,7 +121,7 @@ Now have the same session fail it's MOC, but there is no backup - make deadtime
 >           , fromGregorian 2006 2 5 11 30 0]
 >     durs = [240, 120, 120, 360, 120]
 >     scores = [5.7547455, 3.8890452, 2.928565, 3.9593077, 3.2085283]
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores dts (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 
 Make sure the simulation can handle running out of sessions to schedule, and
 that it does not over allocate periods to a session.
@@ -137,15 +137,17 @@ that it does not over allocate periods to a session.
 >     int = 60 * 24 * 1
 >     history = []
 >     p = defaultProject { semester = "06A"
->                        , pAlloted = 240
+>                        , pAllottedT = 240
+>                        , pAllottedS = 240
 >                        }
 >     s = defaultSession {minDuration = 120
->                       , sAlloted   = 240
+>                       , sAllottedT  = 240
+>                       , sAllottedS  = 240
 >                       , project     = p 
 >                        }
 >     ss = [s]
->     exp = [Period 0 s (fromGregorian 2006 2 1 16 15 0) 120 0.0 dt False 120
->          , Period 0 s (fromGregorian 2006 2 1 18 15 0) 120 0.0 dt False 120]
+>     exp = [Period 0 s (fromGregorian 2006 2 1 16 15 0) 120 0.0 Pending dt False 120
+>          , Period 0 s (fromGregorian 2006 2 1 18 15 0) 120 0.0 Pending dt False 120]
 
 Can't simulate anything because the project doesn't have enough time!
 
@@ -158,7 +160,8 @@ Can't simulate anything because the project doesn't have enough time!
 >     dur = 60 * 24 * 10
 >     int = 60 * 24 * 1
 >     s = defaultSession {minDuration = 120
->                       , sAlloted   = 240
+>                       , sAllottedT  = 240
+>                       , sAllottedS  = 240
 >                       , project     = defaultProject -- not enought time! 
 >                        }
 
@@ -175,9 +178,9 @@ Can't simulate anything because the project doesn't have enough time!
 >   dt1 = fromGregorian 2006 2 1 0 0 0
 >   dt2 = fromGregorian 2006 2 1 1 0 0
 >   dt3 = fromGregorian 2006 2 1 2 0 0
->   p1 = Period 0 defaultSession dt1 1 0.0 dt1 False 1
->   p2 = Period 0 defaultSession dt2 1 0.0 dt2 False 1
->   p3 = Period 0 defaultSession dt3 1 0.0 dt3 False 1
+>   p1 = Period 0 defaultSession dt1 1 0.0 Pending dt1 False 1
+>   p2 = Period 0 defaultSession dt2 1 0.0 Pending dt2 False 1
+>   p3 = Period 0 defaultSession dt3 1 0.0 Pending dt3 False 1
 
 > test_sim_pack = TestCase $ do
 >     w <- getWeather $ Just dt
@@ -190,21 +193,21 @@ Can't simulate anything because the project doesn't have enough time!
 >     int = 60 * 24 * 1
 >     history = []
 >     cnl = []
->     ss =  filter (\s -> (sName s) /= "MH") getOpenPSessions
->     expSs = [gb, va, va, tx, tx, wv, gb, lp, cv, tx]
+>     ss = getOpenPSessions
+>     expSs = [gb, va, tx, tx, wv, mh, cv, cv, tx]
 >     dts = [ fromGregorian 2006 2 1  1 30 0
->           , fromGregorian 2006 2 1  4 30 0
->           , fromGregorian 2006 2 1  8 30 0
+>           , fromGregorian 2006 2 1  6 30 0
 >           , fromGregorian 2006 2 1 12 30 0
 >           , fromGregorian 2006 2 1 17 30 0
 >           , fromGregorian 2006 2 1 22 30 0
 >           , fromGregorian 2006 2 2  4 30 0
->           , fromGregorian 2006 2 2  7 45 0
+>           , fromGregorian 2006 2 2 10  0 0
 >           , fromGregorian 2006 2 2 12  0 0
->           , fromGregorian 2006 2 2 14 15 0 ]
->     durs = [180, 240, 240, 300, 240, 360, 195, 255, 135, 360]
+>           , fromGregorian 2006 2 2 14 15 0
+>            ]
+>     durs = [300, 360, 300, 240, 360, 330, 120, 135, 360]
 >     scores = replicate 10 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores dts (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
 
 TBF: this test shows we aren't constraining withing pack: see how the allotted
@@ -221,17 +224,19 @@ time exceeds the sessions total time
 >     int = 60 * 24 * 1
 >     history = []
 >     p = defaultProject {semester = "06A"
->                       , pAlloted = 360
+>                       , pAllottedT = 360
+>                       , pAllottedS = 360
 >                        }
 >     s = defaultSession {minDuration = 120
 >                       , maxDuration = 120
->                       , sAlloted   = 360
+>                       , sAllottedT   = 360
+>                       , sAllottedS   = 360
 >                       , project     = p 
 >                        }
 >     ss = [s]
->     exp = [Period 0 s (fromGregorian 2006 2 1 17 45 0) 120 0.0 dt False 120
->          , Period 0 s (fromGregorian 2006 2 1 19 45 0) 120 0.0 dt False 120
->          , Period 0 s (fromGregorian 2006 2 1 21 45 0) 120 0.0 dt False 120]
+>     exp = [Period 0 s (fromGregorian 2006 2 1 17 45 0) 120 0.0 Pending dt False 120
+>          , Period 0 s (fromGregorian 2006 2 1 19 45 0) 120 0.0 Pending dt False 120
+>          , Period 0 s (fromGregorian 2006 2 1 21 45 0) 120 0.0 Pending dt False 120]
 
 > test_sim_pack_starvation2 = TestCase $ do
 >     w <- getWeather $ Just dt
@@ -245,7 +250,7 @@ time exceeds the sessions total time
 >     int = 60 * 24 * 1
 >     history = []
 >     -- induce starvation by shortening everybody's time
->     ss = map (\s -> s {sAlloted = 10*60}) getOpenPSessions
+>     ss = map (\s -> s {sAllottedT = 10*60, sAllottedS = 10*60}) getOpenPSessions
 
 TBF: the simulate function currently cannot handle scheduling around 
 pre-scheduled periods
@@ -262,9 +267,8 @@ pre-scheduled periods
 >     int = 60 * 24 * 1
 >     cnl = []
 >     ss = getOpenPSessions
->     fixed1 = Period 0 lp (fromGregorian 2006 2 1 7 30 0) 240 0.0 dt False 240
+>     fixed1 = Period 0 lp (fromGregorian 2006 2 1 7 30 0) 240 0.0 Pending dt False 240
 >     history = [fixed1]
->     --expSs = [gb, va, tx, tx, wv, gb, lp, tx, tx]
 >     expSs = [gb, lp, tx, tx, wv, gb, lp, tx, tx]
 >     dts = [ fromGregorian 2006 2 1 1 30 0
 >           , fromGregorian 2006 2 1 7 30 0
@@ -277,7 +281,7 @@ pre-scheduled periods
 >           , fromGregorian 2006 2 2 16  0 0 ]
 >     durs = [360, 240, 240, 360, 360, 180, 270, 240, 270]
 >     scores = replicate 9 0.0
->     exp = zipWith8 Period (repeat 0) expSs dts durs scores dts (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
 
 > test_sim_schd_pack = TestCase $ do
@@ -304,7 +308,7 @@ pre-scheduled periods
 >               ]
 >     expDurs = [345, 255, 360, 240, 360, 135]
 >     exp = zipWith3 mkPeriod expSs expDts expDurs
->     mkPeriod s dt dur = Period 0 s dt dur 0.0 dt False dur
+>     mkPeriod s dt dur = Period 0 s dt dur 0.0 Pending dt False dur
 
 > test_sim_schd_pack_around_history = TestCase $ do
 >     w <- getWeather $ Just dt
@@ -336,15 +340,15 @@ pre-scheduled periods
 >               ]
 >     expDurs = [345, 285, 360, 360, 135, 270, 120, 270]
 >     exp' = zipWith3 mkPeriod expSs expDts expDurs
->     mkPeriod s dt dur = Period 0 s dt dur 0.0 dt False dur
+>     mkPeriod s dt dur = Period 0 s dt dur 0.0 Pending dt False dur
 >     -- outside of the simulation range
->     fixed0 = Period 0 ds {sId = 1000} (fromGregorian 2006 1 30 0 0 0) 60 0.0 dt False 60
+>     fixed0 = Period 0 ds {sId = 1000} (fromGregorian 2006 1 30 0 0 0) 60 0.0 Pending dt False 60
 >     -- within the simulation range
->     fixed1 = Period 0 ds {sId = 1001} (fromGregorian 2006 2 1 12 0 0) 120 0.0 dt False 120
+>     fixed1 = Period 0 ds {sId = 1001} (fromGregorian 2006 2 1 12 0 0) 120 0.0 Pending dt False 120
 >     -- w/ in the sim range, and spaning a strategy boundry (midnight)
->     fixed2 = Period 0 ds {sId = 1002} (fromGregorian 2006 2 2 22 0 0) 240 0.0 dt False 240
+>     fixed2 = Period 0 ds {sId = 1002} (fromGregorian 2006 2 2 22 0 0) 240 0.0 Pending dt False 240
 >     -- outside sim range
->     fixed3 = Period 0 ds {sId = 1003} (fromGregorian 2006 3 1 0 0 0) 60 0.0 dt False 60
+>     fixed3 = Period 0 ds {sId = 1003} (fromGregorian 2006 3 1 0 0 0) 60 0.0 Pending dt False 60
 >     history1 = [fixed1, fixed2]
 >     exp1 = sort $ history1 ++ exp'
 >     history2 = [fixed0, fixed1, fixed2, fixed3]
@@ -365,7 +369,7 @@ of pre-scheduled periods (history)
 >     (result, t) <- simulateScheduling Pack w rs dt dur int h2 cnl ss2
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_3" True (scheduleHonorsFixed h2 result)
 >     let observedTime = sum $ map duration result
->     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_4" True (abs (observedTime - (sAlloted s2)) <= (minDuration s2))
+>     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_4" True (abs (observedTime - (sAllottedT s2)) <= (minDuration s2))
 >   where
 >     rs  = []
 >     -- set it up to be like production 08B beta test scheduling
@@ -375,13 +379,13 @@ of pre-scheduled periods (history)
 >     cnl = []
 >     ds = defaultSession
 >     -- a period that uses up all the sessions' time!
->     f1 = Period 0 ds {sId = sId cv} dt (sAlloted cv) 0.0 dt False (sAlloted cv)
+>     f1 = Period 0 ds {sId = sId cv} dt (sAllottedT cv) 0.0 Pending dt False (sAllottedT cv)
 >     h1 = [f1]
 >     -- make sure that this session knows it's used up it's time
 >     s1 = cv {periods = h1}
 >     ss1 = [s1]
 >     -- a period that uses MOST of the sessions' time!
->     f2 = Period 0 ds {sId = sId cv} (dt) (45*60) 0.0 dt False (45*60)
+>     f2 = Period 0 ds {sId = sId cv} (dt) (45*60) 0.0 Pending dt False (45*60)
 >     h2 = [f2]
 >     -- make sure that this session knows it's used up MOST of it's time
 >     s2 = cv {periods = h2}
@@ -389,19 +393,21 @@ of pre-scheduled periods (history)
 
 
 > test_sim_timeLeft = TestCase $ do
->   assertEqual "test_timeLeft_1" True  (hasTimeSchedulable dt1 s1)
+>   -- dt1 => 09B, dt* => 09A
+>   assertEqual "test_timeLeft_1" False (hasTimeSchedulable dt1 s1)
 >   assertEqual "test_timeLeft_2" True  (hasTimeSchedulable dt1 s2)
->   assertEqual "test_timeLeft_3" False (hasTimeSchedulable dt1 s3)
+>   assertEqual "test_timeLeft_3" True  (hasTimeSchedulable dt1 s3)
 >   assertEqual "test_timeLeft_4" False (hasTimeSchedulable dt1 s4)
->   assertEqual "test_timeLeft_5" False (hasTimeSchedulable dt2 s6) -- 09A
->   assertEqual "test_timeLeft_6" True  (hasTimeSchedulable dt1 s6) -- 09B
+>   assertEqual "test_timeLeft_5" False (hasTimeSchedulable dt2 s6)
+>   assertEqual "test_timeLeft_6" True  (hasTimeSchedulable dt1 s6)
 >     where
 >       -- vanilla test
 >       dt1 = fromGregorian 2009 6 2 0 0 0 -- 09B
 >       s1 = defaultSession
 >       -- use up some time, but not all ( 3 hrs left )
->       proj = defaultProject { pAlloted = 7 * 60 }
->       s2' = s1 { sAlloted = 7 * 60
+>       proj = defaultProject { pAllottedT = 7*60, pAllottedS = 7*60 }
+>       s2' = s1 { sAllottedT = 7*60
+>                , sAllottedS = 7*60
 >                , minDuration = 2 * 60
 >                , project = proj }
 >       dt2 = fromGregorian 2009 5 2 0 0 0
@@ -418,20 +424,26 @@ of pre-scheduled periods (history)
 >       p3 = p2 { startTime = dt4 }
 >       s3 = makeSession s2' [] [p1,p2,p3] 
 >       -- now the session has enough time, but not the project
->       proj2' = proj { pAlloted = 4 * 60 }
+>       proj2' = proj { pAllottedT = 4*60, pAllottedS = 1*60 }
 >       s4' = s2 { project = proj2' }
->       proj2 = makeProject proj2' (4*60) [s4']
+>       proj2 = makeProject' proj2' (4*60) (1*60) [s4']
 >       s4 = head . sessions $ proj2
 >       -- now the session has enought time, depending on the semester
->       proj3' = proj { pAlloted = 6 * 60 
->                     , maxSemesterTime = 2 * 60 }
->       s5' = s1 { sAlloted = 7 * 60
+>       proj3' = proj { pAllottedT = 6 * 60 
+>                     , pAllottedS = 2 * 60 }
+>       s5' = s1 { sAllottedT = 7 * 60
+>                , sAllottedS = 7 * 60
 >                , minDuration = 2 * 60 }
 >       s5 = makeSession s5' [] [p1]
 >       s6' = s5'
->       proj3 = makeProject proj3' (6*60) [s5, s6']
+>       proj3 = makeProject' proj3' (6*60) (2*60) [s5, s6']
 >       s6 = last . sessions $ proj3
 
+> makeProject' :: Project -> Minutes -> Minutes -> [Session] -> Project
+> makeProject' p tt st ss = p'
+>   where
+>     p' = p { pAllottedT = tt, pAllottedS = st, sessions = map (\s -> s { project = p' }) ss }
+>     t  = sum . map sAllottedT $ ss
 
 > test_sim_pack_completion = TestCase $ do
 >   w <- getWeather $ Just dt
@@ -453,8 +465,9 @@ of pre-scheduled periods (history)
 >       int = 12 * 60
 >       dt1 = fromGregorian 2005 1 1 0 0 0
 >       -- setup a project with sessions - no used time
->       pr = defaultProject { pAlloted = 10 * 60 }
->       s = defaultSession { sAlloted = 5 * 60
+>       pr = defaultProject { pAllottedT = 10*60, pAllottedS = 10*60 }
+>       s = defaultSession { sAllottedT = 5 * 60
+>                          , sAllottedS = 5 * 60
 >                          , project = pr
 >                          , minDuration = 1 * 60
 >                          , maxDuration = 5 * 60
@@ -462,20 +475,20 @@ of pre-scheduled periods (history)
 >       s1' = s { sId = 0, ra = 0.0 } 
 >       s2' = s { sId = 1, ra = 8.0 }
 >       s3' = s { sId = 2, ra = 16.0 }
->       pr1 = makeProject pr (pAlloted pr) [s1', s2', s3']
+>       pr1 = makeProject pr (pAllottedT pr) [s1', s2', s3']
 >       ss1 = sessions pr1
 >       -- now use up the schedulable time of one of them
 >       p1 = defaultPeriod { session = s1', startTime = dt, duration = 4*60 + 30, pTimeBilled = 4*60 + 30 }
 >       s1'' = makeSession s1' [] [p1] 
->       pr2 = makeProject pr (pAlloted pr) [s1'', s2', s3']
+>       pr2 = makeProject pr (pAllottedT pr) [s1'', s2', s3']
 >       ss2 = sessions pr2
 >       -- now close one of them
 >       s2'' = s2' { sClosed = True }
->       pr3 = makeProject pr (pAlloted pr) [s1'', s2'', s3']
+>       pr3 = makeProject pr (pAllottedT pr) [s1'', s2'', s3']
 >       ss3 = sessions pr3
 >       -- now close the project
 >       pr4' = pr3 { pClosed = True }
->       pr4 = makeProject pr4' (pAlloted pr4') [s1'', s2'', s3']
+>       pr4 = makeProject pr4' (pAllottedT pr4') [s1'', s2'', s3']
 >       ss4 = sessions pr4
 
 > test_schedulableSessions = TestCase $ do
@@ -484,9 +497,9 @@ of pre-scheduled periods (history)
 >     let ts = s {sType = Fixed}
 >     assertEqual "test_schedulableSessions 2" False (isTypeOpen dt ts)
 >     let s = findPSessionByName "LP"
->     let ts = s {sAlloted = 10*60}
+>     let ts = s {sAllottedT = 10*60, sAllottedS = 10*60}
 >     assertEqual "test_schedulableSessions 3" True (hasTimeSchedulable dt ts)
->     let ts = s {sAlloted = 9*60}
+>     let ts = s {sAllottedT = 9*60, sAllottedS = 9*60}
 >     assertEqual "test_schedulableSessions 4" False (hasTimeSchedulable dt ts)
 >     let s = findPSessionByName "GB"
 >     assertEqual "test_schedulableSessions 5" True (isSchedulableSemester dt s)
@@ -504,12 +517,12 @@ of pre-scheduled periods (history)
 >     assertEqual "test_schedulableSessions 12" False (hasObservers dt ts)
 >     assertEqual "test_schedulableSessions 13" 10 (length ss)
 >     let sss = scoringSessions dt ss
->     assertEqual "test_schedulableSessions 14" 8 (length sss)
+>     assertEqual "test_schedulableSessions 14" 10 (length sss)
 >     --print . length $ sss
->     --assertEqual "test_schedulableSessions 0" True True
 >   where
 >     ss = getOpenPSessions
->     dt = fromGregorian 2006 2 1  7 15 0
+>     dt = fromGregorian 2006 10 1  7 15 0
+>     dt1 = fromGregorian 2006 10 1  7 15 0
 >     early = fromGregorian 2005 11 30  23 45 0
 >     late = fromGregorian 2006 6 30  15 30 0
 
@@ -543,6 +556,7 @@ Test Utilities:
 > cv  = findPSessionByName "CV"
 > as  = findPSessionByName "AS"
 > gb  = findPSessionByName "GB"
+> mh  = findPSessionByName "MH"
 > va  = findPSessionByName "VA"
 > tx  = findPSessionByName "TX"
 > wv  = findPSessionByName "WV"

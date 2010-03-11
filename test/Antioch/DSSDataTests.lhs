@@ -55,7 +55,7 @@ connection to the DB correctly.
 >     assertEqual "test_getProjects1" 103 (length ps)  
 >     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 48480 (pAlloted . head $ ps)  
+>     assertEqual "test_getProjects3" 48480 (pAllottedT . head $ ps)  
 >     assertEqual "test_getProjects4" 16 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Windowed (sType . head $ ss)
 >     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
@@ -95,8 +95,8 @@ once and has a total time that is the sum of the grade hrs.
 > test_totaltime = TestCase $ do
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09B-010") projs
->   assertEqual "test_sAlloted_1" 1 (length ps)
->   assertEqual "test_sAlloted_2" (22*60) (pAlloted . head $ ps)
+>   assertEqual "test_sAllottedT_1" 1 (length ps)
+>   assertEqual "test_sAllottedT_2" (22*60) (pAllottedT . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -111,7 +111,7 @@ session scores zero through out a 24 hr period.
 >     let p = p' { observers = [defaultObserver] }
 >     let sess = sess' { project = p }
 >     let score' w dt = runScoring w [] $ do
->         fs <- genScore ss 
+>         fs <- genScore starttime ss 
 >         s <- fs dt sess
 >         return $ eval s
 >     scores <- mapM (score' w) times
@@ -134,7 +134,7 @@ from the database.
 >     let p = p' { observers = [defaultObserver] }
 >     let s = s' { project = p }
 >     let score' w dt = runScoring w [] $ do
->         fs <- genScore ss 
+>         fs <- genScore start ss 
 >         sf <- fs dt s
 >         return $ eval sf
 >     scores <- mapM (score' w) times
@@ -157,7 +157,7 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_4" "GBT09A-081-02" (sName s)
 >   assertEqual "test_session2_5" "GBT09A-081" (pName . project $ s)
 >   assertEqual "test_session2_6" "09A" (semester . project $ s)
->   assertEqual "test_session2_7" 210 (sAlloted s)
+>   assertEqual "test_session2_7" 210 (sAllottedT s)
 >   assertEqual "test_session2_8" 180 (minDuration s)
 >   assertEqual "test_session2_9" 210 (maxDuration s)
 >   assertEqual "test_session2_10" 0 (timeBetween s)
@@ -188,11 +188,12 @@ generated: it's the input we want to test, really.
 >   -- TBF, BUG: Session (17) BB261-01 has no target, 
 >   -- so is not getting imported.
 >   --assertEqual "test_getProjects_properties_9" 256 (length ss)  
->   assertEqual "test_getProjects_properties_9" 255 (length ss)  
+>   assertEqual "test_getProjects_properties_9" 254 (length ss)  
+>   assertEqual " " True True
 >     where
 >       validProject proj = "0" == (take 1 $ semester proj)
 >       validSession s = (maxDuration s) >= (minDuration s)
->                    -- TBF!! &&  (sAlloted s)     >= (minDuration s)
+>                    -- TBF!! &&  (sAllottedT s)     >= (minDuration s)
 >                     &&  (validRA s) && (validDec s)
 >       validPeriods allPeriods = not . internalConflicts $ allPeriods
 
@@ -281,7 +282,7 @@ example in comments.
 >   assertEqual "test_makeSession 4" (Just p') (wPeriod . head . windows $ s)
 >   assertEqual "test_makeSession 5" (head . periods $ s) (fromJust . wPeriod . head . windows $ s)
 >     where
->       s' = defaultSession { sAlloted = (8*60) }
+>       s' = defaultSession { sAllottedT = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
 >       w' = defaultWindow { wDuration = 7, wPeriodId = peId p' }
 

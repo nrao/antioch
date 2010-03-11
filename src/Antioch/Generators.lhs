@@ -53,15 +53,15 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     semester <- genSemesterName
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
->     let pAlloted = sum [ sAlloted s | s <- sessions ]
->     maxST    <- genMaxSemesterTime pAlloted
+>     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
+>     maxST    <- genMaxSemesterTime pAllottedT
 >     let project = defaultProject {
 >           pName = str name
 >         , semester = semester
 >         , thesis = thesis
->         , maxSemesterTime = maxST
+>         , pAllottedS = maxST
 >         }
->     return $ makeProject project pAlloted sessions
+>     return $ makeProject project pAllottedT sessions
 
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []
@@ -81,22 +81,22 @@ at a time:
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["05C", "06A", "06B", "06C"]
 
-Each Project's Sessions can have a sAlloted between 2 & 30 hrs.  Currently
+Each Project's Sessions can have a sAllottedT between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
 
 > prop_sessions p = 1 <= (length . sessions $ p) && (length . sessions $ p) <= 5
-> prop_pAlloted p = (1*2*60) <= pAlloted p && pAlloted p <= (5*30*60)
+> prop_pAllottedT p = (1*2*60) <= pAllottedT p && pAllottedT p <= (5*30*60)
 
-> prop_pAllotedQuarter p = pAlloted p `mod` quarter == 0
+> prop_pAllottedTQuarter p = pAllottedT p `mod` quarter == 0
 
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
 > prop_projectPeriods p = let n = sum [length . periods $ s | s <- sessions p] in 0 <= n && n <= 5*3
 
 TBF: this does not pass because generated periods aren't limited by their
-sessions' sAlloted.
+sessions' sAllottedT.
 
-> prop_pUsed p = 0 <= pUsed p && pUsed p <= pAlloted p
+> prop_pCommittedT p = 0 <= pCommittedT p && pCommittedT p <= pAllottedT p
 
 choose LST range and declination
 s - single sources or few sources in one area of the sky
@@ -173,7 +173,7 @@ Only 20 percent of the low freq. sessions are backups
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
->     sAlloted  <- choose (6*60, 30*60)
+>     sAllottedT <- choose (6*60, 30*60)
 >     minD       <- genMinTP f
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
@@ -192,8 +192,8 @@ Only 20 percent of the low freq. sessions are backups
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
 >                -- TBF: only for scheduleMinDuration; then go back
->                --, sAlloted      = matchAvTime sAlloted (round2quarter minD)
->                , sAlloted       = round2quarter sAlloted
+>                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
+>                , sAllottedT      = round2quarter sAllottedT
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
 >                , lowRFI         = lowRFIFlag
@@ -204,12 +204,12 @@ Only 20 percent of the low freq. sessions are backups
 >                }
 
 TBF: this is only for use with the scheduleMinDuration strategy.  We want
-to use this so that the sAlloted of a session can be completely scheduled
+to use this so that the sAllottedT of a session can be completely scheduled
 without leaving behind 'loose change'.  This can happen because this strategy
 only schedule Periods of length minDuration.
 
 > matchAvTime :: Int -> Int -> Int
-> matchAvTime sAlloted minDuration = (sAlloted `div` minDuration) * minDuration
+> matchAvTime sAllottedT minDuration = (sAllottedT `div` minDuration) * minDuration
 
 > genProjectSessions :: Gen [Session]
 > genProjectSessions = 
@@ -238,9 +238,9 @@ Assumes a single scalar rcvr group
 
 Make sure that the total time used up by the periods is correct:
 
-> prop_sUsed s          = 0 <= sUsed s && sUsed s <= (3*10*60)
-> prop_sAlloted s          = (2*60) <= sAlloted s && sAlloted s <= (30*60)
-> prop_sAllotedQuarter s   = sAlloted s `mod` quarter == 0
+> prop_sCommittedT s        = 0 <= sCommittedT s && sCommittedT s <= (3*10*60)
+> prop_sAllottedT s         = (2*60) <= sAllottedT s && sAllottedT s <= (30*60)
+> prop_sAllottedTQuarter s  = sAllottedT s `mod` quarter == 0
 > prop_minDuration s        = (2*60) <= minDuration s && minDuration s <= (6*60)
 > prop_minDurationQuarter s = minDuration s `mod` quarter == 0
 > prop_maxDuration s        = (11*60) <= maxDuration s && maxDuration s <= (12*60)
@@ -286,6 +286,7 @@ then an hour.  TBD: use T.frequency
 >        , startTime = startTime
 >        , duration  = duration
 >        , pScore    = 0.0
+>        , pState    = Pending
 >        , pForecast = startTime
 >        , pBackup   = False
 >        }
@@ -334,7 +335,7 @@ TBF: we can make this more sophisticated.
 >     pDur' <- choose (min maxL (minDuration sess), min maxL (maxDuration sess))
 >     let pDur = round2quarter pDur' --quarter * (pDur' `div` quarter)
 >     let fits = minDuration sess <= maxL
->     return $ if not fits then Nothing else Just $ Period 0 sess dt pDur 0.0 dt False pDur
+>     return $ if not fits then Nothing else Just $ Period 0 sess dt pDur 0.0 Pending dt False pDur
 
 Check this generator itself: make sure the periods adhere to expected properties
 

@@ -61,7 +61,7 @@ Session for scheduling w/ different methods.
 >           then do
 >             w <- weather
 >             let d = minDuration s
->             let p = Period 0 s dt d score (forecast w) False d
+>             let p = Period 0 s dt d score Pending (forecast w) False d
 >             rest <- scheduleMinDurationWorker sf (d `addMinutes'` dt) (dur - d) (p : history) sessions bestScorer
 >             return $ p : rest
 >           else
@@ -81,7 +81,7 @@ Always schedules a session at a given fixed duration.
 >         if score > 0.0
 >           then do
 >             w <- weather
->             let p = Period 0 s dt len score (forecast w) False len
+>             let p = Period 0 s dt len score Pending (forecast w) False len
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
@@ -101,7 +101,7 @@ A really dumb scheduler that just looks at the first score for a session.
 >         if score > 0.0
 >           then do
 >             w <- weather
->             let p = Period 0 s dt len score (forecast w) False len
+>             let p = Period 0 s dt len score Pending (forecast w) False len
 >             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
@@ -125,13 +125,13 @@ Is there time for this session?  Taking into account both the session's periods
 and the periods in the history?
 
 > timeLeftHistory :: [Period] -> Session -> Bool
-> timeLeftHistory history s = sAlloted s - timeUsedHistory history s >= minDuration s
+> timeLeftHistory history s = sAllottedT s - timeUsedHistory history s >= minDuration s
 
 The list of periods (ps) may contain redundant versions of the
 sessions' periods list.  
 
 > timeUsedHistory :: [Period] -> Session -> Minutes
-> timeUsedHistory ps s = sum [duration p | p <- uniquePeriods ps s] + sUsed s 
+> timeUsedHistory ps s = sum [duration p | p <- uniquePeriods ps s] + sCommittedT s 
 >   where
 >     uniquePeriods ps s = [p | p <- ps, s == session p] \\ periods s
 > 
@@ -223,7 +223,7 @@ Framework for quick checking startegies
 >     --let sess' = concatMap sessions ps
 >     let sess = zipWith (\s n -> s { sId = n, sName = show n }) (concatMap sessions ps) [0..]
 >     ps <- runScoring w' [] $ do
->         fs <- genScore sess
+>         fs <- genScore starttime sess
 >         strategy fs starttime dur fixed' sess
 >     --print "timebetween: "
 >     --print $ disobeyTimeBetween ps
@@ -258,7 +258,7 @@ have used up more then their alloted time.
 > disobeySessionAlloted :: [Period] -> [Session]
 > disobeySessionAlloted ps = nub $ concatMap disobeysSAlloted ps
 >   where
->     disobeysSAlloted p = if ((sAvail (session p) (sem p)) < 0) then [session p] else []
+>     disobeysSAlloted p = if ((sAvailS (sem p) (session p)) < 0) then [session p] else []
 >     sem p = dt2semester . startTime $ p
 
 Which, if any, Projects appearing in the given schedule, 
@@ -267,7 +267,7 @@ have used up more then their alloted time.
 > disobeyProjectAlloted :: [Period] -> [Project]
 > disobeyProjectAlloted ps = nub $ concatMap disobeysPAlloted ps
 >   where
->     disobeysPAlloted p = if ((pAvail (pr p) (sem p)) < 0) then [pr p] else []
+>     disobeysPAlloted p = if ((pAvailS (sem p) (pr p)) < 0) then [pr p] else []
 >     pr p = project . session $ p
 >     sem p = dt2semester . startTime $ p
 

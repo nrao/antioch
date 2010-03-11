@@ -54,8 +54,7 @@ separate query, to deal with multiple allotments (different grades)
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
 >     let project'' = setProjectObservers project' observers
->     --let sessions'' = filter hasWindows sessions' TBF belong in Simulate?
->     return $ makeProject project'' (pAlloted project'') sessions'
+>     return $ makeProject project'' (pAllottedT project'') sessions'
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer
@@ -190,7 +189,7 @@ TBF: field ignore_grade in Allotment table can be null.
 >       query = "SELECT a.total_time, a.grade FROM allotment AS a, projects AS p, projects_allotments AS pa WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
 >       xs = [toSql projId]
 >       toAllotmentList = map toAllotment
->       toAllotment (time:grade:[]) = (fromSqlMinutes time, fromSql grade)
+>       toAllotment (ttime:grade:[]) = (fromSqlMinutes ttime, fromSql grade)
 
 TBF: WTF! In Antioch, do we need to be taking into account grades at the 
 project level?  For now, we are ignoring grade and summing the different
@@ -198,7 +197,7 @@ hours togethor to get the total time.
 
 > setProjectAllotments :: Project -> [(Minutes, Grade)] -> Project
 > setProjectAllotments p [] = p
-> setProjectAllotments p (x:xs) = setProjectAllotments (p {pAlloted = (pAlloted p) + (fst x)} ) xs
+> setProjectAllotments p (x:xs) = setProjectAllotments (p {pAllottedT = (pAllottedT p) + (fst x)} ) xs
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!
@@ -211,10 +210,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND  t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?"
+>       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, stype.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS stype, observing_types AS otype WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = stype.id AND s.observing_type_id = otype.id AND otype.type != 'maintenance' AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?;"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:time:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -222,7 +221,8 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , minDuration = fromSqlMinutes' mind 3
 >           , maxDuration = fromSqlMinutes' maxd 12
 >           , timeBetween = fromSqlMinutes' between 0
->           , sAlloted    = fromSqlMinutes time
+>           , sAllottedT  = fromSqlMinutes ttime
+>           , sAllottedS  = fromSqlMinutes stime
 >           , ra = fromSql h 
 >           , dec = fromSql v  
 >           , grade = fromSql grade
@@ -243,10 +243,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   s <- updateRcvrs cnn s' 
 >   return s
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type, periods AS p WHERE s.id = p.session_id AND a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type, periods AS p WHERE s.id = p.session_id AND a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
 >       xs = [toSql periodId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:time:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -254,7 +254,8 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , minDuration = fromSqlMinutes' mind 3
 >           , maxDuration = fromSqlMinutes' maxd 12
 >           , timeBetween = fromSqlMinutes' between 0
->           , sAlloted    = fromSqlMinutes time 
+>           , sAllottedT  = fromSqlMinutes ttime 
+>           , sAllottedS  = fromSqlMinutes stime 
 >           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
 >           , dec = fromSql v  
 >           , grade = fromSql grade
@@ -275,9 +276,9 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   s <- updateRcvrs cnn s' 
 >   return s
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.id = ?"
 >       xs = [toSql sessionId]
->       toSessionData (id:name:mind:maxd:between:freq:time:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -285,7 +286,8 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , minDuration = fromSqlMinutes' mind 3
 >           , maxDuration = fromSqlMinutes' maxd 12
 >           , timeBetween = fromSqlMinutes' between 0
->           , sAlloted    = fromSqlMinutes time
+>           , sAllottedT  = fromSqlMinutes ttime
+>           , sAllottedS  = fromSqlMinutes stime
 >           , ra = fromSql h 
 >           , dec = fromSql v  
 >           , grade = fromSql grade
@@ -326,16 +328,22 @@ value of the right type.
 TBF: is this totaly legit?  and should it be somewhere else?
 
 > deriveBand :: Float -> Band
-> deriveBand freq | freq <= 2.0                  = L
-> deriveBand freq | freq > 2.00 && freq <= 3.95  = S
-> deriveBand freq | freq > 3.95 && freq <= 5.85  = C
-> deriveBand freq | freq > 5.85 && freq <= 8.00  = X
-> deriveBand freq | freq > 8.00 && freq <= 10.0  = U
-> deriveBand freq | freq > 12.0 && freq <= 15.4  = A
-> deriveBand freq | freq > 18.0 && freq <= 26.0  = K
-> deriveBand freq | freq > 26.0 && freq <= 40.0  = Q
-> deriveBand freq | freq > 40.0 && freq <= 50.0  = S
-> deriveBand freq | otherwise = W -- shouldn't get any of these!
+> deriveBand freq |                freq <= 2.0   = L
+> deriveBand freq | freq > 2.0  && freq <= 3.0   = S
+> deriveBand freq | freq > 3.0  && freq <= 7.0   = C
+> deriveBand freq | freq > 7.0  && freq <= 11.0  = X
+> deriveBand freq | freq > 11.0 && freq <= 17.0  = U
+> deriveBand freq | freq > 17.0 && freq <= 26.0  = K
+> deriveBand freq | freq > 26.0 && freq <= 40.0  = A
+> deriveBand freq | freq > 40.0 && freq <= 50.0  = Q
+> deriveBand freq | otherwise                    = W
+
+> deriveState :: String -> StateType
+> deriveState s
+>   | s == "P"  = Pending
+>   | s == "S"  = Scheduled
+>   | s == "C"  = Complete
+>   | otherwise = Deleted
 
 > toSessionType :: SqlValue -> SessionType
 > toSessionType val = read . toUpperFirst $ fromSql val
@@ -505,15 +513,17 @@ it an exclusion range.
 >   where
 >     xs = [toSql . sId $ s]
 >     -- don't pick up deleted periods!
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
->     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { peId = fromSql id
 >                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
+>                     , pState = deriveState . fromSql $ state
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
+>                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
 >                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     }
 
@@ -523,14 +533,16 @@ it an exclusion range.
 >   return . toPeriod . head $ result
 >   where
 >     xs = [toSql id]
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND p.id = ?"
->     toPeriod (id:sid:start:durHrs:score:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND p.id = ?"
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { peId = fromSql id
 >                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
 >                     , pScore = fromSql score
+>                     , pState = deriveState . fromSql $ state
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
+>                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
 >                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     } 
 
