@@ -550,12 +550,15 @@ Here we add a new period to the database.
 Initialize the Period in the Pending state (state_id = 1)
 Since Antioch is creating it
 we will set the Period_Accounting.scheduled field
+and the associated receviers using the session's receivers.
 
 > putPeriod :: Connection -> Period -> IO ()
 > putPeriod cnn p = do
 >   accounting_id <- putPeriodAccounting cnn (duration p)
 >   quickQuery' cnn query (xs accounting_id) 
 >   commit cnn
+>   pId <- getNewestID cnn "periods"
+>   putPeriodReceivers cnn p pId
 >   updateWindow cnn p
 >   commit cnn
 >     where
@@ -568,6 +571,40 @@ we will set the Period_Accounting.scheduled field
 >             , toSql a
 >             ]
 >       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, 1, false);"
+
+When we create a period, we are going to associate the rcvrs from the session
+to it's period (they can be changed later by schedulers)
+
+> putPeriodReceivers :: Connection -> Period -> Int -> IO ()
+> putPeriodReceivers cnn p pId = do
+>     -- the rcvrs to put are those from the session
+>     let rcvrs = concat . receivers . session $ p 
+>     mapM (putPeriodReceiver cnn pId) rcvrs
+>     return ()
+
+Creates a new entry in the periods_receivers table.
+
+> putPeriodReceiver :: Connection -> Int -> Receiver -> IO ()
+> putPeriodReceiver cnn pId rcvr = do
+>   -- get the rcvr id from DB
+>   rcvrId <- getRcvrId cnn rcvr
+>   quickQuery' cnn query (xs pId rcvrId) 
+>   commit cnn
+>     where
+>       xs pId rcvrId = [toSql pId
+>                      , toSql rcvrId
+>                       ]
+>       query = "INSERT INTO periods_receivers (period_id, receiver_id) VALUES (?, ?);"
+
+You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
+
+> getRcvrId :: Connection -> Receiver -> IO Int
+> getRcvrId cnn rcvr = do
+>     result <- quickQuery' cnn query xs
+>     return $ fromSql . head . head $ result 
+>   where
+>     query = "SELECT id FROM receivers WHERE name = ?;"
+>     xs = [toSql . show $ rcvr]
 
 > updateWindow :: Connection -> Period -> IO ()
 > updateWindow cnn p = handleSqlError $ do
@@ -623,3 +660,16 @@ Creates a new period accounting row, and returns this new rows ID
 >       xsId = []
 >       queryId = "SELECT MAX(id) FROM periods_accounting"
 >       toId [[x]] = fromSql x
+
+Utilities
+
+What's the largest (i.e. newest) primary key in the given table?
+
+> getNewestID :: Connection -> String -> IO Int
+> getNewestID cnn table = do
+>     r <- quickQuery' cnn query xs
+>     return $ toId r
+>   where
+>     xs = [] 
+>     query = "SELECT MAX(id) FROM " ++ table
+>     toId [[x]] = fromSql x
