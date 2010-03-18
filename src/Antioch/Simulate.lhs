@@ -74,6 +74,9 @@ Possible factors:
 > isGradeA_B :: SelectionCriteria
 > isGradeA_B _ s = grade s >= 2.8
 
+> isNotMaintenance :: SelectionCriteria
+> isNotMaintenance _ s = (pName . project $ s) /= "Maintenance"
+
 > isBackup :: SelectionCriteria
 > isBackup _ s = backup s
 
@@ -212,6 +215,7 @@ scheduled.
 > scoringSessions :: DateTime -> [Session] -> [Session]
 > scoringSessions dt = filterSessions dt [
 >         isGradeA_B
+>       , isNotMaintenance
 >        ]
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String

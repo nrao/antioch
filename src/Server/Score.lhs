@@ -70,19 +70,13 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     params <- hParameters
 >     liftIO $ print params
 >     -- Interpret options: id, start, duration
->     liftIO $ print (lookup "sid" $ params)
 >     let id       = read . fromJust . fromJust . lookup "sid" $ params
->     liftIO $ print id
 >     -- start at ...
 >     let startStr = fromJust . fromJust . lookup "start" $ params
->     liftIO $ print startStr
 >     let utc      = fromJust . parseUTCTime httpFormat $ startStr
->     liftIO $ print utc
 >     let dt = toSeconds utc
->     liftIO $ print dt
 >     -- duration
 >     let dur = read . fromJust . fromJust . lookup "duration" $ params
->     liftIO $ print dur
 >
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
@@ -93,6 +87,7 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >
 >     score <- liftIO $ scoreSession dt dur s sss w rs
+>     liftIO $ print score
 >     jsonHandler $ makeObj [("score", showJSON score)]
 
 > scoresListToJSValue :: [(Int, Score)] -> JSValue
@@ -111,8 +106,6 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     let s = snd psp
 >     let dt = startTime p
 >     let sss = scoringSessions dt ss
->     liftIO $ print (toGregorian dt)
->     liftIO $ print (length sss)
 >     rs <- liftIO $ getReceiverSchedule . Just $ dt
 >     scorePeriod p s sss w rs
 
