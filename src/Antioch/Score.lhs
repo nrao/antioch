@@ -724,7 +724,7 @@ and periods.
 >     where
 >   st = startTime p
 >   scorePeriod' dt = do
->     fs <- runScoring w rs $ genScore st ss >>= \f -> f dt s
+>     fs <- runScoring w rs $ genPeriodScore st ss >>= \f -> f dt s
 >     return $ eval fs
 >   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
@@ -1041,6 +1041,42 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       --, observerAvailable
 >       , inWindows
 >       ] ++ sfs) dt s
+
+> genPeriodScore          :: DateTime -> [Session] -> Scoring ScoreFunc
+> genPeriodScore dt sessions = do
+>     raPressure   <- genRightAscensionPressure dt sessions
+>     freqPressure <- genFrequencyPressure dt sessions
+>     genPeriodScore' raPressure freqPressure
+
+> genPeriodScore' raPressure freqPressure = return $ \dt s -> do
+>     effs <- calcEfficiency dt s
+>     score (periodFactors effs raPressure freqPressure) dt s
+
+> periodFactors :: Maybe (Score, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
+> periodFactors effs raPressure freqPressure =
+>        [
+>         stringency
+>       , (atmosphericOpacity' . fmap fst) effs
+>       , surfaceObservingEfficiency
+>       , trackingEfficiency
+>       , raPressure
+>       , freqPressure
+>       , observingEfficiencyLimit
+>       , (hourAngleLimit' . fmap snd) effs
+>       , zenithAngleLimit
+>       , trackingErrorLimit
+>       , atmosphericStabilityLimit
+>       , scienceGrade
+>       , thesisProject
+>       , projectCompletion
+>       , observerOnSite
+>       , receiver
+>       , needsLowRFI
+>       , lstExcepted
+>       --, enoughTimeBetween
+>       , observerAvailable
+>       , inWindows
+>        ]
 
 Convenience function for translating go/no-go into a factor.
 

@@ -36,7 +36,7 @@
 > getPScore :: Connection -> StateT Context IO ()
 > getPScore cnn = do
 >     params <- hParameters
->     liftIO $ print params
+>     -- liftIO $ print params
 >
 >     -- Interpret options: pids
 >     let spids = (catMaybes . map snd $ params)::[String]
