@@ -710,6 +710,9 @@ minutes              weighted mean score
 >                   (_:[])  ->  0.0
 >                   (_:rem) ->  (sum rem) / (fromIntegral . length $ ss)
 
+TBF The fact that we have to pass in session is a kluge resulting from the
+fact that we have not tied the knots properly among projects, sessions,
+and periods.
 
 > scorePeriod :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> IO Score
 > scorePeriod p s ss w rs = do
@@ -719,12 +722,24 @@ minutes              weighted mean score
 >                else weightedMeanScore scores
 >   return retval
 >     where
->   s = session p
 >   st = startTime p
 >   scorePeriod' dt = do
->     fs <- runScoring w rs $ genScore st ss >>= \f -> f dt s
+>     fs <- runScoring w rs $ genPeriodScore st ss >>= \f -> f dt s
 >     return $ eval fs
 >   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
+
+> scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> IO Score
+> scoreSession st dur s ss w rs = do
+>   scores <- mapM scoreSession' $ dts
+>   let retval = if 0.0 `elem` scores
+>                then 0.0
+>                else weightedMeanScore scores
+>   return retval
+>     where
+>   scoreSession' dt = do
+>     fs <- runScoring w rs $ genScore st ss >>= \f -> f dt s
+>     return $ eval fs
+>   dts = [(i*quarter) `addMinutes'` st | i <- [0..((dur `div` quarter)-1)]]
 
 These methods for scoring a session are to be used in conjunction with
 Schedule's 'best' function.
@@ -940,21 +955,21 @@ Need to translate a session's factors into the final product score.
 >   freq = if usesMustang s then 30.0 else frequency s
 
 > scoreFactors :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
-> scoreFactors s w ss dt dur rs = do
+> scoreFactors s w ss st dur rs = do
+>   fs <- runScoring w rs $ genScore st ss
 >   let score' w dt = runScoring w rs $ do
->       fs <- genScore dt ss 
 >       sf <- fs dt s
 >       return sf
 >   factors <- mapM (score' w) times
 >   return factors
 >     where
->       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+>       times = [(15*q) `addMinutes'` st | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
 
 > scoreElements :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
-> scoreElements s w ss dt dur rs = do
+> scoreElements s w ss st dur rs = do
+>   fs <- runScoring w rs $ genScore st ss
 >   let score' w dt = runScoring w rs $ do
->       fs <- genScore dt ss 
 >       sf <- fs dt s
 >       return sf
 >   pfactors <- mapM (positionFactors s) times
@@ -963,7 +978,7 @@ Need to translate a session's factors into the final product score.
 >   sfactors <- mapM (score' w) times
 >   return $ zipWith4 (\a b c d -> a ++ b ++ c ++ d) pfactors wfactors ffactors sfactors
 >     where
->       times = [(15*q) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+>       times = [(15*q) `addMinutes'` st | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
 
 sfactors :: Maybe (Float, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
@@ -1026,6 +1041,42 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       --, observerAvailable
 >       , inWindows
 >       ] ++ sfs) dt s
+
+> genPeriodScore          :: DateTime -> [Session] -> Scoring ScoreFunc
+> genPeriodScore dt sessions = do
+>     raPressure   <- genRightAscensionPressure dt sessions
+>     freqPressure <- genFrequencyPressure dt sessions
+>     genPeriodScore' raPressure freqPressure
+
+> genPeriodScore' raPressure freqPressure = return $ \dt s -> do
+>     effs <- calcEfficiency dt s
+>     score (periodFactors effs raPressure freqPressure) dt s
+
+> periodFactors :: Maybe (Score, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
+> periodFactors effs raPressure freqPressure =
+>        [
+>         stringency
+>       , (atmosphericOpacity' . fmap fst) effs
+>       , surfaceObservingEfficiency
+>       , trackingEfficiency
+>       , raPressure
+>       , freqPressure
+>       , observingEfficiencyLimit
+>       , (hourAngleLimit' . fmap snd) effs
+>       , zenithAngleLimit
+>       , trackingErrorLimit
+>       , atmosphericStabilityLimit
+>       , scienceGrade
+>       , thesisProject
+>       , projectCompletion
+>       , observerOnSite
+>       , receiver
+>       , needsLowRFI
+>       , lstExcepted
+>       --, enoughTimeBetween
+>       , observerAvailable
+>       , inWindows
+>        ]
 
 Convenience function for translating go/no-go into a factor.
 
