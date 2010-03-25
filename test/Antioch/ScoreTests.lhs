@@ -1086,7 +1086,6 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >   let weightedAvgScore = (sum . tail $ scores) / 4.0
 >   -- now 
 >   periodScore <- scorePeriod p s ss w []
->   print periodScore
 >   assertEqual "test_scorePeriod_1" weightedAvgScore periodScore
 >   where
 >     startDt = fromGregorian 2006 2 1 0 0 0

@@ -731,7 +731,7 @@ and periods.
 > scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> IO Score
 > scoreSession st dur s ss w rs = do
 >   scores <- mapM scoreSession' $ dts
->   let retval = if 0.0 `elem` scores
+>   let retval = if elem 0.0 scores
 >                then 0.0
 >                else weightedMeanScore scores
 >   return retval
