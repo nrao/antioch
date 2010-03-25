@@ -5,6 +5,7 @@
 > import Antioch.Score
 > import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB)
+> import Antioch.DSSReversion            (putPeriodReversion)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
 > import Data.List                       (sort, nub, find)
@@ -566,13 +567,21 @@ and the associated receviers using the session's receivers.
 
 > putPeriod :: Connection -> Period -> IO ()
 > putPeriod cnn p = do
+>   -- make an entry in the periods_accounting table
 >   accounting_id <- putPeriodAccounting cnn (duration p)
+>   -- now for the period itself
 >   quickQuery' cnn query (xs accounting_id) 
 >   commit cnn
 >   pId <- getNewestID cnn "periods"
+>   -- init the rcvrs associated w/ this period
 >   putPeriodReceivers cnn p pId
+>   -- now, mark if a window got scheduled early by this period
 >   updateWindow cnn p
 >   commit cnn
+>   -- finally, track changes in the DB by filling in the reversion tables
+>   -- TBF: just comment out these two lines when ready to release reversion
+>   --putPeriodReversion cnn p accounting_id
+>   --commit cnn
 >     where
 >       xs a = [toSql . sId . session $ p
 >             , toSql $ (toSqlString . startTime $ p) 
