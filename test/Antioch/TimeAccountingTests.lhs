@@ -4,7 +4,7 @@
 > import Antioch.PProjects
 > import Antioch.Schedule
 > import Antioch.Score
-> import Antioch.Simulate           (isNotComplete)
+> import Antioch.Filters           (isNotComplete)
 > import Antioch.Types
 > import Antioch.TimeAccounting
 > import Antioch.Utilities

@@ -3,23 +3,31 @@
 > import Antioch.DateTime
 > import Antioch.Score
 > import Antioch.Schedule
-> import Antioch.Simulate
+> --import Antioch.Simulate
+> import Antioch.Filters
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hrs, printList, overlie)
 > import Antioch.Weather
 > import Antioch.Debug
-> import Antioch.HardwareSchedule
-> import Antioch.DSSData
+> --import Antioch.HardwareSchedule
+> --import Antioch.DSSData
 > import Antioch.Settings (dssDataDB)
+> --import Antioch.Reports
 > import Data.Time           (getCurrentTimeZone, localTimeToUTC)
 > import Data.Time.LocalTime (timeZoneMinutes)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, (\\), find)
-> import Antioch.Reports
+> import Control.Monad.Writer
+
+Daily Schedule is a "meta-strategy".  For example, if the strategy is "Pack",
+then this module applies the correct filtering to the pool of sessions given,
+schedules using a buffer (over-schedule by a few hours), then removes the buffer
+to avoid artificial boundaries.
 
 Daily Schedule is a specialty function used in the daily process of actually
 scheduling the GBT every morning.  It is distinct from all the other scheduling
 functions which are more appropriate for *simulations*.
+
 Each day the GBT is scheduled for the next 24 - 48 hours.  The time range
 begins at 8 AM ET to 8 AM ET (12:00/13:00 - 12:00/13:00 UTC) the next day.  
 Therefore, the datetime passed
@@ -28,45 +36,46 @@ simply the day to begin the scheduling at 8 AM ET.
 In addition, the strategy used (ex: Pack), is called directly, avoid any 
 artificial boundaries (as we see with calling a strategy multiple times for
 each day, as in simulations).
+
 An additional attempt at avoiding artificial boundaries is the way in which 
 the endpoint for our scheduling is determined: we run the strategy from 7 AM
 EST to 7 AM EST + some overhead, then ignore the periods scheduled into the 
 overhead until we have a reasonable boundary condition at the end of the 24
 hour scheduling period.
 
-> dailySchedulePack :: DateTime -> Int -> IO ()
-> dailySchedulePack dt days = dailySchedule Pack dt days
+> dailySchedulePack :: DateTime -> Int -> [Period] -> [Session] -> Scoring [Period]
+> dailySchedulePack dt days history ss = dailySchedule Pack dt days history ss True
 
-> dailySchedule :: StrategyName -> DateTime -> Int -> IO ()
-> dailySchedule strategyName dt days = do
+> dailySchedule :: StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
+> dailySchedule strategyName dt days history ss quiet = do
+>     -- figure out the time period to schedule for
 >     let workStartMinutes = 8*60  -- TBF when do they get to work?
->     w <- getWeather Nothing
->     --edt <- getCurrentTimeZone
->     --let endTimeMinutes = workStartMinutes - (timeZoneMinutes edt) 
->     --let endTime = getEndTime dt days endTimeMinutes
->     --let dur = endTime `diffMinutes'` dt 
->     endTime <- getEndTime dt days workStartMinutes
+>     endTime <- liftIO $ getEndTime dt days workStartMinutes
 >     let dur = endTime `diffMinutes'` dt 
->     print $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
->     -- now get all the input from the DB
->     (rs, ss, projs, history') <- dbInput dt
->     let history = filterHistory history' dt (days + 1) 
->     print "scheduling around periods: "
->     --printList history
->     schdWithBuffer <- runScoring w rs $ runDailySchedule strategyName dt dur history ss
->     print "scheduled w/ buffer: "
->     print . length $ schdWithBuffer
->     printList schdWithBuffer
->     let results = removeBuffer dt dur schdWithBuffer history
->     print "removed buffer: "
->     print . length $ results
->     printList results
->     -- new schedule to DB; only write the new periods
->     let newPeriods = results \\ history
->     print "writing new periods to DB: " 
->     printList newPeriods
->     putPeriods newPeriods
+>     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
+>     let history' = filterHistory history dt (days + 1)
+>     liftIO $ pr quiet $ "scheduling around periods: "
+>     liftIO $ prl quiet $ history'
+>     -- schedule with a buffer
+>     schdWithBuffer <- dailySchedule' strategyName dt dur history' ss
+>     liftIO $ pr quiet $ "scheduled w/ buffer: "
+>     liftIO $ pr quiet $ show . length $ schdWithBuffer
+>     liftIO $ prl quiet $ schdWithBuffer
+>     -- get rid of the buffer
+>     let results = removeBuffer dt dur schdWithBuffer history'
+>     liftIO $ pr quiet $ "removed buffer: "
+>     liftIO $ pr quiet $ show . length $ results
+>     liftIO $ prl quiet $ results
+>     tell [Timestamp dt] -- for trace plots
+>     return results
 
+> pr :: Bool -> String -> IO ()
+> pr quiet str = do
+>     if quiet then return () else print str
+ 
+> prl :: Show a => Bool -> [a] -> IO ()
+> prl quiet list = do
+>     if quiet then return () else printList list
 
 Computes the scheduling period finish in UTC on the last day at the
 start hour of the work day in ET.
@@ -81,8 +90,8 @@ Actually calls the strategy (ex: Pack) for the days we are interested in,
 scheduling a 'buffer' zone, and then removing this 'buffer' to avoid 
 boundary affects.
 
-> runDailySchedule :: StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
-> runDailySchedule strategyName dt dur history ss = do
+> dailySchedule' :: StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
+> dailySchedule' strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
 >   sf <- genScore dt . scoringSessions dt $ ss
 >   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
@@ -119,6 +128,7 @@ NOTE: you may want to change getWeather in dailySchedule to use the
 start time if you use this function.
 TBF: this also needs to be refactored to merge this with Simulations.lhs
 
+> {-
 > simDailySchedulePack :: DateTime -> Int -> Int -> IO ()
 > simDailySchedulePack start packDays simDays 
 >     | packDays > simDays = return ()
@@ -127,6 +137,7 @@ TBF: this also needs to be refactored to merge this with Simulations.lhs
 >         simDailySchedulePack (nextDay start) packDays (simDays - 1)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
+> -}
 
 Debugging Utilities:
 
@@ -146,7 +157,8 @@ to reproduce scores.
 > scoreThisPeriod :: String -> DateTime -> IO ()
 > scoreThisPeriod sessName dt = do
 >     -- get the session in question
->     projs <- getProjects
+>     --projs <- getProjects
+>     let projs = [] -- TBF: place this all somewhere else?
 >     let ss = concatMap sessions projs
 >     let s = head $ filter (\s -> (sName s) == sessName) ss
 >     -- now get it's period

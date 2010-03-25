@@ -14,6 +14,7 @@
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
+
 > connect :: IO Connection
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where

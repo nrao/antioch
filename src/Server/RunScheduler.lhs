@@ -22,7 +22,7 @@
 > import Maybe
 > import Antioch.Settings                      (proxyListenerPort)
 > import Antioch.DateTime
-> import Antioch.DailySchedule
+> import Antioch.RunDailySchedule
 
 > scheduleAndRedirectHandler :: Handler ()
 > scheduleAndRedirectHandler = hMethodRouter [
@@ -55,7 +55,7 @@ for the given date range.
 >     liftIO $ print start
 >     -- schedule something! 
 >     liftIO $ print (fromSeconds start)
->     liftIO $ dailySchedulePack start days
+>     liftIO $ runDailySchedulePack start days
 >   where
 >     getKeyValuePairs pairs = [(key, value) | (key, Just value) <- pairs]
 

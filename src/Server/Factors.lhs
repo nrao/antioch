@@ -22,18 +22,19 @@
 > import qualified Data.ByteString.Lazy.Char8 as L
 > import Server.Json
 > import Server.List
-> import Antioch.Reports
 > import Network.Protocol.Uri 
 > import Network.Salvia.Handlers.Redirect      (hRedirect)
 > --import Data.Time.LocalTime                   (utcToLocalTime)
 > import Text.Printf
 > import Maybe
+> --import Antioch.Reports
 > import Antioch.DateTime
 > import Antioch.DSSData                       (getProjects, getSession)
 > import Antioch.HardwareSchedule              (getReceiverSchedule)
 > import Antioch.Score
 > import Antioch.Settings                      (proxyListenerPort)
-> import Antioch.Simulate
+> import Antioch.Filters
+> --import Antioch.Simulate
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes, rad2deg, rad2hrs)
 > import Antioch.Weather                       (getWeather)

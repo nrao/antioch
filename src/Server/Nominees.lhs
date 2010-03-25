@@ -31,7 +31,8 @@
 > import Antioch.HardwareSchedule              (getReceiverSchedule)
 > import Antioch.Score
 > import Antioch.Settings                      (proxyListenerPort)
-> import Antioch.Simulate
+> --import Antioch.Simulate
+> import Antioch.Filters
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes)
 > import Antioch.Weather                       (getWeather)

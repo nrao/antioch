@@ -8,211 +8,32 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, showList', dt2semester, overlie)
 > import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.DailySchedule
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 
-> simulate06 :: StrategyName -> IO ([Period], [Trace])
-> simulate06 strategyName = do
->     w  <- liftIO $ getWeather Nothing
->     ps <- liftIO $ generateVec 400
->     let ss = zipWith (\s n -> s { sId = n }) (concatMap sessions ps) [0..]
->     liftIO $ print $ length ss
->     start  <- liftIO getCPUTime
->     result <- simulate strategyName w rs dt dur int [] [] ss
->     stop   <- liftIO getCPUTime
->     liftIO $ putStrLn $ "Test Execution Speed: " ++ show (fromIntegral (stop-start) / 1.0e12) ++ " seconds"
->     return result
+
+Here we leave the meta-strategy to do the work of scheduling, but inbetween,
+we must do all the work that usually gets done in nell.
+
+> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
+> simulateDailySchedule rs start packDays simDays history sessions quiet schedule trace
+>     | packDays > simDays = return (schedule, trace)
+>     | otherwise = do 
+>         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
+>         w <- getWeather $ Just start
+>         (s, t) <- runScoring' w rs $ dailySchedule Pack start packDays history sessions quiet
+>         -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>         liftIO $ writeFile "/dev/null" (show t)
+>         -- TBF: udpate sessions
+>         -- TBF: publish
+>         -- TBF: optional - simulate observing
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) (sort . nub $ history ++ s) sessions quiet (sort . nub $ schedule ++ s) (trace ++ t)
 >   where
->     rs  = []
->     dt  = fromGregorian 2006 1 2 0 0 0
->     dur = 60 * 24 * 30
->     int = 60 * 24 * 1
->     history = []
-  
-Not all sessions should be considered for scheduling.  We may not one to pass
-Sessions that:
-   * are disabled/unauthorized
-   * have no time left (due to Periods)
-   * have been marked as complete
-   * more ...
+>     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
-> type SelectionCriteria = DateTime -> Session -> Bool
-
-Possible factors:
-   - project time available
-   - session time available
-   - project semester time available
-
-> hasTimeSchedulable :: SelectionCriteria
-> hasTimeSchedulable dt s = sAvail > 0 &&
->                           sAvail >= minDur &&
->                           pAvail > 0 &&
->                           pAvail >= minDur
->   where 
->     pAvail = pAvailS sem . project $ s
->     sAvail = sAvailS sem s
->     minDur = minDuration s
->     sem = dt2semester dt
-
-Possible factors:
-   - project complete flag
-   - session complete flag
-   - project time available
-   - session time available
-
-> isNotComplete :: SelectionCriteria
-> isNotComplete _ s = not . sComplete $ s
-
-> isNotTerminated :: SelectionCriteria
-> isNotTerminated _ s = not . sTerminated $ s
-
-> isTypeOpen :: SelectionCriteria
-> isTypeOpen _ s = sType s == Open
-
-> isGradeA_B :: SelectionCriteria
-> isGradeA_B _ s = grade s >= 2.8
-
-> isBackup :: SelectionCriteria
-> isBackup _ s = backup s
-
-> isApproved :: SelectionCriteria
-> isApproved _ s = all (\f -> f s) [enabled, authorized]
-
-> isAuthorized :: SelectionCriteria
-> isAuthorized _ s = authorized s
-
-> hasObservers :: SelectionCriteria
-> hasObservers _ s = not . null . observers . project $ s
-
-Filter candidate sessions dependent on its type.
-
-> isSchedulableType :: DateTime -> Minutes -> Session -> Bool
-> isSchedulableType dt dur s
->   -- Open
->   | isTypeOpen dt s     = True
->   | sType s == Windowed = activeWindows (windows s)
->   | otherwise           = False -- must be Fixed.  
->     where
->       activeWindows ws
->         -- Windowed with no windows overlapping the scheduling range
->         -- or those windows that are overlapped by the scheduling range
->         -- also overlap their default periods.
->         | filter schedulableWindow ws == [] = False
->         | otherwise                         = True
->
->       schedulableWindow w = (intersect w) && (withNoDefault $ w)
->       intersect w = wStart w < dtEnd && dt < wEnd w
->       withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
->       wEnd w = (wDuration w) `addMinutes` (wStart w)
->       dtEnd = dur `addMinutes` dt
-
-We are explicitly ignoring grade here: it has been decided that a human
-should deal with closing old B projects, etc.
-
-> -- TBF is this needed?
-> isSchedulableSemester :: SelectionCriteria 
-> isSchedulableSemester dt s = (semester $ project s) <= current_semester
->    where
->      current_semester = dt2semester dt
-
-> filterSessions :: DateTime -> [SelectionCriteria] -> [Session] -> [Session]
-> filterSessions dt []       ss = ss
-> filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
-
-> meetsCriteria :: DateTime -> Session -> [SelectionCriteria] -> Bool
-> meetsCriteria dt s []       = True
-> meetsCriteria dt s (sc:scs) = (sc dt s) && (meetsCriteria dt s scs)
-
-TBF: this does not work properly in serveral ways:
-   * each point in time should be 'scheduled' only once.  This works most of
-     the time; for example, if a period is scheduled, but then canceled due 
-     to MOC and not replaced w/ a backup, this 'gap' in the schedule will not
-     be filled again by the scheduling strategy.  This example does not apply,
-     however, when the period that is canceled, was the last (by date) to be
-     scheduled.  This is because the head of the history is used to determine
-     when we should start scheduling next.
-   * when the 'history' contains not just periods from the past, but 
-     pre-scheduled periods (ex: maintanence), it will start scheduling at the
-     end of the latest history, even if that is far in the future!.
-   * not all scheduling strategies even handle the 'history'!  Currently, only
-     Pack seems too ...
-
-> simulate :: StrategyName -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
-> simulate sched w rs dt dur int history canceled sessions =
->     simulate' w dt dur history sessions [] []
->   where
->     simulate' w dt dur history sessions pAcc tAcc
->         | dur < int  = return (pAcc, tAcc)
->         | otherwise  = do
->             w' <- liftIO $ newWeather w $ Just dt
->             ((schedPeriods, obsPeriods), t1) <- runScoring' w' rs $ runSimStrategy sched start int' sessions history
->             --liftIO $ putStrLn $ debugSimulation schedPeriods obsPeriods t1
->             let sessions' = updateSessions sessions obsPeriods
->             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->             -- This writeFile is a necessary hack to force evaluation
->             -- of the pressure histories.
->             liftIO $ writeFile "/dev/null" (show t1)
->             simulate' w' (hint `addMinutes'` dt) (dur - hint) (reverse schedPeriods ++ history) sessions' (pAcc ++ obsPeriods) $! (tAcc ++ t1)
->       where
->         -- make sure we avoid an infinite loop in the case that a
->         -- period of time can't be scheduled with anyting
->         hint   = int `div` 2
->         start' = case history of
->             (h:_) -> duration h `addMinutes'` startTime h
->             _     -> dt
->         start  = max dt start' -- strategy never starts before 'now'
->         end    = int `addMinutes'` dt
->         int'   = end `diffMinutes'` start
-
-Run the strategy to produce a schedule, then replace with backups where necessary.
-
-> runSimStrategy :: StrategyName -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring ([Period], [Period])
-> runSimStrategy strategyName dt dur sessions history = do
->   tell [Timestamp dt]
->   let strategy = getStrategy strategyName 
->   let schedSessions = schedulableSessions dt sessions
->   sf <- genScore dt . scoringSessions dt $ sessions
->   schedPeriods <- strategy sf dt dur history schedSessions
->   -- publish
->   let schedPeriods' = map (\p -> p {pState = Scheduled}) schedPeriods
->   obsPeriods <-  scheduleBackups strategyName sf schedSessions schedPeriods'
->   return (schedPeriods, obsPeriods)
-
-Note, selection by type is handled separately by isSchedulableType
-because it requires arguments describing the time period being
-scheduled.
-
-> schedulableCriteria :: [SelectionCriteria]
-> schedulableCriteria = [
->         hasTimeSchedulable
->       , isNotComplete
->       , isApproved
->       , hasObservers
->                       ]
-
-> schedulableSessions :: DateTime -> [Session] -> [Session]
-> schedulableSessions dt = filterSessions dt schedulableCriteria
-
-> clearWindowedTimeBilled :: Session -> Session
-> clearWindowedTimeBilled s
->   | (windows s) == [] = s
->   | otherwise         = makeSession s (windows s) ps
->       where
->         ps = map clear . periods $ s
->         clear p
->           | elem (peId p) pIds = p { pTimeBilled = 0 }
->           | otherwise          = p
->         pIds = [wPeriodId w | w <- (windows s)]
-
-> schedulableSession :: DateTime -> Session -> Bool
-> schedulableSession dt s = meetsCriteria dt s schedulableCriteria
-
-> scoringSessions :: DateTime -> [Session] -> [Session]
-> scoringSessions dt = filterSessions dt [
->         isGradeA_B
->        ]
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
@@ -222,75 +43,6 @@ scheduled.
 >     backups = [p | p <- obsPs, pBackup p]
 >     bcks = if length backups == 0 then "" else  "Backups: \n" ++ (showList' backups) ++ "\n"
 
-> forceSeq []     = []
-> forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
-
-> findCanceledPeriods :: [Period] -> [Period] -> [Period]
-> findCanceledPeriods scheduled observed = filter (isPeriodCanceled observed) scheduled
-
-> 
-> isPeriodCanceled :: [Period] -> Period -> Bool
-> isPeriodCanceled ps p = not $ isJust $ find (==p) ps
-
-Replace any badly performing periods with either backups or deadtime.
-
-> type BackupStrategy = StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
-
-> scheduleBackups :: StrategyName -> ScoreFunc -> [Session] -> [Period] -> Scoring [Period]
-> scheduleBackups _  _  _  [] = return []
-> scheduleBackups sn sf ss ps = do
->     sched' <- mapM (scheduleBackup sn sf ss) ps
->     let sched = mapMaybe id sched'
->     return sched
-
-What backups are even condsidered when looking for one to fill a hole due to
-a cancelation may depend on the strategy being used.  For now it doesn't.
-
-> filterBackups :: StrategyName -> [Session] -> Period -> [Session]
-> filterBackups _ ss p = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
-
-If a scheduled period fails it's Minimum Observing Conditions criteria,
-then try to replace it with the best backup that can (according to it's
-min and max duration limits).  If no suitable backup can be found, then
-schedule this as deadtime.
-
-> scheduleBackup :: BackupStrategy
-> scheduleBackup sn sf ss p = do 
->   moc <- minimumObservingConditions (startTime p) (session p)
->   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
->   where
->     backupSessions  = filterBackups sn ss p 
-
-> cancelPeriod :: BackupStrategy
-> cancelPeriod sn sf backups p = do
->   tell [Cancellation p]
->   if length backups == 0 
->     then return Nothing
->     else replaceWithBackup sn sf backups p
-
-Find the best backup for a given period according to the strategy being used.
-
-> findBestBackup :: StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Session, Score)
-> findBestBackup sn sf backups p =
->   case sn of
->     Pack ->  best (avgScoreForTimeRealWind sf (startTime p) (duration p)) backups
->     ScheduleMinDuration ->  best (avgScoreForTimeRealWind sf (startTime p) (duration p)) backups
->     ScheduleLittleNell ->  best (scoreForTime sf (startTime p) True) backups
->     
-
-Find the best backup for a given period.  The backups are scored using the
-best forecast and *not* rejecting zero scored quarters.  If the backup in turn
-fails it's MOC, then, since it is likely all the others will as well, then 
-schedule deadtime.
-
-> replaceWithBackup :: BackupStrategy
-> replaceWithBackup sn sf backups p = do
->   (s, score) <- findBestBackup sn sf backups p
->   moc        <- minimumObservingConditions (startTime p) s 
->   w <- weather
->   if score > 0.0 && fromMaybe False moc
->     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pTimeBilled p)
->     else return Nothing -- no decent backups, must be bad weather -> Deadtime
 
 > updateSessionPeriods :: [Session] -> [Period] -> [Session]
 > updateSessionPeriods ss nps = map update ss
@@ -319,75 +71,6 @@ schedule deadtime.
 >   where
 >     (as, bs) = partition (\t -> f t == f x) xs
 
-simulateScheduling is a simplification of 'simulate', in that it does not
-simulate scheduling *and* observing.  That is, it does not evaluate
-scheduled periods' MOC's and attempt to find backups for cancelations.  It's
-current purpose is for building a schedule for the 09B trimester.
-
-We will take an approach as close as possible to what was done in production
-for the 08B beta test: 
-   * attempt to schedule a 48 hour time range
-   * the first 24 hrs of this time range may have been scheduled already by
-     preveious calls to simulate'
-   * we will not attempt to do anything with the schedule as it is built up; 
-     instead, we simply pass it along to the strategy, making it the strategy's
-     responsibility for honoring pre-scheduled Periods.
-
-This also exists because it attempts to solve the bugs involving the 'history':
-that is, pre-scheduled periods that can appear any where in time.  
-
-TBF: for the purposes of building a schedule, is this acceptable?
-we introducing an effect of cutting off periods at the simulation
-boundary, and are unable to schedule only until 07:00 EDT (23:00 UT)
-on the terminal day.
-
-> simulateScheduling :: StrategyName -> Weather -> ReceiverSchedule -> DateTime -> Minutes -> Minutes -> [Period] -> [Period] -> [Session] -> IO ([Period], [Trace])
-> simulateScheduling sched w rs dt dur int history canceled sessions =
->     simulate' w dt dur history sessions [] []
->   where
->     simulate' w dt dur history sessions pAcc tAcc
->         | dur == 0  = return (pAcc, tAcc)
->         | otherwise  = do
->             w' <- liftIO $ newWeather w $ Just dt
->             -- schedPeriods only includes those periods from the history
->             -- that are contained in or overlap (dt - (dt + int)).
->             (schedPeriods, t1) <- runScoring' w' rs $ runSimSchedStrategy sched dt int' sessions history
->             -- take out the 'history' out of the result from the strategy
->             let newlyScheduledPeriods = schedPeriods \\ history
->             let newHistory = filter (\p -> elem p history) schedPeriods
->             let sessions' = updateSessionPeriods sessions newHistory
->             let sessions'' = updateSessions sessions' newlyScheduledPeriods
->             liftIO $ putStrLn $ "Time: " ++ show (toGregorian' dt) ++ "\r"
->             -- This writeFile is a necessary hack to force evaluation
->             -- of the pressure histories.
->             liftIO $ writeFile "/dev/null" (show t1)
->             -- We must always pass on the whole history, because Periods
->             -- not covered in the time range we are simulating would be
->             -- other wise lost.
->             -- Note: by using nub, we aren't catching geniune bugs
->             -- involving the creation of identical Periods.
->             simulate' w' (hint `addMinutes'` dt) (dur - hint) (nub . sort $ schedPeriods ++ history) sessions'' (nub . sort $ schedPeriods ++ history) $! (tAcc ++ t1)
->       where
->         -- must handle if duration is less then the sim. interval
->         -- ex: sim intervals are often 2 days - must be able to sim 1 day
->         int'   = if dur < int then dur else int 
->         -- move forward next simulation by half the sim. interval
->         hint   = int `div` 2
->         
-
-
-The main diff between this and runSimStrategy is that we aren't simulating
-observing: not checking MOC, not trying to replace cancelations w/ backups.
-
-> runSimSchedStrategy :: StrategyName -> DateTime -> Minutes -> [Session] -> [Period] -> Scoring [Period]
-> runSimSchedStrategy strategyName dt dur sessions history = do
->   tell [Timestamp dt]
->   let strategy = getStrategy strategyName 
->   sf <- genScore dt . scoringSessions dt $ sessions
->   schedPeriods <- strategy sf dt dur history . schedulableSessions dt $ sessions
->   -- publish
->   let schedPeriods' = map (\p -> p {pState = Scheduled}) schedPeriods
->   return schedPeriods'
 
 
 Utilities:

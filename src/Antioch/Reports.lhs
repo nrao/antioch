@@ -11,9 +11,9 @@
 > import Antioch.Utilities (rad2deg, rad2hrs, printList)
 > import Antioch.Weather
 > import Antioch.Debug
-> import Antioch.HardwareSchedule
-> import Antioch.DSSData
-> import Antioch.Settings (dssDataDB)
+> --import Antioch.HardwareSchedule
+> --import Antioch.DSSData
+> --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, (\\))
@@ -608,43 +608,6 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> dbInput :: DateTime -> IO (ReceiverSchedule, [Session], [Project], [Period])
-> dbInput dt = do
->     rs <- getReceiverSchedule $ Just dt
->     projs <- getProjects
->     let ss = concatMap sessions projs
->     let history = sort $ concatMap periods ss
->     return $ (rs, ss, projs, history)
-
-> simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput = return $ (rs, ss, projs, history)
->   where
->     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
->     g = mkStdGen 1
->     projs = generate 0 g $ genProjects 255
->     ss' = concatMap sessions projs
->     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
->     history = []
-
-Pass on to the simulation only the history of pre-scheduled periods that 
-we care about: those that fall in between the dates we are simulating for.
-We do this, because otherwise the reports at the end of the simulations will
-be confused and raise false alarams.
-
-> filterHistory :: [Period] -> DateTime -> Int -> [Period]
-> filterHistory ps start dur = filter inWindow ps
->   where
->     end = (dur*24*60) `addMinutes'` start
->     endTime p = (duration p) `addMinutes'` (startTime p)
->     inWindow p = endTime p >= start && startTime p <= end 
-
-> filterHistory' :: [Period] -> DateTime -> Minutes -> [Period]
-> filterHistory' ps start dur = filter inWindow ps
->   where
->     end = dur `addMinutes'` start
->     endTime p = (duration p) `addMinutes'` (startTime p)
->     inWindow p = endTime p >= start && startTime p <= end 
-
 > textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
 > textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
@@ -805,129 +768,47 @@ be confused and raise false alarams.
 >     hdr = "Final Schedule:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
-> generatePlots :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
-> generatePlots strategyName outdir sps dt days name simInput quiet = do
->     w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
->     let history = filterHistory history' dt days 
->     putStrLn $ "Number of sessions: " ++ show (length ss)
->     putStrLn $ "Total Time: " ++ show (sum (map sAllottedT ss)) ++ " minutes"
->     start <- getCPUTime
->     -- TBF: better way of switching between the two types of simulations?
->     (results, trace) <- simulate strategyName w rs dt dur int history [] ss
->     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
->     stop <- getCPUTime
->     let execTime = fromIntegral (stop-start) / 1.0e12 
->     putStrLn $ "Simulation Execution Speed: " ++ show execTime ++ " seconds"
->     -- post simulation analysis
->     let gaps = findScheduleGaps dt dur results
->     let canceled = getCanceledPeriods trace
->     schdObsEffs <- historicalSchdObsEffs results
->     schdAtmEffs <- historicalSchdAtmEffs results
->     schdTrkEffs <- historicalSchdTrkEffs results
->     schdSrfEffs <- historicalSchdSrfEffs results
->     let scores = [("obsEff", schdObsEffs)
->                 , ("atmEff", schdAtmEffs)
->                 , ("trkEff", schdTrkEffs)
->                 , ("srfEff", schdSrfEffs)]
->     -- text reports 
->     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history quiet
->     -- create plots
->     mapM_ (\f -> f ss results trace) sps
->     -- TBF: Here's what you need to call if you the new TP's should be 
->     -- written to the DB.  Problem: results contains the schedule, which
->     -- is a combo of the history (pre-scheduled periods) and newly 
->     -- scheduled periods.  We need to write only the new ones to the DB.
->     -- putPeriods results
+> reportTotalScore :: [Period] -> String
+> reportTotalScore ps = "\n\nTotal Score: " ++ (show total) ++ "\n"
 >   where
->     dur     = 60 * 24 * days
->     int     = 60 * 24 * 2
-
-This is a specialized version of generatePlots.  The main difference is that 
-it calls simulateScheduling instead of simulate, and it writes results to 
-the DB.
-
-> generatePlots2db :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
-> generatePlots2db strategyName outdir sps dt days name simInput quiet = do
->     print $ "Scheduling trimester for " ++ show days ++ " days."
->     w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
->     let history = filterHistory history' dt days 
->     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
->     let execTime = 0.0 
->     -- post simulation analysis
->     let gaps = findScheduleGaps dt dur results
->     let canceled = getCanceledPeriods trace
->     schdObsEffs <- historicalSchdObsEffs results
->     schdAtmEffs <- historicalSchdAtmEffs results
->     schdTrkEffs <- historicalSchdTrkEffs results
->     schdSrfEffs <- historicalSchdSrfEffs results
->     let scores = [("obsEff", schdObsEffs)
->                 , ("atmEff", schdAtmEffs)
->                 , ("trkEff", schdTrkEffs)
->                 , ("srfEff", schdSrfEffs)]
->     -- text reports 
->     now <- getCurrentTime
->     textReports name outdir now execTime dt days (show strategyName) ss results canceled gaps scores simInput rs history quiet 
->     -- create plots
->     mapM_ (\f -> f ss results trace) sps
->     -- new schedule to DB; only write the new periods
->     putPeriods $ results \\ history
->   where
->     dur     = 60 * 24 * days
->     int     = 60 * 24 * 2
-
-> schedule2db :: StrategyName -> DateTime -> Int -> IO ()
-> schedule2db strategyName dt days = do
->     print $ "Scheduling trimester for " ++ show days ++ " days."
->     w <- getWeather Nothing
->     (rs, ss, projs, history') <- dbInput dt
->     -- history start earlier?
->     let history = filterHistory history' dt days 
->     liftIO $ print dt
->     liftIO $ print days
->     liftIO $ print history
->     (results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
->     print . length $ results
->     -- new schedule to DB; only write the new periods
->     putPeriods $ results \\ history
->   where
->     dur     = 60 * 24 * days
->     int     = 60 * 24 * 2
-
-Run generic simulations.
-
-> runSim days filepath = generatePlots Pack filepath (statsPlotsToFile filepath "") start days "" False True
->   where
->     start      = fromGregorian 2010 2 1 0 0 0
-
-More specialized: Try to schedule specific trimester.
-
-> schedulePackDB :: DateTime -> Int -> IO ()
-> schedulePackDB start days = schedule2db Pack start days 
-
-> sim09B' start days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
-
-> sim09B days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
->   where
->     start      = fromGregorian 2009 6 1 0 0 0
-
-> sim09C days filepath = generatePlots2db Pack filepath (statsPlotsToFile filepath "") start days "" False True
->   where
->     start      = fromGregorian 2009 10 1 0 0 0
+>     total = sum [pScore p * fromIntegral (duration p `div` 15) | p <- ps]
 
 Trying to emulate the Beta Test's Scoring Tab:
 
+> {-
 > scoringReport :: Int -> DateTime -> Minutes -> IO ()
 > scoringReport sessionId dt dur = do
 >   (rs, ss, projs, history') <- dbInput dt
 >   let s = head $ filter (\sess -> (sId sess) == sessionId) ss
 >   scoringInfo s ss dt dur rs
- 
+> -}
+
+> {-
 > scoringReportByName :: String -> DateTime -> Minutes -> IO ()
 > scoringReportByName name dt dur = do
 >   (rs, ss, projs, history') <- dbInput dt
 >   let s = head $ filter (\sess -> (sName sess) == name) ss
 >   scoringInfo s ss dt dur rs
+> -}
+
+> createPlotsAndReports :: [[Session] -> [Period] -> [Trace] -> IO ()] -> String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO ()
+> createPlotsAndReports sps name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet = do
+>     let gaps = findScheduleGaps dt dur schedule
+>     let canceled = getCanceledPeriods trace
+>     let os = getOriginalSchedule' schedule canceled
+>     schdObsEffs <- historicalSchdObsEffs schedule
+>     schdAtmEffs <- historicalSchdAtmEffs schedule
+>     schdTrkEffs <- historicalSchdTrkEffs schedule
+>     schdSrfEffs <- historicalSchdSrfEffs schedule
+>     let scores = [("obsEff", schdObsEffs)
+>                 , ("atmEff", schdAtmEffs)
+>                 , ("trkEff", schdTrkEffs)
+>                 , ("srfEff", schdSrfEffs)]
+>     -- text reports 
+>     --now <- getCurrentTime
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores simInput rs history quiet 
+>     -- create plots
+>     mapM_ (\f -> f ss schedule trace) sps
+>   where
+>     dur = days * 60 * 24
 

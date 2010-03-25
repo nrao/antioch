@@ -29,7 +29,8 @@
 > import Antioch.DSSData                       (getProjects, fetchPeriod, setPeriodScore)
 > import Antioch.HardwareSchedule              (getReceiverSchedule)
 > import Antioch.Score
-> import Antioch.Simulate
+> --import Antioch.Simulate
+> import Antioch.Filters
 > import Antioch.Types
 > import Antioch.Weather                       (getWeather)
 
