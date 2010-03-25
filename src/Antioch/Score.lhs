@@ -211,8 +211,8 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >   where
 >     c = 299792485.0
 >     -- As of 2009-12-16: day = 400, night = 340 (microns)
->     epsilonDay   = 0.46 -- both epsilons from Memo 5.2
->     epsilonNight = 0.39 -- TBF: need to update these!
+>     epsilonDay   = 0.35
+>     epsilonNight = 0.26
 >     epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
 >     k = 32.0 * pi ^ 2 * 1e12 / (c ^ 2)
 >     -- TBF: temp fix for MUSTANG - make sure we use 90 GHz
