@@ -6,7 +6,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester, overlie)
+> import Antioch.Utilities    (between, showList', overlie, printList)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Antioch.DailySchedule
 > import Control.Monad.Writer
@@ -24,13 +24,17 @@ we must do all the work that usually gets done in nell.
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
 >         w <- getWeather $ Just start
->         (s, t) <- runScoring' w rs $ dailySchedule Pack start packDays history sessions quiet
+>         (newSched, newTrace) <- runScoring' w rs $ dailySchedule Pack start packDays history sessions quiet
 >         -- This writeFile is a necessary hack to force evaluation of the pressure histories.
->         liftIO $ writeFile "/dev/null" (show t)
->         -- TBF: udpate sessions
+>         liftIO $ writeFile "/dev/null" (show newTrace)
+>         -- make sure the session contain their new periods on the next iter.
+>         let newlyScheduledPeriods = newSched \\ history
+>         let newHistory = filter (\p -> elem p history) newSched
+>         let sessions' = updateSessionPeriods sessions newHistory
+>         let sessions'' = updateSessions sessions' newlyScheduledPeriods
 >         -- TBF: publish
 >         -- TBF: optional - simulate observing
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) (sort . nub $ history ++ s) sessions quiet (sort . nub $ schedule ++ s) (trace ++ t)
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) (nub . sort $ newSched ++ history) sessions'' quiet (nub . sort $ newSched ++ history) $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 

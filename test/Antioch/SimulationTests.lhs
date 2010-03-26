@@ -56,13 +56,11 @@ of pre-scheduled periods (history)
 > test_exhaustive_history = TestCase $ do
 >     w <- getWeather $ Just dt
 >     -- first, a test where the history uses up all the time
->     --(result, t) <- simulateScheduling Pack w rs dt dur int h1 cnl ss1
 >     (result, t) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True [] []
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_1" True (scheduleHonorsFixed h1 result)
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_2" h1 result
 >     -- now, if history only takes some of the time, make sure 
 >     -- that the session's time still gets used up
->     --(result, t) <- simulateScheduling Pack w rs dt dur int h2 cnl ss2
 >     (result, t) <- simulateDailySchedule rs dt packDays simDays h2 ss2 True [] []
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_3" True (scheduleHonorsFixed h2 result)
 >     let observedTime = sum $ map duration result
