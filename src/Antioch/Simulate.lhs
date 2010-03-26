@@ -38,7 +38,6 @@ we must do all the work that usually gets done in nell.
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
-
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
 >   where
@@ -46,7 +45,6 @@ we must do all the work that usually gets done in nell.
 >     obs = "Observed: \n" ++ (showList' obsPs) ++ "\n"
 >     backups = [p | p <- obsPs, pBackup p]
 >     bcks = if length backups == 0 then "" else  "Backups: \n" ++ (showList' backups) ++ "\n"
-
 
 > updateSessionPeriods :: [Session] -> [Period] -> [Session]
 > updateSessionPeriods ss nps = map update ss

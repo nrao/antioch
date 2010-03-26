@@ -187,8 +187,7 @@ generated: it's the input we want to test, really.
 >   assertEqual "test_getProjects_properties_8" [(14.0,9.0)] (lstExclude . last $ lsts)
 >   -- TBF, BUG: Session (17) BB261-01 has no target, 
 >   -- so is not getting imported.
->   --assertEqual "test_getProjects_properties_9" 256 (length ss)  
->   assertEqual "test_getProjects_properties_9" 254 (length ss)  
+>   assertEqual "test_getProjects_properties_9" 255 (length ss)  
 >   assertEqual " " True True
 >     where
 >       validProject proj = "0" == (take 1 $ semester proj)

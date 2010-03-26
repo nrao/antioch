@@ -60,21 +60,23 @@
 >     let utc  | timezone == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ startStr
 >              | otherwise        = fromJust . parseUTCTime httpFormat $ startStr
 >     let dt = toSeconds utc
+>     -- duration
 >     let dur = read . fromJust . fromJust . lookup "duration" $ params
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
->     let ss = scoringSessions dt . concatMap sessions $ projs
->     let s = head $ filter (\s -> (sId s) == id) $ concatMap sessions $ projs
+>     let ss = concatMap sessions projs
+>     let sss = scoringSessions dt ss
+>     let s = head $ filter (\s -> (sId s) == id) ss
 >     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     factors' <- liftIO $ scoreFactors s w ss dt dur rs
+>     factors' <- liftIO $ scoreFactors s w sss dt dur rs
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
->     factors <- liftIO $ scoreElements s w ss dt dur rs
+>     factors <- liftIO $ scoreElements s w sss dt dur rs
 >     let scoresNfactors = zipWith (++) scores factors
+>     --liftIO $ print scoresNfactors
 >     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)
->                          , ("alive", showJSON . alive dt dur $ s)
 >                          , ("type", showJSON . isSchedulableType dt dur $ s)
 >                          , ("time", showJSON . hasTimeSchedulable dt $ s)
 >                          , ("not_complete", showJSON . isNotComplete dt $ s)
@@ -82,7 +84,6 @@
 >                          , ("authorized", showJSON . authorized $ s)
 >                          , ("observers", showJSON . hasObservers dt $ s)
 >                          , ("factors", factorsListToJSValue scoresNfactors)]
->       where alive dt dur s = (hasTimeSchedulable dt s) && (isSchedulableType dt dur s)
 
 > floatStr :: Float -> String
 > floatStr f = printf "%.2f" f

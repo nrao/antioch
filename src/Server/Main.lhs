@@ -57,7 +57,7 @@
 >           ("/runscheduler",  runSchedulerHandler)  
 >         , ("/nominees",      getNomineesHandler)  
 >         , ("/scores",        getScoresHandler cnn)  
->         , ("/score",         setScoreHandler cnn)  
+>         , ("/score",         scoreHandler cnn)  
 >         , ("/factors",       getFactorsHandler cnn)  
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
 >         , ("/moc",           getMOCHandler cnn)  
