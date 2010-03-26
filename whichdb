@@ -1,0 +1,4 @@
+#!/bin/bash
+grep dssDataDB src/Antioch/Settings.lhs
+
+
