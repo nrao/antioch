@@ -270,7 +270,7 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >     let s = findPSessionByName "CV"
 >     fs <- runScoring w [] (observingEfficiency dt s)
 >     let result = eval fs
->     assertAlmostEqual "test_observingEfficiency" 4 0.857506 result
+>     assertAlmostEqual "test_observingEfficiency" 4 0.8577623 result
 
 BETA: TestObservingEfficiency.py test_efficiency
 
@@ -297,10 +297,10 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit <18" 2.9231957e-4 result
+>     assertEqual "test_observingEfficiencyLimit <18" 3.0780464e-4 result
 >     let s = findPSessionByName "GB"
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit >=18" 1.5857213e-4 result
+>     assertEqual "test_observingEfficiencyLimit >=18" 1.6728761e-4 result
 
 BETA: TestAtmosphericOpacity.py testefficiency
 
@@ -561,9 +561,9 @@ BETA: TestSurfaceObservingEfficiency testefficiency
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
 >     let sess = findPSessionByName "LP"
->     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.99392 (surfaceObservingEfficiency dt sess)
+>     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.9943902 (surfaceObservingEfficiency dt sess)
 >     let sess = findPSessionByName "WV"
->     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.77517 (surfaceObservingEfficiency dt sess)
+>     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.7905864 (surfaceObservingEfficiency dt sess)
 
 > test_scoreCV = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
@@ -572,7 +572,7 @@ BETA: TestSurfaceObservingEfficiency testefficiency
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV" 5 (1.2004913e-3) result  
+>     assertAlmostEqual "test_scoreCV" 5 1.2679951e-3 result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -585,7 +585,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 4.684075 result  
+>     assertAlmostEqual "test_scoreCV2" 3 4.6854753 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -728,13 +728,13 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 4.3943977, 255)
+>     let expected = (s, 4.3957114, 255)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- override the minimum and maximum
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 4.377978, 240)
+>     let expected = (s, 4.3792863, 240)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -749,11 +749,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertAlmostEqual "test_bestDurations 2 v" 5 4.3943977 v
+>     assertAlmostEqual "test_bestDurations 2 v" 5 4.3957114 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970864 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970957 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
@@ -1122,9 +1122,9 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >     assertEqual "test_mustang_6" 1.0 (eval fs) 
 >     fs <- runScoring w [] (surfaceObservingEfficiency dtDay ms)
 >     -- TBF: 0.18 != 0.28
->     assertEqual "test_mustang_61" 0.18385674 (eval fs) 
+>     assertEqual "test_mustang_61" 0.20957701 (eval fs) 
 >     fs <- runScoring w [] (surfaceObservingEfficiency dtDay ds)
->     assertEqual "test_mustang_62" 0.99666023 (eval fs) 
+>     assertEqual "test_mustang_62" 0.996918 (eval fs) 
 >
 >     -- Factor: trackingEfficiency
 >     fs <- runScoring w [] (trackingEfficiency dtNight ds)

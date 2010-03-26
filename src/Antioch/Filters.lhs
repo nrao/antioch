@@ -49,7 +49,6 @@ Possible factors:
 >     minDur = minDuration s
 >     sem = dt2semester dt
 
-
 Possible factors:
    - project complete flag
    - session complete flag
@@ -67,6 +66,9 @@ Possible factors:
 
 > isGradeA_B :: SelectionCriteria
 > isGradeA_B _ s = grade s >= 2.8
+
+> isNotMaintenance :: SelectionCriteria
+> isNotMaintenance _ s = (pName . project $ s) /= "Maintenance"
 
 > isBackup :: SelectionCriteria
 > isBackup _ s = backup s
@@ -151,6 +153,6 @@ scheduled.
 > scoringSessions :: DateTime -> [Session] -> [Session]
 > scoringSessions dt = filterSessions dt [
 >         isGradeA_B
+>       , isNotMaintenance
 >        ]
-
 
