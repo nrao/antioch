@@ -20,4 +20,5 @@
 >   -- TBF: get this to be an option
 >   let start = fromGregorian 2009 10 1 0 0 0
 >   --generatePlots stg dir (statsPlotsToFile dir name) start numDays name True True
->   generatePlots2db stg dir (statsPlotsToFile dir name) start numDays name False True
+>   --generatePlots2db stg dir (statsPlotsToFile dir name) start numDays name False True
+>   return () 
