@@ -3,24 +3,24 @@
 A mechanism suggested by Ron:
 G = 2*pi*Day_of_year/365 in radians
 
-A = 13.2178
+A = 11.2178 (13.2178 for PTCS)
 B = 1.2754
 C = -0.0915
 D = 0.0673
 E = 0.1573
 
-L = 2.3553
+L = 23.3553 (2.3553 for PTCS)
 M = -1.3304
 N = 0.3406
 O = 0.0525
 P = 0.1520
 
-PTCSSunRise in UT = A + B*cos(G) + C*sin(G) + D*cos(2*G) + E*sin(2*G)
+SunRise in UT = A + B*cos(G) + C*sin(G) + D*cos(2*G) + E*sin(2*G)
 
-PTCSSunSet in UT = L + M*cos(G) + N*sin(G) + O*cos(2*G) + P*sin(2*G)
+SunSet in UT = [L + M*cos(G) + N*sin(G) + O*cos(2*G) + P*sin(2*G)] modulo 24
 
-SunRise = PTCSSunRise - 2
-SunSet = (PTCSSunSet - 3 + 24) mudulo 24
+PTCSSunRise = SunRise + 2
+PTCSSunSet = (SunSet + 3 + 24) mudulo 24
 
 Accurate to about 12 min. Only works for Green Bank.
 
@@ -44,35 +44,34 @@ DOY Rise Set
 361 14.6 1.0
 ------------
 
+You can also check this code against various resources, including:
+http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 
-This is a little bit tricky, since you'd think that PTCS would calculate
-the true sun rise/set from a polynomyl, then apply these simple offsets.
-But instead, it appears they have their own fancy polynomyl!
 
 G = 2*pi*Day_of_year/365 in radians
 
 > day_frac :: Int -> Float
 > day_frac day = 2.0 * pi * ((fromIntegral day) / 365.0) 
 
-PTCSSunRise in UT = A + B*cos(G) + C*sin(G) + D*cos(2*G) + E*sin(2*G)
+SunRise in UT = A + B*cos(G) + C*sin(G) + D*cos(2*G) + E*sin(2*G)
 
-> ptcsSunRise :: Int -> Float
-> ptcsSunRise day = a + (b * cos g) + (c * sin g) + (d * cos  (2 * g)) + (e * sin (2 * g))
+> sunRise :: Int -> Float
+> sunRise day = a + (b * cos g) + (c * sin g) + (d * cos  (2 * g)) + (e * sin (2 * g))
 >   where 
 >     g = day_frac day 
->     a = 13.2178
+>     a = 11.2178
 >     b = 1.2754
 >     c = (-0.0915)
 >     d = 0.0673::Float
 >     e = 0.1573::Float
 
-PTCSSunSet in UT = L + M*cos(G) + N*sin(G) + O*cos(2*G) + P*sin(2*G)
+SunSet in UT = L + M*cos(G) + N*sin(G) + O*cos(2*G) + P*sin(2*G) modulo 24
 
-> ptcsSunSet :: Int -> Float
-> ptcsSunSet day = l + (m * (cos g)) + (n * (sin g)) + (o * (cos (2 * g))) + (p * (sin (2 * g)))
+> sunSet :: Int -> Float
+> sunSet day = unWrapHours $ l + (m * (cos g)) + (n * (sin g)) + (o * (cos (2 * g))) + (p * (sin (2 * g)))
 >   where 
 >     g = day_frac day 
->     l = 2.3553
+>     l = 23.3553
 >     m = (-1.3304)
 >     n = 0.3406
 >     o = 0.0525::Float
@@ -85,26 +84,26 @@ PTCSSunSet in UT = L + M*cos(G) + N*sin(G) + O*cos(2*G) + P*sin(2*G)
 > ptcsSunSetOffset = 3.0
 
 
-TBF: we probably shouldn't be calculating the actual sun rise/set this
-way - we should get a more direct calculation.
-
 PTCS considers the sun to have actually risen an offest *after* the sun 
 has actually risen; this is to take into account the time that it takes for
 the sun to actually warm up the GBT.
 
-> sunRise day = unWrapHours $ (ptcsSunRise day) - ptcsSunRiseOffset
+> ptcsSunRise day = (sunRise day) + ptcsSunRiseOffset
 
 PTCS considers the sun to have actually set an offest *after* the sun 
 has actually gone down; this is to take into account the time that it takes for
 the GBT to cool down.
 
-> sunSet day = unWrapHours $ (ptcsSunSet day) - ptcsSunSetOffset  
+> ptcsSunSet day = unWrapHours $ sunSet day + ptcsSunSetOffset  
 
-TBF: this is dumb, just handles (-48) to 24 hrs -> 0 - 24 hrs;
+TBF: this is dumb
+
 
 > unWrapHours :: Float -> Float
-> unWrapHours hrs | hrs < 0.0 = hrs + 24.0 
->                 | otherwise = hrs
+> unWrapHours hrs | hrs > 24.0 = hrs - 24.0
+>                 | otherwise  = hrs
+> --unWrapHours hrs | hrs < 0.0 = hrs + 24.0 
+> --                | otherwise = hrs
 
 
 

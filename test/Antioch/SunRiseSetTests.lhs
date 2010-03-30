@@ -3,7 +3,11 @@
 > import Antioch.SunRiseSet
 > import Test.HUnit
 
-> tests = TestList [test_ptcsSunRise, test_ptcsSunSet ]
+> tests = TestList [test_ptcsSunRise
+>                 , test_ptcsSunSet
+>                 , test_sunRise
+>                 , test_sunSet
+>                  ]
 
 As a check:
 ------------
@@ -45,17 +49,28 @@ about 2 hours to it.
 >     assertEqual "test_sunRise_13" 14.541542 (ptcsSunRise 361)
 
 > test_ptcsSunSet = TestCase $ do
->     assertEqual "test_sunSet_1" 1.088661 (ptcsSunSet 1)
->     assertEqual "test_sunSet_2" 1.5415978 (ptcsSunSet 31)
->     assertEqual "test_sunSet_3" 2.0935512 (ptcsSunSet 61)
->     assertEqual "test_sunSet_4" 2.6389816 (ptcsSunSet 91)
->     assertEqual "test_sunSet_5" 3.1469939 (ptcsSunSet 121)
->     assertEqual "test_sunSet_6" 3.5607843 (ptcsSunSet 151)
->     assertEqual "test_sunSet_7" 3.7386339 (ptcsSunSet 181)
->     assertEqual "test_sunSet_8" 3.5238287 (ptcsSunSet 211)
->     assertEqual "test_sunSet_9" 2.8931303 (ptcsSunSet 241)
->     assertEqual "test_sunSet_10" 2.0401423 (ptcsSunSet 271)
->     assertEqual "test_sunSet_11" 1.2964275 (ptcsSunSet 301)
->     assertEqual "test_sunSet_12" 0.9386457 (ptcsSunSet 331)
->     assertEqual "test_sunSet_13" 1.0357552 (ptcsSunSet 361)
+>     assertEqual "test_sunSet_1" 1.0886631 (ptcsSunSet 1)
+>     assertEqual "test_sunSet_2" 1.5415993 (ptcsSunSet 31)
+>     assertEqual "test_sunSet_3" 2.0935516 (ptcsSunSet 61)
+>     assertEqual "test_sunSet_4" 2.6389828 (ptcsSunSet 91)
+>     assertEqual "test_sunSet_5" 3.1469955 (ptcsSunSet 121)
+>     assertEqual "test_sunSet_6" 3.5607853 (ptcsSunSet 151)
+>     assertEqual "test_sunSet_7" 3.7386322 (ptcsSunSet 181)
+>     assertEqual "test_sunSet_8" 3.5238285 (ptcsSunSet 211)
+>     assertEqual "test_sunSet_9" 2.8931332 (ptcsSunSet 241)
+>     assertEqual "test_sunSet_10" 2.040144 (ptcsSunSet 271)
+>     assertEqual "test_sunSet_11" 1.2964287 (ptcsSunSet 301)
+>     assertEqual "test_sunSet_12" 0.9386463 (ptcsSunSet 331)
+>     assertEqual "test_sunSet_13" 1.0357571 (ptcsSunSet 361)
 
+You can also check this code against various resources, including:
+http://aa.usno.navy.mil/data/docs/RS_OneYear.php
+Here the times are given in EST, which is = UTC - 5 hours.
+
+> test_sunRise = TestCase $ do
+>     assertEqual "test_sunRise_1" 12.564111 (sunRise 1)
+>     assertEqual "test_sunRise_2" 9.999554  (sunRise 181)
+
+> test_sunSet = TestCase $ do
+>     assertEqual "test_sunSet_1" 22.088663 (sunSet 1)
+>     assertEqual "test_sunSet_2" 0.7386322 (sunSet 181)
