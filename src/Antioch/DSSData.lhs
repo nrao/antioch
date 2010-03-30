@@ -580,9 +580,8 @@ and the associated receviers using the session's receivers.
 >   updateWindow cnn p
 >   commit cnn
 >   -- finally, track changes in the DB by filling in the reversion tables
->   -- TBF: just comment out these two lines when ready to release reversion
->   --putPeriodReversion cnn p accounting_id
->   --commit cnn
+>   putPeriodReversion cnn p accounting_id
+>   commit cnn
 >     where
 >       xs a = [toSql . sId . session $ p
 >             , toSql $ (toSqlString . startTime $ p) 
