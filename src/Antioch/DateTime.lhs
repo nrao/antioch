@@ -1,5 +1,6 @@
 > module Antioch.DateTime where
 
+> import Antioch.SunRiseSet
 > import Data.Fixed                 (div')
 > import Data.Function              (on)
 > import Data.Time.Calendar hiding  (fromGregorian, toGregorian)
@@ -226,16 +227,44 @@ Simple arithmetic.
 > diffSeconds :: DateTime -> DateTime -> Int
 > diffSeconds = (-)
 
-TBF hard-coded! need to know when rise and set are
+These next two functions give back a datetime for when the sun
+should rise or set for the given datetime.
 
 > getRise    :: DateTime -> DateTime
-> getRise dt = 86400 * (dt `div` 86400) + 12 * 3600 + 30 * 60
+> getRise dt = fromGregorian year month day hrRise minRise 0
+>   where 
+>     (year, month, day, _, _, _) = toGregorian dt
+>     (hrRise, minRise) = fromHoursToHourMins . sunRise . toDayOfYear $ dt
+
 
 > getSet    :: DateTime -> DateTime
-> getSet dt = 86400 * (dt `div` 86400) + 22 * 3600
+> getSet dt = fromGregorian year month day hrSet minSet 0
+>   where 
+>     (year, month, day, _, _, _) = toGregorian dt
+>     (hrSet, minSet) = fromHoursToHourMins . sunSet . toDayOfYear $ dt
+> 
 
 > isDayTime    :: DateTime -> Bool
 > isDayTime dt = getRise dt <= dt && dt <= getSet dt
+
+Calculates the day of the year by finding the difference in minutes
+between the given datetime and the first of the year, and converting
+this to integer days.
+
+> toDayOfYear :: DateTime -> Int
+> toDayOfYear dt = toDays $ dt `diffMinutes` yearStart
+>   where
+>     (year, _, _, _, _, _) = toGregorian dt
+>     yearStart = fromGregorian (year) 1 1 0 0 0
+>     toDays mins = (mins `div` (24*60)) + 1 --ceiling $ mins / (24*60)
+
+Ex: 12.5 hours -> 12 hours and 30 minutes
+
+> fromHoursToHourMins :: Float -> (Int, Int)
+> fromHoursToHourMins hrs = (hr, mins)
+>   where
+>     hr = (floor hrs)::Int
+>     mins = floor $ ((hrs - (fromIntegral hr)) * 60.0)
 
 TBF use ET and translate to UT
 

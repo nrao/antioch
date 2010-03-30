@@ -98,12 +98,9 @@ the GBT to cool down.
 
 TBF: this is dumb
 
-
 > unWrapHours :: Float -> Float
 > unWrapHours hrs | hrs > 24.0 = hrs - 24.0
 >                 | otherwise  = hrs
-> --unWrapHours hrs | hrs < 0.0 = hrs + 24.0 
-> --                | otherwise = hrs
 
 
 

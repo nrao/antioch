@@ -13,6 +13,10 @@
 >                 , test_addMonth
 >                 , test_translations
 >                 , test_setHour
+>                 , test_toDayOfYear
+>                 , test_fromHoursToHourMins
+>                 , test_isDayTime
+>                 , test_getRise
 >                  ]
 
 > test_setHour = TestCase $ do
@@ -60,3 +64,42 @@ TBF must be some way to factor out the common code in these, but ...
 >     -- LocalTime <-> (Http) String
 >     let lt_http = formatLocalTime httpFormat lt
 >     assertEqual "test_translations_6" (Just lt) (parseLocalTime httpFormat lt_http)
+
+> test_toDayOfYear =  TestCase $ do
+>     assertEqual "test_toDayOfYear_1" 1 (toDayOfYear dt1)
+>     assertEqual "test_toDayOfYear_2" 1 (toDayOfYear dt2)
+>     assertEqual "test_toDayOfYear_3" 1 (toDayOfYear dt3)
+>     assertEqual "test_toDayOfYear_4" 2 (toDayOfYear dt4)
+>     assertEqual "test_toDayOfYear_5" 91 (toDayOfYear dt5)
+>     assertEqual "test_toDayOfYear_6" 365 (toDayOfYear dt6)
+>   where
+>     dt1 = fromGregorian 2006 1 1 0 0 0
+>     dt2 = fromGregorian 2006 1 1 1 0 0
+>     dt3 = fromGregorian 2006 1 1 23 0 0
+>     dt4 = fromGregorian 2006 1 2 0 0 0
+>     dt5 = fromGregorian 2006 4 1 0 0 0
+>     dt6 = fromGregorian 2006 12 31 12 0 0
+
+> test_fromHoursToHourMins =  TestCase $ do
+>     assertEqual "test_fromHoursToHourMins_1" (12,0) (fromHoursToHourMins 12.0)
+>     assertEqual "test_fromHoursToHourMins_2" (12,30) (fromHoursToHourMins 12.5)
+>     assertEqual "test_fromHoursToHourMins_3" (13,0) (fromHoursToHourMins 13.0)
+
+> test_isDayTime = TestCase $ do
+>     assertEqual "test_getRise" False (isDayTime dt1)
+>     assertEqual "test_getRise" True (isDayTime dt2)
+>     assertEqual "test_getRise" False (isDayTime dt3)
+>     assertEqual "test_getRise" False (isDayTime dt4)
+>   where
+>     dt1 = fromGregorian 2006 1 1 10 0 0 -- rise = 12.6, set = 22.1
+>     dt2 = fromGregorian 2006 1 1 15 0 0 -- rise = 12.6, set = 22.1
+>     dt3 = fromGregorian 2006 1 1 23 10 0 -- rise = 12.6, set = 22.1
+>     dt4 = fromGregorian 2006 1 2 5  0 0  -- rise = 12.6, set = 22.1
+
+> test_getRise = TestCase $ do
+>     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1)
+>  where
+>     dt1_1 = fromGregorian 2006 1 1 10 0 0
+>     dt1_2 = fromGregorian 2006 1 1 12 33 0
+
+
