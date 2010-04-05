@@ -608,7 +608,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
 > textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
@@ -637,14 +637,14 @@ TBF: combine this list with the statsPlotsToFile fnc
 > reportSessionDetails :: [Session] -> String
 > reportSessionDetails ss = "Session Details: \n" ++ (concatMap (\s -> (show s) ++ "\n") ss)
 
-> reportSimulationGeneralInfo :: String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
+> reportSimulationGeneralInfo :: String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> Bool -> String
 > reportSimulationGeneralInfo name now execTime start days strategyName ss ps simInput =
 >     heading ++ "    " ++ intercalate "    " [l0, l1, l2, l3, l4, l5, l6]
 >   where
 >     heading = "General Simulation Info: \n"
 >     l0 = printf "Simulation Name: %s\n" name
 >     l1 = printf "Ran Simulations on: %s\n" (toSqlString now)
->     l2 = printf "Simulation Execution Speed: %f seconds\n" execTime
+>     l2 = printf "Simulation Execution Speed: %d seconds\n" execTime
 >     l3 = printf "Ran Simulations starting at: %s for %d days (%d hours)\n" (toSqlString start) days (days*24)
 >     l4 = printf "Ran strategy %s\n" strategyName
 >     l5 = if simInput then printf "Using simulated data.\n" else "Using real data.\n"
@@ -791,7 +791,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >   scoringInfo s ss dt dur rs
 > -}
 
-> createPlotsAndReports :: [[Session] -> [Period] -> [Trace] -> IO ()] -> String -> String -> DateTime -> Float -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO ()
+> createPlotsAndReports :: [[Session] -> [Period] -> [Trace] -> IO ()] -> String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO ()
 > createPlotsAndReports sps name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet = do
 >     let gaps = findScheduleGaps dt dur schedule
 >     let canceled = getCanceledPeriods trace

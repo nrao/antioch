@@ -37,8 +37,10 @@
 >     --history'' <- fakeWindows dt days
 >     let history = filterHistory history' dt days 
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
+>     begin <- getCurrentTime
 >     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet [] []
->     let execTime = 0.0 -- TBF: calculate
+>     end <- getCurrentTime
+>     let execTime = end - begin
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
