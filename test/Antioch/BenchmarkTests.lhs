@@ -8,6 +8,7 @@
 > import Antioch.Weather
 > import Antioch.PProjects
 > import Antioch.Simulate
+> import Antioch.RunSimulation
 > import Antioch.Utilities
 > import Antioch.Reports
 > import Control.Exception (assert)
@@ -49,7 +50,7 @@ So write to dev/nell to force some execution to take place.
 >   w <- getWeather . Just $ starttime 
 >   start <- getCPUTime
 >   periods' <- runScoring w [] $ do
->       fs <- genScore sess
+>       fs <- genScore starttime sess
 >       P.pack fs starttime duration [] sess
 >   stop <- getCPUTime
 >   showExecTime "benchmark_pack_1" start stop
@@ -63,7 +64,7 @@ So write to dev/nell to force some execution to take place.
 >   w <- getWeather . Just $ starttime 
 >   start <- getCPUTime
 >   periods' <- runScoring w [] $ do
->       fs <- genScore sess
+>       fs <- genScore starttime sess
 >       P.pack fs starttime duration [] sess
 >   stop <- getCPUTime
 >   showExecTime "benchmark_pack_2" start stop
@@ -76,7 +77,7 @@ So write to dev/nell to force some execution to take place.
 > benchmark_simulate_1 = do
 >   w <- getWeather Nothing
 >   start <- getCPUTime
->   (results, trace) <- simulate Pack w rs dt dur int hist [] ss
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
 >   showExecTime "benchmark_simulate_1" start stop
 >     where
@@ -84,8 +85,11 @@ So write to dev/nell to force some execution to take place.
 >       rs = [] -- rcvr schedule
 >       hist = [] -- pre-schedule periods
 >       dt = fromGregorian 2006 6 1 0 0 0
->       dur = 24 * 60 * 3
->       int = 24 * 60 * 2
+>       simdays = 3
+>       packdays = 2
+>       quiet = True
+>       sched = []
+>       trace = []
 
 More Sessions, for longer
 
@@ -93,7 +97,7 @@ More Sessions, for longer
 > benchmark_simulate_2 = do
 >   w <- getWeather Nothing
 >   start <- getCPUTime
->   (results, trace) <- simulate Pack w rs dt dur int hist [] ss
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
 >   print . show . length $ ss
 >   showExecTime "benchmark_simulate_2" start stop
@@ -102,14 +106,17 @@ More Sessions, for longer
 >       rs = [] -- rcvr schedule
 >       hist = [] -- pre-schedule periods
 >       dt = fromGregorian 2006 6 1 0 0 0
->       dur = 24 * 60 * 10
->       int = 24 * 60 * 2
+>       simdays = 10 
+>       packdays = 2
+>       quiet = True
+>       sched = []
+>       trace = []
 
 > benchmark_simulateScheduling_1 :: IO ()
 > benchmark_simulateScheduling_1 = do
 >   w <- getWeather Nothing
 >   start <- getCPUTime
->   (results, trace) <- simulateScheduling Pack w rs dt dur int hist [] ss
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
 >   showExecTime "benchmark_simulateScheduling_1" start stop
 >     where
@@ -117,8 +124,11 @@ More Sessions, for longer
 >       rs = [] -- rcvr schedule
 >       hist = [] -- pre-schedule periods
 >       dt = fromGregorian 2006 6 1 0 0 0
->       dur = 24 * 60 * 3
->       int = 24 * 60 * 2
+>       simdays = 3
+>       packdays = 2
+>       quiet = True
+>       sched = []
+>       trace = []
 
 More sessions, for longer 
 
@@ -126,7 +136,7 @@ More sessions, for longer
 > benchmark_simulateScheduling_2 = do
 >   w <- getWeather Nothing
 >   start <- getCPUTime
->   (results, trace) <- simulateScheduling Pack w rs dt dur int hist [] ss
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
 >   showExecTime "benchmark_simulateScheduling_2" start stop
 >     where
@@ -134,8 +144,11 @@ More sessions, for longer
 >       rs = [] -- rcvr schedule
 >       hist = [] -- pre-schedule periods
 >       dt = fromGregorian 2006 6 1 0 0 0
->       dur = 24 * 60 * 10
->       int = 24 * 60 * 2
+>       simdays = 10
+>       packdays = 2
+>       quiet = True
+>       sched = []
+>       trace = []
 
 > benchmark_packWorker_1 :: IO ()
 > benchmark_packWorker_1 = do
@@ -179,12 +192,13 @@ I thought it would be interesting to do anyways.
 > benchmark_generatePlots_1 :: IO ()
 > benchmark_generatePlots_1 = do
 >   start <- getCPUTime
->   runSim 120 "sims" -- a whole semester!
+>   runSim dt 120 "sims" -- a whole semester!
 >   -- don't need this, due to production of things in the real world (plots)
 >   -- forceExec (show .length $ zs)
 >   stop <- getCPUTime
 >   showExecTime "benchmark_generatePlots_1" start stop
 >     where 
+>       dt = fromGregorian 2006 6 1 0 0 0
 
 Utilities:
 
