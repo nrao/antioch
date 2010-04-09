@@ -425,7 +425,7 @@ For now, just set:
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
 >     | n == "Night-time Flag" = s { lowRFI = fromSql pBool }    
 >     | n == "Transit"         = s { transit = toTransit pBool }
->     | n == "Min Eff Tsys"    = s { xi = fromSql pFlt }    
+>     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
 >     | otherwise              = s
 >   where
 >     n = fromSql pName
