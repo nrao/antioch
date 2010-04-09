@@ -39,6 +39,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
+>   , test_minObservingEfficiencyFactor
 >   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
@@ -271,6 +272,28 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >     fs <- runScoring w [] (observingEfficiency dt s)
 >     let result = eval fs
 >     assertAlmostEqual "test_observingEfficiency" 4 0.8577623 result
+
+> test_minObservingEfficiencyFactor = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
+>     fs <- runScoring w [] (observingEfficiency dt s1)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.48114803 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s1)
+>     assertEqual "test_minObservingEfficiencyFactor 2" 6.297815e-14 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt s2)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 0.48114803 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s2)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 6.297815e-14 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt s3)
+>     assertEqual "test_minObservingEfficiencyFactor 5" 1.9245921 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s3)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 1.0 (eval fs)
+>     where
+>      dt = fromGregorian 2006 10 15 12 0 0
+>      s1 = defaultSession {sAllottedT = 24*60, minDuration = 2*60
+>                         , maxDuration = 6*60, frequency = 16.9
+>                         , dec = 0.71, band = K}
+>      s2 = s1 {xi = 1.0}
+>      s3 = s1 {xi = 2.0}
 
 BETA: TestObservingEfficiency.py test_efficiency
 

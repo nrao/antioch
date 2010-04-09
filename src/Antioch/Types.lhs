@@ -79,6 +79,7 @@ use a single data structure for all sessions.
 >   , lstExclude  :: [(Float, Float)]
 >   , sType       :: SessionType
 >   , transit     :: TransitType
+>   , xi          :: Float
 >   } deriving Show
 
 > instance Eq Session where
@@ -256,6 +257,7 @@ Simple Functions for Periods:
 >   , sClosed     = False
 >   , sType       = Open
 >   , transit     = Optional
+>   , xi          = 1.0
 >   }
 
 > defaultObserver = Observer {

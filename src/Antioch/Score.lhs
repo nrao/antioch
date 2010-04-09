@@ -37,13 +37,13 @@ Ranking System from Memo 5.2, Section 3
 >     -- MUSTANG computes opticalDepth using zod @ 30 GHz
 >     zod <- if not . usesMustang $ s then zenithOpticalDepth dt s else zenithOpticalDepth dt s { frequency = 30.0 }
 >     -- MUSTANG computes minTsysPrime instead of looking it up
->     lookupMinTsysPrime <-  liftIO $ minTSysPrime w (frequency s) elevation'
+>     lookupMinTsysPrime <-  liftIO $ minTSysPrime w (frequency s) $ elevation'
 >     let mustangMinTsysPrime = if usesMustang s then Just $ calcMustangTSysPrime za else Nothing
 >     let minTsysPrime' = if usesMustang s then mustangMinTsysPrime else lookupMinTsysPrime
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
->         minTsysPrime'' <- minTsysPrime'
+>         minTsysPrime'' <- minTsysPrime' >>= Just . (*xf)
 >         -- MUSTANG uses rcvr temp of 120.0 K
 >         let [eff, effTransit] = if not . usesMustang $ s then  map (calcEff trx tk' minTsysPrime'' zod') [za, zat] else map (mustangCalcEff 120.0 tk' minTsysPrime'' zod') [za, zat]
 >         return (eff, eff / effTransit)
@@ -51,6 +51,7 @@ Ranking System from Memo 5.2, Section 3
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
 >     elevation' = (pi/2 - za)
+>     xf = xi s
 >            
 >     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
 >       where
@@ -90,7 +91,12 @@ From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
->     minTSysPrime w (frequency s) (elevation dt s)
+>     --minTSysPrime w (frequency s) (elevation dt s)
+>     mts' <- minTSysPrime w (frequency s) (elevation dt s)
+>     return $ do
+>         mts' >>= Just . (*xf)
+>     where
+>       xf = xi s
 
 > systemNoiseTemperature :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperature w dt s = runScoring w [] $ do
