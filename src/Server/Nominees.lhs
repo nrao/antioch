@@ -73,8 +73,7 @@
 >     -- include completed sessions?
 >     let completed = fromJust . fromJust . lookup "completed" $ params
 >     let filter = catMaybes . concat $ [
->             [Just isTypeOpen]
->           , if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
+>             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
 >           , [Just isApproved]
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
