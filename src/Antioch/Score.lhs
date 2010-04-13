@@ -91,7 +91,6 @@ From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
->     --minTSysPrime w (frequency s) (elevation dt s)
 >     mts' <- minTSysPrime w (frequency s) (elevation dt s)
 >     return $ do
 >         mts' >>= Just . (*xf)
@@ -202,7 +201,9 @@ TBF: this was moved from Statistic to here, but it needs a better home.
 TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 
 > atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
-> atmosphericOpacity' eff dt s = factor "atmosphericOpacity" eff
+> atmosphericOpacity' eff dt s = do
+>     let eff' = maybe Nothing (Just . min 1.0) eff
+>     factor "atmosphericOpacity" eff'
 
 > surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" . Just $
 >     if isDayTime dt
