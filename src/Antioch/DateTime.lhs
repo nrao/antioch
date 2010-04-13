@@ -230,29 +230,14 @@ Simple arithmetic.
 These next two functions give back a datetime for when the sun
 should rise or set for the given datetime.
 
-> {-
-> getRise    :: DateTime -> DateTime
-> getRise dt = fromGregorian year month day hrRise minRise 0
->   where 
->     (year, month, day, _, _, _) = toGregorian dt
->     (hrRise, minRise) = fromHoursToHourMins . sunRise . toDayOfYear $ dt
-> -}
-
 > getRise :: DateTime -> (Int -> Float) -> DateTime
 > getRise dt riseFnc = fromGregorian year month day hrRise minRise 0
 >   where 
 >     (year, month, day, _, _, _) = toGregorian dt
 >     (hrRise, minRise) = fromHoursToHourMins . riseFnc . toDayOfYear $ dt
 
-> {-
-> getSet    :: DateTime -> DateTime
-> getSet dt = fromGregorian year month day hrSet minSet 0
->   where 
->     (year, month, day, _, _, _) = toGregorian dt
->     (hrSet, minSet) = fromHoursToHourMins . sunSet . toDayOfYear $ dt
-> -} 
 
-TBF: set times, when using a function that offsets it, can wrap to the next dy
+Note: Set times, when using a func that offsets it, can wrap to the next day.
 
 > getSet    :: DateTime -> (Int -> Float) -> DateTime
 > getSet dt setFnc = fromGregorian year month day hrSet minSet 0

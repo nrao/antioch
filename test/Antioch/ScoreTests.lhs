@@ -281,12 +281,12 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] (observingEfficiency dt1 sLP)
->     assertAlmostEqual "test_observingEfficiency2" 4 0.97346973 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2" 4 0.97434574 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt2 sLP)
 >     -- BETA: difference due to Float vs. Double
 >     assertAlmostEqual "test_observingEfficiency2_2" 2 0.97567 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt1 sGB)
->     assertAlmostEqual "test_observingEfficiency2_3" 2 0.7007987 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2_3" 2 0.71677315 (eval fs)
 
 BETA: TestObservingEfficiencyLimit.testHaskell
 
@@ -449,7 +449,7 @@ BETA: TestTrackingEfficiency.py testefficiencyHaskell
 >     -- session LP
 >     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency lp" Nothing 4 0.9967476 (trackingEfficiency dt sess)
+>     assertScoringResult "test_trackingEfficiency lp" Nothing 4 0.9976445 (trackingEfficiency dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
@@ -753,7 +753,7 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970718 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970447 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
