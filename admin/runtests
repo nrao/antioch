@@ -1,0 +1,7 @@
+#! /bin/bash
+python tests/TestSolarHeating.py
+python tests/TestCleoDBImport.py
+python tests/TestWeatherData.py
+
+
+
