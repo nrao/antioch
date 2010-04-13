@@ -17,6 +17,7 @@
 >                 , test_toDayOfYear
 >                 , test_fromHoursToHourMins
 >                 , test_isDayTime
+>                 , test_isDayTime_2
 >                 , test_isPTCSDayTime
 >                 , test_getRise
 >                  ]
@@ -100,6 +101,17 @@ TBF must be some way to factor out the common code in these, but ...
 >     dt3 = fromGregorian 2006 1 1 15 0 0 
 >     dt4 = fromGregorian 2006 1 1 23 10 0 
 >     dt5 = fromGregorian 2006 1 2 5  0 0  
+
+This next test is to be the mirror image of the test in:
+antioch/admin/tests/TestSolarHeating.testIsDayTime
+
+> test_isDayTime_2 = TestCase $ do
+>     assertEqual "test_isDayTime_2_1" (exp) (isDayTimes)
+>   where
+>     start = fromGregorian 2010 1 1 0 0 0
+>     dts = [ (qtr*15) `addMinutes'` start | qtr <- [0 .. (4*24 - 1)]]
+>     isDayTimes = map isDayTime dts
+>     exp = (take (12*4 + 3) $ repeat False) ++ (take (9*4 + 2) $ repeat True) ++ (take (1*4 + 3) $ repeat False)
 
 > test_isPTCSDayTime = TestCase $ do
 >     assertEqual "test_isPTCSDayTime_1" False (isPTCSDayTime dt1)
