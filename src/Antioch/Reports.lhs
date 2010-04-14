@@ -479,9 +479,9 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 Utilities
 
 > getObservingEfficiency w p = do 
->     let now' = (replaceYear 2006 (startTime p))
+>     let now' = pForecast p
 >     w'     <- newWeather w $ Just now'
->     result <- runScoring w' [] (observingEfficiency now' (session p))
+>     result <- runScoring w' [] (observingEfficiency (startTime p) (session p))
 >     return $ eval result
 
 > historicalObsEff w = mapM (getObservingEfficiency w) 

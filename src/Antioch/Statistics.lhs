@@ -61,6 +61,9 @@ offending period/session/project needs to be revealed.
 >     where
 >       periodSchdFactors' w p = periodSchdFactors p sf w
 
+TBF: the use of mean' might cause misunderstandings, since pack zero's out
+the first quarter.  We should be using the weighted average found in Score.
+
 > historicalSchdMeanFactors :: [Period] -> ScoreFunc -> IO [Float]
 > historicalSchdMeanFactors ps sf = do
 >   w <- getWeather Nothing
