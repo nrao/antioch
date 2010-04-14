@@ -77,6 +77,7 @@
 >     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)
+>                          , ("xi", showJSON . floatStr . xi $ s)
 >                          , ("type", showJSON . isSchedulableType dt dur $ s)
 >                          , ("time", showJSON . hasTimeSchedulable dt $ s)
 >                          , ("not_complete", showJSON . isNotComplete dt $ s)

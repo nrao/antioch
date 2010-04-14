@@ -39,6 +39,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
+>   , test_minObservingEfficiencyFactor
 >   , test_efficiency
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
@@ -271,6 +272,41 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >     fs <- runScoring w [] (observingEfficiency dt s)
 >     let result = eval fs
 >     assertAlmostEqual "test_observingEfficiency" 4 0.8577623 result
+
+> test_minObservingEfficiencyFactor = TestCase $ do
+>     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
+>     fs <- runScoring w [] (observingEfficiency dt s1)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.48535314 (eval fs)
+>     fs <- runScoring w [] (atmosphericOpacity dt s1)
+>     assertEqual "test_minObservingEfficiencyFactor 2" 0.5247221 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s1)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 3.173581e-13 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt s2)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 0.48535314  (eval fs)
+>     fs <- runScoring w [] (atmosphericOpacity dt s2)
+>     assertEqual "test_minObservingEfficiencyFactor 5" 0.5247221 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s2)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 3.173581e-13 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt s3)
+>     assertEqual "test_minObservingEfficiencyFactor 7" 0.7583644 (eval fs)
+>     fs <- runScoring w [] (atmosphericOpacity dt s3)
+>     assertEqual "test_minObservingEfficiencyFactor 8" 0.81987834 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s3)
+>     assertEqual "test_minObservingEfficiencyFactor 9" 1.0 (eval fs)
+>     fs <- runScoring w [] (observingEfficiency dt s4)
+>     assertEqual "test_minObservingEfficiencyFactor 10" 0.9249718 (eval fs)
+>     fs <- runScoring w [] (atmosphericOpacity dt s4)
+>     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
+>     fs <- runScoring w [] (observingEfficiencyLimit dt s4)
+>     assertEqual "test_minObservingEfficiencyFactor 12" 1.0 (eval fs)
+>     where
+>      dt = fromGregorian 2006 10 15 12 0 0
+>      s1 = defaultSession {sAllottedT = 24*60, minDuration = 2*60
+>                         , maxDuration = 6*60, frequency = 16.9
+>                         , dec = 0.71, band = K}
+>      s2 = s1 {xi = 1.0}
+>      s3 = s1 {xi = 1.25}
+>      s4 = s1 {xi = 2.0}
 
 BETA: TestObservingEfficiency.py test_efficiency
 
