@@ -230,22 +230,45 @@ Simple arithmetic.
 These next two functions give back a datetime for when the sun
 should rise or set for the given datetime.
 
-> getRise    :: DateTime -> DateTime
-> getRise dt = fromGregorian year month day hrRise minRise 0
+> getRise :: DateTime -> (Int -> Float) -> DateTime
+> getRise dt riseFnc = fromGregorian year month day hrRise minRise 0
 >   where 
 >     (year, month, day, _, _, _) = toGregorian dt
->     (hrRise, minRise) = fromHoursToHourMins . sunRise . toDayOfYear $ dt
+>     (hrRise, minRise) = fromHoursToHourMins . riseFnc . toDayOfYear $ dt
 
 
-> getSet    :: DateTime -> DateTime
-> getSet dt = fromGregorian year month day hrSet minSet 0
+Note: Set times, when using a func that offsets it, can wrap to the next day.
+
+> getSet    :: DateTime -> (Int -> Float) -> DateTime
+> getSet dt setFnc = fromGregorian year month day hrSet minSet 0
 >   where 
->     (year, month, day, _, _, _) = toGregorian dt
->     (hrSet, minSet) = fromHoursToHourMins . sunSet . toDayOfYear $ dt
-> 
+>     setHrs = setFnc . toDayOfYear $ dt
+>     (hrSet, minSet) = fromHoursToHourMins setHrs
+>     -- If the setting time is less then the physical sun set time,
+>     -- then it must have wrapped around
+>     pySetHrs = sunRise . toDayOfYear $ dt
+>     dayDt = if pySetHrs < setHrs then dt else ((24*60) `addMinutes'` dt)  
+>     (year, month, day, _, _, _) = toGregorian dayDt
+
+
+Definitions of Day/Night differ:
+   * physical - when the actual sun sets and rises
+   * PTCS versions - include offsets after sun set/rise
+
+Physical Definition:
 
 > isDayTime    :: DateTime -> Bool
-> isDayTime dt = getRise dt <= dt && dt <= getSet dt
+> isDayTime dt = getRise dt sunRise <= dt && dt <= getSet dt sunSet
+
+PTCS Version 1.0:
+
+> isPTCSDayTime    :: DateTime -> Bool
+> isPTCSDayTime dt = getRise dt ptcsSunRise <= dt && dt <= getSet dt ptcsSunSet
+
+PTCS Version 2.0:
+
+> isPTCSDayTime_V2    :: DateTime -> Bool
+> isPTCSDayTime_V2 dt = getRise dt ptcsSunRise_V2 <= dt && dt <= getSet dt ptcsSunSet_V2
 
 Calculates the day of the year by finding the difference in minutes
 between the given datetime and the first of the year, and converting

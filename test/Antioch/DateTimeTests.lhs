@@ -7,6 +7,7 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Score
+> import Antioch.SunRiseSet
 > import Data.Time (getCurrentTimeZone, utcToLocalTime, localTimeToUTC)
 
 > tests = TestList [test_secondsToMJD
@@ -16,6 +17,8 @@
 >                 , test_toDayOfYear
 >                 , test_fromHoursToHourMins
 >                 , test_isDayTime
+>                 , test_isDayTime_2
+>                 , test_isPTCSDayTime
 >                 , test_getRise
 >                  ]
 
@@ -86,18 +89,48 @@ TBF must be some way to factor out the common code in these, but ...
 >     assertEqual "test_fromHoursToHourMins_3" (13,0) (fromHoursToHourMins 13.0)
 
 > test_isDayTime = TestCase $ do
->     assertEqual "test_getRise" False (isDayTime dt1)
->     assertEqual "test_getRise" True (isDayTime dt2)
->     assertEqual "test_getRise" False (isDayTime dt3)
->     assertEqual "test_getRise" False (isDayTime dt4)
+>     assertEqual "test_isDayTime_1" False (isDayTime dt1)
+>     assertEqual "test_isDayTime_2" True  (isDayTime dt2)
+>     assertEqual "test_isDayTime_3" True  (isDayTime dt3)
+>     assertEqual "test_isDayTime_4" False (isDayTime dt4)
+>     assertEqual "test_isDayTime_5" False (isDayTime dt5)
 >   where
->     dt1 = fromGregorian 2006 1 1 10 0 0 -- rise = 12.6, set = 22.1
->     dt2 = fromGregorian 2006 1 1 15 0 0 -- rise = 12.6, set = 22.1
->     dt3 = fromGregorian 2006 1 1 23 10 0 -- rise = 12.6, set = 22.1
->     dt4 = fromGregorian 2006 1 2 5  0 0  -- rise = 12.6, set = 22.1
+>     -- physical rise = 12.6, set = 22.1
+>     dt1 = fromGregorian 2006 1 1 10 0 0 
+>     dt2 = fromGregorian 2006 1 1 14 0 0 
+>     dt3 = fromGregorian 2006 1 1 15 0 0 
+>     dt4 = fromGregorian 2006 1 1 23 10 0 
+>     dt5 = fromGregorian 2006 1 2 5  0 0  
+
+This next test is to be the mirror image of the test in:
+antioch/admin/tests/TestSolarHeating.testIsDayTime
+
+> test_isDayTime_2 = TestCase $ do
+>     assertEqual "test_isDayTime_2_1" (exp) (isDayTimes)
+>   where
+>     start = fromGregorian 2010 1 1 0 0 0
+>     dts = [ (qtr*15) `addMinutes'` start | qtr <- [0 .. (4*24 - 1)]]
+>     isDayTimes = map isDayTime dts
+>     exp = (take (12*4 + 3) $ repeat False) ++ (take (9*4 + 2) $ repeat True) ++ (take (1*4 + 3) $ repeat False)
+
+> test_isPTCSDayTime = TestCase $ do
+>     assertEqual "test_isPTCSDayTime_1" False (isPTCSDayTime dt1)
+>     assertEqual "test_isPTCSDayTime_2" False (isPTCSDayTime dt2)
+>     assertEqual "test_isPTCSDayTime_3" True  (isPTCSDayTime dt3)
+>     assertEqual "test_isPTCSDayTime_4" True  (isPTCSDayTime dt4)
+>     assertEqual "test_isPTCSDayTime_5" False (isPTCSDayTime dt5)
+>   where
+>     -- physical rise = 12.6, set = 22.1
+>     -- PTCS rise = 12.6 + 2 = 14.6
+>     -- PTCS set  = 22.1 + 3 = 25.1 = 1.1
+>     dt1 = fromGregorian 2006 1 1 10 0 0 
+>     dt2 = fromGregorian 2006 1 1 14 0 0 
+>     dt3 = fromGregorian 2006 1 1 15 0 0 
+>     dt4 = fromGregorian 2006 1 1 23 10 0 
+>     dt5 = fromGregorian 2006 1 2 5  0 0  
 
 > test_getRise = TestCase $ do
->     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1)
+>     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1 sunRise)
 >  where
 >     dt1_1 = fromGregorian 2006 1 1 10 0 0
 >     dt1_2 = fromGregorian 2006 1 1 12 33 0

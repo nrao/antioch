@@ -77,6 +77,8 @@ SunSet in UT = L + M*cos(G) + N*sin(G) + O*cos(2*G) + P*sin(2*G) modulo 24
 >     o = 0.0525::Float
 >     p = 0.1520::Float
 
+PTCS sun rise/set times VERSION 1.0
+
 > ptcsSunRiseOffset :: Float
 > ptcsSunRiseOffset = 2.0 
 
@@ -102,5 +104,11 @@ TBF: this is dumb
 > unWrapHours hrs | hrs > 24.0 = hrs - 24.0
 >                 | otherwise  = hrs
 
+PTCS sun rise/set times VERSION 2.0
+
+> ptcsSunRiseOffset_V2 = 0.0
+> ptcsSunSetOffset_V2  = 3.0
+> ptcsSunRise_V2 day   = (sunRise day) + ptcsSunRiseOffset_V2
+> ptcsSunSet_V2 day    = unWrapHours $ sunSet day + ptcsSunSetOffset_V2
 
 

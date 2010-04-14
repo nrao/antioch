@@ -194,6 +194,7 @@ Only 20 percent of the low freq. sessions are backups
 >                -- TBF: only for scheduleMinDuration; then go back
 >                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
 >                , sAllottedT      = round2quarter sAllottedT
+>                , sAllottedS      = round2quarter sAllottedT
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
 >                , lowRFI         = lowRFIFlag

@@ -206,7 +206,7 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >     factor "atmosphericOpacity" eff'
 
 > surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" . Just $
->     if isDayTime dt
+>     if isPTCSDayTime_V2 dt
 >     then
 >         -- Equation 9
 >         --exp (-(k * frequency s ^ 2 * epsilonFactor))
@@ -229,7 +229,7 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 > theta f = 740.0 / f
 
 > rmsTE :: DateTime -> Float
-> rmsTE dt = if isDayTime dt then sigmaDay else sigmaNight
+> rmsTE dt = if isPTCSDayTime dt then sigmaDay else sigmaNight
 >   where
 >     sigmaDay = 3.3
 >     sigmaNight = 2.8
