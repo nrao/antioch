@@ -522,17 +522,25 @@ up, all the time.
 >     scheduled = getReceivers dt rs
 >     evalCNF av rs = all (\rg -> any (\r -> elem r av) rg) rs
 
-> inWindows :: ScoreFunc
-> inWindows dt s = factor "inWindows" . Just $ result
+> inWindows :: DateTime -> (Session -> [Window]) -> Session -> Score
+> inWindows dt f s
+>       | sType s == Open           = 1.0
+>       | any inWindow . f $ s      = 1.0
+>       | otherwise                 = 0.0
 >   where
->     result
->       | sType s == Open          = 1.0
->       | any inWindow (windows s) = 1.0
->       | otherwise                = 0.0
 >     inWindow w = (wStart w) <= dt && dt <= (wEnd w)
 >     -- window ends 1 minute before midnight of the last day
 >     wEnd w = (wLength w) `addMinutes` (wStart w)
 >     wLength w = (wDuration w) + ((60 * 24) - 1)
+
+> availWindows :: Session -> [Window]
+> availWindows = filter (not . wHasChosen) . windows
+
+> inAvailWindows :: ScoreFunc
+> inAvailWindows dt s = factor "inWindows" . Just . inWindows dt availWindows $ s
+
+> inAnyWindows :: ScoreFunc
+> inAnyWindows dt s = factor "inWindows" . Just . inWindows dt windows $ s
 
 Returns list of receivers that will be up at the given time.
 
@@ -963,7 +971,7 @@ Need to translate a session's factors into the final product score.
 
 > scoreFactors :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreFactors s w ss st dur rs = do
->   fs <- runScoring w rs $ genScore st ss
+>   fs <- runScoring w rs $ genPeriodScore st ss
 >   let score' w dt = runScoring w rs $ do
 >       sf <- fs dt s
 >       return sf
@@ -975,7 +983,7 @@ Need to translate a session's factors into the final product score.
 
 > scoreElements :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreElements s w ss st dur rs = do
->   fs <- runScoring w rs $ genScore st ss
+>   fs <- runScoring w rs $ genPeriodScore st ss
 >   let score' w dt = runScoring w rs $ do
 >       sf <- fs dt s
 >       return sf
@@ -990,6 +998,9 @@ Need to translate a session's factors into the final product score.
 
 sfactors :: Maybe (Float, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
 sfactors effs rap fp = scoringFactors effs rap fp
+
+This version is used for scheduling, i.e., all factors must be accounted
+for to generate new periods.
 
 > scoringFactors :: Maybe (Score, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
 > scoringFactors effs raPressure freqPressure =
@@ -1014,8 +1025,12 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , lstExcepted
 >       , enoughTimeBetween
 >       , observerAvailable
->       , inWindows
+>       , inAvailWindows
 >        ]
+
+This version exists for the nominees panel.  The commented out scoring factors
+may or may not be re-activated depending on the user's choices in the
+vacancy control panel.
 
 > genPartScore          :: DateTime -> [ScoreFunc] -> [Session] -> Scoring ScoreFunc
 > genPartScore dt sfs sessions = do
@@ -1046,7 +1061,7 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       --, observerAvailable
->       , inWindows
+>       , inAvailWindows
 >       ] ++ sfs) dt s
 
 > genPeriodScore          :: DateTime -> [Session] -> Scoring ScoreFunc
@@ -1058,6 +1073,10 @@ sfactors effs rap fp = scoringFactors effs rap fp
 > genPeriodScore' raPressure freqPressure = return $ \dt s -> do
 >     effs <- calcEfficiency dt s
 >     score (periodFactors effs raPressure freqPressure) dt s
+
+This version allows the obtaining of scores for periods that may
+already exist, i.e., do not let their existence generate uninteresting
+scores of zero.
 
 > periodFactors :: Maybe (Score, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
 > periodFactors effs raPressure freqPressure =
@@ -1082,7 +1101,7 @@ sfactors effs rap fp = scoringFactors effs rap fp
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       , observerAvailable
->       , inWindows
+>       , inAnyWindows
 >        ]
 
 Convenience function for translating go/no-go into a factor.

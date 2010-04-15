@@ -550,7 +550,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -558,13 +558,28 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 
 > test_inWindows = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 20 1 0 0
->     let dt = fromGregorian 2006 9 21 23 45 0
+>     -- test sessions with two windows,
+>     --     first not satisfied, i.e., no chosen period
+>     --     second is satisfied, i.e., has chosen period
 >     let s = findPSessionByName "TestWindowed2"
->     [(_, Just result)] <- runScoring w [] (inWindows dt s)
->     assertEqual "test_inWindows out" 0.0 result 
+>     -- dt is outside both windows
+>     let dt = fromGregorian 2006 9 21 23 45 0
+>     [(_, Just result)] <- runScoring w [] (inAvailWindows dt s)
+>     assertEqual "test_inWindows 1" 0.0 result 
+>     [(_, Just result)] <- runScoring w [] (inAnyWindows dt s)
+>     assertEqual "test_inWindows 2" 0.0 result 
+>     -- dt is just inside first window
 >     let dt = fromGregorian 2006 9 22 0 0 0
->     [(_, Just result)] <- runScoring w [] (inWindows dt s)
->     assertEqual "test_inWindows in" 1.0 result 
+>     [(_, Just result)] <- runScoring w [] (inAvailWindows dt s)
+>     assertEqual "test_inWindows 3" 1.0 result 
+>     [(_, Just result)] <- runScoring w [] (inAnyWindows dt s)
+>     assertEqual "test_inWindows 4" 1.0 result 
+>     -- dt is in second window, but it is satisfied
+>     let dt = fromGregorian 2006 10 19 0 0 0
+>     [(_, Just result)] <- runScoring w [] (inAvailWindows dt s)
+>     assertEqual "test_inWindows 5" 0.0 result 
+>     [(_, Just result)] <- runScoring w [] (inAnyWindows dt s)
+>     assertEqual "test_inWindows 6" 1.0 result 
 
 > test_scoreElements = TestCase $ do
 >     let dt = fromGregorian 2006 9 2 14 30 0
@@ -572,7 +587,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreElements s w pSessions dt dur []
->     assertEqual "test_scoreElements 1" 30 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 29 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
