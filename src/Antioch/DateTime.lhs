@@ -250,25 +250,44 @@ Note: Set times, when using a func that offsets it, can wrap to the next day.
 >     dayDt = if pySetHrs < setHrs then dt else ((24*60) `addMinutes'` dt)  
 >     (year, month, day, _, _, _) = toGregorian dayDt
 
+For a given day, return the (sun rise, sun set) for the day before, that day,
+and the next day.
+
+> getSunRiseSets :: DateTime -> (Int -> Float) -> (Int -> Float) -> [(DateTime, DateTime)]
+> getSunRiseSets dt rise set = map (getSunRiseSet rise set) dts
+>   where
+>     dts = map offsetDay [(-1), 0, 1]
+>     offsetDay offset = (offset * 24 * 60) `addMinutes'` dt
+
+> getSunRiseSet :: (Int -> Float) -> (Int -> Float) -> DateTime -> (DateTime, DateTime)
+> getSunRiseSet rise set dt = (getRise dt rise, getSet dt set)
+
+> isInAnyRange :: DateTime -> [(DateTime, DateTime)] -> Bool
+> isInAnyRange dt ranges = any (==True) $ map inRange ranges
+>   where
+>     inRange range = (fst range) <= dt && dt <= (snd range)
 
 Definitions of Day/Night differ:
    * physical - when the actual sun sets and rises
    * PTCS versions - include offsets after sun set/rise
 
+To avoid confusion over what day we should be checking our sun rise/sets against
+we simply look at the day before and afterwards as well.
+
 Physical Definition:
 
 > isDayTime    :: DateTime -> Bool
-> isDayTime dt = getRise dt sunRise <= dt && dt <= getSet dt sunSet
+> isDayTime dt = isInAnyRange dt $ getSunRiseSets dt sunRise sunSet
 
 PTCS Version 1.0:
 
 > isPTCSDayTime    :: DateTime -> Bool
-> isPTCSDayTime dt = getRise dt ptcsSunRise <= dt && dt <= getSet dt ptcsSunSet
+> isPTCSDayTime dt = isInAnyRange dt $ getSunRiseSets dt ptcsSunRise ptcsSunSet
 
 PTCS Version 2.0:
 
 > isPTCSDayTime_V2    :: DateTime -> Bool
-> isPTCSDayTime_V2 dt = getRise dt ptcsSunRise_V2 <= dt && dt <= getSet dt ptcsSunSet_V2
+> isPTCSDayTime_V2 dt = isInAnyRange dt $ getSunRiseSets dt ptcsSunRise_V2 ptcsSunSet_V2
 
 Calculates the day of the year by finding the difference in minutes
 between the given datetime and the first of the year, and converting

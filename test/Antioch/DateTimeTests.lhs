@@ -20,6 +20,7 @@
 >                 , test_isDayTime_2
 >                 , test_isPTCSDayTime
 >                 , test_getRise
+>                 , test_getSunRiseSets
 >                  ]
 
 > test_setHour = TestCase $ do
@@ -88,6 +89,23 @@ TBF must be some way to factor out the common code in these, but ...
 >     assertEqual "test_fromHoursToHourMins_2" (12,30) (fromHoursToHourMins 12.5)
 >     assertEqual "test_fromHoursToHourMins_3" (13,0) (fromHoursToHourMins 13.0)
 
+> test_getSunRiseSets = TestCase $ do
+>   assertEqual "test_getSunRiseSets_1" exp (getSunRiseSets dt sunRise sunSet)
+>   assertEqual "test_getSunRiseSets_2" exp_2 (getSunRiseSets dt ptcsSunRise_V2 ptcsSunSet_V2)
+>     where 
+>   dt = fromGregorian 2006 1 1 0 0 0
+>   dt1 = fromGregorian 2005 12 31 12 33 0
+>   dt2 = fromGregorian 2005 12 31 22  4 0
+>   dt3 = fromGregorian 2006  1  1 12 33 0
+>   dt4 = fromGregorian 2006  1  1 22  5 0
+>   dt5 = fromGregorian 2006  1  2 12 34 0
+>   dt6 = fromGregorian 2006  1  2 22  6 0
+>   exp = [(dt1,dt2),(dt3,dt4),(dt5,dt6)]
+>   dt2_2 = fromGregorian 2006 1 1 1 4 0
+>   dt4_2 = fromGregorian 2006 1 2 1 5 0
+>   dt6_2 = fromGregorian 2006 1 3 1 6 0
+>   exp_2 = [(dt1,dt2_2),(dt3,dt4_2),(dt5,dt6_2)]
+
 > test_isDayTime = TestCase $ do
 >     assertEqual "test_isDayTime_1" False (isDayTime dt1)
 >     assertEqual "test_isDayTime_2" True  (isDayTime dt2)
@@ -119,6 +137,9 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 >     assertEqual "test_isPTCSDayTime_3" True  (isPTCSDayTime dt3)
 >     assertEqual "test_isPTCSDayTime_4" True  (isPTCSDayTime dt4)
 >     assertEqual "test_isPTCSDayTime_5" False (isPTCSDayTime dt5)
+>     assertEqual "test_isPTCSDayTime_6" True (isPTCSDayTime_V2 dt10)
+>     assertEqual "test_isPTCSDayTime_7" True (isPTCSDayTime_V2 dt11)
+>     assertEqual "test_isPTCSDayTime_8" False (isPTCSDayTime_V2 dt12)
 >   where
 >     -- physical rise = 12.6, set = 22.1
 >     -- PTCS rise = 12.6 + 2 = 14.6
@@ -128,6 +149,9 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 >     dt3 = fromGregorian 2006 1 1 15 0 0 
 >     dt4 = fromGregorian 2006 1 1 23 10 0 
 >     dt5 = fromGregorian 2006 1 2 5  0 0  
+>     dt10 =  fromGregorian 2006 1 10 23 0 0 -- is ptcsDayTime_V2
+>     dt11 = fromGregorian 2006 1 11 0 0 0 -- is ptcsDayTime_V2
+>     dt12 = fromGregorian 2006 1 11 2 0 0 -- is NOT ptcsDayTime_V2
 
 > test_getRise = TestCase $ do
 >     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1 sunRise)
