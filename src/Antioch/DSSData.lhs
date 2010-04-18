@@ -497,13 +497,14 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT w.id, w.start_date, w.duration, p.id FROM windows as w, periods as p, period_states as s WHERE w.default_period_id = p.id AND w.period_id is NULL AND p.state_id = s.id AND s.abbreviation = 'P' AND w.session_id = ?;"
+>     query = "SELECT w.id, w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w, periods as p, period_states as s WHERE (w.default_period_id = p.id OR w.period_id = p.id) AND p.state_id = s.id AND s.abbreviation <> 'D' AND w.session_id = ?;"
 >     toWindowList = map toWindow
->     toWindow(id:strt:dur:pid:[]) =
->       defaultWindow { wId       = fromSql id
->                     , wStart    = sqlToDate strt
->                     , wDuration = 24*60*(fromSql dur)
->                     , wPeriodId = fromSql pid
+>     toWindow(id:strt:dur:dpid:pid:[]) =
+>       defaultWindow { wId        = fromSql id
+>                     , wStart     = sqlToDate strt
+>                     , wDuration  = 24*60*(fromSql dur)
+>                     , wPeriodId  = fromSql dpid
+>                     , wHasChosen = pid /= SqlNull
 >                     }
 
 > getPeriods :: Connection -> Session -> IO [Period]

@@ -98,10 +98,11 @@ use a single data structure for all sessions.
 >   , wStart       :: DateTime   -- date
 >   , wDuration    :: Minutes    -- from day count
 >   , wPeriodId    :: Int        -- default period id
+>   , wHasChosen   :: Bool       -- has period
 >    }
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (flip div (24*60) . wDuration $ w) ++ " days; Period: " ++ show (wPeriod w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (flip div (24*60) . wDuration $ w) ++ " days " ++ show (wHasChosen w) ++ "; Period: " ++ show (wPeriod w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -303,4 +304,5 @@ Simple Functions for Periods:
 >   , wStart       = defaultStartTime
 >   , wDuration    = 0
 >   , wPeriodId    = 0
+>   , wHasChosen   = False
 >    }
