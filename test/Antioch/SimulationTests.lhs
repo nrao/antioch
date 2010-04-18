@@ -34,7 +34,7 @@ Attempt to see if the old test_sim_pack still works:
 >     cnl = []
 >     ss = getOpenPSessions
 >     expSs = [gb, va, tx, tx, wv, mh, cv, cv, tx]
->     dts = [ fromGregorian 2006 2 1  1 30 0
+>     dts = [ fromGregorian 2006 2 1  1 45 0
 >           , fromGregorian 2006 2 1  6 30 0
 >           , fromGregorian 2006 2 1 12 30 0
 >           , fromGregorian 2006 2 1 17 30 0
@@ -44,7 +44,7 @@ Attempt to see if the old test_sim_pack still works:
 >           , fromGregorian 2006 2 2 12  0 0
 >           , fromGregorian 2006 2 2 14 15 0
 >            ]
->     durs = [300, 360, 300, 240, 360, 330, 120, 135, 360]
+>     durs = [285, 360, 300, 240, 360, 330, 120, 135, 360]
 >     scores = replicate 10 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
