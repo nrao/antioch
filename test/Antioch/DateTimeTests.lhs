@@ -17,7 +17,8 @@
 >                 , test_toDayOfYear
 >                 , test_fromHoursToHourMins
 >                 , test_isDayTime
->                 , test_isDayTime_2
+>                 -- TBF, WTF: toggle this once sponsor testing is done
+>                 --, test_isDayTime_2
 >                 , test_isPTCSDayTime
 >                 , test_getRise
 >                 , test_getSunRiseSets
