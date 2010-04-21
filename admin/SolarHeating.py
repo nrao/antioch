@@ -67,3 +67,11 @@ class SolarHeating:
             return True
         else:
             return False
+
+    def getSunRiseSet(self, dt):
+        "Returns the physical sun rise & set times"
+        long = TimeAgent.GBTLONG
+        lat = TimeAgent.rad2deg(TimeAgent.GBTLAT)
+        rise, set = self.sun.sunRiseSet(dt.year, dt.month, dt.day, long, lat)
+        return (rise, set)
+            
