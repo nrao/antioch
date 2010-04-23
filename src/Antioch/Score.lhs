@@ -15,7 +15,7 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
-> import Data.Maybe         (fromMaybe)
+> import Data.Maybe         (fromMaybe, isJust, fromJust)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -431,14 +431,32 @@ Translates the total/used times pairs into pressure factors.
 >     minObsEff = if usesMustang s then 0.5 else minObservingEff . frequency $ s
 >     fac = factor "observingEfficiencyLimit" . Just
 
-> hourAngleLimit        dt s = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
+TBF: include the elevation limit pattern matching once this is sponsor tested.
+
+> {-
+> hourAngleLimit        dt s | isJust . elLimit $ s = elevationLimit dt s
+>                            | otherwise = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
+> -}
+> hourAngleLimit dt s = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
 >   where
 >     s' = if usesMustang s then s { frequency = 40.0 } else s
 
-> hourAngleLimit' effHA dt s =
->     boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
+> {-
+> hourAngleLimit' effHA dt s | isJust . elLimit $ s = elevationLimit dt s
+>                            | otherwise = boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
+> -}
+> hourAngleLimit' effHA dt s = boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff . frequency $ s
+
+> elevationLimit dt s = boolean "hourAngleLimit" . Just $ elevationLimit' dt s
+
+> elevationLimit' :: DateTime -> Session -> Bool
+> elevationLimit' dt s | isJust . elLimit $ s = el >= lim
+>                      | otherwise            = True
+>   where
+>     lim = fromJust . elLimit $ s
+>     el  = elevation dt s
 
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0

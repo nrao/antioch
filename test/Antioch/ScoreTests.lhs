@@ -84,6 +84,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_observerOnSite
 >   , test_scorePeriod
 >   , test_mustang
+>   , test_elevationLimit
 >   ]
 
 > benchmark = do
@@ -1257,6 +1258,30 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >     dtDay = fromGregorian 2006 2 1 14 0 0 
 >     dtNight = fromGregorian 2006 2 1 5 0 0 
  
+
+> test_elevationLimit = TestCase $ do
+>   assertEqual "test_elevationLimit_1" True (elevationLimit' dt s1)
+>   assertEqual "test_elevationLimit_2" True (elevationLimit' dt s2)
+>   assertEqual "test_elevationLimit_3" False (elevationLimit' dt s3)
+>   -- now make sure we override hour angle limit properly
+>   -- TBF: include this once elevation limit is sponsor tested
+>    {-
+>   w <- getWeather $ Just dt
+>   fs <- runScoring w [] (hourAngleLimit dt s1)
+>   assertEqual "test_elevationLimit_4" 1.0 (eval fs)
+>   fs <- runScoring w [] (hourAngleLimit dt s2)
+>   assertEqual "test_elevationLimit_5" 1.0 (eval fs)
+>   fs <- runScoring w [] (hourAngleLimit dt s3)
+>   assertEqual "test_elevationLimit_6" 0.0 (eval fs)
+>   -}
+>     where
+>   s1 = defaultSession { dec = 1.5 } -- always up
+>   dt = fromGregorian 2010 1 1 0 0 0
+>   s2 = defaultSession { dec = 1.5 -- always up
+>                       , elLimit = Just . deg2rad $ 10.0  } 
+>   s3 = defaultSession { dec = 1.5 -- always up
+>                       , elLimit = Just . deg2rad $ 70.0  } 
+
 Test utilities
 
 > assertAlmostEqual :: String -> Int -> Float -> Float -> IO ()

@@ -420,16 +420,22 @@ For now, just set:
    * low rfi flag
    * transit flag
    * xi factor
+   * elevation limit 
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
 >     | n == "Night-time Flag" = s { lowRFI = fromSql pBool }    
 >     | n == "Transit"         = s { transit = toTransit pBool }
 >     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
->     | otherwise              = s
+>     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
+>     | otherwise              = s  
 >   where
 >     n = fromSql pName
 >     toTransit t = toTransitType . toTransitBool $ t 
+
+> toElLimit :: SqlValue -> Maybe Float
+> toElLimit v | v == SqlNull = Nothing
+>             | otherwise    = Just $ deg2rad . fromSql $ v
 
 > toTransitBool :: SqlValue -> Bool
 > toTransitBool t = fromSql t
