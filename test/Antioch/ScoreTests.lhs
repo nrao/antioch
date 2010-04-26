@@ -1251,8 +1251,6 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >   assertEqual "test_elevationLimit_2" True (elevationLimit' dt s2)
 >   assertEqual "test_elevationLimit_3" False (elevationLimit' dt s3)
 >   -- now make sure we override hour angle limit properly
->   -- TBF: include this once elevation limit is sponsor tested
->    {-
 >   w <- getWeather $ Just dt
 >   fs <- runScoring w [] (hourAngleLimit dt s1)
 >   assertEqual "test_elevationLimit_4" 1.0 (eval fs)
@@ -1260,7 +1258,6 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >   assertEqual "test_elevationLimit_5" 1.0 (eval fs)
 >   fs <- runScoring w [] (hourAngleLimit dt s3)
 >   assertEqual "test_elevationLimit_6" 0.0 (eval fs)
->   -}
 >     where
 >   s1 = defaultSession { dec = 1.5 } -- always up
 >   dt = fromGregorian 2010 1 1 0 0 0

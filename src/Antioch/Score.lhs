@@ -433,19 +433,13 @@ Translates the total/used times pairs into pressure factors.
 
 TBF: include the elevation limit pattern matching once this is sponsor tested.
 
-> {-
 > hourAngleLimit        dt s | isJust . elLimit $ s = elevationLimit dt s
 >                            | otherwise = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
-> -}
-> hourAngleLimit dt s = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
 >   where
 >     s' = if usesMustang s then s { frequency = 40.0 } else s
 
-> {-
 > hourAngleLimit' effHA dt s | isJust . elLimit $ s = elevationLimit dt s
 >                            | otherwise = boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
-> -}
-> hourAngleLimit' effHA dt s = boolean "hourAngleLimit" . fmap (\effHA' -> effHA' >= criterion) $ effHA
 >   where
 >     criterion = sqrt . (* 0.5) . minObservingEff . frequency $ s
 
