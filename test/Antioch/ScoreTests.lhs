@@ -277,32 +277,25 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 > test_minObservingEfficiencyFactor = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
 >     fs <- runScoring w [] (observingEfficiency dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 1" 0.51284677 (eval fs)
->     --assertEqual "test_minObservingEfficiencyFactor 1" 0.48535314 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.48535314 (eval fs)
 >     fs <- runScoring w [] (atmosphericOpacity dt s1)
 >     assertEqual "test_minObservingEfficiencyFactor 2" 0.5247221 (eval fs)
 >     fs <- runScoring w [] (observingEfficiencyLimit dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 3" 4.174069e-9 (eval fs)
->     --assertEqual "test_minObservingEfficiencyFactor 3" 3.173581e-13 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 3.173581e-13 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 4" 0.51284677  (eval fs)
->     --assertEqual "test_minObservingEfficiencyFactor 4" 0.48535314  (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 0.48535314  (eval fs)
 >     fs <- runScoring w [] (atmosphericOpacity dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 5" 0.5247221 (eval fs)
 >     fs <- runScoring w [] (observingEfficiencyLimit dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 6" 4.174069e-9 (eval fs)
->     --assertEqual "test_minObservingEfficiencyFactor 6" 3.173581e-13 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 3.173581e-13 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt s3)
->     --assertEqual "test_minObservingEfficiencyFactor 7" 0.7583644 (eval fs)
->     assertEqual "test_minObservingEfficiencyFactor 7" 0.8013231 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 7" 0.7583644 (eval fs)
 >     fs <- runScoring w [] (atmosphericOpacity dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 8" 0.81987834 (eval fs)
->     --assertEqual "test_minObservingEfficiencyFactor 8"  (eval fs)
 >     fs <- runScoring w [] (observingEfficiencyLimit dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 9" 1.0 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt s4)
->     --assertEqual "test_minObservingEfficiencyFactor 10" 0.9249718 (eval fs)
->     assertEqual "test_minObservingEfficiencyFactor 10" 0.97736835 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 10" 0.9249718 (eval fs)
 >     fs <- runScoring w [] (atmosphericOpacity dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
 >     fs <- runScoring w [] (observingEfficiencyLimit dt s4)
@@ -325,16 +318,12 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] (observingEfficiency dt1 sLP)
->     -- TBF: toggle these lines when day/night is solved 
->     assertAlmostEqual "test_observingEfficiency2" 4 0.9798425 (eval fs)
->     --assertAlmostEqual "test_observingEfficiency2" 4 0.97434574 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2" 4 0.97434574 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt2 sLP)
 >     -- BETA: difference due to Float vs. Double
 >     assertAlmostEqual "test_observingEfficiency2_2" 2 0.97567 (eval fs)
 >     fs <- runScoring w [] (observingEfficiency dt1 sGB)
->     -- TBF: toggle these lines when day/night is solved 
->     assertAlmostEqual "test_observingEfficiency2_3" 2 0.8293616 (eval fs)
->     --assertAlmostEqual "test_observingEfficiency2_3" 2 0.71677315 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2_3" 2 0.71677315 (eval fs)
 
 BETA: TestObservingEfficiencyLimit.testHaskell
 
@@ -816,9 +805,7 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     -- TBF: to be toggled once day/night is fixed
->     --assertAlmostEqual "test_bestDurations 3 v" 5 3.3970325 v
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970957 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970325 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0

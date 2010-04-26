@@ -227,15 +227,6 @@ Simple arithmetic.
 > diffSeconds :: DateTime -> DateTime -> Int
 > diffSeconds = (-)
 
-TBF, WTF: legacy to code to be deleted once sponsor testing is completed.
-
-> getRise'    :: DateTime -> DateTime
-> getRise' dt = 86400 * (dt `div` 86400) + 12 * 3600 + 30 * 60
-
-> getSet'    :: DateTime -> DateTime
-> getSet' dt = 86400 * (dt `div` 86400) + 22 * 3600
-
-
 These next two functions give back a datetime for when the sun
 should rise or set for the given datetime.
 
@@ -288,8 +279,7 @@ TBF, WTF: toggle this code once sponsor testing is complete
 Physical Definition:
 
 > isDayTime    :: DateTime -> Bool
-> --isDayTime dt = isInAnyRange dt $ getSunRiseSets dt sunRise sunSet
-> isDayTime dt = getRise' dt <= dt && dt <= getSet' dt
+> isDayTime dt = isInAnyRange dt $ getSunRiseSets dt sunRise sunSet
 
 PTCS Version 1.0:
 
