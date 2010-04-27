@@ -302,16 +302,15 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       
 
 > test_disobeySessionAlloted = TestCase $ do
->   assertEqual "test_disobeySAlloted_1" 0 $ length . disobeySessionAlloted $ []
->   assertEqual "test_disobeySAlloted_2" [s1] $ disobeySessionAlloted $ periods s1 
->   assertEqual "test_disobeySAlloted_3" [s1] $ disobeySessionAlloted $ periods s2 
+>   assertEqual "test_disobeySAlloted_1" [] $ disobeySessionAlloted $ []
+>   assertEqual "test_disobeySAlloted_2" [] $ disobeySessionAlloted $ periods s1 
+>   assertEqual "test_disobeySAlloted_3" [] $ disobeySessionAlloted $ periods s2 
 >   assertEqual "test_disobeySAlloted_4" [s3] $ disobeySessionAlloted $ periods s3 
 >     where
 >       proj = defaultProject { pAllottedT = 2*60 }   -- 0
 >       sess = defaultSession { sAllottedT = 2*60, project = proj }
 >       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60 }
 >       dt1 = fromGregorian 2006 1 1 3 0 0
->       sem = dt2semester dt1
 >         -- plenty of time
 >       p1 = mkPeriod sess dt1 
 >       ps1 = [p1]

@@ -49,6 +49,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_kineticTemperature
 >   , test_kineticTemperature2
 >   , test_stringency
+>   , test_scienceGrade
 >   , test_projectCompletion
 >   , test_politicalFactors
 >   , test_trackingEfficiency
@@ -467,6 +468,32 @@ BETA: TestStringency.py testScore (first assert)
 >           }
 >       ]
 >     ss'   = [ makeSession s [] (periods s) | s <- ss'' ]
+
+> test_scienceGrade = TestCase $ do
+>     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
+>     let p1 = makeTestProject' dt 501 1000 500
+>     let s1 = head . sessions $ p1
+>     assertScoringResult' "test_scienceGrade 1" Nothing 1.0 (scienceGrade dt s1)
+>     let p2 = makeTestProject' dt 500 1000 500
+>     let s2 = head . sessions $ p2
+>     assertScoringResult' "test_scienceGrade 2" Nothing 0.51 (scienceGrade dt s2)
+
+> makeTestProject' dt tl tt ts = makeProject proj' tt ss'
+>   where
+>     proj' = defaultProject { pName = "time use test" }
+>     ss''  = [
+>         defaultSession {
+>             periods = [defaultPeriod {startTime = dt
+>                                     , duration = tt - tl
+>                                     , pTimeBilled = tt - tl
+>                                      }
+>                       ]
+>           , sAllottedT = tt
+>           , sAllottedS = ts
+>           }
+>       ]
+>     ss'   = [ makeSession s [] (periods s) | s <- ss'' ]
+
 
 BETA: TestProjectCompletion.py test_completion_score
 

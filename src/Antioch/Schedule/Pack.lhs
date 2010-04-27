@@ -127,14 +127,13 @@ Convert an open session `s` into a schedulable item by scoring it with
 > toItem dt dur sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
 >     let force = if sum scores >= 0.0 then True else False
->     let sem = dt2semester dt
 >     return $! force `seq` Item {
 >         iId      = s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
->       , iMaxDur  = numSteps $ min (maxDuration s) (sAvailS sem s)
->       , iSTimAv  = numSteps $ sAvailS sem s
->       , iPTimAv  = numSteps $ pAvailS sem (project s)
+>       , iMaxDur  = numSteps $ min (maxDuration s) (sAvailT s)
+>       , iSTimAv  = numSteps $ sAvailT s
+>       , iPTimAv  = numSteps $ pAvailT (project s)
 >       , iTimeBt  = numSteps $ timeBetween s
 >       , iTrType  = transit s
 >       , iTrnsts  = if (transit s) == Optional

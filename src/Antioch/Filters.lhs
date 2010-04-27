@@ -44,10 +44,9 @@ Possible factors:
 >                           pAvail > 0 &&
 >                           pAvail >= minDur
 >   where 
->     pAvail = pAvailS sem . project $ s
->     sAvail = sAvailS sem s
+>     pAvail = pAvailT . project $ s
+>     sAvail = sAvailT s
 >     minDur = minDuration s
->     sem = dt2semester dt
 
 Possible factors:
    - project complete flag
