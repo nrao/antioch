@@ -839,10 +839,8 @@ the provided duration and the session's duration is used.
 >     return $ (session, fst result, snd result)
 >   where
 >     shortest = maybe (minDuration session) (min . minDuration $ session) lower
->     -- timeLeft = min (pAvailT . project $ session) (sAvailT session)
->     -- longest = min timeLeft $ maybe (maxDuration session) (min . maxDuration $ session) upper
->     -- TBF for this change make sure shortest <= longest?
->     longest = maybe (maxDuration session) (min . maxDuration $ session) upper
+>     timeLeft = min (pAvailT . project $ session) (sAvailT session)
+>     longest = min timeLeft $ maybe (maxDuration session) (min . maxDuration $ session) upper
 >     durs   = [quarter, 2*quarter .. longest]
 >     times  = map (`addMinutes'` dt) [0, quarter .. (longest - quarter)]
 >     findBest x y = if (fst x) > (fst y) then x else y

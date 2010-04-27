@@ -795,22 +795,40 @@ plus 40 quarters.
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeather . Just $ origin 
->     let ss = concatMap sessions pTestProjects
->     let s = head $ filter (\s -> "CV" == (sName s)) ss
+>     -- best period length using session's min/max
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 4.3957114, 255)
+>     let expected = (s, 4.3957114, 4*60 + 15)
 >     assertEqual "test_bestDuration 1" expected bestDur
->     -- override the minimum and maximum
+>     -- best period length overriding min/max
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 4.3792863, 240)
+>     let expected = (s, 4.3792863, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
+>     -- best period length using session's min/max, but only 4 hours left
+>     bestDur <- runScoring w [] $ do
+>         sf <- genScore starttime ss
+>         bestDuration sf starttime Nothing Nothing exht
+>     let expected = (exht, 4.3792863, 4*60)
+>     assertEqual "test_bestDuration 3" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
 >     starttime = fromGregorian 2006 10 1 18 0 0
+>     -- a nearly exhausted session, i.e., only 4 hours left
+>     ss = concatMap sessions pTestProjects
+>     s = head $ filter (\s -> "CV" == (sName s)) ss
+>     exht = s { sAllottedT   = 8*60 
+>               , minDuration = 2*60 
+>               , maxDuration = 6*60
+>               , periods = [
+>                  defaultPeriod { pState = Scheduled
+>                                , duration = 4*60
+>                                , pTimeBilled = 4*60
+>                                }
+>                ]
+>               }
 
 > test_bestDurations = TestCase $ do
 >     w <- getWeather . Just $ starttime 
