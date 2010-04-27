@@ -31,15 +31,9 @@ Time Accounting is conceptually simple: sessions and projects have been
 allotted only so much time, and we don't want to schedule them over this
 amount of time.
 
-But the devil is in the details.  Like:
-
-   * Project Time vs. Session Time - a session can't be scheduled anymore if
-   it's project is out of time.  Thus you have to check both session & project.
-
-   * Project.pAllottedS - a project, especially a large one, may only
-   be allowed to observe so much in a single semester (and this may be
-   less then the projects total alloted time).  This means that query's into
-   the available time of a semester have to specify the semester as well.
+But the devil is in the details, e.g., Project Time vs. Session Time - a
+session can't be scheduled anymore if it's project is out of time.  Thus
+you have to check both session & project.
 
    * Possible factors:
       - project/session close flag

@@ -19,6 +19,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
+> import Debug.Trace (trace)
 
 Ranking System from Memo 5.2, Section 3
 
@@ -502,8 +503,15 @@ TBF: include the elevation limit pattern matching once this is sponsor tested.
 > grade2Score :: Grade -> Score
 > grade2Score g = g / 4.0
 
-> scienceGrade _ s = factor "scienceGrade" . Just $
->     grade2Score . grade $ s
+> scienceGrade dt s = factor "scienceGrade" . Just $ result
+>   where
+>     result
+>       | haveTime dt s    = grade2Score . grade $ s
+>       | otherwise        = 0.51
+>     sem = dt2semester dt
+>     pAvail = pAvailS sem . project $ s
+>     sAvail = sAvailS sem s
+>     haveTime dt s = sAvail > 0 && pAvail > 0
 
 3.x Other Factors *not* listed in Memo 5.2
 
@@ -831,6 +839,9 @@ the provided duration and the session's duration is used.
 >     return $ (session, fst result, snd result)
 >   where
 >     shortest = maybe (minDuration session) (min . minDuration $ session) lower
+>     -- timeLeft = min (pAvailT . project $ session) (sAvailT session)
+>     -- longest = min timeLeft $ maybe (maxDuration session) (min . maxDuration $ session) upper
+>     -- TBF for this change make sure shortest <= longest?
 >     longest = maybe (maxDuration session) (min . maxDuration $ session) upper
 >     durs   = [quarter, 2*quarter .. longest]
 >     times  = map (`addMinutes'` dt) [0, quarter .. (longest - quarter)]

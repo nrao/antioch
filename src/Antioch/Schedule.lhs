@@ -258,8 +258,7 @@ have used up more then their alloted time.
 > disobeySessionAlloted :: [Period] -> [Session]
 > disobeySessionAlloted ps = nub $ concatMap disobeysSAlloted ps
 >   where
->     disobeysSAlloted p = if ((sAvailS (sem p) (session p)) < 0) then [session p] else []
->     sem p = dt2semester . startTime $ p
+>     disobeysSAlloted p = if ((sAvailT (session p)) < 0) then [session p] else []
 
 Which, if any, Projects appearing in the given schedule, 
 have used up more then their alloted time.
@@ -267,9 +266,8 @@ have used up more then their alloted time.
 > disobeyProjectAlloted :: [Period] -> [Project]
 > disobeyProjectAlloted ps = nub $ concatMap disobeysPAlloted ps
 >   where
->     disobeysPAlloted p = if ((pAvailS (sem p) (pr p)) < 0) then [pr p] else []
+>     disobeysPAlloted p = if ((pAvailT (pr p)) < 0) then [pr p] else []
 >     pr p = project . session $ p
->     sem p = dt2semester . startTime $ p
 
 which, if any, pairs of periods in the given schedule, are separated
 by a duration greater then their session's timebetween.
