@@ -816,7 +816,7 @@ individual score is zero then the end result must also be zero.
 >   where
 >     step s Nothing   = Nothing
 >     step s (Just x)
->         | s < 1.0e-6 = Nothing
+>         | s <= 0.0 = Nothing
 >         | otherwise  = Just $! x + s
 
 For a start time, optional minimum/maximum durations, and session,
@@ -949,9 +949,7 @@ Need to translate a session's factors into the final product score.
 > eval = foldr' step 1.0
 >   where
 >     step (_, Nothing) s = 0.0
->     step (_, Just f)  s
->         | s < 1.0e-6    = 0.0
->         | otherwise     = s * f
+>     step (_, Just f)  s = s * f
 
 > genScore          :: DateTime -> [Session] -> Scoring ScoreFunc
 > genScore dt sessions = do
