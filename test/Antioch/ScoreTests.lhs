@@ -1298,7 +1298,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >   assertEqual "test_elevationLimit_6" 0.0 (eval fs)
 >     where
 >   s1 = defaultSession { dec = 1.5 } -- always up
->   dt = fromGregorian 2010 1 1 0 0 0
+>   dt = fromGregorian 2006 3 1 0 0 0
 >   s2 = defaultSession { dec = 1.5 -- always up
 >                       , elLimit = Just . deg2rad $ 10.0  } 
 >   s3 = defaultSession { dec = 1.5 -- always up
