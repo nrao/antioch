@@ -56,7 +56,7 @@ separate query, to deal with multiple allotments (different grades)
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
 >     let project'' = setProjectObservers project' observers
->     return $ makeProject project'' (pAllottedT project'') sessions'
+>     return $ makeProject project'' (pAllottedT project'') (pAllottedS project'') sessions'
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer
@@ -183,23 +183,25 @@ time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
 two allotments, and querying w/ a join will duplicate the project.
 TBF: field ignore_grade in Allotment table can be null.
 
-> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Grade)]
+> getProjectAllotments :: Int -> Connection -> IO [(Minutes, Minutes, Grade)]
 > getProjectAllotments projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   return $ toAllotmentList result 
 >     where
->       query = "SELECT a.total_time, a.grade FROM allotment AS a, projects AS p, projects_allotments AS pa WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
+>       query = "SELECT a.total_time, a.max_semester_time, a.grade FROM allotment AS a, projects AS p, projects_allotments AS pa WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
 >       xs = [toSql projId]
 >       toAllotmentList = map toAllotment
->       toAllotment (ttime:grade:[]) = (fromSqlMinutes ttime, fromSql grade)
+>       toAllotment (ttime:mstime:grade:[]) = (fromSqlMinutes ttime, fromSqlMinutes mstime, fromSql grade)
 
 TBF: WTF! In Antioch, do we need to be taking into account grades at the 
 project level?  For now, we are ignoring grade and summing the different
 hours togethor to get the total time.
 
-> setProjectAllotments :: Project -> [(Minutes, Grade)] -> Project
+> setProjectAllotments :: Project -> [(Minutes, Minutes, Grade)] -> Project
 > setProjectAllotments p [] = p
-> setProjectAllotments p (x:xs) = setProjectAllotments (p {pAllottedT = (pAllottedT p) + (fst x)} ) xs
+> setProjectAllotments p ((t,s,g):xs) =
+>     setProjectAllotments (p {pAllottedT = (pAllottedT p) + t
+>                            , pAllottedS = (pAllottedS p) + s} ) xs
 
 TBF: if a session is missing any of the tables in the below query, it won't
 get picked up!!!
@@ -525,9 +527,9 @@ it an exclusion range.
 >   where
 >     xs = [toSql . sId $ s]
 >     -- don't pick up deleted periods!
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
->     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:osw:osr:oso:ltw:ltr:lto:[]) =
 >       defaultPeriod { peId = fromSql id
 >                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
@@ -536,7 +538,7 @@ it an exclusion range.
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
 >                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
->                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
+>                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
 >                     }
 
 > fetchPeriod :: Int -> Connection -> IO Period

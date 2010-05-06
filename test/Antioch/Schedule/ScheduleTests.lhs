@@ -315,19 +315,19 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       p1 = mkPeriod sess dt1 
 >       ps1 = [p1]
 >       s1' = makeSession sess [] ps1 
->       pr1 = makeProject proj (pAllottedT proj) [s1']
+>       pr1 = makeProject proj (pAllottedT proj) (pAllottedS proj) [s1']
 >       s1 = head . sessions $ pr1
 >       -- use up exactly the alloted time
 >       dt2 = fromGregorian 2006 1 1 1 0 0
 >       p2 = mkPeriod sess dt2 
 >       ps2 = [p1, p2]
 >       s2' = makeSession sess [] ps2
->       pr2 = makeProject proj (pAllottedT proj) [s2']
+>       pr2 = makeProject proj (pAllottedT proj) (pAllottedS proj) [s2']
 >       s2 = head . sessions $ pr2
 >       -- use too much time
 >       dt3 = fromGregorian 2006 1 1 2 0 0
 >       p3 = mkPeriod sess dt3 
 >       ps3 = [p1, p2, p3]
 >       s3' = makeSession sess [] ps3
->       pr3 = makeProject proj (pAllottedT proj) [s3']
+>       pr3 = makeProject proj (pAllottedT proj) (pAllottedS proj) [s3']
 >       s3 = head . sessions $ pr3

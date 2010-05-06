@@ -307,7 +307,7 @@
 >   ]
 
 > p1sessions = [ makeSession s (windows s) (periods s) | s <- p1sessions' ]
-> project1 = makeProject project1' (500*60) p1sessions
+> project1 = makeProject project1' (500*60) (500*60) p1sessions
 
 > project2' = defaultProject {
 >     pId = 2
@@ -353,7 +353,7 @@
 >   ]
 
 > p2sessions = [ makeSession s (windows s) (periods s) | s <- p2sessions' ]
-> project2 = makeProject project2' (14*60) p2sessions
+> project2 = makeProject project2' (14*60) (14*60) p2sessions
 
 Utilities:
 

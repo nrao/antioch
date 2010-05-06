@@ -158,11 +158,10 @@ Tying the knot.
 >   , observers       :: [Observer]
 >   } deriving Eq
 
-> makeProject :: Project -> Minutes -> [Session] -> Project
-> makeProject p tt ss = p'
+> makeProject :: Project -> Minutes -> Minutes -> [Session] -> Project
+> makeProject p tt st ss = p'
 >   where
->     p' = p { pAllottedT = tt, pAllottedS = tt, sessions = map (\s -> s { project = p' }) ss }
->     t  = sum . map sAllottedT $ ss
+>     p' = p { pAllottedT = tt, pAllottedS = st, sessions = map (\s -> s { project = p' }) ss }
 
 > instance Show Project where
 >     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAllottedT $ p) ++ ") Sessions: " ++ show [ sAllottedT s | s <- sessions p] 
@@ -281,7 +280,7 @@ Simple Functions for Periods:
 >   , sessions        = [defaultSession]
 >   , thesis          = False
 >   , pAllottedT      = 0
->   , pAllottedS      = 10000000 -- more then enough time
+>   , pAllottedS      = 0
 >   , observers       = [defaultObserver]
 >   , pClosed         = False
 >   }

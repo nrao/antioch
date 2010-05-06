@@ -55,7 +55,7 @@
 >       -- now the session has enough time, but not the project
 >       proj2' = proj { pAllottedT = 4*60, pAllottedS = 1*60 }
 >       s4' = s2 { project = proj2' }
->       proj2 = makeProject' proj2' (4*60) (1*60) [s4']
+>       proj2 = makeProject proj2' (4*60) (1*60) [s4']
 >       s4 = head . sessions $ proj2
 >       -- now the session has enought time, depending on the semester
 >       proj3' = proj { pAllottedT = 6 * 60 
@@ -65,15 +65,8 @@
 >                , minDuration = 2 * 60 }
 >       s5 = makeSession s5' [] [p1]
 >       s6' = s5'
->       proj3 = makeProject' proj3' (6*60) (2*60) [s5, s6']
+>       proj3 = makeProject proj3' (6*60) (2*60) [s5, s6']
 >       s6 = last . sessions $ proj3
-
-> makeProject' :: Project -> Minutes -> Minutes -> [Session] -> Project
-> makeProject' p tt st ss = p'
->   where
->     p' = p { pAllottedT = tt, pAllottedS = st, sessions = map (\s -> s { project = p' }) ss }
->     t  = sum . map sAllottedT $ ss
-
 
 > test_schedulableSessions = TestCase $ do
 >     let s = findPSessionByName "GB"

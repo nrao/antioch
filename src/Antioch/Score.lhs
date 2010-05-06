@@ -19,7 +19,6 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
-> import Debug.Trace (trace)
 
 Ranking System from Memo 5.2, Section 3
 

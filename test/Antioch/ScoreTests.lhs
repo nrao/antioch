@@ -448,7 +448,7 @@ BETA: TestStringency.py testScore (first assert)
 >     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sess)
 
 > makeTestProject :: Minutes -> Minutes -> Project
-> makeTestProject tl tt = makeProject proj' tt ss'
+> makeTestProject tl tt = makeProject proj' tt tt ss'
 >   where
 >     proj' = defaultProject { pName = "time use test" }
 >     ss''  = [
@@ -468,7 +468,7 @@ BETA: TestStringency.py testScore (first assert)
 >     let s2 = head . sessions $ p2
 >     assertScoringResult' "test_scienceGrade 2" Nothing 0.51 (scienceGrade dt s2)
 
-> makeTestProject' dt tl tt ts = makeProject proj' tt ss'
+> makeTestProject' dt tl tt ts = makeProject proj' tt tt ss'
 >   where
 >     proj' = defaultProject { pName = "time use test" }
 >     ss''  = [
