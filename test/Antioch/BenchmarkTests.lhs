@@ -16,6 +16,9 @@
 
 > benchmarks :: IO ()
 > benchmarks = do
+>   benchmark_weather_1
+>   benchmark_score_1
+>   benchmark_score_2
 >   benchmark_packWorker_1
 >   benchmark_packWorker_2
 >   benchmark_pack_1
@@ -44,6 +47,61 @@ So write to dev/nell to force some execution to take place.
 
 > forceExec :: String -> IO ()
 > forceExec str =  writeFile "/dev/null" str
+
+Introduced in rev 1028; no difference from rev 959
+
+> benchmark_weather_1 :: IO ()
+> benchmark_weather_1 = do
+>   w <- getWeather . Just $ starttime 
+>   start <- getCPUTime
+>   tsysValues <- mapM (getWeatherData freq w) times
+>   stop <- getCPUTime
+>   showExecTime "benchmark_weather_1" start stop
+>     where
+>       freq = 3.0
+>       starttime = fromGregorian 2006 11 8 12 0 0
+>       days = 7
+>       numQtrs = days * 24 * 4
+>       times = [(15*q) `addMinutes'` starttime | q <- [0..numQtrs]]
+>       getWeatherData freq w dt = tsys w dt freq
+>       
+
+Introduced in rev 1028; no difference from rev 959
+
+> benchmark_score_1 :: IO ()
+> benchmark_score_1 = do
+>   w <- getWeather . Just $ starttime 
+>   start <- getCPUTime
+>   score <- runScoring w [] $ genScore starttime sess >>= \f -> f starttime s
+>   stop <- getCPUTime
+>   showExecTime "benchmark_score_1" start stop
+>     where
+>       sess = getOpenPSessions 
+>       s = head $ sess
+>       starttime = fromGregorian 2006 11 8 12 0 0
+
+Introduced in rev 1028; 
+Twice as slow as when run in rev 959!
+Reintroducing static isDayTime code brings it back to almost same time as 959!
+
+> benchmark_score_2 :: IO ()
+> benchmark_score_2 = do
+>   w <- getWeather . Just $ starttime 
+>   --score <- runScoring w [] $ genScore starttime sess >>= \f -> f starttime s
+>   let score' w dt = runScoring w [] $ do
+>       fs <- genScore dt sess
+>       score <- fs dt s
+>       return $ eval score
+>   start <- getCPUTime
+>   scores <- mapM (score' w) times
+>   stop <- getCPUTime
+>   showExecTime "benchmark_score_2" start stop
+>     where
+>       sess = getOpenPSessions 
+>       s = head $ sess
+>       starttime = fromGregorian 2006 11 8 12 0 0
+>       times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+
 
 > benchmark_pack_1 :: IO ()
 > benchmark_pack_1 = do 
