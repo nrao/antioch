@@ -20,6 +20,7 @@
 >   , test_WindsAreReasonable
 >   , test_forecastType_1
 >   , test_forecastType_2
+>   , test_correctWindSpeed
 >      ]
 
 This module (except for the test-forecastType_2 test) only tests weather
@@ -217,6 +218,13 @@ to 2006 date.
 >   assertAlmostEqual "test_data36_47Day_tsys" 3 275.6069 (fromMaybe 0.0 tsys')
 >   assertAlmostEqual "test_data36_47Day_wind" 4 4.2099 (fromMaybe 0.0 wind')
 >   assertAlmostEqual "test_data36_47Day_w2_wind" 4 2.259703 (fromMaybe 0.0 w2_wind')
+
+> test_correctWindSpeed = TestCase $ do
+>   assertEqual "test_correctWindSpeed night" 5.029251 (correctWindSpeed night 17.66975)
+>   assertEqual "test_correctWindSpeed day" 6.041008 (correctWindSpeed day 16.19775)
+>     where
+>       night = fromGregorian 2006 12 10 14 15 0 
+>       day = fromGregorian 2006 12 10 14 30 0 
 
 Test utilities
 
