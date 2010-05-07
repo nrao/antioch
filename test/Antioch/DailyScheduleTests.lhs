@@ -137,7 +137,7 @@ Utilities:
 > mkPeriod s time = defaultPeriod { session = s
 >                                 , startTime = fst time
 >                                 , duration = snd time
->                                 , pTimeBilled = snd time
+>                                 , pDuration = snd time
 >                                 }
 
 > getSchedulableSession :: Session

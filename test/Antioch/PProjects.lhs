@@ -61,7 +61,7 @@
 >                 startTime = fromGregorian 2006 10 15 9 0 0
 >               , pState = Scheduled
 >               , duration = 6*60
->               , pTimeBilled = 6*60
+>               , pDuration = 6*60
 >                }
 >           ]
 >       , sAllottedT = 40*60
@@ -139,13 +139,13 @@
 >                 startTime = fromGregorian 2006 10 16 20 0 0
 >               , pState = Scheduled
 >               , duration = 4*60
->               , pTimeBilled = 4*60
+>               , pDuration = 4*60
 >                }
 >           , defaultPeriod {
 >                 startTime = fromGregorian 2006 11 1 20 0 0
 >               , pState = Scheduled
 >               , duration = 2*60
->               , pTimeBilled = 2*60
+>               , pDuration = 2*60
 >                }
 >           ]
 >       , sAllottedT = 40*60
@@ -167,7 +167,7 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 1 18 0 0
 >               , duration = 6*60
->               , pTimeBilled = 6*60
+>               , pDuration = 6*60
 >                }
 >       , sAllottedT = 6*60
 >       , sAllottedS = 6*60
@@ -187,7 +187,7 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 4 11 0 0
 >               , duration = 4*60
->               , pTimeBilled = 4*60
+>               , pDuration = 4*60
 >                }
 >       , sAllottedT = 4*60
 >       , sAllottedS = 4*60
@@ -207,7 +207,7 @@
 >             defaultPeriod {
 >                 startTime = fromGregorian 2006 9 5 1 0 0
 >               , duration = 5*60
->               , pTimeBilled = 5*60
+>               , pDuration = 5*60
 >                }
 >       , sAllottedT = 5*60
 >       , sAllottedS = 5*60
@@ -241,13 +241,13 @@
 >                 peId = 100
 >               , startTime = fromGregorian 2006 10 4 17 15 0
 >               , duration = 4*60
->               , pTimeBilled = 4*60
+>               , pDuration = 4*60
 >                }
 >           , defaultPeriod {
 >                 peId = 101
 >               , startTime = fromGregorian 2006 10 27 17 45 0
 >               , duration = 4*60
->               , pTimeBilled = 4*60
+>               , pDuration = 4*60
 >                }
 >           ]
 >       , sAllottedT = 2*4*60
@@ -283,13 +283,13 @@
 >                 peId = 200
 >               , startTime = fromGregorian 2006 9 28 2 0 0
 >               , duration = 3*60
->               , pTimeBilled = 3*60
+>               , pDuration = 3*60
 >                }
 >           , defaultPeriod {
 >                 peId = 201
 >               , startTime = fromGregorian 2006 10 20 6 30 0
 >               , duration = 3*60
->               , pTimeBilled = 3*60
+>               , pDuration = 3*60
 >                }
 >           ]
 >       , sAllottedT = 2*3*60

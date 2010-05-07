@@ -453,7 +453,7 @@ BETA: TestStringency.py testScore (first assert)
 >     proj' = defaultProject { pName = "time use test" }
 >     ss''  = [
 >         defaultSession {
->             periods = [defaultPeriod {duration = tt - tl, pTimeBilled = tt - tl}]
+>             periods = [defaultPeriod {duration = tt - tl, pDuration = tt - tl}]
 >           , sAllottedT = tt
 >           }
 >       ]
@@ -475,7 +475,7 @@ BETA: TestStringency.py testScore (first assert)
 >         defaultSession {
 >             periods = [defaultPeriod {startTime = dt
 >                                     , duration = tt - tl
->                                     , pTimeBilled = tt - tl
+>                                     , pDuration = tt - tl
 >                                      }
 >                       ]
 >           , sAllottedT = tt
@@ -825,7 +825,7 @@ plus 40 quarters.
 >               , periods = [
 >                  defaultPeriod { pState = Scheduled
 >                                , duration = 4*60
->                                , pTimeBilled = 4*60
+>                                , pDuration = 4*60
 >                                }
 >                ]
 >               }
@@ -1083,7 +1083,7 @@ If none is sanctioned, then there should never be an observer available
 >       mkPeriod s dt = defaultPeriod { session = s
 >                                    , startTime = dt
 >                                    , duration = 60
->                                    , pTimeBilled = 60
+>                                    , pDuration = 60
 >                                     }
 >       
 
@@ -1372,7 +1372,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >           , sAllottedT = t
 >           , periods = [defaultPeriod {duration = u
 >                                     , pState = Scheduled
->                                     , pTimeBilled = u}]
+>                                     , pDuration = u}]
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
@@ -1389,7 +1389,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >           , sAllottedT = t
 >           , periods = [defaultPeriod {duration = u
 >                                     , pState = Scheduled
->                                     , pTimeBilled = u}]
+>                                     , pDuration = u}]
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g

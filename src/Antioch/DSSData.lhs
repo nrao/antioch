@@ -527,9 +527,9 @@ it an exclusion range.
 >   where
 >     xs = [toSql . sId $ s]
 >     -- don't pick up deleted periods!
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, pa.not_billable FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
->     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:osw:osr:oso:ltw:ltr:lto:[]) =
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:osw:osr:oso:ltw:ltr:lto:nb:[]) =
 >       defaultPeriod { peId = fromSql id
 >                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
@@ -537,9 +537,14 @@ it an exclusion range.
 >                     , pState = deriveState . fromSql $ state
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
->                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
->                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
+>                     --, pDuration = fromSqlMinutes durHrs  -- db simulation
+>                     , pDuration = 
+>                        if (deriveState . fromSql $ state) == Pending
+>                        then fromSqlMinutes durHrs
+>                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 >                     }
+
+fetchPeriod is used in unit tests only.
 
 > fetchPeriod :: Int -> Connection -> IO Period
 > fetchPeriod id cnn = do
@@ -556,9 +561,12 @@ it an exclusion range.
 >                     , pState = deriveState . fromSql $ state
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
->                     --, pTimeBilled = fromSqlMinutes durHrs  -- db simulation
->                     , pTimeBilled = (fromSqlMinutes sch)  - (fromSqlMinutes nb) - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto)
->                     } 
+>                     , pDuration = 
+>                        if (deriveState . fromSql $ state) == Pending
+>                        then fromSqlMinutes durHrs
+>                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
+>                     }
+
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt

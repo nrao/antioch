@@ -185,13 +185,13 @@ TBF: this is not passing - but was it meant to copy a python test?
 >               session = head $ filter (\s -> "CV" == (sName s)) ss
 >             , startTime = fromGregorian 2006 9 2 14 30 0
 >             , duration = 225
->             , pTimeBilled = 225
+>             , pDuration = 225
 >             }
 >         , defaultPeriod {
 >               session = head $ filter (\s -> "AS" == (sName s)) ss
 >             , startTime = fromGregorian 2006 9 2 18 15 0
 >             , duration = 480
->             , pTimeBilled = 480
+>             , pDuration = 480
 >           }
 >         ]
 >       -- expected = [
@@ -225,11 +225,11 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       lstRange3 = (4.4721766,8.396873)
 >       reverseLSTRange = (14.0, 9.0)
 >       s1 = defaultSession { lstExclude = [lstRange] }
->       p1 = defaultPeriod { session = s1, startTime = dt1, duration = 180, pTimeBilled = 180 }
+>       p1 = defaultPeriod { session = s1, startTime = dt1, duration = 180, pDuration = 180 }
 >       s2 = defaultSession { lstExclude = [badLSTrange] }
->       p2 = defaultPeriod { session = s2, startTime = dt1, duration = 180, pTimeBilled = 180 }
+>       p2 = defaultPeriod { session = s2, startTime = dt1, duration = 180, pDuration = 180 }
 >       s3 = defaultSession { lstExclude = [reverseLSTRange] }
->       p3 = defaultPeriod { session = s3, startTime = dt3, duration = 120, pTimeBilled = 120 }
+>       p3 = defaultPeriod { session = s3, startTime = dt3, duration = 120, pDuration = 120 }
 
 > test_disobeyTransit = TestCase $ do
 >   {-
@@ -281,7 +281,7 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       dt1 = fromGregorian 2006 1 1 0 0 0
 >       dt2 = fromGregorian 2006 1 1 1 0 0
 >       ps1 = map (mkPeriod s1) [dt1, dt2]
->       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, duration = 60, pTimeBilled = 60 }
+>       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, duration = 60, pDuration = 60 }
 >       -- now disallow them
 >       s2 = defaultSession { sId = 1, timeBetween = 1 * 60 }
 >       ps2 = map (mkPeriod s2) [dt1, dt2]
@@ -309,7 +309,7 @@ TBF: this is not passing - but was it meant to copy a python test?
 >     where
 >       proj = defaultProject { pAllottedT = 2*60 }   -- 0
 >       sess = defaultSession { sAllottedT = 2*60, project = proj }
->       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pTimeBilled = 60 }
+>       mkPeriod s dt = defaultPeriod { session = s, startTime = dt, pDuration = 60 }
 >       dt1 = fromGregorian 2006 1 1 3 0 0
 >         -- plenty of time
 >       p1 = mkPeriod sess dt1 

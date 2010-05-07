@@ -84,6 +84,6 @@ schedule deadtime.
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
->     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pTimeBilled p)
+>     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p)
 >     else return Nothing -- no decent backups, must be bad weather -> Deadtime
     

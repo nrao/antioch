@@ -194,11 +194,11 @@ Tying the knot.
 >   , pState      :: StateType
 >   , pForecast   :: DateTime
 >   , pBackup     :: Bool
->   , pTimeBilled :: Minutes
+>   , pDuration   :: Minutes
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p) ++ " " ++ show (pState p) ++ "  band: " ++ (show . band . session $ p) ++ "  RA: " ++ (show . (\x -> 12*x/pi) . ra . session $ p) ++ "  grade: " ++ (show . grade . session $ p)
+>     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pDuration p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p) ++ " " ++ show (pState p) ++ "  band: " ++ (show . band . session $ p) ++ "  RA: " ++ (show . (\x -> 12*x/pi) . ra . session $ p) ++ "  grade: " ++ (show . grade . session $ p)
 >       where 
 >         n = sName . session $ p
 >         printName p = if n == "" then show . sId . session $ p else n
@@ -296,7 +296,7 @@ Simple Functions for Periods:
 >   , pState      = Pending
 >   , pForecast   = fromGregorian' 2008 1 1
 >   , pBackup     = False
->   , pTimeBilled = 0
+>   , pDuration   = 0
 >   }
 
 > defaultWindow  = Window {

@@ -180,8 +180,8 @@ what bin it shows up in.
 >   where
 >     cnt = sessionTP ps
 >     ps = [p1, p2, p1, p2, p1]
->     p1 = defaultPeriod {duration = 60, pTimeBilled = 60}
->     p2 = defaultPeriod {duration = 150, pTimeBilled = 150}
+>     p1 = defaultPeriod {duration = 60, pDuration = 60}
+>     p2 = defaultPeriod {duration = 150, pDuration = 150}
 >     exp = [(1.0,3),(2.0,0),(3.0,2)]
 
 > test_sessionTPQtrs = TestCase $ do
@@ -189,8 +189,8 @@ what bin it shows up in.
 >   where
 >     cnt = take 8 $ sessionTPQtrs ps
 >     ps = [p1, p2, p1, p2, p1]
->     p1 = defaultPeriod {duration = 30, pTimeBilled = 30}
->     p2 = defaultPeriod {duration = 105, pTimeBilled = 105}
+>     p1 = defaultPeriod {duration = 30, pDuration = 30}
+>     p2 = defaultPeriod {duration = 105, pDuration = 105}
 >     q  = quarter
 >     exp = [(0,0),(1*q,0),(2*q,3),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,2)]
 
@@ -199,8 +199,8 @@ what bin it shows up in.
 >   where
 >     cnt = take 8 $ periodDuration ps
 >     ps = [p1, p2, p1, p2, p1]
->     p1 = defaultPeriod {duration = 30, pTimeBilled = 30}
->     p2 = defaultPeriod {duration = 105, pTimeBilled = 105}
+>     p1 = defaultPeriod {duration = 30, pDuration = 30}
+>     p2 = defaultPeriod {duration = 105, pDuration = 105}
 >     q  = quarter
 >     exp = [(0,0),(1*q,0),(2*q,(3*30)),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,(2*105))]
 

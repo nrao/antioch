@@ -44,7 +44,7 @@
 >       p1 = defaultPeriod { session = s2'
 >                          , startTime = dt2
 >                          , duration = 2 * 60
->                          , pTimeBilled = 2 * 60
+>                          , pDuration = 2 * 60
 >                          }
 >       p2 = p1 { startTime = dt3 }
 >       s2 = makeSession s2' [] [p1,p2] 
@@ -106,10 +106,10 @@
 > test_clearWindowedTimeBilled = TestCase $ do
 >     let s = tw2
 >     let s' = clearWindowedTimeBilled s
->     -- because pTimeBilled is not checked in session equivalence
+>     -- because pDuration is not checked in session equivalence
 >     assertEqual "test_clearWindowedTimeBilled 1" s s'
->     assertEqual "test_clearWindowedTimeBilled 2" 180 (pTimeBilled . fromJust . wPeriod . head . windows $ s)
->     assertEqual "test_clearWindowedTimeBilled 3" 0 (pTimeBilled . fromJust . wPeriod . head . windows $ s')
+>     assertEqual "test_clearWindowedTimeBilled 2" 180 (pDuration . fromJust . wPeriod . head . windows $ s)
+>     assertEqual "test_clearWindowedTimeBilled 3" 0 (pDuration . fromJust . wPeriod . head . windows $ s')
 >     -- should be nop
 >     let cv' = clearWindowedTimeBilled cv
 >     assertEqual "test_clearWindowedTimeBilled 4" cv cv'
