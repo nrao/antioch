@@ -7,21 +7,21 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Score
-> import Antioch.SunRiseSet
+> --import Antioch.SunRiseSet
 > import Data.Time (getCurrentTimeZone, utcToLocalTime, localTimeToUTC)
 
 > tests = TestList [test_secondsToMJD
 >                 , test_addMonth
 >                 , test_translations
 >                 , test_setHour
->                 , test_toDayOfYear
->                 , test_fromHoursToHourMins
+>                 --, test_toDayOfYear
+>                 --, test_fromHoursToHourMins
 >                 , test_isDayTime
 >                 -- TBF, WTF: toggle this once sponsor testing is done
 >                 --, test_isDayTime_2
 >                 , test_isPTCSDayTime
 >                 , test_getRise
->                 , test_getSunRiseSets
+>                 --, test_getSunRiseSets
 >                  ]
 
 > test_setHour = TestCase $ do
@@ -70,6 +70,9 @@ TBF must be some way to factor out the common code in these, but ...
 >     let lt_http = formatLocalTime httpFormat lt
 >     assertEqual "test_translations_6" (Just lt) (parseLocalTime httpFormat lt_http)
 
+Below unit tests were deprecated when SunRiseSet.lhs was refactored.
+
+> {-
 > test_toDayOfYear =  TestCase $ do
 >     assertEqual "test_toDayOfYear_1" 1 (toDayOfYear dt1)
 >     assertEqual "test_toDayOfYear_2" 1 (toDayOfYear dt2)
@@ -106,6 +109,7 @@ TBF must be some way to factor out the common code in these, but ...
 >   dt4_2 = fromGregorian 2006 1 2 1 5 0
 >   dt6_2 = fromGregorian 2006 1 3 1 6 0
 >   exp_2 = [(dt1,dt2_2),(dt3,dt4_2),(dt5,dt6_2)]
+> -}
 
 > test_isDayTime = TestCase $ do
 >     assertEqual "test_isDayTime_1" False (isDayTime dt1)
@@ -155,8 +159,9 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 >     dt12 = fromGregorian 2006 1 11 2 0 0 -- is NOT ptcsDayTime_V2
 
 > test_getRise = TestCase $ do
->     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1 sunRise)
+>     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1)
 >  where
+>     getRise dt = fst $ sunRiseAndSet dt
 >     dt1_1 = fromGregorian 2006 1 1 10 0 0
 >     dt1_2 = fromGregorian 2006 1 1 12 33 0
 

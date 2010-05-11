@@ -273,7 +273,7 @@ Takes a project's sessions, uses them as a template to make more of them,
 and recreates the project to include these new ones.
 
 > expand :: Project -> Project
-> expand p = makeProject p enoughTime $ newSessions p
+> expand p = makeProject p enoughTime enoughTime $ newSessions p
 >   where
 >     enoughTime = 1000000000 * 60
 
