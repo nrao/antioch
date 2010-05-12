@@ -158,11 +158,10 @@ Tying the knot.
 >   , observers       :: [Observer]
 >   } deriving Eq
 
-> makeProject :: Project -> Minutes -> [Session] -> Project
-> makeProject p tt ss = p'
+> makeProject :: Project -> Minutes -> Minutes -> [Session] -> Project
+> makeProject p tt st ss = p'
 >   where
->     p' = p { pAllottedT = tt, pAllottedS = tt, sessions = map (\s -> s { project = p' }) ss }
->     t  = sum . map sAllottedT $ ss
+>     p' = p { pAllottedT = tt, pAllottedS = st, sessions = map (\s -> s { project = p' }) ss }
 
 > instance Show Project where
 >     show p = "Project: " ++ pName p ++ ", " ++ semester p ++ " Time: ("++ (show . pAllottedT $ p) ++ ") Sessions: " ++ show [ sAllottedT s | s <- sessions p] 
@@ -195,11 +194,11 @@ Tying the knot.
 >   , pState      :: StateType
 >   , pForecast   :: DateTime
 >   , pBackup     :: Bool
->   , pTimeBilled :: Minutes
+>   , pDuration   :: Minutes
 >   } 
 
 > instance Show Period where
->     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pTimeBilled p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p) ++ " " ++ show (pState p) ++ "  band: " ++ (show . band . session $ p) ++ "  RA: " ++ (show . (\x -> 12*x/pi) . ra . session $ p) ++ "  grade: " ++ (show . grade . session $ p)
+>     show p = "Period: " ++ printName p ++ " (" ++ show (peId p) ++ ") at " ++ toSqlString (startTime p) ++ " for " ++ show (duration p) ++ " (" ++ show (pDuration p) ++ ") with score of " ++ show (pScore p) ++ " from " ++ (toSqlString . pForecast $ p) ++ " " ++ show (pState p) ++ "  band: " ++ (show . band . session $ p) ++ "  RA: " ++ (show . (\x -> 12*x/pi) . ra . session $ p) ++ "  grade: " ++ (show . grade . session $ p)
 >       where 
 >         n = sName . session $ p
 >         printName p = if n == "" then show . sId . session $ p else n
@@ -281,7 +280,7 @@ Simple Functions for Periods:
 >   , sessions        = [defaultSession]
 >   , thesis          = False
 >   , pAllottedT      = 0
->   , pAllottedS      = 10000000 -- more then enough time
+>   , pAllottedS      = 0
 >   , observers       = [defaultObserver]
 >   , pClosed         = False
 >   }
@@ -297,7 +296,7 @@ Simple Functions for Periods:
 >   , pState      = Pending
 >   , pForecast   = fromGregorian' 2008 1 1
 >   , pBackup     = False
->   , pTimeBilled = 0
+>   , pDuration   = 0
 >   }
 
 > defaultWindow  = Window {

@@ -61,7 +61,7 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >         , thesis = thesis
 >         , pAllottedS = maxST
 >         }
->     return $ makeProject project pAllottedT sessions
+>     return $ makeProject project pAllottedT pAllottedT sessions
 
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []

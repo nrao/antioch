@@ -137,14 +137,14 @@ Utilities:
 > mkPeriod s time = defaultPeriod { session = s
 >                                 , startTime = fst time
 >                                 , duration = snd time
->                                 , pTimeBilled = snd time
+>                                 , pDuration = snd time
 >                                 }
 
 > getSchedulableSession :: Session
 > getSchedulableSession = head $ sessions getSchedulableProject
 
 > getSchedulableProject :: Project
-> getSchedulableProject = makeProject proj' (100*60) [s']
+> getSchedulableProject = makeProject proj' (100*60) (100*60) [s']
 >   where
 >     -- simplest session that can be scheduled at anytime
 >     -- TBF: hour angle limit fails on this occassionally - shouldn't happen

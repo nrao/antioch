@@ -166,7 +166,7 @@ Our Periods need to have Minutes, and average scores.
 >   , pScore       = (cScore candidate)/(fromIntegral $ cDuration candidate)
 >   , pForecast    = dtw -- the weather origin used to create this period
 >   , pBackup      = False
->   , pTimeBilled  = quarter * cDuration candidate
+>   , pDuration    = quarter * cDuration candidate
 >   }
 
 Candidates, importantly, don't care what unit of time we're working

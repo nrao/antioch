@@ -127,8 +127,8 @@ Begin tests:
 >       dt2 = fromGregorian 2006 1 1 3 0 0
 >       dt3 = fromGregorian 2006 1 1 1 0 0
 >       dt4 = fromGregorian 2006 1 1 9 0 0
->       f1 = defaultPeriod {startTime = dt1, duration = 2*60, pTimeBilled = 2*60}
->       f2 = defaultPeriod {startTime = dt2, duration = 2*60, pTimeBilled = 2*60}
+>       f1 = defaultPeriod {startTime = dt1, duration = 2*60, pDuration = 2*60}
+>       f2 = defaultPeriod {startTime = dt2, duration = 2*60, pDuration = 2*60}
 >       fixed = [f1, f2]
 >       rst = inFixed dt1 fixed
 
@@ -146,14 +146,14 @@ Begin tests:
 >       dt4 = fromGregorian 2006 1 1 9 0 0 
 >       dt5 = fromGregorian 2006 1 1 11 0 0 -- end
 >       -- schedule produced by PackWorker
->       p1 = defaultPeriod {startTime = dt1, duration = 2*60, pTimeBilled = 2*60}
->       p2 = defaultPeriod {startTime = dt2, duration = 2*60, pTimeBilled = 2*60}
->       p3 = defaultPeriod {startTime = dt3, duration = 4*60, pTimeBilled = 4*60}
->       p4 = defaultPeriod {startTime = dt4, duration = 2*60, pTimeBilled = 2*60}
+>       p1 = defaultPeriod {startTime = dt1, duration = 2*60, pDuration = 2*60}
+>       p2 = defaultPeriod {startTime = dt2, duration = 2*60, pDuration = 2*60}
+>       p3 = defaultPeriod {startTime = dt3, duration = 4*60, pDuration = 4*60}
+>       p4 = defaultPeriod {startTime = dt4, duration = 2*60, pDuration = 2*60}
 >       ps = [p1, p2, p3, p4]
 >       -- what the original 
->       f1 = defaultPeriod {startTime = dt0, duration = 3*60, pTimeBilled = 3*60} -- before start!
->       f3 = defaultPeriod {startTime = dt4, duration = 6*60, pTimeBilled = 6*60} -- after end!
+>       f1 = defaultPeriod {startTime = dt0, duration = 3*60, pDuration = 3*60} -- before start!
+>       f3 = defaultPeriod {startTime = dt4, duration = 6*60, pDuration = 6*60} -- after end!
 >       fixed = [f1, p2, f3]
 
 > test_NumSteps = TestCase . assertEqual "test_NumSteps" 192 . numSteps $ 48 * 60
@@ -773,7 +773,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                              , startTime = dt1
 >                              , duration = quarter * 12
 >                              , pScore = 20.0
->                              , pTimeBilled = quarter * 12
+>                              , pDuration = quarter * 12
 >                              , pForecast = dt1
 >                              }
 

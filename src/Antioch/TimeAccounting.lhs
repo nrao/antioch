@@ -13,19 +13,22 @@ The names of the core functions for time accounting consist of three fields:
     s = session
     -
     Allotted = apportioned time for the project or session
-    Committed = pTimeBilled in its Pending/Scheduled/Completed periods
-    Used = pTimeBilled in its Scheduled/Completed periods
-    Past = pTimeBilled in its Scheduled/Completed periods started
+    Committed = sum of pDuration* of periods in Pending/Scheduled/Completed
+    Used = sum of pDuration* of periods in Scheduled/Completed
+    Past = sum of pDuration* of periods in Scheduled/Completed started
            prior to the scheduling time
-    Avail = Allotted* minus Committed
-    Remain = Allotted* minus Used
-    Future = Allotted* minus Past
+    Avail = Allotted minus Committed
+    Remain = Allotted minus Used
+    Future = Allotted minus Past
     -
     S = Semester
     T = Total
 
-* - semester Avail/Remain time uses the minimum of the semester and
-    total allotted time.
+*  - is nell period's duration if period state is Pending, else is time
+     billed if state is Scheduled or Completed
+
+Note when using semester allotted time, the minimum of the semester
+and total time is used.
 
 Time Accounting is conceptually simple: sessions and projects have been
 allotted only so much time, and we don't want to schedule them over this
@@ -51,17 +54,33 @@ Checked factors:
    - project close flag
    - project time available
 
+Note the divergence between this Time Accounting, and the Time Accounting
+in Nell; in Nell, state is ignored: when a pending period is created, its
+period_accounting.scheduled time is zero.  When that period is published,
+its state is moved to scheduled, and the period_accounting.scheduled
+time is set to the duration of the period.  In this way, time billed
+for pending periods is zero, and when we calculate time accounting
+for sessions and projects, we can simply sum up all the period time
+accounting without taking state into account.  For example, deleted
+periods *must* have their time accounting set such that time billed
+is zero.  In contrast, in Antioch we need to take more things into
+account.  For example, the various computations need to know about state,
+schedule start time, planned duration vs. billed duration, and trimester
+boundaries; but not why some observing time is not billed.
+
 > pComplete :: Project -> Bool
 > pComplete p = (pClosed p) || ((pAvailT p) < quarter )
 > -- NOTE: project completeness is NOT dependent on session completeness:
 > --  where
 > --    allSessClosed p = all (==True) $ map sClosed $ sessions p
 
-How much time has this session used up in periods?
-The requirements below for session completion are drawn from Project Note 11.3.
-A session is considered closed within the DSS when any of:
-   1. the total amount of time allotted for that session has been billed (less than 15 minutes remains),
-   2. the session is marked as closed by a project investigator or the GBT telescope scheduler, or
+How much time has this session used up in periods?  The requirements below
+for session completion are drawn from Project Note 11.3.  A session is
+considered closed within the DSS when any of:
+   1. the total amount of time allotted for that session has been billed
+   (less than 15 minutes remains),
+   2. the session is marked as closed
+   by a project investigator or the GBT telescope scheduler, or
    3. the project to which it belongs is closed.
 
 Checked factors:
@@ -78,25 +97,25 @@ Checked factors:
 How much time has this session used up in periods?
 
 > sCommittedT :: Session -> Minutes
-> sCommittedT = sum . map pTimeBilled . periods
+> sCommittedT = sum . map pDuration . periods
 
 > sCommittedS :: SemesterName -> Session -> Minutes
-> sCommittedS sem s = sum $ map pTimeBilled $ periodsBySemester sem s
+> sCommittedS sem s = sum $ map pDuration $ periodsBySemester sem s
 
 > sUsedT :: Session -> Minutes
-> sUsedT = sum . map pTimeBilled . filter isUsed . periods
+> sUsedT = sum . map pDuration . filter isUsed . periods
 
 > sUsedS :: SemesterName -> Session -> Minutes
-> sUsedS sem s = sum $ map pTimeBilled . filter isUsed . periodsBySemester sem $ s 
+> sUsedS sem s = sum $ map pDuration . filter isUsed . periodsBySemester sem $ s 
 
 > isUsed :: Period -> Bool
 > isUsed p = (pState p) `elem` [Scheduled, Complete]
 
 > sPastT :: DateTime -> Session -> Minutes
-> sPastT dt = sum . map pTimeBilled . filter (isPast dt) . periods
+> sPastT dt = sum . map pDuration . filter (isPast dt) . periods
 
 > sPastS :: DateTime -> Session -> Minutes
-> sPastS dt s = sum $ map pTimeBilled . filter (isPast dt) . periodsBySemester (dt2semester dt) $ s
+> sPastS dt s = sum $ map pDuration . filter (isPast dt) . periodsBySemester (dt2semester dt) $ s
 
 > isPast :: DateTime -> Period -> Bool
 > isPast dt p = isUsed p && (startTime p) < dt

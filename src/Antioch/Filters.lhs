@@ -143,7 +143,7 @@ scheduled.
 >       where
 >         ps = map clear . periods $ s
 >         clear p
->           | elem (peId p) pIds = p { pTimeBilled = 0 }
+>           | elem (peId p) pIds = p { pDuration = 0 }
 >           | otherwise          = p
 >         pIds = [wPeriodId w | w <- (windows s)]
 

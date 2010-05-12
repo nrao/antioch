@@ -179,7 +179,7 @@ Note: only applicable for columns 'wind_speed' and 'wind_speed_mph'
 
 TBF: don't use the cache, since this won't be called very often.
 If we want to use the cache we'll have to come up with a different
-key to distinguics it from the wind_speed values.
+key to distinguish it from the wind_speed values.
 
 > getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
 > --getWindMPH cache cnn ftype dt = withCache key cache $
@@ -206,6 +206,36 @@ key to distinguics it from the wind_speed values.
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ?"
 >     xs    = [toSql' dt]
+
+Changes wind miles per hour to PTCS meters to second
+with day/night correction
+
+> correctWindSpeed :: DateTime -> Float -> Float
+> correctWindSpeed dt w = correctWindSpeed' cfs w'
+>   where
+>     cfs
+>         | isPTCSDayTime dt = windDayCoeff
+>         | otherwise        = windNightCoeff
+>     w' = mph2ms w
+
+Miles per hour to meters per second conversion
+
+> mph2ms :: Float -> Float
+> mph2ms w = w / 2.237
+
+PTCS day/night correction for meters per second
+
+> correctWindSpeed' :: [Float] -> Float -> Float
+> correctWindSpeed' cfs w = sum . map (\x -> (fst x)*w**(snd x)) . zip (reverse cfs) $ [0..]
+
+> windDayCoeff = [-1.70737148e-04,  6.56523342e-03,
+>                 -9.82652357e-02,  7.21325467e-01,
+>                 -2.68827245e+00,  5.24223121e+00,
+>                 -7.61618314e-01]::[Float]
+> windNightCoeff = [-3.38584062e-04,  1.19917649e-02,
+>                   -1.61474697e-01,  1.02041521e+00,
+>                   -2.98028690e+00,  3.89258501e+00,
+>                   -5.69079000e-01]::[Float]
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.

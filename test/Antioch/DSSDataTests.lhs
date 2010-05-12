@@ -250,7 +250,7 @@ example in comments.
 >   p <- fetchPeriod pId cnn
 >   assertEqual "test_populateSession 3" (fromGregorian 2009 6 15 12 0 0) (startTime p)
 >   assertEqual "test_populateSession 4" (4*60) (duration . head . periods $ ios)
->   assertEqual "test_populateSession 5" (4*60) (pTimeBilled . head . periods $ ios)
+>   assertEqual "test_populateSession 5" (4*60) (pDuration . head . periods $ ios)
 >   assertEqual "test_populateSession 7" Nothing (wPeriod . head . windows $ ios)
 >   assertEqual "test_populateSession 8" (Just . head . periods $ ios) (wPeriod . head . windows $ ios)
 >   assertEqual "test_populateSession 9" (fromGregorian 2009 6 10 0 0 0) (wStart . head . windows $ ios)
@@ -320,24 +320,6 @@ example in comments.
 
 > fromFloat2Sql :: Float ->  SqlValue
 > fromFloat2Sql = toSql
-
-> test_fetchPeriod = TestCase $ do
->   putPeriods [p1]
->   cnn <- connect
->   r <- quickQuery' cnn ("SELECT id FROM periods") []
->   let id = fromSqlInt . head . head $ r
->   p' <- fetchPeriod id cnn
->   -- fetchPeriod doesn't set the period's session, so we'll do that
->   let p = p' {session = s }
->   disconnect cnn
->   cleanup "periods"
->   assertEqual "test_fetchPeriod" p1 p
->     where
->       dt = fromGregorian 2006 1 1 0 0 0
->       s  = defaultSession { sId = 1 }
->       p1 = defaultPeriod { session = s
->                          , startTime = dt
->                          , pForecast = dt }
 
 > test_toDateRangesFromInfo_1 = TestCase $ do
 >   let dtrs = toDateRangesFromInfo start end repeat until 
