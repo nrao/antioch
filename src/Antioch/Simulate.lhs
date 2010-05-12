@@ -27,16 +27,31 @@ we must do all the work that usually gets done in nell.
 >         (newSched, newTrace) <- runScoring' w rs $ dailySchedule Pack start packDays history sessions quiet
 >         -- This writeFile is a necessary hack to force evaluation of the pressure histories.
 >         liftIO $ writeFile "/dev/null" (show newTrace)
->         -- make sure the session contain their new periods on the next iter.
->         let newlyScheduledPeriods = newSched \\ history
->         let newHistory = filter (\p -> elem p history) newSched
->         let sessions' = updateSessionPeriods sessions newHistory
->         let sessions'' = updateSessions sessions' newlyScheduledPeriods
->         -- TBF: publish
+>         -- newSched is a combination of the periods from history that overlap
+>         -- the scheduling range, and the new periods prodcued by pack.
+>         -- here's how we get the new periods:
+>         -- ex: [1,2,3,4,5] \\ [1,2,3,5] -> [4]
+>         let newlyScheduledPeriods' = newSched \\ history
+>         -- move these periods to the scheduled state, etc. 
+>         let newlyScheduledPeriods = map publishPeriod newlyScheduledPeriods'
+>         -- here we need to take the periods that were created by pack
+>         -- and add them to the list of periods for each session
+>         -- this is necessary so that a session that has used up all it's
+>         -- time is not scheduled in the next call to simulate.
+>         let sessions'' = updateSessions sessions newlyScheduledPeriods
 >         -- TBF: optional - simulate observing
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) (nub . sort $ newSched ++ history) sessions'' quiet (nub . sort $ newSched ++ history) $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
+
+This is vital for calculating pressures correctly.
+TBF: once windows are introduced, here we will need to reconcile them.
+
+> publishPeriod :: Period -> Period
+> publishPeriod p = p { pState = Scheduled, pDuration = dur }
+>   where
+>     dur = duration p
+
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
@@ -46,17 +61,19 @@ we must do all the work that usually gets done in nell.
 >     backups = [p | p <- obsPs, pBackup p]
 >     bcks = if length backups == 0 then "" else  "Backups: \n" ++ (showList' backups) ++ "\n"
 
-> updateSessionPeriods :: [Session] -> [Period] -> [Session]
-> updateSessionPeriods ss nps = map update ss
->   where
->     -- replace all the session's original periods from new periods (nps)
->     update s = makeSession s (windows s) rps
->       where
->         -- the session's original periods
->         sps = periods s
->         -- the session's replacement periods:
->         --     originals not in nps and equivalent in nps
->         rps = (sps \\ nps) ++ (filter (\p -> elem p sps) nps)
+Assign the new periods to the appropriate Session.
+For example, if the inputs looked like this:
+sessions = 
+   * Session A [(no periods)]
+   * Session B [(Period for Session B)]
+periods =
+   * Period for Session A
+   * Period for Session B
+
+Then the result would be:
+sessions =
+   * Session A [(Period for Session A)]
+   * Session B [(Period for Session B), (Period for Session B)]
 
 > updateSessions :: [Session] -> [Period] -> [Session]
 > updateSessions sessions periods = map update sessions
