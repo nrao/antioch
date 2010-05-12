@@ -36,6 +36,8 @@ results = {}
 # units[test_name] = "ms" or "seconds", etc.
 units = {}
 
+now = datetime.now()
+
 # for each file, read it in and parse it.
 for bf in bfs:
     print bf
@@ -65,9 +67,11 @@ for bf in bfs:
             parts = timeLine.split(" ")
             print parts
             month = parts[1].strip()
-            day = parts[3].strip()
-            time = parts[4].strip()
-            year = parts[6].strip()
+            # spacing depends on whether day of month is 1 or 2 digits
+            offset = 1 if parts[2] == "" else 0
+            day  = parts[2 + offset].strip()
+            time = parts[3 + offset].strip()
+            year = parts[5 + offset].strip()
             timeStr = "%s %s %s %s" % (year, month, day, time)
             print timeStr
             dt = datetime.strptime(timeStr, "%Y %b %d %H:%M:%S")
@@ -97,6 +101,7 @@ for bf in bfs:
 for k in results.keys():
     results[k].sort()
 
+
 #print "************* results:  "
 #print results           
 
@@ -109,7 +114,7 @@ for name in results.keys():
     clf()
     xlabel("date")
     ylabel("execution time (%s)" % units[name])
-    title(name)
+    title("%s (%s)" % (name, now.strftime("%Y-%m-%d")))
 
     # we need to transform the dict we made while parsing into
     # the x and y axis lists
