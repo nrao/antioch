@@ -1,10 +1,11 @@
 all: simulate serve
 
-simulate:
-	ghc -o simulate --make src/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -prof -auto-all
+simulate: src/Antioch/DateTime.lhs
+	#ghc -o simulate --make src/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -prof -auto-all
+	ghc -o simulate --make src/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
 serve:
-	ghc -o serve --make src/Server/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -auto-all
+	ghc -o serve --make src/Server/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
 force:
 	touch src/Main.lhs

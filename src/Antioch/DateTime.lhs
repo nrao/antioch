@@ -1,6 +1,5 @@
 > module Antioch.DateTime where
 
-> import Antioch.SunRiseSet
 > import Data.Fixed                 (div')
 > import Data.Function              (on)
 > import Data.Time.Calendar hiding  (fromGregorian, toGregorian)
@@ -227,88 +226,31 @@ Simple arithmetic.
 > diffSeconds :: DateTime -> DateTime -> Int
 > diffSeconds = (-)
 
-These next two functions give back a datetime for when the sun
-should rise or set for the given datetime.
+Here we allow generic offsets to be passed in (for use w/ PTCS definitions)
+and also catch cases where offsets from the previous day change the
+day/night boundary.
 
-> getRise :: DateTime -> (Int -> Float) -> DateTime
-> getRise dt riseFnc = fromGregorian year month day hrRise minRise 0
->   where 
->     (year, month, day, _, _, _) = toGregorian dt
->     (hrRise, minRise) = fromHoursToHourMins . riseFnc . toDayOfYear $ dt
-
-
-Note: Set times, when using a func that offsets it, can wrap to the next day.
-
-> getSet    :: DateTime -> (Int -> Float) -> DateTime
-> getSet dt setFnc = fromGregorian year month day hrSet minSet 0
->   where 
->     setHrs = setFnc . toDayOfYear $ dt
->     (hrSet, minSet) = fromHoursToHourMins setHrs
->     -- If the setting time is less then the physical sun set time,
->     -- then it must have wrapped around
->     pySetHrs = sunRise . toDayOfYear $ dt
->     dayDt = if pySetHrs < setHrs then dt else ((24*60) `addMinutes'` dt)  
->     (year, month, day, _, _, _) = toGregorian dayDt
-
-For a given day, return the (sun rise, sun set) for the day before, that day,
-and the next day.
-
-> getSunRiseSets :: DateTime -> (Int -> Float) -> (Int -> Float) -> [(DateTime, DateTime)]
-> getSunRiseSets dt rise set = map (getSunRiseSet rise set) dts
+> isDayTime' :: DateTime -> DateTime -> DateTime -> Bool
+> isDayTime' dt riseOffset setOffset = rise + riseOffset <= dt && dt < set + setOffset || rise' + riseOffset <= dt && dt < set' + setOffset
 >   where
->     dts = map offsetDay [(-1), 0, 1]
->     offsetDay offset = (offset * 24 * 60) `addMinutes'` dt
+>     (rise, set) = sunRiseAndSet dt
+>     rise' = rise - 86400
+>     set'  = set - 86400
 
-> getSunRiseSet :: (Int -> Float) -> (Int -> Float) -> DateTime -> (DateTime, DateTime)
-> getSunRiseSet rise set dt = (getRise dt rise, getSet dt set)
-
-> isInAnyRange :: DateTime -> [(DateTime, DateTime)] -> Bool
-> isInAnyRange dt ranges = any (==True) $ map inRange ranges
->   where
->     inRange range = (fst range) <= dt && dt <= (snd range)
-
-Definitions of Day/Night differ:
-   * physical - when the actual sun sets and rises
-   * PTCS versions - include offsets after sun set/rise
-
-To avoid confusion over what day we should be checking our sun rise/sets against
-we simply look at the day before and afterwards as well.
-
-TBF, WTF: toggle this code once sponsor testing is complete
-
-Physical Definition:
+Pysical Sun Rise/Set:
 
 > isDayTime    :: DateTime -> Bool
-> isDayTime dt = isInAnyRange dt $ getSunRiseSets dt sunRise sunSet
+> isDayTime dt = isDayTime' dt 0 0 
 
 PTCS Version 1.0:
 
 > isPTCSDayTime    :: DateTime -> Bool
-> isPTCSDayTime dt = isInAnyRange dt $ getSunRiseSets dt ptcsSunRise ptcsSunSet
+> isPTCSDayTime dt = isDayTime' dt (3600 * 2) (3600 *3)
 
 PTCS Version 2.0:
 
 > isPTCSDayTime_V2    :: DateTime -> Bool
-> isPTCSDayTime_V2 dt = isInAnyRange dt $ getSunRiseSets dt ptcsSunRise_V2 ptcsSunSet_V2
-
-Calculates the day of the year by finding the difference in minutes
-between the given datetime and the first of the year, and converting
-this to integer days.
-
-> toDayOfYear :: DateTime -> Int
-> toDayOfYear dt = toDays $ dt `diffMinutes` yearStart
->   where
->     (year, _, _, _, _, _) = toGregorian dt
->     yearStart = fromGregorian (year) 1 1 0 0 0
->     toDays mins = (mins `div` (24*60)) + 1 --ceiling $ mins / (24*60)
-
-Ex: 12.5 hours -> 12 hours and 30 minutes
-
-> fromHoursToHourMins :: Float -> (Int, Int)
-> fromHoursToHourMins hrs = (hr, mins)
->   where
->     hr = (floor hrs)::Int
->     mins = floor $ ((hrs - (fromIntegral hr)) * 60.0)
+> isPTCSDayTime_V2 dt = isDayTime' dt 0 (3600 *3)
 
 TBF use ET and translate to UT
 
@@ -318,3 +260,31 @@ TBF use ET and translate to UT
 >     badRFIStart dt = 86400 * (dt `div` 86400) + 12 * 3600  -- 8 AM ET
 >     badRFIEnd dt   = 86400 * (dt `div` 86400) + 24 * 3600  -- 8 PM ET
 
+Accurate to about 12 min. Only works for Green Bank.
+
+You can also check this code against various resources, including:
+http://aa.usno.navy.mil/data/docs/RS_OneYear.php
+
+> years = map (\y -> fromGregorian' y 1 1) [2011, 2010 .. 2006]
+
+> dayOfYear dt = (dt - year) `div` 86400
+>   where
+>     (year : _) = dropWhile (dt <) years
+
+> (a, b, c, d, e) = (11.2178,  1.2754, -0.0915, 0.0673, 0.1573)
+> (l, m, n, o, p) = (23.3553, -1.3304,  0.3406, 0.0525, 0.1520)
+
+> hoursToSeconds hours = floor $ 86400.0 * (hours / 24.0)
+
+> sunRiseAndSet    :: DateTime -> (DateTime, DateTime)
+> sunRiseAndSet dt = (midnight + hoursToSeconds rise, midnight + hoursToSeconds set)
+>   where
+>     midnight = 86400 * (dt `div` 86400)
+>     day = dayOfYear midnight
+>     g   = 2.0 * pi * (fromIntegral day / 365.0)
+>     cosg  = cos g
+>     sing  = sin g
+>     cos2g = 2.0 * cosg * cosg - 1.0
+>     sin2g = 2.0 * cosg * sing
+>     rise  = a + (b * cosg) + (c * sing) + (d * cos2g) + (e * sin2g)
+>     set   = l + (m * cosg) + (n * sing) + (o * cos2g) + (p * sin2g)
