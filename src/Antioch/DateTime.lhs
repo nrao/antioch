@@ -226,24 +226,31 @@ Simple arithmetic.
 > diffSeconds :: DateTime -> DateTime -> Int
 > diffSeconds = (-)
 
-> isDayTime    :: DateTime -> Bool
-> isDayTime dt = rise <= dt && dt < set
+Here we allow generic offsets to be passed in (for use w/ PTCS definitions)
+and also catch cases where offsets from the previous day change the
+day/night boundary.
+
+> isDayTime' :: DateTime -> DateTime -> DateTime -> Bool
+> isDayTime' dt riseOffset setOffset = rise + riseOffset <= dt && dt < set + setOffset || rise' + riseOffset <= dt && dt < set' + setOffset
 >   where
 >     (rise, set) = sunRiseAndSet dt
+>     rise' = rise - 86400
+>     set'  = set - 86400
+
+Pysical Sun Rise/Set:
+
+> isDayTime    :: DateTime -> Bool
+> isDayTime dt = isDayTime' dt 0 0 
 
 PTCS Version 1.0:
 
 > isPTCSDayTime    :: DateTime -> Bool
-> isPTCSDayTime dt = rise + 3600 * 2 <= dt && dt < set + 3600 * 3
->   where
->     (rise, set) = sunRiseAndSet dt
+> isPTCSDayTime dt = isDayTime' dt (3600 * 2) (3600 *3)
 
 PTCS Version 2.0:
 
 > isPTCSDayTime_V2    :: DateTime -> Bool
-> isPTCSDayTime_V2 dt = rise <= dt && dt < set + 3600 * 3
->   where
->     (rise, set) = sunRiseAndSet dt
+> isPTCSDayTime_V2 dt = isDayTime' dt 0 (3600 *3)
 
 TBF use ET and translate to UT
 

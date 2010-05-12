@@ -21,6 +21,7 @@
 >                 --, test_isDayTime_2
 >                 , test_isPTCSDayTime
 >                 , test_getRise
+>                 , test_getSet
 >                 --, test_getSunRiseSets
 >                  ]
 
@@ -160,9 +161,20 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 
 > test_getRise = TestCase $ do
 >     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1)
+>     assertEqual "test_getRise_2" dt2_2 (getRise dt2_1)
 >  where
 >     getRise dt = fst $ sunRiseAndSet dt
 >     dt1_1 = fromGregorian 2006 1 1 10 0 0
->     dt1_2 = fromGregorian 2006 1 1 12 33 0
+>     dt1_2 = fromGregorian 2006 1 1 12 33 37
+>     dt2_1 = fromGregorian 2006 7 1 0 0 0
+>     dt2_2 = fromGregorian 2006 7 1 9 59 58
 
-
+> test_getSet = TestCase $ do
+>     assertEqual "test_getSet_1" dt1_2 (getSet dt1_1)
+>     assertEqual "test_getSet_2" dt2_2 (getSet dt2_1)
+>  where
+>     getSet dt = snd $ sunRiseAndSet dt
+>     dt1_1 = fromGregorian 2006 1 1 1 0 0
+>     dt1_2 = fromGregorian 2006 1 1 22 4 38
+>     dt2_1 = fromGregorian 2006 7 1 0 0 0
+>     dt2_2 = 1151801059 --fromGregorian 2006 7 2 0 44 19
