@@ -49,6 +49,28 @@
 >   , test_breakdownSimulationTimes
 >    ]
 
+> test_fracObservedTimeByDays = TestCase $ do
+>     print $ fracObservedTimeByDays ss ps
+>     assertEqual "fracObservedTimeByDays_1" True True 
+>   where
+>     s1 = defaultSession { sAllottedT = 60 }
+>     s2 = defaultSession { sAllottedT = 120 }
+>     s3 = defaultSession { sAllottedT = 60 }
+>     s4 = defaultSession { sAllottedT = 120 }
+>     s5 = defaultSession { sAllottedT = 60 }
+>     s6 = defaultSession { sAllottedT = 120 }
+>     ss = [s1, s2, s3, s4, s5, s6]
+>     dts = [ fromGregorian 2006 1 1 0 0 0 
+>           , fromGregorian 2006 1 2 0 0 0 
+>           , fromGregorian 2006 1 4 0 0 0 
+>           , fromGregorian 2006 1 5 0 0 0 
+>           , fromGregorian 2006 1 7 0 0 0 
+>           , fromGregorian 2006 1 9 0 0 0 
+>           ]
+>     durs = [60, 120, 60, 120, 60, 120]
+>     ps = zipWith3 mkPeriod ss dts durs 
+>     mkPeriod s start dur = Period 0 s start dur 0.0 Pending undefined False dur
+
 > test_scheduleHonorsFixed = TestCase $ do
 >     assertEqual "StatisticsTests_test_scheduleHonorsFixed_1" True (scheduleHonorsFixed fixed1 schd)
 >     assertEqual "StatisticsTests_test_scheduleHonorsFixed_2" False (scheduleHonorsFixed fixed2 schd)

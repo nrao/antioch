@@ -23,6 +23,18 @@
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
+simFracTime 
+
+> plotFractionalTime              :: StatsPlot
+> plotFractionalTime fn n ss ps _ = do
+>   let plotData = fracObservedTimeByDays ss ps 
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", plotData)]
+>     where
+>   title = "Fractional Observed Time"
+>   xl = "Time [Days]"
+>   yl = "Time Observed / Time Allocated"
+>   titles = [Just "Total"]
+
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
 the graph produced by CLEO forecasts, requesting 'Ground Speed', just sites
@@ -604,6 +616,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
 >  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
+>  , plotFractionalTime   $ rootPath ++ "/simFracTime.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"

@@ -32,6 +32,19 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
   
+> fracObservedTimeByDays :: [Session] -> [Period] -> [(Float, Float)]
+> fracObservedTimeByDays ss ps = map fracObservedTime days
+>   where
+>     days = [0 .. (numDays - 1)]
+>     numDays = (diffMinutes' lastDt firstDt) `div` (60 * 24)
+>     firstDt = startTime $ head ps
+>     lastDt  = startTime $ last ps
+>     total = totalSessionHrs ss
+>     fracObservedTime day = (fromIntegral day,(total - (observed day)) / total)
+>     observed day = getTotalHours $ observedPeriods day
+>     observedPeriods day = takeWhile (\p -> startTime p < (toDt day)) ps
+>     toDt day = (day * 24 * 60) `addMinutes'` firstDt
+
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
 > historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericOpacity
 > historicalSchdTrkEffs ps = historicalSchdFactors ps trackingEfficiency
