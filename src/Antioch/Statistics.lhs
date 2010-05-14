@@ -404,7 +404,9 @@ time could you really schedule with these sessions?
 >   where
 >     error = "WARNING: "
 >     w1 = if totalDead /= schedDead + failedBackup then error ++ "Total Dead Time != Scheduled Dead Time + Failed Backup Time!" else ""
->     w2 = if observed + totalDead /= simulated then error ++ "Total Simulated Time != Observed + Dead Times!\n" else ""
+>     -- this warning is no longer applicable, since each simulation stip
+>     -- calls dailySchedule, which schedule's more then the 'simulated' time
+>     w2 = "" -- if observed + totalDead /= simulated then error ++ "Total Simulated Time != Observed + Dead Times!\n" else ""
 >     w3 = if scheduled - observed /= canceled - obsBackup then error ++ "Scheduled - Observed Time != Canceled - Observed Backup Times!\n" else ""
 >     warnings = [w1, w2, w3]
 

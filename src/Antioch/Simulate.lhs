@@ -5,10 +5,12 @@
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
+> import Antioch.Statistics
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, showList', overlie, printList)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Antioch.DailySchedule
+> import Antioch.SimulateObserving
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
@@ -23,24 +25,65 @@ we must do all the work that usually gets done in nell.
 >     | packDays > simDays = return (schedule, trace)
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
+>         --liftIO $ print "history: "
+>         --liftIO $ printList history 
+>         --let bks2 = [b | b <- history, pBackup b]
+>         --liftIO $ print "backups in history: "
+>         --liftIO $ printList bks2
+>         --liftIO $ print "scheduling ..."
 >         w <- getWeather $ Just start
->         (newSched, newTrace) <- runScoring' w rs $ dailySchedule Pack start packDays history sessions quiet
+>         (newSchedPending, newTrace) <- runScoring' w rs $ do
+>             newSched' <- dailySchedule Pack start packDays history sessions quiet
+>             --let bs = [b | b <- newSched', pBackup b]
+>             --liftIO $ print "backups from dailySchedule: "
+>             --liftIO $ printList bs
+>             -- simulate observing
+>             newSched'' <- scheduleBackups Pack sessions newSched' start (24 * 60 * 1)
+>             --let bs2 = [b | b <- newSched'', pBackup b]
+>             --liftIO $ print "backups from scheduleBackups: "
+>             --liftIO $ printList bs2
+>             --let gaps = findScheduleGaps start (24 * 60 * 1) newSched''
+>             --liftIO $ print "gaps in schedule from schedulBackups: "
+>             --liftIO $ printList $ gaps
+>             return $ newSched''
+> {-
+>         -- daily schedule! Same thing we call every day.
+>         (newSched', newTrace') <- runScoring' w rs $ dailySchedule Pack start packDays history sessions quiet
+>         -- now simulate observing: check moc's, schedule backups
+>         (newSched, newTrace) <- runScoring' w rs $ scheduleBackups sessions newSched' start 
+>  -}
 >         -- This writeFile is a necessary hack to force evaluation of the pressure histories.
 >         liftIO $ writeFile "/dev/null" (show newTrace)
+>         let newSched = map publishPeriod newSchedPending
+>         -- mark them all as backups
+>         --let newSched = map (\p -> p {pBackup = True}) newSched''
 >         -- newSched is a combination of the periods from history that overlap
 >         -- the scheduling range, and the new periods prodcued by pack.
 >         -- here's how we get the new periods:
 >         -- ex: [1,2,3,4,5] \\ [1,2,3,5] -> [4]
->         let newlyScheduledPeriods' = newSched \\ history
+>         let newlyScheduledPeriods = newSched \\ history
 >         -- move these periods to the scheduled state, etc. 
->         let newlyScheduledPeriods = map publishPeriod newlyScheduledPeriods'
+>         --let newlyScheduledPeriods = map publishPeriod newlyScheduledPeriods'
+>         --let bks = [b | b <- newlyScheduledPeriods, pBackup b]
+>         --liftIO $ print "new backups: "
+>         --liftIO $ printList bks
+>         --let bks3 = [b | b <- history, pBackup b]
+>         --liftIO $ print "old backups: "
+>         --liftIO $ printList bks3
+>         --let bks4 = [b | b <- (nub . sort $ newSched ++ history), pBackup b]
+>         --liftIO $ print "backups in new history: "
+>         --liftIO $ printList bks4
+>         --liftIO $ print "session 102 in new newSched" 
+>         --liftIO $ printList $ [p | p <- newSched, (sId . session $ p) == 102]
+>         --liftIO $ print "session 102 in history" 
+>         --liftIO $ printList $ [p | p <- history, (sId . session $ p) == 102]
 >         -- here we need to take the periods that were created by pack
 >         -- and add them to the list of periods for each session
 >         -- this is necessary so that a session that has used up all it's
 >         -- time is not scheduled in the next call to simulate.
 >         let sessions'' = updateSessions sessions newlyScheduledPeriods
->         -- TBF: optional - simulate observing
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) (nub . sort $ newSched ++ history) sessions'' quiet (nub . sort $ newSched ++ history) $! (trace ++ newTrace)
+>         let newHistory = updateHistory history newSched start
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
@@ -52,6 +95,18 @@ TBF: once windows are introduced, here we will need to reconcile them.
 >   where
 >     dur = duration p
 
+We must combine the output of the scheduling algorithm with the history from
+before the algorithm was called, but there's two complications:
+   * the output from the algo. is a combination of parts of the history and the newly scheduled periods
+   * this same output is then modified: canclelations and replacements (backups) may occur.
+So, we need to intelligently combine the previous history and the algo. output.
+Basically, ignore any of the history that overlaps with the time range covered
+by the scheduling algorithm.
+
+> updateHistory :: [Period] -> [Period] -> DateTime -> [Period]
+> updateHistory history newSched start = oldHistory ++ newSched
+>   where
+>     oldHistory = takeWhile (\p -> (periodEndTime p) <= start) history
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]

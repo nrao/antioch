@@ -16,6 +16,7 @@
 > tests = TestList [ 
 >     test_simulateDailySchedule
 >   , test_exhaustive_history
+>   , test_updateHistory
 >                  ]
 
 Attempt to see if the old test_sim_pack still works:
@@ -88,6 +89,30 @@ of pre-scheduled periods (history)
 >     -- make sure that this session knows it's used up MOST of it's time
 >     s2 = cv {periods = h2}
 >     ss2 = [s2]
+
+
+> test_updateHistory = TestCase $ do
+>     assertEqual "test_updateHistory_1" r1 (updateHistory h1 s1 dt1)
+>     assertEqual "test_updateHistory_2" r2 (updateHistory h1 s1 dt2)
+>     assertEqual "test_updateHistory_3" r1 (updateHistory h3 s3 dt2)
+>     assertEqual "test_updateHistory_2" r2 (updateHistory h3 s1 dt2)
+>   where
+>     mkDts start num = map (\i->(i*dur) `addMinutes'` start) [0 .. (num-1)] 
+>     mkPeriod dt = defaultPeriod { startTime = dt, duration = dur }
+>     dur = 120 -- two hours
+>     -- first test 
+>     h1_start = fromGregorian 2006 2 1 0 0 0
+>     h1 = map mkPeriod $ mkDts h1_start 5
+>     s1_start = fromGregorian 2006 2 1 10 0 0
+>     s1 = map mkPeriod $ mkDts s1_start 3
+>     dt1 = fromGregorian 2006 2 1 10 0 0
+>     r1 = h1 ++ s1
+>     -- second test
+>     dt2 = fromGregorian 2006 2 1 9 0 0
+>     r2 = (init h1) ++ s1
+>     -- third
+>     h3 = init h1
+>     s3 = [(last h1)] ++ s1
 
 Test Utilities:
 
