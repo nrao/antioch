@@ -92,9 +92,6 @@ Specifically, we want to exclude any period that overlaps with the start, but
 > cancelPeriod :: BackupStrategy
 > cancelPeriod sn sf backups p = do
 >   tell [Cancellation p]
->   liftIO $ print "canceling period: "
->   liftIO . print $ p
->   liftIO . print . show . length $ backups
 >   if length backups == 0 
 >     then return Nothing
 >     else replaceWithBackup sn sf backups p
@@ -119,15 +116,7 @@ schedule deadtime.
 >   (s, score) <- findBestBackup sn sf backups p
 >   moc        <- minimumObservingConditions (startTime p) s 
 >   w <- weather
->   liftIO . print $ "found backup? " ++ (show (score > 0.0 && fromMaybe False moc))
->   let result = if score > 0.0 && fromMaybe False moc then Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p) else Nothing
->   --    then Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p)
->   --    else Nothing -- no decent backups, must be bad weather -> Deadtime
->   liftIO . print . show $ result 
->   return result
->   {-
 >   if score > 0.0 && fromMaybe False moc
 >     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p)
 >     else return Nothing -- no decent backups, must be bad weather -> Deadtime
->    -}
     
