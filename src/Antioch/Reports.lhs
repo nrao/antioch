@@ -147,7 +147,7 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     plotEffVsFreq fn n effs ps
 
 
-> plotEffVsFreq fn n effs ps =
+> plotEffVsFreq fn n effs ps = 
 >     errorBarPlot attrs $ zip3 meanFreq meanEffFreq sdomEffFreq
 >   where
 >     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
@@ -157,6 +157,25 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+
+simTPFreq
+
+> plotTPDurVsFreqBin  :: StatsPlot
+> plotTPDurVsFreqBin fn n _ ps _ = do
+>     let durs = map (fromIntegral . duration) ps
+>     plotTPDurVsFreq fn n durs ps
+
+
+> plotTPDurVsFreq fn n durs ps = 
+>     errorBarPlot attrs $ zip3 meanFreq meanDurFreq sdomDurFreq
+>   where
+>     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
+>     meanDurFreq = meanByBin $ zip (map (frequency . session) ps) durs
+>     sdomDurFreq = sdomByBin $ zip (map (frequency . session) ps) durs
+>     t = "Telescope Period Length vs Frequency" ++ n
+>     x = "Frequency [GHz]"
+>     y = "Telescope Period Length [Min]"
+>     attrs = (tail $ scatterAttrs t x y fn) -- ++ [XRange (0, 51), YRange (-0.1, 1.1)]
 
 simMinObsEff - minimum observing efficiency (stand alone plot for now)
 
@@ -617,6 +636,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >  , plotFractionalTime   $ rootPath ++ "/simFracTime.png"
+>  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
