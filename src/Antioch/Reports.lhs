@@ -27,13 +27,20 @@ simFracTime
 
 > plotFractionalTime              :: StatsPlot
 > plotFractionalTime fn n ss ps _ = do
->   let plotData = fracObservedTimeByDays ss ps 
->   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", plotData)]
+>   let total = fracObservedTimeByDays ss ps 
+>   let gradeA = fracObservedTimeByDays ssA psA
+>   let gradeB = fracObservedTimeByDays ssB psB
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB)]
 >     where
 >   title = "Fractional Observed Time"
 >   xl = "Time [Days]"
 >   yl = "Time Observed / Time Allocated"
->   titles = [Just "Total"]
+>   ssA = filter isGradeA ss -- grade A sessions
+>   psA = filter (isGradeA . session) ps -- grade A periods
+>   ssB = filter isGradeB ss -- grade B sessions
+>   psB = filter (isGradeB . session) ps -- grade B periods
+>   isGradeA s = grade s >= 4
+>   isGradeB s = grade s < 4 && grade s >= 3
 
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
