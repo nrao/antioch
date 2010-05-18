@@ -26,13 +26,16 @@
 simFracTime 
 
 > plotFractionalTime              :: StatsPlot
-> plotFractionalTime fn n ss ps _ = do
+> plotFractionalTime fn n ss ps tr = if (length ps == 0) then print "no periods for plotFractionalTime" else plotFractionalTime' fn n ss ps tr
+
+> plotFractionalTime'              :: StatsPlot
+> plotFractionalTime' fn n ss ps _ = do
 >   let total = fracObservedTimeByDays ss ps 
 >   let gradeA = fracObservedTimeByDays ssA psA
 >   let gradeB = fracObservedTimeByDays ssB psB
 >   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB)]
 >     where
->   title = "Fractional Observed Time"
+>   title = "Fractional Observed Time " ++ n
 >   xl = "Time [Days]"
 >   yl = "Time Observed / Time Allocated"
 >   ssA = filter isGradeA ss -- grade A sessions
@@ -227,8 +230,7 @@ simFreqTime (circles, dt on x-axis)
 Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
 
-> plotSchdFreqVsTime fn n _ ps trace = 
->   scatterPlots attrs $ zip titles $ [pl1, pl2, pl3, pl4]
+> plotSchdFreqVsTime fn n _ ps trace = if (length ps == 0) then print "no periods for plotSchdFreqVsTime" else scatterPlots attrs $ zip titles $ [pl1, pl2, pl3, pl4]
 >     where
 >       t = "Frequency vs Start Time" ++ n
 >       x = "Time [fractional days]"
@@ -636,7 +638,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  --, histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
 >  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
->  --, plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
+>  , plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
 >  , histCanceledFreqRatio $ rootPath ++ "/simFracCanceledFreq.png"
 >  , plotBandPressureTime  $ rootPath ++ "/simBandPFTime.png"
 >  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
