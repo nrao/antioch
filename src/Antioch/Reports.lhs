@@ -93,8 +93,23 @@ simDecRA (stars, crosses)
 >     titles = [Just "Available", Just "Observed"]
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (-1, 25), YRange (-40, 95)]
 
-simMeanEffFreq (error bars, crosses, line plot) - TBF: no error bars & line
-However, this IS a correct plot of the mean scheduled obs. eff.
+Efficiency Plots:
+
+simMinObsEff - simply the min. observing curve.  Note: observing efficiencies
+that are below this line experience and exponential cutoff (i.e., not simply zero).
+simEffFreq - simply the observed observing efficiency at the start of the period
+simSchd* - these are plots that represent the efficiency at the time the
+period was scheduled (*not*) the time it was observed.
+simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  TBF: note that this is *not* a reflection of the scoring used when
+the period was scheduled, because the Pack algorithm ignores the first quarter.
+   * simSchdMeanEffFreq - Observing Efficiency
+   * simSchdMeanAtmFreq - Atmospheric Efficiency
+   * simSchdMeanSrfFreq - Surface Efficiency
+   * simSchdMeanTrkFreq - Tracking Efficiency
+simMeanObsEff - this plot shows the error bars for simSchdMeanEffFreq   
+
+simSchdMeanEffFreq
+error bars done separately in simMeanObsEff
 
 > plotMeanObsEffVsFreq  :: StatsPlot
 > plotMeanObsEffVsFreq fn n _ ps _ = do
@@ -103,6 +118,7 @@ However, this IS a correct plot of the mean scheduled obs. eff.
 >   let y = "Mean Observing Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
 
+simSchdMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
 
 > plotMeanAtmEffVsFreq  :: StatsPlot
@@ -112,12 +128,16 @@ Break down the above plot into the three factors that make up observing eff.
 >   let y = "Mean Atmospheric Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
 
+simSchdMeanTrkFreq
+
 > plotMeanTrkEffVsFreq  :: StatsPlot
 > plotMeanTrkEffVsFreq fn n _ ps _ = do
 >   effs <- historicalSchdMeanTrkEffs ps
 >   let t = "Scheduled Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Mean Tracking Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
+
+simSchdMeanSrfFreq
 
 > plotMeanSrfEffVsFreq  :: StatsPlot
 > plotMeanSrfEffVsFreq fn n _ ps _ = do
@@ -163,7 +183,7 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
 >     meanEffFreq = meanByBin $ zip (map (frequency . session) ps) effs
 >     sdomEffFreq = sdomByBin $ zip (map (frequency . session) ps) effs
->     t = "Observing Efficiency vs Frequency" ++ n
+>     t = "(dog) Observing Efficiency vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
