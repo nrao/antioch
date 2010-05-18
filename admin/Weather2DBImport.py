@@ -100,9 +100,22 @@ class Weather2DBImport:
     
     def backfillIrradiance(self):
         return self.backfill("irradiance"
-                           , self.pyrgeometerData.getLastHourMedianIrradiance)
+                   , self.pyrgeometerData.getLastHourMedianDownwardIrradiance)
     
 
-            
+    def backfillReport(self, filename):
+        "Backfills the DB, and creates report on results."
 
+        f = open(filename, 'w')
+        lines = []
+        lines.append("Irradiance\n")
+        lines.append("Start (ET): %s\n" % datetime.now())
+        # TBF: just back fill irradiance right now
+        results = self.backfillIrradiance()
+        for r in results:
+            lines.append("%s,%s,%s\n" % (r[0], r[1], r[2]))
+        lines.append("End (ET): %s\n" % datetime.now())
+        f.writelines(lines)    
+        f.close()    
+        print "printed report to: ", filename
 
