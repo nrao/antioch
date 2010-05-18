@@ -20,16 +20,15 @@ to replace these canceled periods with backups.
 
 > type BackupStrategy = StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
 
-> scheduleBackups :: StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
-> scheduleBackups sn ss ps dt dur = do
->     sf <- genScore dt . scoringSessions dt $ ss
+> scheduleBackups :: ScoreFunc -> StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
+> scheduleBackups sf sn ss ps dt dur = do
 >     let ss' = schedulableSessions dt $ ss
->     scheduleBackups' sn sf ss ps dt dur 
+>     scheduleBackups' sf sn ss' ps dt dur 
 
-> scheduleBackups' :: StrategyName -> ScoreFunc -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
+> scheduleBackups' :: ScoreFunc -> StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
 > scheduleBackups' _  _  _  [] _ _    = return []
-> scheduleBackups' sn sf ss ps dt dur = do
->     sched' <- mapM (\p -> scheduleBackup sn sf ss p dt dur) ps
+> scheduleBackups' sf sn ss ps dt dur = do
+>     sched' <- mapM (\p -> scheduleBackup sf sn ss p dt dur) ps
 >     let sched = mapMaybe id sched'
 >     return sched
 
@@ -59,11 +58,11 @@ We only we want to be scheduling backups during the specified time range,
 and we don't want to alter periods that are in the Scheduled state.
 
 > --scheduleBackup :: BackupStrategy
-> scheduleBackup :: StrategyName -> ScoreFunc -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
+> scheduleBackup :: ScoreFunc -> StrategyName -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
 > --scheduleBackup sn sf ss p dt dur | pState p == Scheduled = return $ Just p
 > --                                 | not $ overlie dt dur p = return $ Just p
-> scheduleBackup sn sf ss p dt dur | not $ inCancelRange p dt dur = return $ Just p
->                                  | otherwise = do 
+> scheduleBackup sf sn ss p dt dur | not $ inCancelRange p dt dur = return $ Just p
+>                                  | otherwise = do
 >   moc <- minimumObservingConditions (startTime p) (session p)
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
