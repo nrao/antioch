@@ -1187,7 +1187,8 @@ returns true if Rcvr_PAR is listed as one of it's rcvrs.
 TBF: we aren't using the frequncy here, is that okay?
 
 > usesMustang :: Session -> Bool
-> usesMustang s = any (==True) $ map (any (==Rcvr_PAR)) $ receivers s
+> usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)
+
 
 Quick Check properties:
 
