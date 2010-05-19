@@ -1,10 +1,12 @@
+> {-# LANGUAGE ForeignFunctionInterface #-}
 > module Antioch.SLALib (gmst, gmst', slaGaleq) where
 
 > import Antioch.DateTime
 
-> import Data.Fixed    (mod')
 > import Data.Function (on)
 > import Data.List     (foldl1')
+> import Foreign
+> import Foreign.C.Types
 > import Test.QuickCheck 
 
 > d2pi :: Double
@@ -13,10 +15,12 @@
 > s2r :: Double
 > s2r = 7.272205216643039903848711535369e-5
 
+> foreign import ccall "math.h fmod" c_fmod :: CDouble -> CDouble -> CDouble
+
 > -- Normalize angle into the range 0..2*pi.
 > dranrm a
 >     | a <  0    = dranrm $ a + d2pi
->     | otherwise = a `mod'` d2pi
+>     | otherwise = realToFrac $ c_fmod (realToFrac a) (realToFrac d2pi)
 
 Even though this one is fairly obvious, lets start unit testing;
 Generate a wide range of angles:
@@ -167,7 +171,7 @@ TBF: why did we have to make the above change for this to work?
 > slaDrange :: Double -> Double
 > slaDrange a | abs w < pi = w
 >             | otherwise = w - d2pi -- dsign d2pi x
->              where w = mod' a d2pi
+>   where w = realToFrac $ c_fmod (realToFrac a) (realToFrac d2pi)
 
 > prop_slaDrange = 
 >     forAll genAngleRad $ \a ->
