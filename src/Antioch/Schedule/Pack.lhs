@@ -85,7 +85,10 @@ Also need to reset other attributes here too!
 > restoreFixedScore :: [Period] -> Period -> Period
 > restoreFixedScore fs p = case find (\f -> f == p) fs of
 >     Nothing -> p
->     Just f  -> p {pScore = pScore f, pBackup = pBackup f, pState = pState f}
+>     Just f  -> p {pScore = pScore f
+>                 , pBackup = pBackup f
+>                 , pState = pState f
+>                 , pForecast = pForecast f}
 
 Construct a list of datetimes (in minutes) at quarter intervals
 starting at 'dt' for 'dur' minutes.
