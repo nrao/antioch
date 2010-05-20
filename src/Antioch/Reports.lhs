@@ -33,7 +33,8 @@ simFracTime
 >   let total = fracObservedTimeByDays ss ps 
 >   let gradeA = fracObservedTimeByDays ssA psA
 >   let gradeB = fracObservedTimeByDays ssB psB
->   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB)]
+>   let bandK = fracObservedTimeByDays ssK psK
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB), (Just "K Band", bandK)]
 >     where
 >   title = "Fractional Observed Time " ++ n
 >   xl = "Time [Days]"
@@ -42,6 +43,8 @@ simFracTime
 >   psA = filter (isGradeA . session) ps -- grade A periods
 >   ssB = filter isGradeB ss -- grade B sessions
 >   psB = filter (isGradeB . session) ps -- grade B periods
+>   ssK = filter (\s -> (band s) == K) ss -- grade B sessions
+>   psK = filter (\p -> (band . session $ p) == K) ps -- K Band periods
 >   isGradeA s = grade s >= 4
 >   isGradeB s = grade s < 4 && grade s >= 3
 
@@ -183,7 +186,7 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
 >     meanEffFreq = meanByBin $ zip (map (frequency . session) ps) effs
 >     sdomEffFreq = sdomByBin $ zip (map (frequency . session) ps) effs
->     t = "(dog) Observing Efficiency vs Frequency" ++ n
+>     t = "Observing Efficiency vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
@@ -197,15 +200,15 @@ simTPFreq
 
 
 > plotTPDurVsFreq fn n durs ps = 
->     errorBarPlot attrs $ zip3 meanFreq meanDurFreq sdomDurFreq
+>     errorBarPlot attrs $ zip3 meanFreq meanDurFreq stddevDurFreq
 >   where
 >     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
 >     meanDurFreq = meanByBin $ zip (map (frequency . session) ps) durs
->     sdomDurFreq = sdomByBin $ zip (map (frequency . session) ps) durs
+>     stddevDurFreq = stddevByBin $ zip (map (frequency . session) ps) durs
 >     t = "Telescope Period Length vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Telescope Period Length [Min]"
->     attrs = (tail $ scatterAttrs t x y fn) -- ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)] --, YRange (-0.1, 1.1)]
 
 simMinObsEff - minimum observing efficiency (stand alone plot for now)
 
@@ -689,9 +692,10 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r8 = reportRcvrSchedule rs
 >     r9 = reportPreScheduled history
 >     r10 = reportFinalSchedule ps
->     r11 = reportSessionDetails ss
->     r12 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12] 
+>     r11 = reportCanceled canceled
+>     r12 = reportSessionDetails ss
+>     r13 = reportObserverDetails ss
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13] 
 
 > reportObserverDetails :: [Session] -> String
 > reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
@@ -828,6 +832,12 @@ TBF: combine this list with the statsPlotsToFile fnc
 > reportFinalSchedule ps = hdr ++ (printPeriods ps)
 >   where
 >     hdr = "Final Schedule:\n"
+>     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
+
+> reportCanceled :: [Period] -> String
+> reportCanceled ps = hdr ++ (printPeriods ps)
+>   where
+>     hdr = "Canceled Periods:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
 > reportTotalScore :: [Period] -> String
