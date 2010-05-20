@@ -12,10 +12,12 @@
 > import Antioch.DailySchedule
 > import Antioch.SimulateObserving
 > import Antioch.Filters
+> import Antioch.Debug
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
+> import Test.HUnit
 
 
 Here we leave the meta-strategy to do the work of scheduling, but inbetween,
@@ -47,14 +49,22 @@ we must do all the work that usually gets done in nell.
 >         -- here's how we get the new periods:
 >         -- ex: [1,2,3,4,5] \\ [1,2,3,5] -> [4]
 >         let newlyScheduledPeriods = newSched \\ history
+>         -- now get the canceled periods so we can make sure they aren't 
+>         -- still in their sessions
+>         let cs = getCanceledPeriods $ trace ++ newTrace 
 >         -- here we need to take the periods that were created by pack
 >         -- and add them to the list of periods for each session
 >         -- this is necessary so that a session that has used up all it's
 >         -- time is not scheduled in the next call to simulate.
->         let sessions'' = updateSessions sessions newlyScheduledPeriods
+>         let sessions'' = updateSessions sessions newlyScheduledPeriods cs
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
 >         let newHistory = updateHistory history newSched start
+>         -- run the below assert if you have doubts about bookeeping
+>         -- make sure canceled periods have been removed from sessons
+>         --let sessPeriods = concatMap periods sessions''
+>         --let results = all (==True) $ map (\canceled -> (elem canceled sessPeriods) == False) cs
+>         --assert results
 >         -- move on to the next day in the simulation!
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet newHistory $! (trace ++ newTrace)
 >   where
@@ -103,14 +113,14 @@ sessions =
    * Session A [(Period for Session A)]
    * Session B [(Period for Session B), (Period for Session B)]
 
-> updateSessions :: [Session] -> [Period] -> [Session]
-> updateSessions sessions periods = map update sessions
+> updateSessions :: [Session] -> [Period] -> [Period] -> [Session]
+> updateSessions sessions periods canceled = map update sessions
 >   where
 >     pss      = partitionWith session periods
 >     update s =
 >         case find (\(p:_) -> session p == s) pss of
->           Nothing -> s
->           Just ps -> updateSession s ps
+>           Nothing -> updateSession' s [] canceled -- canceleds go anyways
+>           Just ps -> updateSession' s ps canceled
 
 > partitionWith            :: Eq b => (a -> b) -> [a] -> [[a]]
 > partitionWith _ []       = []
@@ -118,7 +128,11 @@ sessions =
 >   where
 >     (as, bs) = partition (\t -> f t == f x) xs
 
+> updateSession' :: Session -> [Period] -> [Period] -> Session
+> updateSession' s ps canceled = makeSession s (windows s) $ (removeCanceled s canceled) ++ ps
 
+> removeCanceled :: Session -> [Period] -> [Period]
+> removeCanceled s canceled =  (periods s) \\ canceled
 
 Utilities:
 
