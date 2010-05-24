@@ -33,8 +33,8 @@
 
 > test_inCancelRange = TestCase $ do
 >     assertEqual "test_inCancelRange_1" True  (inCancelRange p dt1 dur)
->     assertEqual "test_inCancelRange_2" False (inCancelRange p dt2 dur)
->     assertEqual "test_inCancelRange_3" True  (inCancelRange p dt3 dur)
+>     assertEqual "test_inCancelRange_2" True  (inCancelRange p dt2 dur)
+>     assertEqual "test_inCancelRange_3" False (inCancelRange p dt3 dur)
 >     assertEqual "test_inCancelRange_4" False (inCancelRange p dt4 dur)
 >     assertEqual "test_inCancelRange_5" False (inCancelRange p dt5 dur)
 >   where

@@ -55,12 +55,8 @@ min and max duration limits).  If no suitable backup can be found, then
 schedule this as deadtime.
 
 We only we want to be scheduling backups during the specified time range, 
-and we don't want to alter periods that are in the Scheduled state.
 
-> --scheduleBackup :: BackupStrategy
 > scheduleBackup :: ScoreFunc -> StrategyName -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
-> --scheduleBackup sn sf ss p dt dur | pState p == Scheduled = return $ Just p
-> --                                 | not $ overlie dt dur p = return $ Just p
 > scheduleBackup sf sn ss p dt dur | not $ inCancelRange p dt dur = return $ Just p
 >                                  | otherwise = do
 >   moc <- minimumObservingConditions (startTime p) (session p)
@@ -75,13 +71,14 @@ day we are first scheduling two days into the future, then we only want to
 check for cancelations on the present day. The next day will be checked in
 the next simulation step.
 
-Specifically, we want to exclude any period that overlaps with the start, but
-*include* any period that overlaps with the end point.
+Specifically, we want to include any period that overlaps with the start, but
+*exclude* any period that overlaps with the end point.
 
 > inCancelRange :: Period -> DateTime -> Minutes -> Bool
-> inCancelRange p start dur | pStart >= start && pEnd < end = True
->                           | pStart < end && pEnd > end    = True
->                           | otherwise                     = False
+> inCancelRange p start dur | pStart >= start && pEnd < end  = True
+>                           | pStart < end && pEnd > end     = False
+>                           | pStart < start && pEnd > start = True
+>                           | otherwise                      = False
 >   where
 >     end = dur `addMinutes'` start
 >     pStart = startTime p
