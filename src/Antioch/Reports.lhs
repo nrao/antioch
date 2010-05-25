@@ -48,6 +48,29 @@ simFracTime
 >   isGradeA s = grade s >= 4
 >   isGradeB s = grade s < 4 && grade s >= 3
 
+simFracBandTime
+
+> plotFracBandTime              :: StatsPlot
+> plotFracBandTime fn n ss ps tr = if (length ps == 0) then print "no periods for plotFracBandTime" else plotFracBandTime' fn n ss ps tr
+
+> plotFracBandTime'              :: StatsPlot
+> plotFracBandTime' fn n ss ps _ = do
+>   let total = fracObservedTimeByDays ss ps 
+>   let bandFracs = map (\d -> fracObservedTimeByDays (fst d) (snd d)) $ zip ssBands psBands
+>   let plots = zip titles bandFracs 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ [(Just "Total", total)] ++ plots 
+>     where
+>   title = "Fractional Observed Time By Band" ++ n
+>   xl = "Time [Days]"
+>   yl = "Time Observed / Time Allocated"
+>   isBand bandName s = band s == bandName
+>   ssBand ss bandName = filter (isBand bandName) ss 
+>   ssBands = map (ssBand ss) [L .. Q]
+>   isPBand bandName p = (band . session $ p) == bandName
+>   psBand ps bandName = filter (isPBand bandName) ps 
+>   psBands = map (psBand ps) [L .. Q]
+>   titles = map (\b -> (Just (show b))) [L .. Q]
+
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
 the graph produced by CLEO forecasts, requesting 'Ground Speed', just sites
@@ -668,6 +691,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >  , plotFractionalTime   $ rootPath ++ "/simFracTime.png"
+>  , plotFracBandTime   $ rootPath ++ "/simFracBandTime.png"
 >  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
 >   ]
 >   where

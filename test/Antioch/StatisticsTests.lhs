@@ -47,11 +47,15 @@
 >   , test_findScheduleGaps
 >   , test_getOriginalSchedule'
 >   , test_breakdownSimulationTimes
+>   , test_fracObservedTimeByDays
 >    ]
 
 > test_fracObservedTimeByDays = TestCase $ do
->     print $ fracObservedTimeByDays ss ps
->     assertEqual "fracObservedTimeByDays_1" True True 
+>     let result = fracObservedTimeByDays ss ps
+>     let exp = [(0.0,1.0),(1.0,0.8888889),(2.0,0.6666667),(3.0,0.6666667),(4.0,0.5555556),(5.0,0.33333334),(6.0,0.33333334),(7.0,0.22222222),(8.0,0.22222222),(9.0,0.0)]
+>     assertEqual "fracObservedTimeByDays_1" exp result 
+>     let r2 = fracObservedTimeByDays ss [] 
+>     assertEqual "fracObservedTimeByDays_1" [] r2 
 >   where
 >     s1 = defaultSession { sAllottedT = 60 }
 >     s2 = defaultSession { sAllottedT = 120 }

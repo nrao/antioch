@@ -33,10 +33,12 @@ To Do List (port from Statistics.py):
       Need historical pressures
   
 > fracObservedTimeByDays :: [Session] -> [Period] -> [(Float, Float)]
+> fracObservedTimeByDays _  [] = []
+> fracObservedTimeByDays [] _  = []
 > fracObservedTimeByDays ss ps = map fracObservedTime days
 >   where
->     days = [0 .. (numDays - 1)]
->     numDays = (diffMinutes' lastDt firstDt) `div` (60 * 24)
+>     days = [0 .. (numDays + 1)]
+>     numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
 >     firstDt = startTime $ head ps
 >     lastDt  = startTime $ last ps
 >     total = totalSessionHrs ss
