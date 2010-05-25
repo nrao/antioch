@@ -55,10 +55,10 @@ simFracBandTime
 
 > plotFracBandTime'              :: StatsPlot
 > plotFracBandTime' fn n ss ps _ = do
->   let total = fracObservedTimeByDays ss ps 
+>   --let total = fracObservedTimeByDays ss ps 
 >   let bandFracs = map (\d -> fracObservedTimeByDays (fst d) (snd d)) $ zip ssBands psBands
 >   let plots = zip titles bandFracs 
->   linePlots (tail $ scatterAttrs title xl yl fn) $ [(Just "Total", total)] ++ plots 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
 >     where
 >   title = "Fractional Observed Time By Band" ++ n
 >   xl = "Time [Days]"
