@@ -7,7 +7,8 @@
 > import Antioch.Types
 > import Antioch.Statistics
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', overlie, printList)
+> import Antioch.Utilities    (between, showList', overlie)
+> import Antioch.Utilities    (printList, dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Antioch.DailySchedule
 > import Antioch.SimulateObserving
@@ -29,13 +30,16 @@ we must do all the work that usually gets done in nell.
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
 >         w <- getWeather $ Just start
+>         -- make sure sessions from future semesters are unauthorized
+>         let sessions' = authorizeBySemester sessions start
+>         -- now we pack, and look for backups
 >         (newSchedPending, newTrace) <- runScoring' w rs $ do
 >             -- it's important that we generate the score only once per
 >             -- simulation step; otherwise we screw up the trace that
 >             -- the plots depend on
->             sf <- genScore start . scoringSessions start $ sessions
+>             sf <- genScore start . scoringSessions start $ sessions'
 >             -- acutally schedule!!!
->             newSched' <- dailySchedule sf Pack start packDays history sessions quiet
+>             newSched' <- dailySchedule sf Pack start packDays history sessions' quiet
 >             
 >             -- simulate observing
 >             newSched'' <- scheduleBackups sf Pack sessions newSched' start (24 * 60 * 1)
@@ -56,7 +60,7 @@ we must do all the work that usually gets done in nell.
 >         -- and add them to the list of periods for each session
 >         -- this is necessary so that a session that has used up all it's
 >         -- time is not scheduled in the next call to simulate.
->         let sessions'' = updateSessions sessions newlyScheduledPeriods cs
+>         let sessions'' = updateSessions sessions' newlyScheduledPeriods cs
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
 >         let newHistory = updateHistory history newSched start
@@ -77,6 +81,18 @@ TBF: once windows are introduced, here we will need to reconcile them.
 > publishPeriod p = p { pState = Scheduled, pDuration = dur }
 >   where
 >     dur = duration p
+
+During simulations, we want to be realistic about sessions from projects
+from future trimesters.  So, we will simply unauthorize any sessions beloning
+to future trimesters.
+
+> authorizeBySemester :: [Session] -> DateTime -> [Session]
+> authorizeBySemester ss dt = map (authorizeBySemester' dt) ss
+
+> authorizeBySemester' dt s = s { authorized = a }
+>   where
+>     a = (semester . project $ s) <= currentSemester 
+>     currentSemester = dt2semester dt
 
 We must combine the output of the scheduling algorithm with the history from
 before the algorithm was called, but there's two complications:

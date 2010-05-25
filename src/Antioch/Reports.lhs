@@ -16,7 +16,7 @@
 > --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate, sort, (\\))
+> import Data.List (intercalate, sort, (\\), nub)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -56,13 +56,15 @@ simFracBandTime
 > plotFracBandTime'              :: StatsPlot
 > plotFracBandTime' fn n ss ps _ = do
 >   --let total = fracObservedTimeByDays ss ps 
->   let bandFracs = map (\d -> fracObservedTimeByDays (fst d) (snd d)) $ zip ssBands psBands
+>   let bandFracs = map (\d -> fracObservedTimeByDays' (fst d) (snd d) start days) $ zip ssBands psBands
 >   let plots = zip titles bandFracs 
 >   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
 >     where
 >   title = "Fractional Observed Time By Band" ++ n
 >   xl = "Time [Days]"
 >   yl = "Time Observed / Time Allocated"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
 >   isBand bandName s = band s == bandName
 >   ssBand ss bandName = filter (isBand bandName) ss 
 >   ssBands = map (ssBand ss) [L .. Q]
@@ -70,6 +72,32 @@ simFracBandTime
 >   psBand ps bandName = filter (isPBand bandName) ps 
 >   psBands = map (psBand ps) [L .. Q]
 >   titles = map (\b -> (Just (show b))) [L .. Q]
+
+simFracSemesterTime
+
+> plotFracSemesterTime              :: StatsPlot
+> plotFracSemesterTime fn n ss ps tr = if (length ps == 0) then print "no periods for plotFracSemesterTime" else plotFracSemesterTime' fn n ss ps tr
+
+> plotFracSemesterTime'              :: StatsPlot
+> plotFracSemesterTime' fn n ss ps _ = do
+>   let total = fracObservedTimeByDays ss ps 
+>   let bandFracs = map (\d -> fracObservedTimeByDays' (fst d) (snd d) start days) $ zip ssSemesters psSemesters
+>   let plots = zip titles bandFracs 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ [(Just "Total", total)] ++ plots 
+>     where
+>   title = "Fractional Observed Time By Semester" ++ n
+>   xl = "Time [Days]"
+>   yl = "Time Observed / Time Allocated"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   semesters = nub . sort $ map (semester . project) ss--["05C","06A", "06B", "06C"]
+>   isSemester sem s = (semester . project $ s) == sem
+>   ssSemester ss sem = filter (isSemester sem) ss 
+>   ssSemesters = map (ssSemester ss) semesters --["05C","06A", "06B", "06C"]
+>   isPSemester sem p = (semester . project . session $ p) == sem
+>   psSemester ps sem = filter (isPSemester sem) ps 
+>   psSemesters = map (psSemester ps) semesters
+>   titles = map (\b -> (Just (show b))) semesters
 
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
@@ -692,6 +720,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
 >  , plotFractionalTime   $ rootPath ++ "/simFracTime.png"
 >  , plotFracBandTime   $ rootPath ++ "/simFracBandTime.png"
+>  , plotFracSemesterTime $ rootPath ++ "/simFracSemesterTime.png"
 >  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
 >   ]
 >   where
