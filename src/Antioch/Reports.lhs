@@ -11,6 +11,7 @@
 > import Antioch.Utilities (rad2deg, rad2hrs, printList)
 > import Antioch.Weather
 > import Antioch.Debug
+> import Antioch.TimeAccounting
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > --import Antioch.Settings (dssDataDB)
@@ -22,6 +23,60 @@
 > import System.CPUTime
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
+
+simRemainingTime
+
+Here we are trying to reproduce subcompenents of the pressure calculations
+
+> plotRemainingTimeByBand              :: StatsPlot
+> plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
+
+> plotRemainingTimeByBand'              :: StatsPlot
+> plotRemainingTimeByBand' fn n ss' ps _ = do
+>   let bandFracs = map (\ss -> remainingTimeByDays ss start days) ssBands
+>   let plots = zip titles bandFracs 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
+>     where
+>   title = "Remaining Time By Band" ++ n
+>   xl = "Time [Days]"
+>   yl = "Remaining Time Used In Pressures"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   ss = updateSessions ss' ps []
+>   ssBands = sessionsByBand ss
+>   titles = map (\b -> (Just (show b))) [L .. Q]
+
+simPastSemesterTime
+
+> plotPastSemesterTimeByBand              :: StatsPlot
+> plotPastSemesterTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotPastSemesterTimeByBand" else plotPastSemesterTimeByBand' fn n ss ps tr
+
+> plotPastSemesterTimeByBand'              :: StatsPlot
+> plotPastSemesterTimeByBand' fn n ss' ps _ = do
+>   let bandFracs = map (\ss -> pastSemesterTimeByDays ss start days) ssBands
+>   let plots = zip titles bandFracs 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
+>     where
+>   title = "Past Semester Time By Band" ++ n
+>   xl = "Time [Days]"
+>   yl = "Past Semester Time Used In Pressures"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   ss = updateSessions ss' ps []
+>   ssBands = sessionsByBand ss
+>   titles = map (\b -> (Just (show b))) [L .. Q]
+
+> sessionsByBand :: [Session] -> [[Session]]
+> sessionsByBand ss = map (ssBand ss) [L .. Q]
+>   where
+>     isBand bandName s = band s == bandName
+>     ssBand sess bandName = filter (isBand bandName) sess
+
+> periodsByBand :: [Period] -> [[Period]]
+> periodsByBand ps = map (psBand ps) [L .. Q]
+>   where
+>     isPBand bandName p = (band . session $ p) == bandName
+>     psBand periods bandName = filter (isPBand bandName) periods 
 
 simFracTime 
 
@@ -65,12 +120,8 @@ simFracBandTime
 >   yl = "Time Observed / Time Allocated"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   isBand bandName s = band s == bandName
->   ssBand ss bandName = filter (isBand bandName) ss 
->   ssBands = map (ssBand ss) [L .. Q]
->   isPBand bandName p = (band . session $ p) == bandName
->   psBand ps bandName = filter (isPBand bandName) ps 
->   psBands = map (psBand ps) [L .. Q]
+>   ssBands = sessionsByBand ss 
+>   psBands = periodsByBand ps 
 >   titles = map (\b -> (Just (show b))) [L .. Q]
 
 simFracSemesterTime
@@ -722,6 +773,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotFracBandTime   $ rootPath ++ "/simFracBandTime.png"
 >  , plotFracSemesterTime $ rootPath ++ "/simFracSemesterTime.png"
 >  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
+>  , plotRemainingTimeByBand $ rootPath ++ "/simRemainingTime.png"
+>  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"

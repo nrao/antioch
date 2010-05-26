@@ -8,6 +8,7 @@
 > import Antioch.Score
 > import Antioch.Utilities  (rad2hrs, rad2deg, utc2lstHours, dt2semester) 
 > import Antioch.Weather
+> import Antioch.TimeAccounting
 > import Antioch.Debug
 > import Control.Arrow      ((&&&), second)
 > import Data.Array
@@ -71,6 +72,33 @@ To Do List (port from Statistics.py):
 >     firstDt = startTime $ head ps
 >     lastDt  = startTime $ last ps
 
+Remaining Time here refers to the remaining time used in the pressure
+factor calculation.  See Score.initBins'.
+
+> remainingTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
+> remainingTimeByDays [] _ _ = []
+> remainingTimeByDays ss start numDays = map fracRemainingTime days
+>   where
+>     days = [0 .. (numDays + 1)]
+>     fracRemainingTime day = (fromIntegral day, totalRemaining day)
+>     totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
+>     toDt day = (day * 24 * 60) `addMinutes'` start
+>     -- this is simply cut and paste from Score.initBins'
+>     rho dt s
+>       | isActive s dt = max 0 (sFutureS dt s)
+>       | otherwise  = 0
+>     -- here, Scomplete -> sTerminated to avoid looking at sAvailT (==0)
+>     isActive s dt = (isAuthorized s dt) && (not . sTerminated $ s)
+>     isAuthorized s dt = (semester . project $ s) <= (dt2semester dt)
+
+> pastSemesterTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
+> pastSemesterTimeByDays [] _ _ = []
+> pastSemesterTimeByDays ss start numDays = map fracSemesterTime days
+>   where
+>     days = [0 .. (numDays + 1)]
+>     fracSemesterTime day = (fromIntegral day, totalSemester day)
+>     totalSemester day = fractionalHours . sum $ map (sPastS (toDt day)) $ ss 
+>     toDt day = (day * 24 * 60) `addMinutes'` start
 
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
 > historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericOpacity
