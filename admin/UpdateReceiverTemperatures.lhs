@@ -12,6 +12,9 @@ this program replaces the fields for the given receiver in the table
 receiver_temperatures with the values from the database *receivers*
 from the given calibration date.
 
+Example command line: 
+runhaskell UpdateReceiverTemperatures <name> Rcvr1_2 2005-05-27
+
 > main = do
 >   -- TBF should use System.Console.GetOpt here to help the poor user
 >   args <- getArgs
@@ -26,10 +29,10 @@ from the given calibration date.
 >   pcnn <- pconnect dbname
 >   mcnn <- mconnect "receivers"
 >   fts <- collectNewTemps mcnn rcvr calDate
->   print fts
 >   
 >   removeOldTemps pcnn rcvr
 >   insertNewTemps pcnn rcvr fts
+>   putStr $ "Wrote " ++ (show . length $ fts) ++ " Receiver Temperature measuremnts to database."
 
 Reads calibration frequencies and receiver temperatures for the given
 receiver which were collected on the given date and returns the means
@@ -49,7 +52,27 @@ the values into the *receiver_temperatures* table.
 
 > insertNewTemps :: Connection -> String -> [(Double, Double)] -> IO ()
 > insertNewTemps cnn r fts = do
->   undefined  -- TBF this is all that is left to do I think
+>     rcvrId <- getRcvrId cnn r
+>     result <- mapM (insertNewTemp cnn rcvrId) fts
+>     return ()
+
+> insertNewTemp :: Connection -> Int -> (Double, Double) -> IO ()
+> insertNewTemp cnn rcvrId freqTemp = do
+>     result <- quickQuery' cnn query xs 
+>     commit cnn
+>     return () 
+>   where
+>     query = "INSERT INTO receiver_temperatures VALUES (DEFAULT, ?, ?, ?)"
+>     freq = fst freqTemp
+>     temp = snd freqTemp
+>     xs = [toSql rcvrId, toSql freq, toSql temp]
+
+> getRcvrId :: Connection -> String -> IO (Int)
+> getRcvrId cnn rname = do
+>     result <- quickQuery' cnn query [toSql rname]
+>     return $ fromSql . head . head $ result
+>   where
+>      query = "SELECT id FROM receivers WHERE name = ?"
 
 Translate [[frequency, temperature]] where frequency may be duplicated
 into [(frequency, [temperature])] where frequency is unique.
