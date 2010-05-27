@@ -31,7 +31,9 @@ and outputs:
 >     let history = filterHistory history' dt (days + 1) 
 >     print "scheduling around periods: "
 >     printList history
->     schd <- runScoring w rs $ dailySchedule strategyName dt days history ss False
+>     schd <- runScoring w rs $ do
+>         sf <- genScore dt . scoringSessions dt $ ss
+>         dailySchedule sf strategyName dt days history ss False
 >     print . length $ schd
 >     printList schd
 >     -- new schedule to DB; only write the new periods

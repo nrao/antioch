@@ -48,7 +48,7 @@ to generate `items` for input to the `packWorker` function.
 Some things have to be corrected before this 'schedule' can be returned:
    * pre-scheduled Periods on the time boundraries have been cut off
    * pre-schedule Periods w/ in the time boundraries have had their scores 
-     mangled up.
+     mangled up (and other attributes overriden!).
 
 > restoreFixed :: [Period] -> DateTime -> Minutes -> [Period] -> [Period] 
 > restoreFixed fs dt dur ps = restoreFixedBoundraies fs dt dur $ map (restoreFixedScore fs) ps
@@ -80,11 +80,15 @@ If so, which ones?
 Using a list 'fs' of pre-scheduled (fixed) periods, return a period 'p'
 with its original pre-packing score.  Only works for those periods that
 were not on the time range boundraries.
+Also need to reset other attributes here too!
 
 > restoreFixedScore :: [Period] -> Period -> Period
 > restoreFixedScore fs p = case find (\f -> f == p) fs of
 >     Nothing -> p
->     Just f  -> p {pScore = pScore f}
+>     Just f  -> p {pScore = pScore f
+>                 , pBackup = pBackup f
+>                 , pState = pState f
+>                 , pForecast = pForecast f}
 
 Construct a list of datetimes (in minutes) at quarter intervals
 starting at 'dt' for 'dur' minutes.

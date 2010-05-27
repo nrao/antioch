@@ -44,10 +44,12 @@ overhead until we have a reasonable boundary condition at the end of the 24
 hour scheduling period.
 
 > dailySchedulePack :: DateTime -> Int -> [Period] -> [Session] -> Scoring [Period]
-> dailySchedulePack dt days history ss = dailySchedule Pack dt days history ss True
+> dailySchedulePack dt days history ss = do
+>   sf <- genScore dt . scoringSessions dt $ ss
+>   dailySchedule sf Pack dt days history ss False
 
-> dailySchedule :: StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
-> dailySchedule strategyName dt days history ss quiet = do
+> dailySchedule :: ScoreFunc -> StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
+> dailySchedule sf strategyName dt days history ss quiet = do
 >     -- figure out the time period to schedule for
 >     let workStartMinutes = 8*60  -- TBF when do they get to work?
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
@@ -57,7 +59,7 @@ hour scheduling period.
 >     liftIO $ pr quiet $ "scheduling around periods: "
 >     liftIO $ prl quiet $ history'
 >     -- schedule with a buffer
->     schdWithBuffer <- dailySchedule' strategyName dt dur history' ss
+>     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' ss
 >     liftIO $ pr quiet $ "scheduled w/ buffer: "
 >     liftIO $ pr quiet $ show . length $ schdWithBuffer
 >     liftIO $ prl quiet $ schdWithBuffer
@@ -90,10 +92,10 @@ Actually calls the strategy (ex: Pack) for the days we are interested in,
 scheduling a 'buffer' zone, and then removing this 'buffer' to avoid 
 boundary affects.
 
-> dailySchedule' :: StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
-> dailySchedule' strategyName dt dur history ss = do
+> dailySchedule' :: ScoreFunc -> StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
+> dailySchedule' sf strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
->   sf <- genScore dt . scoringSessions dt $ ss
+>   --sf <- genScore dt . scoringSessions dt $ ss
 >   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
 >   return schedPeriods
 >     where

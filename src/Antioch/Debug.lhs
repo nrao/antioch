@@ -29,6 +29,7 @@ Organize traces by date and time.
 
 Reconstruct the scoring function that was in place at a specific date and time.
 
+> {-
 > getScoring          :: DateTime -> [Trace] -> Scoring ScoreFunc
 > getScoring dt trace = do
 >     tell [Timestamp dt]
@@ -40,9 +41,11 @@ Reconstruct the scoring function that was in place at a specific date and time.
 >     trace' = findTrace dt trace
 >     (FreqPressureHistory freqFactors : _) = getFreqPressureHistory trace'
 >     (RaPressureHistory   raFactors   : _) = getRaPressureHistory trace'
+> -}
 
 Reconstruct the factors that were used in scoring a given period.
 
+> {-
 > getFactors            :: ReceiverSchedule -> [Trace] -> Period -> IO Factors
 > getFactors rs trace p = do
 >     w <- getWeather (Just dt)
@@ -51,6 +54,7 @@ Reconstruct the factors that were used in scoring a given period.
 >         sf dt (session p)
 >   where
 >     dt = pForecast p
+> -}
 
 > getCanceledPeriods :: [Trace] -> [Period]
 > getCanceledPeriods trace = canceled
@@ -60,6 +64,9 @@ Reconstruct the factors that were used in scoring a given period.
 
 > getFreqPressureHistory :: [Trace] -> [Trace]
 > getFreqPressureHistory = filter isFreqPressureHistory
+
+> getFreqPressureBinHistory :: [Trace] -> [Trace]
+> getFreqPressureBinHistory = filter isFreqPressureBinHistory
 
 > getRaPressureHistory :: [Trace] -> [Trace]
 > getRaPressureHistory = filter isRaPressureHistory
@@ -76,6 +83,8 @@ Reconstruct the factors that were used in scoring a given period.
 
 > getFreqPressure (FreqPressureHistory dt) = dt
 
+> getFreqPressureBin (FreqPressureBinHistory dt) = dt
+
 > getRaPressure (RaPressureHistory dt) = dt
 
 > isTimestamp (Timestamp _) = True
@@ -83,6 +92,9 @@ Reconstruct the factors that were used in scoring a given period.
 
 > isFreqPressureHistory (FreqPressureHistory _) = True
 > isFreqPressureHistory _                       = False
+
+> isFreqPressureBinHistory (FreqPressureBinHistory _) = True
+> isFreqPressureBinHistory _                       = False
 
 > isRaPressureHistory (RaPressureHistory _) = True
 > isRaPressureHistory _                     = False

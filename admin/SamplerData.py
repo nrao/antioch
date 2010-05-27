@@ -162,7 +162,7 @@ class SamplerData:
         else:
             self.noLogsMessage = 'No logs between ' + self.logKeys[startIdx] + " and " + self.logKeys[endIdxM1]
 
-        return self.logKeys[startIdx:endIdx]
+        return self.logKeys[startIdx:endIdx + 1]
         
     def GetStartDateTime(self):
         return self.GetDateTime().GetStart()

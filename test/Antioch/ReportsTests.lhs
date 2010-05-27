@@ -2,6 +2,8 @@
 
 > --import Antioch.Reports
 > import Antioch.RunSimulation
+> import Antioch.Schedule
+> import Antioch.Reports
 > import Test.HUnit
 > import Antioch.Types
 > import Antioch.DateTime
@@ -15,6 +17,7 @@ If it doesn't blow up, it passes
 > test_runSim = TestCase $ do
 >   -- TBF: remove old plots
 >   let start = fromGregorian 2006 2 2 0 0 0
->   runSim start 3 "."
+>   --runSim start 3 "."
+>   runSimulation Pack "." (statsPlotsToFile "." "") start 3 "" True True
 >   -- TBF: make sure new plots and text report are there
 >   assertEqual "test_runSim" True True
