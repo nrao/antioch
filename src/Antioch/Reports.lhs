@@ -35,7 +35,7 @@ Here we are trying to reproduce subcompenents of the pressure calculations
 > plotRemainingTimeByBand' fn n ss' ps _ = do
 >   let bandFracs = map (\ss -> remainingTimeByDays ss start days) ssBands
 >   let plots = zip titles bandFracs 
->   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
+>   linePlots (scatterAttrs title xl yl fn) $ plots 
 >     where
 >   title = "Remaining Time By Band" ++ n
 >   xl = "Time [Days]"
@@ -55,7 +55,7 @@ simPastSemesterTime
 > plotPastSemesterTimeByBand' fn n ss' ps _ = do
 >   let bandFracs = map (\ss -> pastSemesterTimeByDays ss start days) ssBands
 >   let plots = zip titles bandFracs 
->   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
+>   linePlots (scatterAttrs title xl yl fn) $ plots 
 >     where
 >   title = "Past Semester Time By Band" ++ n
 >   xl = "Time [Days]"
@@ -331,7 +331,7 @@ simTPVsFreq - this does not yet work
 > plotTPVsFreq fn _ ps =
 >     errorBarPlot attrs $ zip3 meanFreq meanTPFreq stddevTPFreq
 >   where
->     meanFreq = meanFreqsByBin $ (map (frequency . session) ps) 
+>     meanFreq = meanFreqsByin $ (map (frequency . session) ps) 
 >     meanTPFreq = meanByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
 >     stddevTPFreq = stddevByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
 >     t = "Telescope Period Length vs Frequency"
@@ -495,6 +495,37 @@ simBandPFTime
 >     y = "Band Pressure Factor"
 >     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
 > 
+
+simBandPBinPastTime
+
+
+> plotBandPressureBinPastTime              :: StatsPlot
+> plotBandPressureBinPastTime fn n _ _ trace = do 
+>     let bins = bandPressureBinsByTime trace
+>     let past = binsToPlotData bins snd
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ past 
+>   where
+>     t = "Band Pressure Past Bin vs Time" ++ n
+>     x = "Time [days]"
+>     y = "Band Pressure Past Bin"
+>     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+
+> plotBandPressureBinRemainingTime              :: StatsPlot
+> plotBandPressureBinRemainingTime fn n _ _ trace = do 
+>     let bins = bandPressureBinsByTime trace
+>     let past = binsToPlotData bins fst
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ past 
+>   where
+>     t = "Band Pressure Remainging Bin vs Time" ++ n
+>     x = "Time [days]"
+>     y = "Band Pressure Remainging Bin"
+>     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+
+> binsToPlotData :: [[(Float, (Int, Int))]] -> ((Int,Int) -> Int) -> [[(Float, Float)]]
+> binsToPlotData bins f = map (g f) bins
+>   where
+>     g f bin = map (h f) bin
+>     h f b = (fst b, (fractionalHours . f . snd $ b))
 
 simLSTPFTime1
 
@@ -775,6 +806,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
 >  , plotRemainingTimeByBand $ rootPath ++ "/simRemainingTime.png"
 >  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
+>  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
+>  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"

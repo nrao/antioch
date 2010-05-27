@@ -81,8 +81,10 @@ factor calculation.  See Score.initBins'.
 >   where
 >     days = [0 .. (numDays + 1)]
 >     fracRemainingTime day = (fromIntegral day, totalRemaining day)
->     totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
+>     --totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
+>     totalRemaining day = fractionalHours . sum $ map (remaining (toDt day)) $ ss 
 >     toDt day = (day * 24 * 60) `addMinutes'` start
+>     remaining dt s = (rho dt s) + (sPastS dt s)
 >     -- this is simply cut and paste from Score.initBins'
 >     rho dt s
 >       | isActive s dt = max 0 (sFutureS dt s)
@@ -405,6 +407,22 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > getBandPressures band bp = map (getBandPressure band) bp 
 >   where
 >     getBandPressure band t = getFreqPressure t ! band
+
+> bandPressureBinsByTime :: [Trace] -> [[(Float, (Int, Int))]]
+> bandPressureBinsByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
+>     map bandData [L .. Q]
+>   where
+>     bandData band = [(fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
+>     fp    = getFreqPressureBinHistory trace -- [(array (L,W) [(L,9.850087), ..]]
+>     times = getTimestampHistory trace
+>     days  = historicalTime'' [getTimestamp t | t <- times]
+>     getBandData band = getBandPressureBins band fp
+>     
+
+> getBandPressureBins :: Band -> [Trace] -> [(Int, Int)]
+> getBandPressureBins band bp = map (getBandPressureBin band) bp 
+>   where
+>     getBandPressureBin band t = getFreqPressureBin t ! band
 
 > raPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > raPressuresByTime trace = 

@@ -291,7 +291,8 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 Generate a scoring function having the pressure factors.
 
 > genFrequencyPressure :: DateTime -> [Session] -> Scoring ScoreFunc
-> genFrequencyPressure dt sessions = genFrequencyPressure' factors
+> genFrequencyPressure dt sessions = do
+>     genFrequencyPressure' factors bins
 >   where
 >     bins    = initBins dt (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
@@ -301,9 +302,10 @@ TBF: temporary fix for MUSTANG
 > getBand :: Session -> Band
 > getBand s = if usesMustang s then Q else band s
 
-> genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> m ScoreFunc
-> genFrequencyPressure' factors = do
+> genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> Array Band (Int, Int) -> m ScoreFunc
+> genFrequencyPressure' factors bins = do
 >     tell [FreqPressureHistory factors]
+>     tell [FreqPressureBinHistory bins]
 >     return $ frequencyPressure factors getBand
 
 > genRightAscensionPressure :: DateTime -> [Session] -> Scoring ScoreFunc
@@ -893,6 +895,7 @@ A Trace collects/logs information about the execution of a monad.
 
 > data Trace = Timestamp DateTime
 >            | FreqPressureHistory (Array Band Float)
+>            | FreqPressureBinHistory (Array Band (Int, Int))
 >            | RaPressureHistory (Array Int Float)
 >            | Cancellation Period
 >            deriving (Eq, Show)
