@@ -353,9 +353,9 @@ RA or band?
 
 Our solution is to derive n indirectly by first computing r, which
 will guarantee the relationship n = d + r.  For all authorized and not
-completed sessions, the value r is the minimum of the session's (total
-and semester) allotted time minus the sum of all completed
-time billed, i.e., sFutureS.  Now pressure = 1 + ln( (d + r) / d )
+completed sessions, the value r is the allotted time minus the sum
+of all completed time billed, i.e., expired.
+Now pressure = 1 + ln( (d + r) / d )
 
 Note:
     - As sessions become completed, their hours still are used in the
@@ -383,9 +383,18 @@ without ignoring  successful observation time.
 >     rho dt s
 >       -- the max prevents against negative remainders, i.e.,
 >       -- over-scheduled sessions
->       | isActive s = max 0 (sFutureS dt s)
+>       | isActive s = max 0 (expired dt s)
 >       | otherwise  = 0
 >     isActive s = (authorized s) && (not . sComplete $ s)
+
+> expired :: DateTime -> Session -> Minutes
+> expired dt s
+>   | allot_min == allot_sem = allot_sem - (sPastS dt s)
+>   | otherwise              = allot_tot - (sPastT dt s)
+>     where
+>       allot_sem = sAllottedS s
+>       allot_tot = sAllottedT s
+>       allot_min = min allot_tot allot_sem
 
 Translates the total/used times pairs into pressure factors.
 
