@@ -81,13 +81,13 @@
 
 > test_remainingTimeByDays = TestCase $ do
 >     let result = remainingTimeByDays ss start numDays
->     let exp = [(0.0,12.0),(1.0,11.0),(2.0,9.0),(3.0,9.0),(4.0,8.0),(5.0,6.0),(6.0,6.0),(7.0,5.0),(8.0,5.0),(9.0,3.0)]
 >     assertEqual "remainingTimeByDays_1" exp result 
 >   where
 >     ss = getTestSessions
 >     ps = sort $ concatMap periods ss
 >     start = fst $ getPeriodRange ps
 >     numDays = snd $ getPeriodRange ps
+>     exp = zip [0.0 .. 9.0] (take 10 (repeat 12.0))
 
 > test_pastSemesterTimeByDays = TestCase $ do
 >     let result = pastSemesterTimeByDays ss start numDays
