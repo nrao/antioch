@@ -825,16 +825,17 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r2 = reportScheduleChecks ss ps gaps history 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
->     r5 = reportBandTimes ss ps 
->     r6 = reportScheduleScores scores
->     r7 = reportSessionTypes ss ps
->     r8 = reportRcvrSchedule rs
->     r9 = reportPreScheduled history
->     r10 = reportFinalSchedule ps
->     r11 = reportCanceled canceled
->     r12 = reportSessionDetails ss
->     r13 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13] 
+>     r5 = reportSemesterBandTimes ss ps 
+>     r6 = reportBandTimes ss ps 
+>     r7 = reportScheduleScores scores
+>     r8 = reportSessionTypes ss ps
+>     r9 = reportRcvrSchedule rs
+>     r10 = reportPreScheduled history
+>     r11 = reportFinalSchedule ps
+>     r12 = reportCanceled canceled
+>     r13 = reportSessionDetails ss
+>     r14 = reportObserverDetails ss
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13, r14] 
 
 > reportObserverDetails :: [Session] -> String
 > reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
@@ -898,6 +899,15 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterHrs ss ps) semesters
 
+> reportSemesterBandTimes :: [Session] -> [Period] -> String 
+> reportSemesterBandTimes ss ps = do
+>     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
+>   where
+>     heading = "Simulation By Semester and Band: \n"
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
+>     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
+>     lines = map (reportSemesterBandHrs ss ps) semesters
+
 > reportSessionTypes :: [Session] -> [Period] -> String
 > reportSessionTypes ss ps = do
 >     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3]
@@ -930,6 +940,16 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     l1 = "Sessions: " ++ toStr sessBandTimes
 >     l2 = "Periods : " ++ toStr periodBandTimes
 >     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
+
+> reportSemesterBandHrs :: [Session] -> [Period] -> String -> String
+> reportSemesterBandHrs ss ps sem = semStr ++ (concat bandStrs) ++ "\n"
+> -- printf "%-7s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs totalObsFrom totalBackupObsFrom 
+>   where
+>     semStr = printf "%-7s : " sem
+>     bandStrs = map (printf "%-9.2f ") bandSemHrs
+>     bandSemHrs = map (bandSemHrs' ss) [L .. Q]
+>     bandSemHrs' sess b = totalHrs sess $ isInSemesterAndBand sem b
+>     isInSemesterAndBand semester b s = (isInSemester s semester) && (band s == b)
 
 
 > reportSemesterHrs :: [Session] -> [Period] -> String -> String
