@@ -786,7 +786,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = take 97 $ [1.0235145,1.022359,1.0209842,1.019458,1.0174463] ++ (repeat 0.0)
+>     expected = take 97 $ [2.327,2.3243728,2.321247,2.3177772,2.3132033] ++ (repeat 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
@@ -843,7 +843,7 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.3970325 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.436132 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
