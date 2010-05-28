@@ -89,7 +89,7 @@ Checked factors:
    - session time available
 
 > sComplete :: Session -> Bool
-> sComplete s = (sTerminated s) || ((sAvailT s) < quarter )
+> sComplete s = (sTerminated s) || ((sAvailT s) < quarter)
 
 > sTerminated :: Session -> Bool
 > sTerminated s = (sClosed s) || (pClosed . project $ s)

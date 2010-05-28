@@ -19,6 +19,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
+> import Debug.Trace                   -- debug
 
 Ranking System from Memo 5.2, Section 3
 
@@ -292,6 +293,8 @@ Generate a scoring function having the pressure factors.
 
 > genFrequencyPressure :: DateTime -> [Session] -> Scoring ScoreFunc
 > genFrequencyPressure dt sessions = do
+>     -- liftIO $ print bins
+>     -- liftIO $ print factors
 >     genFrequencyPressure' factors bins
 >   where
 >     bins    = initBins dt (minBound, maxBound) band sessions
@@ -356,7 +359,7 @@ RA or band?
 Our solution is to derive n indirectly by first computing r, which
 will guarantee the relationship n = d + r.  For all authorized and not
 completed sessions, the value r is the allotted time minus the sum
-of all completed time billed, i.e., expired.
+of all completed time billed, i.e., residue.
 Now pressure = 1 + ln( (d + r) / d )
 
 Note:
@@ -378,19 +381,20 @@ without ignoring  successful observation time.
 >     for xs $ \x -> do
 >         let bin = f x
 >         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + rho dt x + sPastS dt x, c + sPastS dt x)
+>         writeArray arr bin $! (t + rho x + sPastS dt x, c + sPastS dt x)
 >     return arr
 >   where
 >     for xs f = foldr ((>>) . f) (return ()) xs
->     rho dt s
+>     rho s
 >       -- the max prevents against negative remainders, i.e.,
 >       -- over-scheduled sessions
->       | isActive s = max 0 (expired dt s)
+>       | isActive s = max 0 (residue dt s)
 >       | otherwise  = 0
->     isActive s = (authorized s) && (not . sComplete $ s)
+>     isActive s = (authorized s) && (not . sComplete' $ s)
+>     sComplete' s = (sTerminated s) || ((residue dt s) < quarter)
 
-> expired :: DateTime -> Session -> Minutes
-> expired dt s
+> residue :: DateTime -> Session -> Minutes
+> residue dt s
 >   | allot_min == allot_sem = allot_sem - (sPastS dt s)
 >   | otherwise              = allot_tot - (sPastT dt s)
 >     where
