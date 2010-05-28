@@ -24,17 +24,15 @@
 > import Server.List
 > import Network.Protocol.Uri 
 > import Network.Salvia.Handlers.Redirect      (hRedirect)
-> --import Data.Time.LocalTime                   (utcToLocalTime)
 > import Text.Printf
 > import Maybe
-> --import Antioch.Reports
 > import Antioch.DateTime
 > import Antioch.DSSData                       (getProjects, getSession)
 > import Antioch.HardwareSchedule              (getReceiverSchedule)
 > import Antioch.Score
 > import Antioch.Settings                      (proxyListenerPort)
 > import Antioch.Filters
-> --import Antioch.Simulate
+> import Antioch.TimeAccounting -- for debugging hasTimeSchedulable
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes, rad2deg, rad2hrs)
 > import Antioch.Weather                       (getWeather)
@@ -74,6 +72,12 @@
 >     factors <- liftIO $ scoreElements s w sss dt dur rs
 >     let scoresNfactors = zipWith (++) scores factors
 >     --liftIO $ print scoresNfactors
+>     liftIO $ print ("Debug hasTimeSchedulable for " ++
+>                     (sName s) ++ " " ++
+>                     (show . pAvailT . project $ s) ++ " " ++
+>                     (show . sAvailT $ s) ++ " " ++
+>                     (show . minDuration $ s)
+>                    )
 >     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)
