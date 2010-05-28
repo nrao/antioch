@@ -118,7 +118,9 @@ How much time has this session used up in periods?
 > sPastS dt s = sum $ map pDuration . filter (isPast dt) . periodsBySemester (dt2semester dt) $ s
 
 > isPast :: DateTime -> Period -> Bool
-> isPast dt p = isUsed p && (startTime p) < dt
+> isPast dt p = isUsed p && (endTime p) < dt
+>   where
+>     endTime pd = (duration pd) `addMinutes'` (startTime pd)
 
 How much time has this project used up in periods?
 
