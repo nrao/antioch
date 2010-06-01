@@ -65,16 +65,13 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
 
 > getRcvrTemps' ::  IORef (M.Map (String) ([(Float,Float)])) -> Connection -> Receiver -> IO ([(Float, Float)])
-> --getRcvrTemps' cache cnn rcvr = withCache key cache $ fetchRcvrTemps cnn rcvr 
 > getRcvrTemps' cache cnn rcvr = withCache key cache $ fetchRcvrTemps cnn rcvr 
 >   where 
 >     key = show rcvr 
 
 > fetchRcvrTemps ::  Connection -> Receiver -> IO [(Float, Float)]
 > fetchRcvrTemps cnn rcvr = do
->     print query
 >     result <- quickQuery' cnn query [toSql . show $ rcvr]
->     print . head $ result
 >     return $ toRcvrTempList result
 >   where
 >     query = "SELECT rt.frequency, rt.temperature FROM receiver_temperatures as rt, receivers as r WHERE r.id = rt.receiver_id AND r.name = ?"
@@ -90,10 +87,9 @@ TBF: interpolation? nearest neighbor?
 
 > findRcvrTemp ::  Receiver -> Float -> [(Float, Float)] -> IO (Float)
 > findRcvrTemp rcvr freq temps = do
->     print "NOT using cache!"
 >     return $ snd . last $ takeWhile (findFreq freq) temps
 >   where
->     findFreq f freqTemp = f > (fst freqTemp)
+>     findFreq f freqTemp = f >= (fst freqTemp)
 
 > withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
 > withCache key cache action = do

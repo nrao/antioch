@@ -2,10 +2,11 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Score
-> import Antioch.Reservations
+> --import Antioch.Score
+> --import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB)
-> import Antioch.DSSReversion            (putPeriodReversion)
+> --import Antioch.DSSReversion            (putPeriodReversion)
+> import Antioch.ReceiverTemperatures
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
 > import Data.List                       (sort, nub, find)
@@ -19,11 +20,14 @@
 >   where
 >     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
 
+TBF: Using this function does not take advantage of the cache in 
+ReceiverTemperatures.  We still need to incorporate this into the
+Scoring Monda.
+
 > getReceiverTemperature :: Session -> IO (Float)
 > getReceiverTemperature s = do
->     cnn <- connect
->     getReceiverTemperature' cnn rcvrName freq
->     return $ (1.0::Float)
+>     rt <- getReceiverTemperatures
+>     getReceiverTemperature' rt rcvrName freq
 >   where
 >     freq = frequency s
 >     rcvrName = getPrimaryReceiver s
@@ -34,7 +38,6 @@ session as a key.
 
 > getPrimaryReceiver :: Session -> Receiver
 > getPrimaryReceiver s = head $ filter (rcvrInFreqRange . frequency $ s) $ concat $ receivers s
-
 
 Is the given frequency in the range of the given receiver?
 
@@ -70,26 +73,10 @@ Here are the ranges for all receivers: this was copied from the DSS database.
 >     (Holography, (11.699999999999999, 12.199999999999999)),
 >     (RcvrArray18_26, (17.0, 27.5))]
 
-> getReceiverTemperature' :: Connection -> Receiver -> Float -> IO (Float)
-> getReceiverTemperature' cnn rcvr freq = do
->     print "getReceiverTemperature: "
->     print rcvr
->     print freq
->     rcvrTemps <- fetchRcvrTemps cnn rcvr
->     return $ interpolateRcvrTemp freq rcvrTemps
+> getReceiverTemperature' :: ReceiverTemperatures -> Receiver -> Float -> IO (Float)
+> getReceiverTemperature' rt rcvr freq = do
+>     rcvrTemps <- temperatures rt rcvr
+>     temp <- temperature rt rcvr freq rcvrTemps
+>     return $ temp
 
-> fetchRcvrTemps :: Connection -> Receiver -> IO ([(Float, Float)])
-> fetchRcvrTemps cnn rcvr = do 
->     result <- quickQuery' cnn query [toSql . show $ rcvr]
->     return $ toRcvrTempList result
->     --return $ map (\r -> (fromSql . fst $ r, fromSql . snd $ r) ) result
->   where
->     query = "SELECT rt.frequency FROM receiver_temperatures as rt, receivers as r WHERE r.id = rt.receiver_id AND r.name = ?"
->     toRcvrTempList = map toRcvrTemp
->     toRcvrTemp (freq:temp:[]) = (fromSql freq, fromSql temp)
-
-TBF:
-
-> interpolateRcvrTemp :: Float -> [(Float, Float)] -> Float
-> interpolateRcvrTemp freq temps = snd . head $ temps
 
