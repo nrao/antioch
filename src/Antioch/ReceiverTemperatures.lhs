@@ -32,6 +32,7 @@ temperatures.
 
 > data ReceiverTemperatures = ReceiverTemperatures {
 >     temperatures :: Receiver -> IO ([(Float, Float)])
+>   , temperature  :: Receiver -> Float -> [(Float, Float)] -> IO (Float)
 > }
 
 The "unsafePerformIO hack" is a way of emulating global variables in GHC.
@@ -47,10 +48,16 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >     cache <- newIORef M.empty
 >     return $ getRcvrTemps' cache
 
+> getRcvrTemp = do
+>     cache <- newIORef M.empty
+>     return $ getRcvrTemp' cache
+
 > updateReceiverTemperatures :: Connection -> IO ReceiverTemperatures
 > updateReceiverTemperatures conn = do
 >     temperaturesf   <- getRcvrTemps
->     return ReceiverTemperatures { temperatures = temperaturesf conn }
+>     temperaturef    <- getRcvrTemp
+>     return ReceiverTemperatures { temperatures = temperaturesf conn 
+>                                 , temperature  = temperaturef conn }
 
 > connect :: IO Connection 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
@@ -73,6 +80,20 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >     query = "SELECT rt.frequency, rt.temperature FROM receiver_temperatures as rt, receivers as r WHERE r.id = rt.receiver_id AND r.name = ?"
 >     toRcvrTempList = map toRcvrTemp
 >     toRcvrTemp (freq:temp:[]) = (fromSql freq, fromSql temp)
+
+> getRcvrTemp' ::  IORef (M.Map (String, Float) (Float)) -> Connection -> Receiver -> Float -> [(Float, Float)] -> IO (Float)
+> getRcvrTemp' cache cnn rcvr freq temps = withCache key cache $ findRcvrTemp rcvr freq temps
+>   where 
+>     key = (show rcvr, freq) 
+
+TBF: interpolation? nearest neighbor?
+
+> findRcvrTemp ::  Receiver -> Float -> [(Float, Float)] -> IO (Float)
+> findRcvrTemp rcvr freq temps = do
+>     print "NOT using cache!"
+>     return $ snd . last $ takeWhile (findFreq freq) temps
+>   where
+>     findFreq f freqTemp = f > (fst freqTemp)
 
 > withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
 > withCache key cache action = do
