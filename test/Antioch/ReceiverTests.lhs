@@ -3,6 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Utilities
+> import Antioch.DSSData
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Maybe
@@ -12,6 +13,7 @@
 > tests = TestList [
 >     test_getReceiverTemperature
 >   , test_getPrimaryReceiver
+>   , test_rcvrInFreqRange
 >                  ]
 
 Rcvr1_2 : 
@@ -29,6 +31,10 @@ Rcvr1_2 :
 >       temp1 = 8.8525
 >       s1 = defaultSession { receivers = [[Rcvr1_2]], frequency = freq1 }
 
+> test_rcvrInFreqRange = TestCase $ do
+>   assertEqual "test_rcvrInFreqRange_1" True (rcvrInFreqRange 1.6 Rcvr1_2) 
+>   assertEqual "test_rcvrInFreqRange_2" False (rcvrInFreqRange 1.12 Rcvr1_2)
+
 > test_getPrimaryReceiver = TestCase $ do
 >   let r = getPrimaryReceiver s1
 >   assertEqual "test_getPrimaryReciever_1" Rcvr1_2 r 
@@ -44,3 +50,16 @@ Rcvr1_2 :
 >       freq2 = 1.12 
 >       temp2 = 13.775
 >       s2 = defaultSession { receivers = [[Rcvr1_2]], frequency = freq2 }
+
+> test_data = TestCase $ do
+>   projs <- getProjects
+>   print . length $ projs
+>   let ss = concatMap sessions projs
+>   let rcvrCheck = map checkRcvrAndFreq ss
+>   print "len rcvrCheck: "
+>   print . length $ rcvrCheck
+>   print "Number of sessions that do not have a single rcvrInFreqRange: "
+>   print . length $ filter (==False) rcvrCheck
+>     where
+>       checkRcvrAndFreq s = any (rcvrInFreqRange (frequency s)) (rcvrs s)
+>       rcvrs s = concat . receivers $ s 
