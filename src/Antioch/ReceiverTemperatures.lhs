@@ -83,13 +83,36 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >   where 
 >     key = (show rcvr, freq) 
 
-TBF: interpolation? nearest neighbor?
+TBF: use the nearestNeighboor function here:
 
 > findRcvrTemp ::  Receiver -> Float -> [(Float, Float)] -> IO (Float)
 > findRcvrTemp rcvr freq temps = do
 >     return $ snd . last $ takeWhile (findFreq freq) temps
 >   where
 >     findFreq f freqTemp = f >= (fst freqTemp)
+
+TBF, WTF: I can't believe I couldn't steal code from somebody else to do 
+the nearest neighbor calculation.  So here it is:
+
+> nns :: Ord a => a -> [a] -> (Maybe a, Maybe a)
+> nns v []     = (Nothing, Nothing)
+> nns v (x:[]) = (Nothing, Just x)
+> nns v (x:y:xs) | v < x = (Just x, Nothing)
+>                | x <= v && v < y = (Just x, Just y)
+>                | otherwise = nns v (y:xs)
+
+Given a value and it's two nearest neighbors, return the neighbor that
+is closest.
+
+> nn :: (Num a, Ord a) => a -> (Maybe a, Maybe a) -> a
+> nn v (Nothing, Nothing) = v
+> nn v (Just x, Nothing) = x
+> nn v (Nothing, Just y) = y
+> nn v (Just x, Just y) | abs (v - x) <= abs (v - y) = x
+>                       | otherwise                  = y
+
+> nearestNeighboor :: (Num a, Ord a) => a -> [a] -> a
+> nearestNeighboor v xs = nn v $ nns v xs
 
 > withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
 > withCache key cache action = do

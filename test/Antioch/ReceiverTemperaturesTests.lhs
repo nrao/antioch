@@ -9,7 +9,8 @@
 > import System.IO.Unsafe (unsafePerformIO)
 
 > tests = TestList [
->   test_receiverTemperatures
+>     test_receiverTemperatures
+>   , test_nearestNeighboor
 >                  ]
 
 TBF: for now just make sure it doesn't blow up
@@ -30,3 +31,11 @@ Some Frequencies & Temperatures:
 >   t <- temperature rt Rcvr1_2 1.121 ts
 >   assertEqual "test_receiverTemperatures_4" 13.775 t 
 >   assertEqual "test_receiverTemperatures" True True
+
+> test_nearestNeighboor = TestCase $ do
+>   assertEqual "test_nearestNeighboor_1" 2.0 (nearestNeighboor 2.1 xs)
+>   assertEqual "test_nearestNeighboor_1" 4.0 (nearestNeighboor 3.1 xs)
+>   assertEqual "test_nearestNeighboor_1" 2.0 (nearestNeighboor 0.1 xs)
+>   assertEqual "test_nearestNeighboor_1" 8.0 (nearestNeighboor 9.1 xs)
+>     where
+>   xs = [2.0, 4.0, 6.0, 8.0]
