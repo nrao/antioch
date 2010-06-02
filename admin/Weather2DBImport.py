@@ -106,6 +106,11 @@ class Weather2DBImport:
     def backfillReport(self, filename):
         "Backfills the DB, and creates report on results."
 
+        # NOTE: current results for this method: using the weather or
+        # or weather_unit_test DB's, since we only have 2006 & 2009 - present
+        # data in those, and there is no 2006 pygeometer data, this method
+        # only backfills in 2009 - present
+
         f = open(filename, 'w')
         lines = []
         lines.append("Irradiance\n")
