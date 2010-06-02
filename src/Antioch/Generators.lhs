@@ -141,16 +141,20 @@ Only 20 percent of the low freq. sessions are backups
 >   if freq > 18.0 then choose (12*60, 12*60)
 >            else choose (11*60, 12*60)
 
-> genTimeBetween :: Gen Minutes
-> genTimeBetween = T.frequency [(50, return 0)
+Backup sessions should not use a time between
+
+> genTimeBetween :: Bool -> Gen Minutes
+> genTimeBetween backup = if backup then return 0 else T.frequency [(50, return 0)
 >                             , (25, return (8 *60))
 >                             , (25, return (12*60))]
 
 > genLowRFIFlag :: Gen Bool
 > genLowRFIFlag = T.frequency [(85, return False), (15, return True)]
 
-> genTransitFlag :: Gen TransitType
-> genTransitFlag = T.frequency [(70, return Optional)
+Backup sessions should not use a transit flag 
+
+> genTransitFlag :: Bool -> Gen TransitType
+> genTransitFlag backup = if backup then return Optional else T.frequency [(70, return Optional)
 >                             , (15, return Partial)
 >                             , (15, return Center)]
 
@@ -178,10 +182,10 @@ Only 20 percent of the low freq. sessions are backups
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
 >     --maxD       <- choose (11*60, 12*60)
->     tb         <- genTimeBetween
+>     tb         <- genTimeBetween bk
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
->     trans      <- genTransitFlag
+>     trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []

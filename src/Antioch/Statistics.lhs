@@ -8,6 +8,7 @@
 > import Antioch.Score
 > import Antioch.Utilities  (rad2hrs, rad2deg, utc2lstHours, dt2semester) 
 > import Antioch.Weather
+> import Antioch.TimeAccounting
 > import Antioch.Debug
 > import Control.Arrow      ((&&&), second)
 > import Data.Array
@@ -32,6 +33,75 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
   
+> fracObservedTimeByDays :: [Session] -> [Period] -> [(Float, Float)]
+> fracObservedTimeByDays _  [] = []
+> fracObservedTimeByDays [] _  = []
+> fracObservedTimeByDays ss ps = map fracObservedTime days
+>   where
+>     days = [0 .. (numDays + 1)]
+>     --numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
+>     --firstDt = startTime $ head ps
+>     --lastDt  = startTime $ last ps
+>     firstDt = fst $ getPeriodRange ps
+>     numDays = snd $ getPeriodRange ps
+>     total = totalSessionHrs ss
+>     fracObservedTime day = (fromIntegral day,(total - (observed day)) / total)
+>     observed day = getTotalHours $ observedPeriods day
+>     observedPeriods day = takeWhile (\p -> startTime p < (toDt day)) ps
+>     toDt day = (day * 24 * 60) `addMinutes'` firstDt
+
+> fracObservedTimeByDays' :: [Session] -> [Period] -> DateTime -> Int -> [(Float, Float)]
+> fracObservedTimeByDays' _  [] _ _ = []
+> fracObservedTimeByDays' [] _  _ _ = []
+> fracObservedTimeByDays' ss ps start numDays = map fracObservedTime days
+>   where
+>     days = [0 .. (numDays + 1)]
+>     --numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
+>     --firstDt = startTime $ head ps
+>     --lastDt  = startTime $ last ps
+>     total = totalSessionHrs ss
+>     fracObservedTime day = (fromIntegral day,(total - (observed day)) / total)
+>     observed day = getTotalHours $ observedPeriods day
+>     observedPeriods day = takeWhile (\p -> startTime p < (toDt day)) ps
+>     toDt day = (day * 24 * 60) `addMinutes'` start
+
+> getPeriodRange :: [Period] -> (DateTime, Int)
+> getPeriodRange ps = (firstDt, numDays)
+>   where
+>     numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
+>     firstDt = startTime $ head ps
+>     lastDt  = startTime $ last ps
+
+Remaining Time here refers to the remaining time used in the pressure
+factor calculation.  See Score.initBins'.
+
+> remainingTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
+> remainingTimeByDays [] _ _ = []
+> remainingTimeByDays ss start numDays = map fracRemainingTime days
+>   where
+>     days = [0 .. (numDays + 1)]
+>     fracRemainingTime day = (fromIntegral day, totalRemaining day)
+>     --totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
+>     totalRemaining day = fractionalHours . sum $ map (remaining (toDt day)) $ ss 
+>     toDt day = (day * 24 * 60) `addMinutes'` start
+>     remaining dt s = (rho dt s) + (sPastS dt s)
+>     -- this is simply cut and paste from Score.initBins'
+>     rho dt s
+>       | isActive s dt = max 0 (sFutureS dt s)
+>       | otherwise  = 0
+>     -- here, Scomplete -> sTerminated to avoid looking at sAvailT (==0)
+>     isActive s dt = (isAuthorized s dt) && (not . sTerminated $ s)
+>     isAuthorized s dt = (semester . project $ s) <= (dt2semester dt)
+
+> pastSemesterTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
+> pastSemesterTimeByDays [] _ _ = []
+> pastSemesterTimeByDays ss start numDays = map fracSemesterTime days
+>   where
+>     days = [0 .. (numDays + 1)]
+>     fracSemesterTime day = (fromIntegral day, totalSemester day)
+>     totalSemester day = fractionalHours . sum $ map (sPastS (toDt day)) $ ss 
+>     toDt day = (day * 24 * 60) `addMinutes'` start
+
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
 > historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericOpacity
 > historicalSchdTrkEffs ps = historicalSchdFactors ps trackingEfficiency
@@ -338,6 +408,22 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >   where
 >     getBandPressure band t = getFreqPressure t ! band
 
+> bandPressureBinsByTime :: [Trace] -> [[(Float, (Int, Int))]]
+> bandPressureBinsByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
+>     map bandData [L .. Q]
+>   where
+>     bandData band = [(fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
+>     fp    = getFreqPressureBinHistory trace -- [(array (L,W) [(L,9.850087), ..]]
+>     times = getTimestampHistory trace
+>     days  = historicalTime'' [getTimestamp t | t <- times]
+>     getBandData band = getBandPressureBins band fp
+>     
+
+> getBandPressureBins :: Band -> [Trace] -> [(Int, Int)]
+> getBandPressureBins band bp = map (getBandPressureBin band) bp 
+>   where
+>     getBandPressureBin band t = getFreqPressureBin t ! band
+
 > raPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > raPressuresByTime trace = 
 >     map raData [0 .. 23]
@@ -404,7 +490,9 @@ time could you really schedule with these sessions?
 >   where
 >     error = "WARNING: "
 >     w1 = if totalDead /= schedDead + failedBackup then error ++ "Total Dead Time != Scheduled Dead Time + Failed Backup Time!" else ""
->     w2 = if observed + totalDead /= simulated then error ++ "Total Simulated Time != Observed + Dead Times!\n" else ""
+>     -- this warning is no longer applicable, since each simulation stip
+>     -- calls dailySchedule, which schedule's more then the 'simulated' time
+>     w2 = "" -- if observed + totalDead /= simulated then error ++ "Total Simulated Time != Observed + Dead Times!\n" else ""
 >     w3 = if scheduled - observed /= canceled - obsBackup then error ++ "Scheduled - Observed Time != Canceled - Observed Backup Times!\n" else ""
 >     warnings = [w1, w2, w3]
 

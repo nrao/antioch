@@ -7,6 +7,7 @@
 > import Antioch.PProjects
 > import Antioch.Schedule
 > import Antioch.Simulate
+> import Antioch.Debug
 > import Antioch.Statistics (scheduleHonorsFixed)
 > import Data.List (sort, find)
 > import Data.Maybe
@@ -16,6 +17,8 @@
 > tests = TestList [ 
 >     test_simulateDailySchedule
 >   , test_exhaustive_history
+>   , test_updateHistory
+>   , test_updateSessions
 >                  ]
 
 Attempt to see if the old test_sim_pack still works:
@@ -88,6 +91,75 @@ of pre-scheduled periods (history)
 >     -- make sure that this session knows it's used up MOST of it's time
 >     s2 = cv {periods = h2}
 >     ss2 = [s2]
+
+Here we attempt to schedule only a single high-frequency session - if it does
+get on, it has a high chance of being canceled.
+
+> test_cancelations = TestCase $ do
+>     (result, tr) <- simulateDailySchedule [] start 2 15 [] ss True [] []
+>     let cs = getCanceledPeriods $ tr
+>     assertEqual "test_cancelations_1" exp result
+>     assertEqual "test_cancelations_2" 15 (length cs)
+>   where
+>     ss = [va]
+>     start = fromGregorian 2006 6 1 0 0 0 -- summer time
+>     p1 = defaultPeriod { session = va
+>                        , startTime = fromGregorian 2006 6 15 0 30 0
+>                        , duration = 255 }
+>     p2 = defaultPeriod { session = va
+>                        , startTime = fromGregorian 2006 6 15 22 30 0
+>                        , duration = 360 }
+>     exp = [p1, p2]
+>     
+
+> test_updateHistory = TestCase $ do
+>     assertEqual "test_updateHistory_1" r1 (updateHistory h1 s1 dt1)
+>     assertEqual "test_updateHistory_2" r2 (updateHistory h1 s1 dt2)
+>     assertEqual "test_updateHistory_3" r1 (updateHistory h3 s3 dt2)
+>     assertEqual "test_updateHistory_2" r2 (updateHistory h3 s1 dt2)
+>   where
+>     mkDts start num = map (\i->(i*dur) `addMinutes'` start) [0 .. (num-1)] 
+>     mkPeriod dt = defaultPeriod { startTime = dt, duration = dur }
+>     dur = 120 -- two hours
+>     -- first test 
+>     h1_start = fromGregorian 2006 2 1 0 0 0
+>     h1 = map mkPeriod $ mkDts h1_start 5
+>     s1_start = fromGregorian 2006 2 1 10 0 0
+>     s1 = map mkPeriod $ mkDts s1_start 3
+>     dt1 = fromGregorian 2006 2 1 10 0 0
+>     r1 = h1 ++ s1
+>     -- second test
+>     dt2 = fromGregorian 2006 2 1 9 0 0
+>     r2 = (init h1) ++ s1
+>     -- third
+>     h3 = init h1
+>     s3 = [(last h1)] ++ s1
+
+> test_updateSessions = TestCase $ do
+>     -- test initial conditions
+>     let psIds = getPeriodIds ss 
+>     assertEqual "test_updateSessions_1" [1] psIds
+>     -- now test an update w/ out canceled periods
+>     let updatedSess = updateSessions ss new_ps []
+>     let newPsIds = getPeriodIds updatedSess 
+>     assertEqual "test_updateSessions_2" [1,2,3] newPsIds
+>     -- now test an update *with* canceled periods
+>     let updatedSess = updateSessions ss new_ps canceled 
+>     let newPsIds = getPeriodIds updatedSess 
+>     assertEqual "test_updateSessions_3" [2,3] newPsIds
+>     -- now test an update *with* canceled periods, but no new periods
+>     let updatedSess = updateSessions ss [] canceled 
+>     let newPsIds = getPeriodIds updatedSess 
+>     assertEqual "test_updateSessions_4" [] newPsIds
+>   where
+>     lp_ps = [defaultPeriod { peId = 1, session = lp }]
+>     canceled = lp_ps
+>     lp' = makeSession lp [] lp_ps
+>     ss = [lp', cv]
+>     new_lp_period = defaultPeriod { peId = 2, session = lp }
+>     new_cv_period = defaultPeriod { peId = 3, session = cv }
+>     new_ps = [new_lp_period, new_cv_period]
+>     getPeriodIds sess = sort $ map peId $ concatMap periods sess
 
 Test Utilities:
 

@@ -11,17 +11,144 @@
 > import Antioch.Utilities (rad2deg, rad2hrs, printList)
 > import Antioch.Weather
 > import Antioch.Debug
+> import Antioch.TimeAccounting
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate, sort, (\\))
+> import Data.List (intercalate, sort, (\\), nub)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
+
+simRemainingTime
+
+Here we are trying to reproduce subcompenents of the pressure calculations
+
+> plotRemainingTimeByBand              :: StatsPlot
+> plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
+
+> plotRemainingTimeByBand'              :: StatsPlot
+> plotRemainingTimeByBand' fn n ss' ps _ = do
+>   let bandFracs = map (\ss -> remainingTimeByDays ss start days) ssBands
+>   let plots = zip titles bandFracs 
+>   linePlots (scatterAttrs title xl yl fn) $ plots 
+>     where
+>   title = "Remaining Time By Band" ++ n
+>   xl = "Time [Days]"
+>   yl = "Remaining Time Used In Pressures"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   ss = updateSessions ss' ps []
+>   ssBands = sessionsByBand ss
+>   titles = map (\b -> (Just (show b))) [L .. Q]
+
+simPastSemesterTime
+
+> plotPastSemesterTimeByBand              :: StatsPlot
+> plotPastSemesterTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotPastSemesterTimeByBand" else plotPastSemesterTimeByBand' fn n ss ps tr
+
+> plotPastSemesterTimeByBand'              :: StatsPlot
+> plotPastSemesterTimeByBand' fn n ss' ps _ = do
+>   let bandFracs = map (\ss -> pastSemesterTimeByDays ss start days) ssBands
+>   let plots = zip titles bandFracs 
+>   linePlots (scatterAttrs title xl yl fn) $ plots 
+>     where
+>   title = "Past Semester Time By Band" ++ n
+>   xl = "Time [Days]"
+>   yl = "Past Semester Time Used In Pressures"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   ss = updateSessions ss' ps []
+>   ssBands = sessionsByBand ss
+>   titles = map (\b -> (Just (show b))) [L .. Q]
+
+> sessionsByBand :: [Session] -> [[Session]]
+> sessionsByBand ss = map (ssBand ss) [L .. Q]
+>   where
+>     isBand bandName s = band s == bandName
+>     ssBand sess bandName = filter (isBand bandName) sess
+
+> periodsByBand :: [Period] -> [[Period]]
+> periodsByBand ps = map (psBand ps) [L .. Q]
+>   where
+>     isPBand bandName p = (band . session $ p) == bandName
+>     psBand periods bandName = filter (isPBand bandName) periods 
+
+simFracTime 
+
+> plotFractionalTime              :: StatsPlot
+> plotFractionalTime fn n ss ps tr = if (length ps == 0) then print "no periods for plotFractionalTime" else plotFractionalTime' fn n ss ps tr
+
+> plotFractionalTime'              :: StatsPlot
+> plotFractionalTime' fn n ss ps _ = do
+>   let total = fracObservedTimeByDays ss ps 
+>   let gradeA = fracObservedTimeByDays ssA psA
+>   let gradeB = fracObservedTimeByDays ssB psB
+>   let bandK = fracObservedTimeByDays ssK psK
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB), (Just "K Band", bandK)]
+>     where
+>   title = "Fractional Observed Time " ++ n
+>   xl = "Time [Days]"
+>   yl = "Time Observed / Time Allocated"
+>   ssA = filter isGradeA ss -- grade A sessions
+>   psA = filter (isGradeA . session) ps -- grade A periods
+>   ssB = filter isGradeB ss -- grade B sessions
+>   psB = filter (isGradeB . session) ps -- grade B periods
+>   ssK = filter (\s -> (band s) == K) ss -- grade B sessions
+>   psK = filter (\p -> (band . session $ p) == K) ps -- K Band periods
+>   isGradeA s = grade s >= 4
+>   isGradeB s = grade s < 4 && grade s >= 3
+
+simFracBandTime
+
+> plotFracBandTime              :: StatsPlot
+> plotFracBandTime fn n ss ps tr = if (length ps == 0) then print "no periods for plotFracBandTime" else plotFracBandTime' fn n ss ps tr
+
+> plotFracBandTime'              :: StatsPlot
+> plotFracBandTime' fn n ss ps _ = do
+>   --let total = fracObservedTimeByDays ss ps 
+>   let bandFracs = map (\d -> fracObservedTimeByDays' (fst d) (snd d) start days) $ zip ssBands psBands
+>   let plots = zip titles bandFracs 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
+>     where
+>   title = "Fractional Observed Time By Band" ++ n
+>   xl = "Time [Days]"
+>   yl = "Time Observed / Time Allocated"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   ssBands = sessionsByBand ss 
+>   psBands = periodsByBand ps 
+>   titles = map (\b -> (Just (show b))) [L .. Q]
+
+simFracSemesterTime
+
+> plotFracSemesterTime              :: StatsPlot
+> plotFracSemesterTime fn n ss ps tr = if (length ps == 0) then print "no periods for plotFracSemesterTime" else plotFracSemesterTime' fn n ss ps tr
+
+> plotFracSemesterTime'              :: StatsPlot
+> plotFracSemesterTime' fn n ss ps _ = do
+>   let total = fracObservedTimeByDays ss ps 
+>   let bandFracs = map (\d -> fracObservedTimeByDays' (fst d) (snd d) start days) $ zip ssSemesters psSemesters
+>   let plots = zip titles bandFracs 
+>   linePlots (tail $ scatterAttrs title xl yl fn) $ [(Just "Total", total)] ++ plots 
+>     where
+>   title = "Fractional Observed Time By Semester" ++ n
+>   xl = "Time [Days]"
+>   yl = "Time Observed / Time Allocated"
+>   start = fst $ getPeriodRange ps
+>   days = snd $ getPeriodRange ps
+>   semesters = nub . sort $ map (semester . project) ss--["05C","06A", "06B", "06C"]
+>   isSemester sem s = (semester . project $ s) == sem
+>   ssSemester ss sem = filter (isSemester sem) ss 
+>   ssSemesters = map (ssSemester ss) semesters --["05C","06A", "06B", "06C"]
+>   isPSemester sem p = (semester . project . session $ p) == sem
+>   psSemester ps sem = filter (isPSemester sem) ps 
+>   psSemesters = map (psSemester ps) semesters
+>   titles = map (\b -> (Just (show b))) semesters
 
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
@@ -71,8 +198,23 @@ simDecRA (stars, crosses)
 >     titles = [Just "Available", Just "Observed"]
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (-1, 25), YRange (-40, 95)]
 
-simMeanEffFreq (error bars, crosses, line plot) - TBF: no error bars & line
-However, this IS a correct plot of the mean scheduled obs. eff.
+Efficiency Plots:
+
+simMinObsEff - simply the min. observing curve.  Note: observing efficiencies
+that are below this line experience and exponential cutoff (i.e., not simply zero).
+simEffFreq - simply the observed observing efficiency at the start of the period
+simSchd* - these are plots that represent the efficiency at the time the
+period was scheduled (*not*) the time it was observed.
+simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  TBF: note that this is *not* a reflection of the scoring used when
+the period was scheduled, because the Pack algorithm ignores the first quarter.
+   * simSchdMeanEffFreq - Observing Efficiency
+   * simSchdMeanAtmFreq - Atmospheric Efficiency
+   * simSchdMeanSrfFreq - Surface Efficiency
+   * simSchdMeanTrkFreq - Tracking Efficiency
+simMeanObsEff - this plot shows the error bars for simSchdMeanEffFreq   
+
+simSchdMeanEffFreq
+error bars done separately in simMeanObsEff
 
 > plotMeanObsEffVsFreq  :: StatsPlot
 > plotMeanObsEffVsFreq fn n _ ps _ = do
@@ -81,6 +223,7 @@ However, this IS a correct plot of the mean scheduled obs. eff.
 >   let y = "Mean Observing Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
 
+simSchdMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
 
 > plotMeanAtmEffVsFreq  :: StatsPlot
@@ -90,12 +233,16 @@ Break down the above plot into the three factors that make up observing eff.
 >   let y = "Mean Atmospheric Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
 
+simSchdMeanTrkFreq
+
 > plotMeanTrkEffVsFreq  :: StatsPlot
 > plotMeanTrkEffVsFreq fn n _ ps _ = do
 >   effs <- historicalSchdMeanTrkEffs ps
 >   let t = "Scheduled Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Mean Tracking Efficiency"
 >   plotEffVsFreq'' fn effs ps t y
+
+simSchdMeanSrfFreq
 
 > plotMeanSrfEffVsFreq  :: StatsPlot
 > plotMeanSrfEffVsFreq fn n _ ps _ = do
@@ -135,7 +282,7 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     plotEffVsFreq fn n effs ps
 
 
-> plotEffVsFreq fn n effs ps =
+> plotEffVsFreq fn n effs ps = 
 >     errorBarPlot attrs $ zip3 meanFreq meanEffFreq sdomEffFreq
 >   where
 >     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
@@ -145,6 +292,25 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+
+simTPFreq
+
+> plotTPDurVsFreqBin  :: StatsPlot
+> plotTPDurVsFreqBin fn n _ ps _ = do
+>     let durs = map (fromIntegral . duration) ps
+>     plotTPDurVsFreq fn n durs ps
+
+
+> plotTPDurVsFreq fn n durs ps = 
+>     errorBarPlot attrs $ zip3 meanFreq meanDurFreq stddevDurFreq
+>   where
+>     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
+>     meanDurFreq = meanByBin $ zip (map (frequency . session) ps) durs
+>     stddevDurFreq = stddevByBin $ zip (map (frequency . session) ps) durs
+>     t = "Telescope Period Length vs Frequency" ++ n
+>     x = "Frequency [GHz]"
+>     y = "Telescope Period Length [Min]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)] --, YRange (-0.1, 1.1)]
 
 simMinObsEff - minimum observing efficiency (stand alone plot for now)
 
@@ -165,7 +331,7 @@ simTPVsFreq - this does not yet work
 > plotTPVsFreq fn _ ps =
 >     errorBarPlot attrs $ zip3 meanFreq meanTPFreq stddevTPFreq
 >   where
->     meanFreq = meanFreqsByBin $ (map (frequency . session) ps) 
+>     meanFreq = meanFreqsByin $ (map (frequency . session) ps) 
 >     meanTPFreq = meanByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
 >     stddevTPFreq = stddevByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
 >     t = "Telescope Period Length vs Frequency"
@@ -189,8 +355,7 @@ simFreqTime (circles, dt on x-axis)
 Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
 
-> plotSchdFreqVsTime fn n _ ps trace = 
->   scatterPlots attrs $ zip titles $ [pl1, pl2, pl3, pl4]
+> plotSchdFreqVsTime fn n _ ps trace = if (length ps == 0) then print "no periods for plotSchdFreqVsTime" else scatterPlots attrs $ zip titles $ [pl1, pl2, pl3, pl4]
 >     where
 >       t = "Frequency vs Start Time" ++ n
 >       x = "Time [fractional days]"
@@ -330,6 +495,37 @@ simBandPFTime
 >     y = "Band Pressure Factor"
 >     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
 > 
+
+simBandPBinPastTime
+
+
+> plotBandPressureBinPastTime              :: StatsPlot
+> plotBandPressureBinPastTime fn n _ _ trace = do 
+>     let bins = bandPressureBinsByTime trace
+>     let past = binsToPlotData bins snd
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ past 
+>   where
+>     t = "Band Pressure Past Bin vs Time" ++ n
+>     x = "Time [days]"
+>     y = "Band Pressure Past Bin"
+>     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+
+> plotBandPressureBinRemainingTime              :: StatsPlot
+> plotBandPressureBinRemainingTime fn n _ _ trace = do 
+>     let bins = bandPressureBinsByTime trace
+>     let past = binsToPlotData bins fst
+>     linePlots (scatterAttrs t x y fn) $ zip titles $ past 
+>   where
+>     t = "Band Pressure Remainging Bin vs Time" ++ n
+>     x = "Time [days]"
+>     y = "Band Pressure Remainging Bin"
+>     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+
+> binsToPlotData :: [[(Float, (Int, Int))]] -> ((Int,Int) -> Int) -> [[(Float, Float)]]
+> binsToPlotData bins f = map (g f) bins
+>   where
+>     g f bin = map (h f) bin
+>     h f b = (fst b, (fractionalHours . f . snd $ b))
 
 simLSTPFTime1
 
@@ -598,12 +794,20 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  --, histSessTP         $ rootPath ++ "/simHistTP.png"
 >  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
 >  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
->  --, plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
+>  , plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
 >  , histCanceledFreqRatio $ rootPath ++ "/simFracCanceledFreq.png"
 >  , plotBandPressureTime  $ rootPath ++ "/simBandPFTime.png"
 >  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
 >  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
 >  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
+>  , plotFractionalTime   $ rootPath ++ "/simFracTime.png"
+>  , plotFracBandTime   $ rootPath ++ "/simFracBandTime.png"
+>  , plotFracSemesterTime $ rootPath ++ "/simFracSemesterTime.png"
+>  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
+>  , plotRemainingTimeByBand $ rootPath ++ "/simRemainingTime.png"
+>  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
+>  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
+>  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
@@ -621,15 +825,17 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r2 = reportScheduleChecks ss ps gaps history 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
 >     r4 = reportSemesterTimes ss ps 
->     r5 = reportBandTimes ss ps 
->     r6 = reportScheduleScores scores
->     r7 = reportSessionTypes ss ps
->     r8 = reportRcvrSchedule rs
->     r9 = reportPreScheduled history
->     r10 = reportFinalSchedule ps
->     r11 = reportSessionDetails ss
->     r12 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12] 
+>     r5 = reportSemesterBandTimes ss ps 
+>     r6 = reportBandTimes ss ps 
+>     r7 = reportScheduleScores scores
+>     r8 = reportSessionTypes ss ps
+>     r9 = reportRcvrSchedule rs
+>     r10 = reportPreScheduled history
+>     r11 = reportFinalSchedule ps
+>     r12 = reportCanceled canceled
+>     r13 = reportSessionDetails ss
+>     r14 = reportObserverDetails ss
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13, r14] 
 
 > reportObserverDetails :: [Session] -> String
 > reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
@@ -693,6 +899,15 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterHrs ss ps) semesters
 
+> reportSemesterBandTimes :: [Session] -> [Period] -> String 
+> reportSemesterBandTimes ss ps = do
+>     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
+>   where
+>     heading = "Simulation By Semester and Band: \n"
+>     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
+>     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
+>     lines = map (reportSemesterBandHrs ss ps) semesters
+
 > reportSessionTypes :: [Session] -> [Period] -> String
 > reportSessionTypes ss ps = do
 >     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3]
@@ -725,6 +940,16 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     l1 = "Sessions: " ++ toStr sessBandTimes
 >     l2 = "Periods : " ++ toStr periodBandTimes
 >     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
+
+> reportSemesterBandHrs :: [Session] -> [Period] -> String -> String
+> reportSemesterBandHrs ss ps sem = semStr ++ (concat bandStrs) ++ "\n"
+> -- printf "%-7s : %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" sem total totalBackup totalObs totalBackupObs totalObsFrom totalBackupObsFrom 
+>   where
+>     semStr = printf "%-7s : " sem
+>     bandStrs = map (printf "%-9.2f ") bandSemHrs
+>     bandSemHrs = map (bandSemHrs' ss) [L .. Q]
+>     bandSemHrs' sess b = totalHrs sess $ isInSemesterAndBand sem b
+>     isInSemesterAndBand semester b s = (isInSemester s semester) && (band s == b)
 
 
 > reportSemesterHrs :: [Session] -> [Period] -> String -> String
@@ -766,6 +991,12 @@ TBF: combine this list with the statsPlotsToFile fnc
 > reportFinalSchedule ps = hdr ++ (printPeriods ps)
 >   where
 >     hdr = "Final Schedule:\n"
+>     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
+
+> reportCanceled :: [Period] -> String
+> reportCanceled ps = hdr ++ (printPeriods ps)
+>   where
+>     hdr = "Canceled Periods:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
 > reportTotalScore :: [Period] -> String

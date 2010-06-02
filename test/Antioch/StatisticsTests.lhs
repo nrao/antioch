@@ -8,6 +8,8 @@
 > import Antioch.Utilities
 > import Antioch.Generators (generateTestData)
 > import Antioch.PProjects
+> import Antioch.TimeAccounting
+> import Antioch.Simulate (updateSessions)
 > import Data.List
 > import Test.HUnit
 > import System.Random
@@ -47,7 +49,55 @@
 >   , test_findScheduleGaps
 >   , test_getOriginalSchedule'
 >   , test_breakdownSimulationTimes
+>   , test_fracObservedTimeByDays
+>   , test_remainingTimeByDays
+>   , test_pastSemesterTimeByDays
 >    ]
+
+> test_fracObservedTimeByDays = TestCase $ do
+>     let result = fracObservedTimeByDays ss ps
+>     let exp = [(0.0,1.0),(1.0,0.8888889),(2.0,0.6666667),(3.0,0.6666667),(4.0,0.5555556),(5.0,0.33333334),(6.0,0.33333334),(7.0,0.22222222),(8.0,0.22222222),(9.0,0.0)]
+>     assertEqual "fracObservedTimeByDays_1" exp result 
+>     let r2 = fracObservedTimeByDays ss [] 
+>     assertEqual "fracObservedTimeByDays_1" [] r2 
+>   where
+>     s1 = defaultSession { sAllottedT = 60 }
+>     s2 = defaultSession { sAllottedT = 120 }
+>     s3 = defaultSession { sAllottedT = 60 }
+>     s4 = defaultSession { sAllottedT = 120 }
+>     s5 = defaultSession { sAllottedT = 60 }
+>     s6 = defaultSession { sAllottedT = 120 }
+>     ss = [s1, s2, s3, s4, s5, s6]
+>     dts = [ fromGregorian 2006 1 1 0 0 0 
+>           , fromGregorian 2006 1 2 0 0 0 
+>           , fromGregorian 2006 1 4 0 0 0 
+>           , fromGregorian 2006 1 5 0 0 0 
+>           , fromGregorian 2006 1 7 0 0 0 
+>           , fromGregorian 2006 1 9 0 0 0 
+>           ]
+>     durs = [60, 120, 60, 120, 60, 120]
+>     ps = zipWith3 mkPeriod ss dts durs 
+>     mkPeriod s start dur = Period 0 s start dur 0.0 Pending undefined False dur
+
+> test_remainingTimeByDays = TestCase $ do
+>     let result = remainingTimeByDays ss start numDays
+>     assertEqual "remainingTimeByDays_1" exp result 
+>   where
+>     ss = getTestSessions
+>     ps = sort $ concatMap periods ss
+>     start = fst $ getPeriodRange ps
+>     numDays = snd $ getPeriodRange ps
+>     exp = zip [0.0 .. 9.0] (take 10 (repeat 12.0))
+
+> test_pastSemesterTimeByDays = TestCase $ do
+>     let result = pastSemesterTimeByDays ss start numDays
+>     let exp = [(0.0,0.0),(1.0,1.0),(2.0,3.0),(3.0,3.0),(4.0,4.0),(5.0,6.0),(6.0,6.0),(7.0,7.0),(8.0,7.0),(9.0,9.0)]
+>     assertEqual "pastSemesterTimeByDays_1" exp result 
+>   where
+>     ss = getTestSessions
+>     ps = sort $ concatMap periods ss
+>     start = fst $ getPeriodRange ps
+>     numDays = snd $ getPeriodRange ps
 
 > test_scheduleHonorsFixed = TestCase $ do
 >     assertEqual "StatisticsTests_test_scheduleHonorsFixed_1" True (scheduleHonorsFixed fixed1 schd)
@@ -357,4 +407,31 @@ Test utilities
 >     assertBool name $ abs (value - expected) < epsilon
 >   where
 >     epsilon = 1.0 / 10.0 ** fromIntegral places
+
+> getTestSessions :: [Session]
+> getTestSessions = ss
+>   where
+>     p = defaultProject { semester = "05C" }
+>     ds = defaultSession { project = p
+>                         , authorized = True
+>                         , sAllottedS = 120
+>                         , periods = [] }
+>     s1 = ds { sId = 1, sAllottedT = 240 }
+>     s2 = ds { sId = 2, sAllottedT = 120 }
+>     s3 = ds { sId = 3, sAllottedT = 240 }
+>     s4 = ds { sId = 4, sAllottedT = 120 }
+>     s5 = ds { sId = 5, sAllottedT = 240 }
+>     s6 = ds { sId = 6, sAllottedT = 120 }
+>     ss' = [s1, s2, s3, s4, s5, s6]
+>     dts = [ fromGregorian 2006 1 1 0 0 0 
+>           , fromGregorian 2006 1 2 0 0 0 
+>           , fromGregorian 2006 1 4 0 0 0 
+>           , fromGregorian 2006 1 5 0 0 0 
+>           , fromGregorian 2006 1 7 0 0 0 
+>           , fromGregorian 2006 1 9 0 0 0 
+>           ]
+>     durs = [60, 120, 60, 120, 60, 120]
+>     ps = zipWith3 mkPeriod ss' dts durs 
+>     ss = updateSessions ss' ps []
+>     mkPeriod s start dur = Period 0 s start dur 0.0 Scheduled start False dur
 

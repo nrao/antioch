@@ -19,6 +19,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
+> import Debug.Trace                   -- debug
 
 Ranking System from Memo 5.2, Section 3
 
@@ -291,7 +292,10 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 Generate a scoring function having the pressure factors.
 
 > genFrequencyPressure :: DateTime -> [Session] -> Scoring ScoreFunc
-> genFrequencyPressure dt sessions = genFrequencyPressure' factors
+> genFrequencyPressure dt sessions = do
+>     -- liftIO $ print bins
+>     -- liftIO $ print factors
+>     genFrequencyPressure' factors bins
 >   where
 >     bins    = initBins dt (minBound, maxBound) band sessions
 >     factors = binsToFactors bins
@@ -301,9 +305,10 @@ TBF: temporary fix for MUSTANG
 > getBand :: Session -> Band
 > getBand s = if usesMustang s then Q else band s
 
-> genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> m ScoreFunc
-> genFrequencyPressure' factors = do
+> genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> Array Band (Int, Int) -> m ScoreFunc
+> genFrequencyPressure' factors bins = do
 >     tell [FreqPressureHistory factors]
+>     tell [FreqPressureBinHistory bins]
 >     return $ frequencyPressure factors getBand
 
 > genRightAscensionPressure :: DateTime -> [Session] -> Scoring ScoreFunc
@@ -353,9 +358,9 @@ RA or band?
 
 Our solution is to derive n indirectly by first computing r, which
 will guarantee the relationship n = d + r.  For all authorized and not
-completed sessions, the value r is the minimum of the session's (total
-and semester) allotted time minus the sum of all completed
-time billed, i.e., sFutureS.  Now pressure = 1 + ln( (d + r) / d )
+completed sessions, the value r is the allotted time minus the sum
+of all completed time billed, i.e., residue.
+Now pressure = 1 + ln( (d + r) / d )
 
 Note:
     - As sessions become completed, their hours still are used in the
@@ -376,16 +381,26 @@ without ignoring  successful observation time.
 >     for xs $ \x -> do
 >         let bin = f x
 >         (t, c) <- readArray arr bin
->         writeArray arr bin $! (t + rho dt x + sPastS dt x, c + sPastS dt x)
+>         writeArray arr bin $! (t + rho x + sPastS dt x, c + sPastS dt x)
 >     return arr
 >   where
 >     for xs f = foldr ((>>) . f) (return ()) xs
->     rho dt s
+>     rho s
 >       -- the max prevents against negative remainders, i.e.,
 >       -- over-scheduled sessions
->       | isActive s = max 0 (sFutureS dt s)
+>       | isActive s = max 0 (residue dt s)
 >       | otherwise  = 0
->     isActive s = (authorized s) && (not . sComplete $ s)
+>     isActive s = (authorized s) && (not . sComplete' $ s)
+>     sComplete' s = (sTerminated s) || ((residue dt s) < quarter)
+
+> residue :: DateTime -> Session -> Minutes
+> residue dt s
+>   | allot_min == allot_sem = allot_sem - (sPastS dt s)
+>   | otherwise              = allot_tot - (sPastT dt s)
+>     where
+>       allot_sem = sAllottedS s
+>       allot_tot = sAllottedT s
+>       allot_min = min allot_tot allot_sem
 
 Translates the total/used times pairs into pressure factors.
 
@@ -893,6 +908,7 @@ A Trace collects/logs information about the execution of a monad.
 
 > data Trace = Timestamp DateTime
 >            | FreqPressureHistory (Array Band Float)
+>            | FreqPressureBinHistory (Array Band (Int, Int))
 >            | RaPressureHistory (Array Int Float)
 >            | Cancellation Period
 >            deriving (Eq, Show)
@@ -1187,7 +1203,8 @@ returns true if Rcvr_PAR is listed as one of it's rcvrs.
 TBF: we aren't using the frequncy here, is that okay?
 
 > usesMustang :: Session -> Bool
-> usesMustang s = any (==True) $ map (any (==Rcvr_PAR)) $ receivers s
+> usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)
+
 
 Quick Check properties:
 

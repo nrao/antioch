@@ -8,6 +8,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, showList', dt2semester, overlie)
 > import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Filters
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
@@ -16,6 +17,20 @@
 By simulating observing, we refer to the process of taking a simulated schedule,
 simulating the detection of Min. Obs. Conditions failures, and attempts
 to replace these canceled periods with backups.
+
+> type BackupStrategy = StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
+
+> scheduleBackups :: ScoreFunc -> StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
+> scheduleBackups sf sn ss ps dt dur = do
+>     let ss' = schedulableSessions dt $ ss
+>     scheduleBackups' sf sn ss' ps dt dur 
+
+> scheduleBackups' :: ScoreFunc -> StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
+> scheduleBackups' _  _  _  [] _ _    = return []
+> scheduleBackups' sf sn ss ps dt dur = do
+>     sched' <- mapM (\p -> scheduleBackup sf sn ss p dt dur) ps
+>     let sched = mapMaybe id sched'
+>     return sched
 
 > forceSeq []     = []
 > forceSeq (x:xs) = x `seq` case forceSeq xs of { xs' -> x : xs' }
@@ -27,16 +42,6 @@ to replace these canceled periods with backups.
 > isPeriodCanceled :: [Period] -> Period -> Bool
 > isPeriodCanceled ps p = not $ isJust $ find (==p) ps
 
-Replace any badly performing periods with either backups or deadtime.
-
-> type BackupStrategy = StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Maybe Period) 
-
-> scheduleBackups :: StrategyName -> ScoreFunc -> [Session] -> [Period] -> Scoring [Period]
-> scheduleBackups _  _  _  [] = return []
-> scheduleBackups sn sf ss ps = do
->     sched' <- mapM (scheduleBackup sn sf ss) ps
->     let sched = mapMaybe id sched'
->     return sched
 
 What backups are even condsidered when looking for one to fill a hole due to
 a cancelation may depend on the strategy being used.  For now it doesn't.
@@ -49,12 +54,36 @@ then try to replace it with the best backup that can (according to it's
 min and max duration limits).  If no suitable backup can be found, then
 schedule this as deadtime.
 
-> scheduleBackup :: BackupStrategy
-> scheduleBackup sn sf ss p = do 
+We only we want to be scheduling backups during the specified time range, 
+
+> scheduleBackup :: ScoreFunc -> StrategyName -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
+> scheduleBackup sf sn ss p dt dur | not $ inCancelRange p dt dur = return $ Just p
+>                                  | otherwise = do
 >   moc <- minimumObservingConditions (startTime p) (session p)
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
 >     backupSessions  = filterBackups sn ss p 
+
+We only want to check each period for cancelation once.  We do this by 
+only checking those that are within the specified range.
+For example, if we are stepping the simulation by one day, and every simulation
+day we are first scheduling two days into the future, then we only want to 
+check for cancelations on the present day. The next day will be checked in
+the next simulation step.
+
+Specifically, we want to include any period that overlaps with the start, but
+*exclude* any period that overlaps with the end point.
+
+> inCancelRange :: Period -> DateTime -> Minutes -> Bool
+> inCancelRange p start dur | pStart >= start && pEnd < end  = True
+>                           | pStart < end && pEnd > end     = False
+>                           | pStart < start && pEnd > start = True
+>                           | otherwise                      = False
+>   where
+>     end = dur `addMinutes'` start
+>     pStart = startTime p
+>     pEnd   = periodEndTime p
+
 
 > cancelPeriod :: BackupStrategy
 > cancelPeriod sn sf backups p = do
