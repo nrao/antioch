@@ -24,6 +24,9 @@ TBF: Using this function does not take advantage of the cache in
 ReceiverTemperatures.  We still need to incorporate this into the
 Scoring Monda.
 
+TBF: We must change this function to return (Maybe Float), so that in case 
+of exceptions (ex: frequency out of all rcvr bands), Nothing can be returned.
+
 > getReceiverTemperature :: Session -> IO (Float)
 > getReceiverTemperature s = do
 >     rt <- getReceiverTemperatures
@@ -35,6 +38,9 @@ Scoring Monda.
 A Session can have a logical grouping of receivers - but what receiver
 should we use to lookup the rcvr temperature?  Use the frequency of the
 session as a key.
+
+TBF: we need this to handle if the frequency is not in the range of *any*
+of the receivers.
 
 > getPrimaryReceiver :: Session -> Receiver
 > getPrimaryReceiver s = head $ filter (rcvrInFreqRange . frequency $ s) $ concat $ receivers s
