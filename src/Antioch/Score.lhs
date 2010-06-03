@@ -443,7 +443,7 @@ Translates the total/used times pairs into pressure factors.
 >             then 0.1
 >             else 0.02
 >     -- TBF: temporary fix for MUSTANG
->     minObsEff = if usesMustang s then 0.5 else minObservingEff . frequency $ s
+>     minObsEff = if usesMustang s then 0.4 else minObservingEff . frequency $ s
 >     fac = factor "observingEfficiencyLimit" . Just
 
 TBF: include the elevation limit pattern matching once this is sponsor tested.
