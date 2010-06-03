@@ -19,8 +19,8 @@
 > import System.IO.Unsafe  (unsafePerformIO)
 > import qualified Data.Map as M
 
-This modules only responsibility is for maintaining a cache of the each rcvr's
-temperatures.
+This module's only responsibility is for maintaining a cache of the each
+rcvr's temperatures.
 
 > instance Convertible Float SqlValue where
 >     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
@@ -83,13 +83,12 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >   where 
 >     key = (show rcvr, freq) 
 
-TBF: use the nearestNeighboor function here:
-
 > findRcvrTemp ::  Receiver -> Float -> [(Float, Float)] -> IO (Float)
 > findRcvrTemp rcvr freq temps = do
->     return $ snd . last $ takeWhile (findFreq freq) temps
+>     return $ snd . last $ takeWhile (findFreq freq') temps
 >   where
 >     findFreq f freqTemp = f >= (fst freqTemp)
+>     freq' = nearestNeighbor freq . map fst $ temps
 
 TBF, WTF: I can't believe I couldn't steal code from somebody else to do 
 the nearest neighbor calculation.  So here it is:
@@ -111,8 +110,8 @@ is closest.
 > nn v (Just x, Just y) | abs (v - x) <= abs (v - y) = x
 >                       | otherwise                  = y
 
-> nearestNeighboor :: (Num a, Ord a) => a -> [a] -> a
-> nearestNeighboor v xs = nn v $ nns v xs
+> nearestNeighbor :: (Num a, Ord a) => a -> [a] -> a
+> nearestNeighbor v xs = nn v $ nns v xs
 
 > withCache :: Ord k => k -> IORef (M.Map k a) -> IO a -> IO a
 > withCache key cache action = do

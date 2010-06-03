@@ -10,15 +10,8 @@
 
 > tests = TestList [
 >     test_receiverTemperatures
->   , test_nearestNeighboor
+>   , test_nearestNeighbor
 >                  ]
-
-TBF: for now just make sure it doesn't blow up
-Some Frequencies & Temperatures:
-(1.116,12.8275)
-(1.12,13.775)
-(1.124,17.43)
-
 
 > test_receiverTemperatures = TestCase $ do
 >   rt <- getReceiverTemperatures
@@ -27,15 +20,16 @@ Some Frequencies & Temperatures:
 >   t <- temperature rt Rcvr1_2 1.12 ts
 >   assertEqual "test_receiverTemperatures_2" 13.775 t 
 >   t <- temperature rt Rcvr1_2 1.119 ts
->   assertEqual "test_receiverTemperatures_3" 12.8275 t 
+>   assertEqual "test_receiverTemperatures_3" 13.775 t 
 >   t <- temperature rt Rcvr1_2 1.121 ts
 >   assertEqual "test_receiverTemperatures_4" 13.775 t 
 >   assertEqual "test_receiverTemperatures" True True
 
-> test_nearestNeighboor = TestCase $ do
->   assertEqual "test_nearestNeighboor_1" 2.0 (nearestNeighboor 2.1 xs)
->   assertEqual "test_nearestNeighboor_1" 4.0 (nearestNeighboor 3.1 xs)
->   assertEqual "test_nearestNeighboor_1" 2.0 (nearestNeighboor 0.1 xs)
->   assertEqual "test_nearestNeighboor_1" 8.0 (nearestNeighboor 9.1 xs)
+> test_nearestNeighbor = TestCase $ do
+>   assertEqual "test_nearestNeighbor_1" 2.0 (nearestNeighbor 2.1 xs)
+>   assertEqual "test_nearestNeighbor_2" 2.0 (nearestNeighbor 0.1 xs)
+>   assertEqual "test_nearestNeighbor_3" 4.0 (nearestNeighbor 3.1 xs)
+>   assertEqual "test_nearestNeighbor_4" 8.0 (nearestNeighbor 7.1 xs)
+>   assertEqual "test_nearestNeighbor_5" 8.0 (nearestNeighbor 9.1 xs)
 >     where
 >   xs = [2.0, 4.0, 6.0, 8.0]

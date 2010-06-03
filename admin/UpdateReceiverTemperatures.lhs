@@ -16,7 +16,6 @@ Example command line:
 runhaskell UpdateReceiverTemperatures <name> Rcvr1_2 2005-05-27
 
 > main = do
->   -- TBF should use System.Console.GetOpt here to help the poor user
 >   args <- getArgs
 >   let dbname  = assert (length args == 3) args !! 0
 >   let rcvr    = assert (length args == 3) args !! 1
