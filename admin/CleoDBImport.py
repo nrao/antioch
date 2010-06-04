@@ -153,6 +153,8 @@ class CleoDBImport:
             if not self.data.has_key(timestamp):
                 self.reportLine("ERROR: No wind data for %s\n" % timestamp)
                 continue
+            # frequencies
+            self.data[timestamp]['freqs'] = []
             # OpacityTime<freq>List_HotSprings
             self.data[timestamp]['tauCleo']  = []
             # TsysTime<freq>List_HotSprings
@@ -162,6 +164,7 @@ class CleoDBImport:
             num = self.numAtmoFreqs
             for i in range(num):
                 #print first[ifreq+1], first[ifreq+51], first[ifreq+101]
+                self.data[timestamp]['freqs'].append(self.atmoFreqs[i])
                 self.data[timestamp]['tauCleo'].append(float(row[i+1]))
                 self.data[timestamp]['tSysCleo'].append(float(row[i+num+1]))
                 self.data[timestamp]['tAtmCleo'].append(float(row[i+(num*2)+1]))
@@ -260,10 +263,10 @@ class CleoDBImport:
         data dictionary
         by checking frequency and forecast id.
         """
-        for i, (tau, tAtm) in enumerate(zip(value['tauCleo']
+        for i, (freq, tau, tAtm) in enumerate(zip(value['freqs']
+                                          , value['tauCleo']
                                           , value['tAtmCleo']
                                         )):
-            freq = i + 1
             r = self.c.query("""SELECT opacity, tsys
                                 FROM forecast_by_frequency
                                 WHERE forecast_id = %s AND frequency = %s
@@ -307,7 +310,7 @@ class CleoDBImport:
                                              , value)
                 self.addForecastByFrequency(forecast_id, value)
             else:
-                print "Got wind but not atmosphere forecasts for %s" % timestamp
+                self.reportLine("ERROR: Got wind but not atmosphere forecasts for %s\n" % timestamp)
 
         self.c.close()
 

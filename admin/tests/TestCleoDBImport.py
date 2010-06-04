@@ -182,6 +182,7 @@ class TestCleoDBImport(unittest.TestCase):
         # create test data
         dt = datetime(2009, 1, 22, 6, 0, 0)
         forecast_type_id = 13
+        freqs     = [2, 4, 6]
         tauCleo   = [1.0, 2.0, 3.0]
         tSysCleo  = [4.0, 5.0, 6.0]
         tAtmCleo  = [7.0, 8.0, 9.0]
@@ -193,6 +194,7 @@ class TestCleoDBImport(unittest.TestCase):
                      , tauCleo          = tauCleo
                      , tSysCleo         = tSysCleo
                      , tAtmCleo         = tAtmCleo
+                     , freqs            = freqs
                      )
         self.cleo.data = [(dt, dataDct)]             
         
@@ -233,7 +235,8 @@ class TestCleoDBImport(unittest.TestCase):
         r = cnn.query(q)
         self.assertEquals(3, len(r.dictresult()))
         for i in range(3):
-            self.assertEquals(tauCleo[i], r.dictresult()[i]['opacity'])
+            self.assertEquals(freqs[i],    r.dictresult()[i]['frequency'])
+            self.assertEquals(tauCleo[i],  r.dictresult()[i]['opacity'])
             self.assertEquals(tAtmCleo[i], r.dictresult()[i]['tsys'])
 
         # insert the data agains
@@ -250,7 +253,7 @@ class TestCleoDBImport(unittest.TestCase):
         r = cnn.query(q)
         self.assertEquals(3, len(r.dictresult()))
 
-    def testInsert(self):
+    def testImport(self):
 
         # setup DB
         cnn = pg.connect(user = "dss", dbname = self.dbname) 
