@@ -13,7 +13,7 @@ MAXFORECASTTYPE = SIXDELTASTART + MAXFORECASTHOURS/FORECASTDELTA
 
 # headers to be found on first line of each file
 # freqFileHeader is at the bottom of this file - line too long for editor!
-windFileHeader = "timeListMJD pwatTimeList_avrg smphTimeList_avrg smph75mTimeList_avrg drctTimeList_avrg presTimeList_avrg tmpcTimeList_avrg humidTimeList_avrg dwpcTimeList_avrg"
+windFileHeader = "timeListMJD pwatTimeList_avrg smphTimeList_avrg smph75mTimeList_avrg drctTimeList_avrg presTimeList_avrg tmpcTimeList_avrg humidTimeList_avrg dwpcTimeList_avrg LCLDTimeList_avrg MCLDTimeList_avrg HCLDTimeList_avrg P0*MTimeList_avrg C0*MTimeList_avrg cfrlMaxTimeList_avrg LWDTimeList_avrg"
 
 class CleoDBImport:
 
@@ -40,7 +40,9 @@ class CleoDBImport:
         # This is a mapping of column names in the wind file header, to the
         # name of where we store it in our internal data dictionary
         # This makes adding new quantities easy.
-        self.windFileCols = [("smphTimeList_avrg", "speed_mph")]
+        self.windFileCols = [("smphTimeList_avrg", "speed_mph")
+                           , ("LWDTimeList_avrg", "irradiance")
+                            ]
 
     def initCleoCommandLines(self):
         """
@@ -66,7 +68,7 @@ class CleoDBImport:
         self.atmoCmdLine = "%s -readCaches -sites %s -calculate %s -freqList %s -elevTsys 90" % (self.cleoCmdLine, sitesStr, measurementsStr, freqStr)
 
         # Then the winds, etc.
-        measurements = ["GroundTime"]
+        measurements = ["GroundTime", "CloudsPrecipTime"]
         measurementsStr = " ".join(measurements)
         sites = ["Elkins", "Lewisburg"]
         sitesStr = " ".join(sites)
@@ -274,8 +276,9 @@ class CleoDBImport:
         Intelligent insert into the forcast table from the data dictionary
         by checking forecast type and timestamp.
         """
-        speed_mph = value['speed_mph']
-        speed_ms  = value['speed_ms']
+        speed_mph  = value['speed_mph']
+        speed_ms   = value['speed_ms']
+        irradiance = value['irradiance']
         r = self.c.query("""SELECT wind_speed
                             FROM forecasts
                             WHERE forecast_type_id = %s and weather_date_id = %s
@@ -283,13 +286,14 @@ class CleoDBImport:
 
         if len(r.dictresult()) == 0:
             q = """INSERT
-                   INTO forecasts (forecast_type_id, weather_date_id, forecast_time_id, import_time_id, wind_speed, wind_speed_mph)
-                   VALUES (%s, %s, %s, %s, %s, %s)""" % (forecast_type_id
+                   INTO forecasts (forecast_type_id, weather_date_id, forecast_time_id, import_time_id, wind_speed, wind_speed_mph, irradiance)
+                   VALUES (%s, %s, %s, %s, %s, %s, %s)""" % (forecast_type_id
                                            , weather_date_id
                                            , forecast_time_id
                                            , import_time_id
                                            , speed_ms
                                            , speed_mph
+                                           , irradiance
                                              )
             self.c.query(q)
 

@@ -44,9 +44,10 @@ class TestCleoDBImport(unittest.TestCase):
 
         # make sure the command lines are properly formatted
         atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
+        #atmo = '/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90'
         self.assertEquals(atmo, self.cleo.atmoCmdLine)
 
-        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime"
+        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime CloudsPrecipTime"
         self.assertEquals(wind, self.cleo.windCmdLine)
 
     def testGetForecatTypeId(self):
@@ -82,53 +83,59 @@ class TestCleoDBImport(unittest.TestCase):
 
     def testRead(self):
         cleo = CleoDBImport(6, "")
-        cleo.forecast_time = datetime(2009, 12, 1, 6, 0, 0)
+        #cleo.forecast_time = datetime(2009, 12, 1, 6, 0, 0)
+        cleo.forecast_time = datetime(2010, 6, 4, 18, 0, 0)
         cleo.read("tests/test_freq_vals.txt", "tests/test_winds.txt")
 
         # Ground File - wind speeds
 
         # First row
-        timestamp = cleo.data[0][0]    # 2009-11-30 23:00:00 UTC
+        #timestamp = cleo.data[0][0]    # 2009-11-30 23:00:00 UTC
+        timestamp = cleo.data[0][0]    # 2010-06-04 08:00:00 UTC
         # We expect this to be the first timestamp since cleo gives
         # you a 12 hour buffer from *before* you *asked* for the forecasts
-        # And we asked for these at 2009-12-1 11:40:00 (rounded to hour)
-        expTimestamp = datetime(2009, 11, 30, 23, 0, 0)
+        ## And we asked for these at 2009-12-1 11:40:00 (rounded to hour)
+        #expTimestamp = datetime(2009, 11, 30, 23, 0, 0)
+        # And we asked for these at 2006-06-04 20:00:00 (rounded to hour)
+        expTimestamp = datetime(2010, 6, 4, 8, 0, 0)
         self.assertEquals(expTimestamp, timestamp)
 
         # The mph wind is something you can see for yourself in the file
         wind_mph = cleo.data[0][1]['speed_mph']
-        self.assertEquals(9.44725, wind_mph)
+        self.assertEquals(5.56025, wind_mph)
         # The rest of these we derive from the file
         wind_ms = cleo.data[0][1]['speed_ms']
-        self.assertAlmostEquals(4.3556981244, wind_ms, 4)  
+        self.assertAlmostEquals(1.25791168, wind_ms, 4)  
         # Should be a really old forecast
         ftype_id = cleo.data[0][1]['forecast_type_id']
         self.assertEquals(9, ftype_id)
 
         # Middle row
         timestamp = cleo.data[52][0]
-        expTimestamp = datetime(2009, 12, 3, 3, 0, 0)
+        expTimestamp = datetime(2010, 6, 6, 12, 0, 0)
         self.assertEquals(expTimestamp, timestamp)
         wind_mph = cleo.data[52][1]['speed_mph']
-        self.assertEquals(15.617, wind_mph)
+        self.assertEquals(16.70375, wind_mph)
         wind_ms = cleo.data[52][1]['speed_ms']
-        self.assertAlmostEquals(4.6497772, wind_ms, 4)     
+        self.assertAlmostEquals(6.127809, wind_ms, 4)     
         ftype_id = cleo.data[52][1]['forecast_type_id']
         self.assertEquals(16, ftype_id)
         
-        # Last row
-        timestamp = cleo.data[91][0]
-        expTimestamp = datetime(2009, 12, 4, 18, 0, 0)
+        # Last row - for some reason this test file doesn't have 3.5 days
+        # into the future of data.
+        last_row = 88
+        timestamp = cleo.data[last_row][0]
+        expTimestamp = datetime(2010, 6, 8)
         self.assertEquals(expTimestamp, timestamp)
-        wind_mph = cleo.data[91][1]['speed_mph']
-        self.assertEquals(7.42325, wind_mph)
-        wind_ms = cleo.data[91][1]['speed_ms']
-        self.assertAlmostEquals(3.888053, wind_ms, 4)     
-        ftype_id = cleo.data[91][1]['forecast_type_id']
-        self.assertEquals(23, ftype_id)
+        wind_mph = cleo.data[last_row][1]['speed_mph']
+        self.assertEquals(7.30825, wind_mph)
+        wind_ms = cleo.data[last_row][1]['speed_ms']
+        self.assertAlmostEquals(3.865914, wind_ms, 4)     
+        ftype_id = cleo.data[last_row][1]['forecast_type_id']
+        self.assertEquals(22, ftype_id)
 
         # Atmosphere File
-
+        return # TBF: we can't test this until we update the frequencies
         # First row
         self.assertEquals(50, len(cleo.data[0][1]['tauCleo']))
         self.assertEquals(50, len(cleo.data[0][1]['tSysCleo']))
@@ -188,9 +195,11 @@ class TestCleoDBImport(unittest.TestCase):
         tAtmCleo  = [7.0, 8.0, 9.0]
         speed_ms  = 10.0
         speed_mph = 11.0
+        irradiance = 300.0
         dataDct = dict(forecast_type_id = forecast_type_id
                      , speed_ms         = speed_ms
                      , speed_mph        = speed_mph
+                     , irradiance       = irradiance
                      , tauCleo          = tauCleo
                      , tSysCleo         = tSysCleo
                      , tAtmCleo         = tAtmCleo
@@ -272,7 +281,7 @@ class TestCleoDBImport(unittest.TestCase):
         # clean up the files
         for type, file in self.cleo.files.items():
             dir = file.split("/")[1]
-            shutil.rmtree(dir)
+            #shutil.rmtree(dir)
 
 if __name__ == "__main__":
     unittest.main()
