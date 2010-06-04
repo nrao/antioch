@@ -74,7 +74,7 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >     result <- quickQuery' cnn query [toSql . show $ rcvr]
 >     return $ toRcvrTempList result
 >   where
->     query = "SELECT rt.frequency, rt.temperature FROM receiver_temperatures as rt, receivers as r WHERE r.id = rt.receiver_id AND r.name = ?"
+>     query = "SELECT rt.frequency, rt.temperature FROM receiver_temperatures as rt, receivers as r WHERE r.id = rt.receiver_id AND r.name = ? ORDER BY rt.frequency"
 >     toRcvrTempList = map toRcvrTemp
 >     toRcvrTemp (freq:temp:[]) = (fromSql freq, fromSql temp)
 
