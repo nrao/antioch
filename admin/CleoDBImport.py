@@ -37,6 +37,11 @@ class CleoDBImport:
 
         self.initCleoCommandLines()
 
+        # This is a mapping of column names in the wind file header, to the
+        # name of where we store it in our internal data dictionary
+        # This makes adding new quantities easy.
+        self.windFileCols = [("smphTimeList_avrg", "speed_mph")]
+
     def initCleoCommandLines(self):
         """
         The system calls we make to cleo are rather complicated, and will
@@ -115,33 +120,75 @@ class CleoDBImport:
         Given the existence of cleo data files, parse the files into a
         data dictionary.
         """
+
+        # init the data dictionary we will be writting to
         self.data = {}
         
+        # we use a similar method for parsing each file, but there are enough
+        # exceptions to warrant separate functions
+        self.readWindFile(wind_file)
+        self.readAtmoFile(forecast_file)
+
+        # TBF: we are changing our dictionary to an ordered list
+        # why not just create the new ordered list?
+        # i.e., self.data[time index][0] = timestamp
+        # or self.data[time index][1][keyword][maybe freq] = value
+        self.data = [(timestamp, values) \
+            for timestamp, values in self.data.items()]
+        self.data.sort(key = lambda x: x[0])
+
+    def readWindFile(self, file):
+        """
+        Parsing this file is straight forward: we'll need the timestamp
+        and *scalar* quantities from each row.
+        """
+
         # read cleo forecast (ground)
-        print 'Process cleo forecast data (ground) ...', wind_file
-        f          = open(wind_file, 'r')
+        print 'Process cleo forecast data (ground) ...', file
+        f          = open(file, 'r')
         lines      = f.readlines()
         header     = lines[0]
         assert header.strip() == windFileHeader.strip()  
-        windcol    = lines[0].split(' ').index('smphTimeList_avrg')
+        #windcol    = lines[0].split(' ').index('smphTimeList_avrg')
 
         for line in lines[1:]:
             row = line.split(' ')
             timestamp = TimeAgent.hour(TimeAgent.mjd2dt(float(row[0]))) #mjd
             self.data[timestamp] = {}
+
             # what forecast type will this be?
             self.data[timestamp]['forecast_type_id'] = \
                 self.getForecastTypeIdFromTimestamp(timestamp)
-            # get forecasted wind speed
-            # convert from mph to m/s
-            speed = float(row[windcol])
-            self.data[timestamp]['speed_mph'] = speed
-            self.data[timestamp]['speed_ms'] = self.dbimport.correctWindSpeed(timestamp, self.mph2mps(speed))
+
+            self.readWindFileValues(header, timestamp, row)
+
+            # TBF: we'll stop doing this eventually, but for now:
+            # need to insert a corrected wind speed into the DB.
+            speed_mph = self.data[timestamp]['speed_mph']
+            self.data[timestamp]['speed_ms'] = \
+                self.dbimport.correctWindSpeed(timestamp
+                                             , self.mph2mps(speed_mph))
+
         f.close()
 
+    def readWindFileValues(self, header, timestamp, row):
+        "Uses the mapping of file headers to data dict to grab values"
+
+        #Ex: self.windFileCols = [("smphTimeList_avrg", "speed_mph")]
+
+        for colName, dataName in self.windFileCols:
+            col = header.split(' ').index(colName)
+            self.data[timestamp][dataName] = float(row[col])
+            
+    def readAtmoFile(self, file):
+        """
+        Parsing this file is more complicated, because each row contains
+        *vector* quantities.
+        """
+
         # read cleo forecast (atmosphere)
-        print 'Process cleo forecast data (atmosphere) ... ', forecast_file
-        f     = open(forecast_file, 'r')
+        print 'Process cleo forecast data (atmosphere) ... ', file
+        f     = open(file, 'r')
         lines = f.readlines()
         header = lines[0]
         assert header.strip() == freqFileHeader.strip()
@@ -169,13 +216,6 @@ class CleoDBImport:
                 self.data[timestamp]['tSysCleo'].append(float(row[i+num+1]))
                 self.data[timestamp]['tAtmCleo'].append(float(row[i+(num*2)+1]))
         f.close()
-
-        # TBF: we are changing our dictionary to an ordered list
-        # why not just create the new ordered list?
-        # i.e., self.data[time index][0] = timestamp
-        # or self.data[time index][1][keyword][maybe freq] = value
-        self.data = [(timestamp, values) for timestamp, values in self.data.items()]
-        self.data.sort(key = lambda x: x[0])
 
     def addTimeToDB(self, timestamp, table):
         """
