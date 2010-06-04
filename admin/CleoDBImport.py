@@ -30,6 +30,49 @@ class CleoDBImport:
         # take note of when this import is happening
         self.import_time = datetime.utcnow().replace(second = 0
                                                    , microsecond = 0)
+        # for reporting and diagnostics
+        self.files = {}
+        self.report = []
+        self.quiet = False
+
+        self.initCleoCommandLines()
+
+    def initCleoCommandLines(self):
+        """
+        The system calls we make to cleo are rather complicated, and will
+        change as what we need changes.
+        """
+
+        # here we init settings for the kind of info we're getting from the CLEO
+        self.cleoCmdLine = "/home/dss/bin/forecastsCmdLine"
+
+        # First the Atmosphere by frequency:
+        # Frequencies: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 
+        freqs = range(1, 51)
+        self.atmoFreqs = freqs
+        self.numAtmoFreqs = len(freqs)
+        freqStr = " ".join(["%d" % f for f in freqs])
+
+        measurements = ["OpacityTime", "TsysTime", "TatmTime"]
+        measurementsStr = " ".join(measurements)
+        sites = ["HotSprings"]
+        sitesStr = " ".join(sites)
+
+        self.atmoCmdLine = "%s -readCaches -sites %s -calculate %s -freqList %s -elevTsys 90" % (self.cleoCmdLine, sitesStr, measurementsStr, freqStr)
+
+        # Then the winds, etc.
+        measurements = ["GroundTime"]
+        measurementsStr = " ".join(measurements)
+        sites = ["Elkins", "Lewisburg"]
+        sitesStr = " ".join(sites)
+
+        self.windCmdLine = "%s -readCaches -sites %s -average -calculate %s" % \
+            (self.cleoCmdLine, sitesStr, measurementsStr)
+
+    def reportLine(self, line):
+        if not self.quiet:
+            print line
+        self.report.append(line)
 
     def mph2mps(self, speed):
         return speed / 2.237
@@ -56,13 +99,12 @@ class CleoDBImport:
         
     def getWeather(self):
         "Make actual calls to cleo to populate weather data files."
-        atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
-        print atmo
-        system(atmo)
 
-        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime"
-        print wind
-        system(wind)
+        print self.atmoCmdLine
+        system(self.atmoCmdLine)
+
+        print self.windCmdLine
+        system(self.windCmdLine)
 
         # where are the files?  See the cleo help:
         # "The results of this program are a set of files that are 
@@ -76,7 +118,7 @@ class CleoDBImport:
         self.data = {}
         
         # read cleo forecast (ground)
-        print 'Process cleo forecast data (ground) ...'
+        print 'Process cleo forecast data (ground) ...', wind_file
         f          = open(wind_file, 'r')
         lines      = f.readlines()
         header     = lines[0]
@@ -98,7 +140,7 @@ class CleoDBImport:
         f.close()
 
         # read cleo forecast (atmosphere)
-        print 'Process cleo forecast data (atmosphere)'
+        print 'Process cleo forecast data (atmosphere) ... ', forecast_file
         f     = open(forecast_file, 'r')
         lines = f.readlines()
         header = lines[0]
@@ -109,7 +151,7 @@ class CleoDBImport:
             row = line.split(' ')
             timestamp  = TimeAgent.hour(TimeAgent.mjd2dt(float(row[0]))) #mjdt1
             if not self.data.has_key(timestamp):
-                print "No wind data for %s" % timestamp
+                self.reportLine("ERROR: No wind data for %s\n" % timestamp)
                 continue
             # OpacityTime<freq>List_HotSprings
             self.data[timestamp]['tauCleo']  = []
@@ -117,11 +159,12 @@ class CleoDBImport:
             self.data[timestamp]['tSysCleo'] = []
             # TatmTime<freq>List_HotSprings
             self.data[timestamp]['tAtmCleo'] = []
-            for ifreq in range(50):
+            num = self.numAtmoFreqs
+            for i in range(num):
                 #print first[ifreq+1], first[ifreq+51], first[ifreq+101]
-                self.data[timestamp]['tauCleo'].append(float(row[ifreq+1]))
-                self.data[timestamp]['tSysCleo'].append(float(row[ifreq+51]))
-                self.data[timestamp]['tAtmCleo'].append(float(row[ifreq+101]))
+                self.data[timestamp]['tauCleo'].append(float(row[i+1]))
+                self.data[timestamp]['tSysCleo'].append(float(row[i+num+1]))
+                self.data[timestamp]['tAtmCleo'].append(float(row[i+(num*2)+1]))
         f.close()
 
         # TBF: we are changing our dictionary to an ordered list
@@ -234,7 +277,9 @@ class CleoDBImport:
 
     def insert(self):
         "From data dictionary into database."
-        print "Inserting data for forecast", self.forecast_time
+
+        self.reportLine("Inserting data for forecast %s\n" % self.forecast_time)
+
         #assert self.dbname != "weather"          # TBF temporary!
         self.c = pg.connect(user = "dss", dbname = self.dbname)
 
@@ -301,10 +346,23 @@ class CleoDBImport:
             * call CLEO forecast commands to produce forecast files
             * reads in and parses these files into a data dict
             * inserts data dict contents into DB
-        """    
+        """
+
+        self.reportLine("Performing import at %s UTC" % datetime.utcnow())
+
+        # call cleo, and find the resulting files
         self.getWeather()
         atmFile, windFile = self.findForecastFiles()
+
+        self.files["atmFile"] = atmFile
+        self.files["windFile"] = windFile
+        self.reportLine("Reading File atmFile: %s \n" % atmFile)
+        self.reportLine("Reading File windFile: %s \n" % windFile)        
+
+        # parse the files
         self.read(atmFile, windFile)
+
+        # insert the parsed data into the DB
         self.insert()
 
 # freqFileHeader on next line

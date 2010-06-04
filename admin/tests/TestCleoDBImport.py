@@ -28,6 +28,7 @@ from datetime import datetime, timedelta
 from CleoDBImport import CleoDBImport
 import unittest
 import pg
+import shutil
 
 class TestCleoDBImport(unittest.TestCase):
 
@@ -38,6 +39,15 @@ class TestCleoDBImport(unittest.TestCase):
         self.import_time = datetime.utcnow().replace(second = 0
                                                    , microsecond = 0)
         self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
+
+    def testInit(self):
+
+        # make sure the command lines are properly formatted
+        atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
+        self.assertEquals(atmo, self.cleo.atmoCmdLine)
+
+        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime"
+        self.assertEquals(wind, self.cleo.windCmdLine)
 
     def testGetForecatTypeId(self):
         self.assertEquals(9, self.cleo.getForecastTypeId(5))
@@ -142,10 +152,10 @@ class TestCleoDBImport(unittest.TestCase):
         tAtm = cleo.data[row][1]['tAtmCleo'][49] # tatm @50 GHz @ ? 
         self.assertEquals(275.21046553, tAtm)
 
-    def testInsert(self):
+    def truncateTables(self, cnn):
 
         # truncat tables of interest
-        cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
+        #cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
         tables = ['weather_station2'
                 , 'forecast_by_frequency'
                 , 'forecasts'
@@ -163,6 +173,11 @@ class TestCleoDBImport(unittest.TestCase):
             q = "SELECT * FROM %s" % t
             r = cnn.query(q)
             self.assertEquals(0, len(r.dictresult()))
+
+    def testInsert(self):
+
+        cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
+        self.truncateTables(cnn)
 
         # create test data
         dt = datetime(2009, 1, 22, 6, 0, 0)
@@ -234,6 +249,27 @@ class TestCleoDBImport(unittest.TestCase):
         q = "SELECT * from forecast_by_frequency"
         r = cnn.query(q)
         self.assertEquals(3, len(r.dictresult()))
+
+    def testInsert(self):
+
+        # setup DB
+        cnn = pg.connect(user = "dss", dbname = self.dbname) 
+        self.truncateTables(cnn)
+
+        # setup object
+        self.cleo.path = "."
+        self.cleo.quiet = True
+
+        self.cleo.performImport()
+
+        # if the import got so far as to insert data, it must have done ok.
+        report = " ".join(self.cleo.report)
+        self.assertTrue("Inserting data for forecast" in report)
+
+        # clean up the files
+        for type, file in self.cleo.files.items():
+            dir = file.split("/")[1]
+            shutil.rmtree(dir)
 
 if __name__ == "__main__":
     unittest.main()
