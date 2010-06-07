@@ -57,7 +57,7 @@ class PyrgeometerData(SamplerData):
 
         return numpy.median(di)
 
-   def getHourDanaMedianSpeeds(self, dt):
+    def getHourMedianDownwardIrradiance(self):
         """
         Median of an hours worth of data, centered at the given time.
         """

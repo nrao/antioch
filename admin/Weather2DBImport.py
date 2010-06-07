@@ -51,8 +51,8 @@ class Weather2DBImport:
         dts = self.getNeededWeatherDates()
         for dtId, dtStr in dts:
             dt = datetime.strptime(dtStr, "%Y-%m-%d %H:%M:%S")
-            wind = self.weatherData.getLastHourMedianWindSpeeds(dt)
-            di   = self.pyrgeometerData.getLastHourMedianDownwardIrradiance(dt)
+            wind = self.weatherData.getHourDanaMedianSpeeds(dt)
+            di   = self.pyrgeometerData.getHourMedianDownwardIrradiance(dt)
             results.append((dtId, wind, di))
             self.insert(dtId, wind, di)
         return results    
