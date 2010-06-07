@@ -43,8 +43,8 @@ class TestCleoDBImport(unittest.TestCase):
     def testInit(self):
 
         # make sure the command lines are properly formatted
-        atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
-        #atmo = '/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90'
+        #atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
+        atmo = '/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90'
         self.assertEquals(atmo, self.cleo.atmoCmdLine)
 
         wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime CloudsPrecipTime"
@@ -91,39 +91,39 @@ class TestCleoDBImport(unittest.TestCase):
 
         # First row
         #timestamp = cleo.data[0][0]    # 2009-11-30 23:00:00 UTC
-        timestamp = cleo.data[0][0]    # 2010-06-04 08:00:00 UTC
+        timestamp = cleo.data[0][0]    # 2010-06-04 09:00:00 UTC
         # We expect this to be the first timestamp since cleo gives
         # you a 12 hour buffer from *before* you *asked* for the forecasts
         ## And we asked for these at 2009-12-1 11:40:00 (rounded to hour)
         #expTimestamp = datetime(2009, 11, 30, 23, 0, 0)
-        # And we asked for these at 2006-06-04 20:00:00 (rounded to hour)
-        expTimestamp = datetime(2010, 6, 4, 8, 0, 0)
+        # And we asked for these at 2006-06-04 21:00:00 (rounded to hour)
+        expTimestamp = datetime(2010, 6, 4, 9, 0, 0)
         self.assertEquals(expTimestamp, timestamp)
 
         # The mph wind is something you can see for yourself in the file
         wind_mph = cleo.data[0][1]['speed_mph']
-        self.assertEquals(5.56025, wind_mph)
+        self.assertEquals(6.0145, wind_mph)
         # The rest of these we derive from the file
         wind_ms = cleo.data[0][1]['speed_ms']
-        self.assertAlmostEquals(1.25791168, wind_ms, 4)  
+        self.assertAlmostEquals(1.3041921, wind_ms, 4)  
         # Should be a really old forecast
         ftype_id = cleo.data[0][1]['forecast_type_id']
         self.assertEquals(9, ftype_id)
 
         # Middle row
         timestamp = cleo.data[52][0]
-        expTimestamp = datetime(2010, 6, 6, 12, 0, 0)
+        expTimestamp = datetime(2010, 6, 6, 13, 0, 0)
         self.assertEquals(expTimestamp, timestamp)
         wind_mph = cleo.data[52][1]['speed_mph']
-        self.assertEquals(16.70375, wind_mph)
+        self.assertEquals(17.181, wind_mph)
         wind_ms = cleo.data[52][1]['speed_ms']
-        self.assertAlmostEquals(6.127809, wind_ms, 4)     
+        self.assertAlmostEquals(6.20667, wind_ms, 4)     
         ftype_id = cleo.data[52][1]['forecast_type_id']
         self.assertEquals(16, ftype_id)
         
         # Last row - for some reason this test file doesn't have 3.5 days
         # into the future of data.
-        last_row = 88
+        last_row = 87
         timestamp = cleo.data[last_row][0]
         expTimestamp = datetime(2010, 6, 8)
         self.assertEquals(expTimestamp, timestamp)
@@ -135,29 +135,29 @@ class TestCleoDBImport(unittest.TestCase):
         self.assertEquals(22, ftype_id)
 
         # Atmosphere File
-        return # TBF: we can't test this until we update the frequencies
+
         # First row
-        self.assertEquals(50, len(cleo.data[0][1]['tauCleo']))
-        self.assertEquals(50, len(cleo.data[0][1]['tSysCleo']))
-        self.assertEquals(50, len(cleo.data[0][1]['tAtmCleo']))
-        tau = cleo.data[0][1]['tauCleo'][0]  # tau @ 1 GHz @ 2009-11-30 23:00
-        self.assertEquals(0.00681057834902, tau)
-        tau = cleo.data[0][1]['tauCleo'][21]  # tau @ 22 GHz @ 2009-11-30 23:00
-        self.assertEquals(0.0553289857371, tau)
-        tAtm = cleo.data[0][1]['tAtmCleo'][49] # tatm @50 GHz @ 2009-11-30 23
-        self.assertEquals(256.986808314, tAtm)
+        self.assertEquals(85, len(cleo.data[0][1]['tauCleo']))
+        self.assertEquals(85, len(cleo.data[0][1]['tSysCleo']))
+        self.assertEquals(85, len(cleo.data[0][1]['tAtmCleo']))
+        tau = cleo.data[0][1]['tauCleo'][0]  # tau @ freq[0] GHz @ 2009-11-30 23:00
+        self.assertEquals(0.00782361636839, tau)
+        tau = cleo.data[0][1]['tauCleo'][21]  # tau @ freq[21] GHz @ 2009-11-30 23:00
+        self.assertEquals(0.316691921831, tau)
+        tAtm = cleo.data[0][1]['tAtmCleo'][49] # tatm @ freq[49] GHz @ 2009-11-30 23
+        self.assertEquals(267.676350343, tAtm)
 
         # Middle row
         row = 52
-        self.assertEquals(50, len(cleo.data[row][1]['tauCleo']))
-        self.assertEquals(50, len(cleo.data[row][1]['tSysCleo']))
-        self.assertEquals(50, len(cleo.data[row][1]['tAtmCleo']))
+        self.assertEquals(85, len(cleo.data[row][1]['tauCleo']))
+        self.assertEquals(85, len(cleo.data[row][1]['tSysCleo']))
+        self.assertEquals(85, len(cleo.data[row][1]['tAtmCleo']))
         tau = cleo.data[row][1]['tauCleo'][0]  # tau @ 1 GHz @ ?
-        self.assertEquals(0.00655953948891, tau)
+        self.assertEquals(0.00700377123625, tau)
         tau = cleo.data[row][1]['tauCleo'][21]  # tau @22 GHz @ ?
-        self.assertEquals(0.290061676655, tau)
+        self.assertEquals(0.261487543705, tau)
         tAtm = cleo.data[row][1]['tAtmCleo'][49] # tatm @50 GHz @ ? 
-        self.assertEquals(275.21046553, tAtm)
+        self.assertEquals(277.080140861, tAtm)
 
     def truncateTables(self, cnn):
 
