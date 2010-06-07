@@ -5,6 +5,8 @@
 > import Database.HDBC
 > import Database.HDBC.MySQL
 > import Database.HDBC.PostgreSQL
+> import Maybe
+> import Data.List
 
 Given the name of the database containing the receiver_temperatures'
 table, the receiver's name, and a sql date string (YYYY-MM-DD),
@@ -16,7 +18,6 @@ Example command line:
 runhaskell UpdateReceiverTemperatures <name> Rcvr1_2 2005-05-27
 
 > main = do
->   -- TBF should use System.Console.GetOpt here to help the poor user
 >   args <- getArgs
 >   let dbname  = assert (length args == 3) args !! 0
 >   let rcvr    = assert (length args == 3) args !! 1
@@ -26,26 +27,44 @@ runhaskell UpdateReceiverTemperatures <name> Rcvr1_2 2005-05-27
 >           " for " ++ rcvr ++
 >           " from measurements taken on " ++ calDate ++ "\n")
 >
+>   let (rcvr', channel) = getMySqlRcvr rcvr
+>
 >   pcnn <- pconnect dbname
 >   mcnn <- mconnect "receivers"
->   fts <- collectNewTemps mcnn rcvr calDate
+>   fts <- collectNewTemps mcnn rcvr' channel calDate
 >   
 >   removeOldTemps pcnn rcvr
 >   insertNewTemps pcnn rcvr fts
->   putStr $ "Wrote " ++ (show . length $ fts) ++ " Receiver Temperature measuremnts to database."
+>   putStr $ "Wrote " ++ (show . length $ fts) ++ " Receiver Temperature measuremnts to database.\n"
+
+> getMySqlRcvr :: String -> (String, Maybe String)
+> getMySqlRcvr dssRcvr | dssRcvr `elem` pf1Rcvrs = ("RcvrPF_1", Just (getChannel dssRcvr))
+>                      | dssRcvr == pf2Rcvr      = ("RcvrPF_2", Just "1070")
+>                      | otherwise               = (dssRcvr   , Nothing)
+>   where
+>     pf1Rcvrs = ["Rcvr_342", "Rcvr_450", "Rcvr_600", "Rcvr_800"]
+>     pf2Rcvr  = "Rcvr_1070"
+
+> getChannel :: String -> String
+> getChannel rcvr = drop ((fromJust $ elemIndex '_' rcvr) + 1) rcvr
 
 Reads calibration frequencies and receiver temperatures for the given
 receiver which were collected on the given date and returns the means
 of the temperatures across all beams and polarizations, i.e., 
 [(frequency, temperature)]
 
+MUSTANG currently does not have calibrations, so fake a constant temperature
+
+> collectNewTemps cnn r chn dt = if (r == "Rcvr_PAR") then return $ [(80.0,120.0),(100.0,120.0)] else collectNewTemps' cnn r chn dt
+
 > -- collectNewTemps :: Database.HDBC.MySQL.Connection.Connection -> String -> String -> IO [(Double, Double)]
-> collectNewTemps cnn r dt = do
->   result <- quickQuery' cnn query [toSql r, toSql dt]
+> collectNewTemps' cnn r chn dt = do
+>   let channel = "%" ++ (maybe "" id chn)
+>   result <- quickQuery' cnn query [toSql r, toSql dt, toSql channel]
 >   let temps = assert (not . null $ result) map fromSqlList result
 >   return $ reverse . means . collapse $ temps
 >     where
->       query = "SELECT t.frequency, t.temperature FROM tcal AS t, measurement AS m WHERE m.id = t.id AND m.type=\"t\" AND m.calibrator=\"B\" AND m.receiver = ? and m.date = ? ORDER BY t.frequency;"
+>       query = "SELECT t.frequency, t.temperature FROM tcal AS t, measurement AS m WHERE m.id = t.id AND m.type=\"t\" AND m.calibrator=\"B\" AND m.receiver = ? AND m.date = ? AND channel LIKE ? ORDER BY t.frequency;"
 
 Given a receiver name and a list of frequency/temperature pairs, insert
 the values into the *receiver_temperatures* table.

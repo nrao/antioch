@@ -5,6 +5,8 @@
 > import qualified Antioch.DebugTests as DebugT
 > import qualified Antioch.DSSDataTests as DSSDataT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
+> import qualified Antioch.ReceiverTests as ReceiverT
+> import qualified Antioch.ReceiverTemperaturesTests as ReceiverTempT
 > import qualified Antioch.ReportsTests as ReportT
 > import qualified Antioch.ReservationsTests as ReservationsT
 > import qualified Antioch.ScoreTests as ScoreT
@@ -29,6 +31,8 @@
 >   , SLAlibT.tests
 >   , StatsT.tests
 >   , PackT.tests
+>   , ReceiverT.tests
+>   , ReceiverTempT.tests
 >   , ReportT.tests
 >   , ReservationsT.tests
 >   , ScheduleT.tests
