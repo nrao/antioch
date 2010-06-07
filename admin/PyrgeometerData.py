@@ -56,3 +56,18 @@ class PyrgeometerData(SamplerData):
         mjd, di = self.getDownwardIrradiance(dates)
 
         return numpy.median(di)
+
+   def getHourDanaMedianSpeeds(self, dt):
+        """
+        Median of an hours worth of data, centered at the given time.
+        """
+
+        # dates centered around the given time
+        start = dt - timedelta(minutes = 30)
+        end   = dt + timedelta(minutes = 30)
+        dates = (start.utctimetuple()[:6], end.utctimetuple()[:6])
+
+        # get mjd, downward irradianc (W/m^2)
+        mjd, di = self.getDownwardIrradiance(dates)
+
+        return numpy.median(di)
