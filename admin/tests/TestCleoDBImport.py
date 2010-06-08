@@ -38,25 +38,27 @@ class TestCleoDBImport(unittest.TestCase):
         self.forecast = datetime.utcnow().replace(hour=6, minute=0, second=0, microsecond=0)
         self.import_time = datetime.utcnow().replace(second = 0
                                                    , microsecond = 0)
-        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
     def testInit(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
         # make sure the command lines are properly formatted
         #atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
-        atmo = '/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90'
+        atmo = '/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90 '
         self.assertEquals(atmo, self.cleo.atmoCmdLine)
 
-        wind = "/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime CloudsPrecipTime"
+        wind = '/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime CloudsPrecipTime '
         self.assertEquals(wind, self.cleo.windCmdLine)
 
     def testGetForecatTypeId(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
         self.assertEquals(9, self.cleo.getForecastTypeId(5))
         self.assertEquals(10, self.cleo.getForecastTypeId(6))
         self.assertEquals(None, self.cleo.getForecastTypeId(-1))
         self.assertEquals(None, self.cleo.getForecastTypeId(99))
 
     def testGetForecatTypeFromTimestamp(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
         now = datetime.utcnow()
 
         dt = now.replace(hour=5, minute=0, second=0, microsecond=0)
@@ -75,6 +77,7 @@ class TestCleoDBImport(unittest.TestCase):
         self.assertEquals(22, self.cleo.getForecastTypeIdFromTimestamp(dt))
 
     def testFindForecastFiles(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
         files = self.cleo.findForecastFiles()        
         exp = ('tests/Forecasts_09_12_07_11h40m52s/time_HotSprings_09_12_07_11h40m52s.txt'
@@ -182,6 +185,7 @@ class TestCleoDBImport(unittest.TestCase):
             self.assertEquals(0, len(r.dictresult()))
 
     def testInsert(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
         cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
         self.truncateTables(cnn)
@@ -263,6 +267,29 @@ class TestCleoDBImport(unittest.TestCase):
         self.assertEquals(3, len(r.dictresult()))
 
     def testImport(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
+
+        # setup DB
+        cnn = pg.connect(user = "dss", dbname = self.dbname) 
+        self.truncateTables(cnn)
+
+        # setup object
+        self.cleo.path = "."
+        self.cleo.quiet = True
+
+        self.cleo.performImport()
+
+        # if the import got so far as to insert data, it must have done ok.
+        report = " ".join(self.cleo.report)
+        self.assertTrue("Inserting data for forecast" in report)
+
+        # clean up the files
+        for type, file in self.cleo.files.items():
+            dir = file.split("/")[1]
+            #shutil.rmtree(dir)
+
+    def testHistoryImport(self):
+        self.cleo = CleoDBImport(self.forecast, self.dbname, "tests", True)
 
         # setup DB
         cnn = pg.connect(user = "dss", dbname = self.dbname) 

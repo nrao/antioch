@@ -7,8 +7,7 @@ import pg
 
 MAXFORECASTHOURS = 96
 FORECASTDELTA = 6
-TWELVEDELTASTART = 1
-SIXDELTASTART = 9
+SIXDELTASTART = 1
 MAXFORECASTTYPE = SIXDELTASTART + MAXFORECASTHOURS/FORECASTDELTA
 
 # headers to be found on first line of each file
@@ -17,15 +16,16 @@ windFileHeader = "timeListMJD pwatTimeList_avrg smphTimeList_avrg smph75mTimeLis
 
 class CleoDBImport:
 
-    def __init__(self, forecast_time, dbname, path = "."):
+    def __init__(self, forecast_time, dbname, path = ".", history = False):
         
         # cleo forecast files get written to our current directory,
         # but we might want to override that for testing
         self.path     = path
 
-        self.dbname   = dbname
-        self.dbimport = DBImport()
+        self.dbname        = dbname
+        self.dbimport      = DBImport()
         self.forecast_time = forecast_time
+        self.history       = history
 
         # take note of when this import is happening
         self.import_time = datetime.utcnow().replace(second = 0
@@ -69,7 +69,14 @@ class CleoDBImport:
         sites = ["HotSprings"]
         sitesStr = " ".join(sites)
 
-        self.atmoCmdLine = "%s -readCaches -sites %s -calculate %s -freqList %s -elevTsys 90" % (self.cleoCmdLine, sitesStr, measurementsStr, freqStr)
+        if self.history:
+            historyOption = '-startTime "%s" -incrTime 1 -mimicHistorical' % \
+                datetime.strftime(self.forecast_time, "%m/%d/%Y %H:%M:%S")
+        else:
+            historyOption = ''
+
+        self.atmoCmdLine = "%s -readCaches -sites %s -calculate %s -freqList %s -elevTsys 90 %s" % \
+            (self.cleoCmdLine, sitesStr, measurementsStr, freqStr, historyOption)
 
         # Then the winds, etc.
         measurements = ["GroundTime", "CloudsPrecipTime"]
@@ -77,8 +84,8 @@ class CleoDBImport:
         sites = ["Elkins", "Lewisburg"]
         sitesStr = " ".join(sites)
 
-        self.windCmdLine = "%s -readCaches -sites %s -average -calculate %s" % \
-            (self.cleoCmdLine, sitesStr, measurementsStr)
+        self.windCmdLine = "%s -readCaches -sites %s -average -calculate %s %s" % \
+            (self.cleoCmdLine, sitesStr, measurementsStr, historyOption)
 
     def reportLine(self, line):
         if not self.quiet:

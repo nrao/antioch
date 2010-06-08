@@ -115,6 +115,7 @@ CREATE TABLE forecasts (
     weather_date_id integer,
     wind_speed double precision,
     wind_speed_mph double precision,
+    irradiance double precision,
     forecast_time_id integer,
     import_time_id integer
 );
