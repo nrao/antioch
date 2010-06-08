@@ -53,3 +53,42 @@ class WeatherData(SamplerData):
         mjd, wind = self.getWindVelocity(dates)
 
         return numpy.median(wind)
+
+    def getHourDanaMedianSpeeds(self, dt):
+        """
+        Compute Dana Balser's (@Registered Trademark) 
+        special median of an hours worth of data, centered at the given time.
+        """
+
+        # dates centered around the given time
+        start = dt - timedelta(minutes = 30)
+        end   = dt + timedelta(minutes = 30)
+        dates = (start.utctimetuple()[:6], end.utctimetuple()[:6])
+
+        # get mjd, windvel (m/s)
+        mjd, wind = self.getWindVelocity(dates)
+
+        return self.danaMedian(wind)
+
+    def danaMedian(self, data):
+        """
+        Compute Dana Balser's (@Registered Trademark) special median.
+        See DSPN6.1.  Data is assumed to be at 1 Hz.
+        """
+
+        # TBF: a real pythonista would use list-comprehension
+        # and could spell it too.
+        stepSize = 20
+        fraction = 0.1 # get the 90% highest median
+        length = len(data)
+        steps = length / stepSize
+        targetIndex = int(steps - (fraction * steps))
+        stepMedians = []
+        for i in range(steps):
+            start = i*stepSize
+            stop = start + stepSize
+            stepData = data[start:stop]
+            stepMedians.append(numpy.median(stepData))
+        stepMedians.sort()
+        return stepMedians[targetIndex]
+

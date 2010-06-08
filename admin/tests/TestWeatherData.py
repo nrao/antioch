@@ -3,7 +3,7 @@ if __name__ == "__main__":
     sys.path[1:1] = [".."]
 
 from WeatherData        import WeatherData
-from datetime           import datetime
+from datetime           import datetime, timedelta
 import unittest
 import nose
 
@@ -45,5 +45,30 @@ class TestWeatherData(unittest.TestCase):
 
         self.assertNotEqual(2.38246560, wind)
 
+    def testHourDanaMedianSpeeds(self):
+
+        dt = datetime(2010, 6, 7, 12) # UTC
+        m = self.wd.getHourDanaMedianSpeeds(dt)
+        self.assertAlmostEquals(3.74649739265, m, 4)
+
+        dt = datetime(2009, 6, 7, 12) # UTC
+        m = self.wd.getHourDanaMedianSpeeds(dt)
+        self.assertAlmostEquals(0.52738451957702637, m, 4)
+
+    def testDanaMedian(self):
+
+        # simple tests first
+        data = [1.0 for i in range(3600)]
+        m = self.wd.danaMedian(data)
+        self.assertEqual(1.0, m)
+
+        data = [1.0 for i in range(110)]
+        m = self.wd.danaMedian(data)
+        self.assertEqual(1.0, m)
+
+        data = [float(i) for i in range(3600)]
+        m = self.wd.danaMedian(data)
+        self.assertEqual(3249.5, m)
+    
 if __name__ == "__main__":
     unittest.main()
