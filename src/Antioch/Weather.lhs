@@ -201,7 +201,7 @@ key to distinguish it from the wind_speed values.
 >   where
 >     key   = (dt, 0)
 >     query = "SELECT wind_speed \n\
->              \FROM weather_station2 \n\
+>              \FROM gbt_weather \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ?"

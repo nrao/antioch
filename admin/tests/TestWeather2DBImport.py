@@ -35,7 +35,7 @@ class TestWeather2DBImport(unittest.TestCase):
 
     def setUp(self):
         # use a special DB because we'll be cleaning this one out everytime.
-        self.dbname = "weather_pmargani_unit_tests"
+        self.dbname = "weather_unit_tests"
         self.wdb = Weather2DBImport(self.dbname)
 
     def testGetNeededWeatherDates(self):

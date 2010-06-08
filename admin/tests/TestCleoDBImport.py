@@ -163,7 +163,7 @@ class TestCleoDBImport(unittest.TestCase):
 
         # truncat tables of interest
         #cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
-        tables = ['weather_station2'
+        tables = ['gbt_weather'
                 , 'forecast_by_frequency'
                 , 'forecasts'
                 , 'forecast_times'
