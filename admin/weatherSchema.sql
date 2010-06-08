@@ -118,7 +118,6 @@ CREATE TABLE forecasts (
     irradiance double precision,
     forecast_time_id integer,
     import_time_id integer,
-    irradiance double precision
 );
 
 
