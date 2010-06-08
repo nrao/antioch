@@ -117,11 +117,39 @@ CREATE TABLE forecasts (
     wind_speed_mph double precision,
     irradiance double precision,
     forecast_time_id integer,
-    import_time_id integer
+    import_time_id integer,
+    irradiance double precision
 );
 
 
 ALTER TABLE public.forecasts OWNER TO dss;
+
+--
+-- Name: weather_station2_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE weather_station2_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.weather_station2_id_seq OWNER TO dss;
+
+--
+-- Name: gbt_weather; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE TABLE gbt_weather (
+    id integer DEFAULT nextval('weather_station2_id_seq'::regclass) NOT NULL,
+    weather_date_id integer,
+    wind_speed double precision,
+    irradiance double precision
+);
+
+
+ALTER TABLE public.gbt_weather OWNER TO dss;
 
 --
 -- Name: hour_angle_boundaries_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
@@ -256,32 +284,6 @@ CREATE TABLE weather_dates (
 ALTER TABLE public.weather_dates OWNER TO dss;
 
 --
--- Name: weather_station2_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
---
-
-CREATE SEQUENCE weather_station2_id_seq
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO MINVALUE
-    CACHE 1;
-
-
-ALTER TABLE public.weather_station2_id_seq OWNER TO dss;
-
---
--- Name: weather_station2; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
---
-
-CREATE TABLE weather_station2 (
-    id integer DEFAULT nextval('weather_station2_id_seq'::regclass) NOT NULL,
-    weather_date_id integer,
-    wind_speed double precision
-);
-
-
-ALTER TABLE public.weather_station2 OWNER TO dss;
-
---
 -- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
 --
 
@@ -387,7 +389,7 @@ ALTER TABLE ONLY weather_dates
 -- Name: weather_station2_pkey; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
 --
 
-ALTER TABLE ONLY weather_station2
+ALTER TABLE ONLY gbt_weather
     ADD CONSTRAINT weather_station2_pkey PRIMARY KEY (id);
 
 
@@ -395,7 +397,7 @@ ALTER TABLE ONLY weather_station2
 -- Name: weather_station2_wind_speed_date; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
 --
 
-ALTER TABLE ONLY weather_station2
+ALTER TABLE ONLY gbt_weather
     ADD CONSTRAINT weather_station2_wind_speed_date UNIQUE (wind_speed, weather_date_id);
 
 
@@ -448,7 +450,7 @@ ALTER TABLE ONLY forecasts
 -- Name: weather_station2_weather_date_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
 --
 
-ALTER TABLE ONLY weather_station2
+ALTER TABLE ONLY gbt_weather
     ADD CONSTRAINT weather_station2_weather_date_id_fkey FOREIGN KEY (weather_date_id) REFERENCES weather_dates(id);
 
 

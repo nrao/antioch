@@ -94,7 +94,7 @@ Test the forecastType function for non-2006 dates:
 >   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed < 0.0"
 >   result <- getFloat cnn sql []
 >   assertEqual "test_WindsArePositive" True (isNothing result)
->   let sql = "SELECT wind_speed FROM weather_station2 WHERE wind_speed < 0.0"
+>   let sql = "SELECT wind_speed FROM gbt_weather WHERE wind_speed < 0.0"
 >   result <- getFloat cnn sql []
 >   assertEqual "test_W2WindsArePositive" True (isNothing result)
 
@@ -103,7 +103,7 @@ Test the forecastType function for non-2006 dates:
 >   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed > 200.0"
 >   result <- getFloat cnn sql []
 >   assertEqual "test_WindsAreReasonable" True (isNothing result)
->   let sql = "SELECT wind_speed FROM weather_station2 WHERE wind_speed > 200.0"
+>   let sql = "SELECT wind_speed FROM gbt_weather WHERE wind_speed > 200.0"
 >   result <- getFloat cnn sql []
 >   assertEqual "test_W2WindsAreReasonable" True (isNothing result)
 
