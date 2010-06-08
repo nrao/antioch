@@ -3,7 +3,7 @@ if __name__ == "__main__":
     sys.path[1:1] = [".."]
 
 from WeatherData        import WeatherData
-from datetime           import datetime
+from datetime           import datetime, timedelta
 import unittest
 import nose
 
@@ -50,6 +50,10 @@ class TestWeatherData(unittest.TestCase):
         dt = datetime(2010, 6, 7, 12) # UTC
         m = self.wd.getHourDanaMedianSpeeds(dt)
         self.assertAlmostEquals(3.74649739265, m, 4)
+
+        dt = datetime(2009, 6, 7, 12) # UTC
+        m = self.wd.getHourDanaMedianSpeeds(dt)
+        self.assertAlmostEquals(0.52738451957702637, m, 4)
 
     def testDanaMedian(self):
 

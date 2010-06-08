@@ -1,7 +1,10 @@
 #! /bin/bash
 python tests/TestSolarHeating.py
-python tests/TestCleoDBImport.py
+python tests/TestSamplerData.py
 python tests/TestWeatherData.py
+python tests/TestPyrgeometerData.py
+python tests/TestWeather2DBImport.py
+python tests/TestCleoDBImport.py
 
 
 
