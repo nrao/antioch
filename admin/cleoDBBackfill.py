@@ -1,4 +1,4 @@
-import sys
+import sys, traceback
 from datetime      import datetime, timedelta
 from CleoDBImport  import CleoDBImport
 
@@ -15,5 +15,10 @@ delta = timedelta(hours = 6)
 
 while start < end:
     print "    ", start
-    CleoDBImport(start, database, ".", True).performImport()
+    try:
+        CleoDBImport(start, database, ".", True).performImport()
+    except:
+        t, v, tb = sys.exc_info()
+        traceback.print_exception(t, v, tb)
+        print "Continuing on to next forecast time ..."
     start += delta

@@ -19,6 +19,15 @@
 > import Test.QuickCheck
 > import qualified Data.Map as M
 > import System.IO.Unsafe  (unsafePerformIO)
+> import Text.Printf
+
+This module provides an interface to the 'weather' DB that holds:
+   * forecasted weather values (exs: wind, opacities, etc.)
+   * actual weather values from the gbt (exs: wind, irradiance, etc.)
+   * historical weather results (exs: stringency, etc.)
+
+Note that this module uses caches for optimization.  There is a cache
+for each different table we are pulling values from.
 
 > instance Convertible Float SqlValue where
 >     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
@@ -30,8 +39,10 @@
 
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
->   , w2_wind         :: DateTime -> IO (Maybe Float)  -- m/s
 >   , wind_mph        :: DateTime -> IO (Maybe Float)  -- mph
+>   , irradiance      :: DateTime -> IO (Maybe Float)  -- 
+>   , gbt_wind        :: DateTime -> IO (Maybe Float)  -- m/s
+>   , gbt_irradiance  :: DateTime -> IO (Maybe Float)  -- 
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
 >   , totalStringency :: Frequency -> Radians -> IO (Maybe Float)
@@ -84,20 +95,25 @@ so we've deprecated 'dateSafe'.
 > getWeather'     :: Maybe DateTime -> IO Weather
 > getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
 
+Here the various caches are initialized.
+
 > updateWeather :: Connection -> Maybe DateTime -> IO Weather
 > updateWeather conn now = do
 >     now'' <- maybe getCurrentTimeSafe return now
 >     let now' = roundToHour now''
 >     ft   <- getForecastTime conn now'
->     (windf, w2_windf, wind_mphf)   <- getWinds'
+>     (windf, wind_mphf, irradiancef) <- getForecasts'
+>     (gbt_windf, gbt_irrf) <- getGbtWeather'
 >     (opacityf, tsysf)   <- getOpacityAndTSys'
 >     stringencyf         <- getTotalStringency'
 >     minOpacityf         <- getMinOpacity'
 >     minTSysf            <- getMinTSysPrime'
 >     return Weather {
 >         wind            = pin ft now' $ windf conn
->       , w2_wind         = pin ft now' $ w2_windf conn
 >       , wind_mph        = pin ft now' $ wind_mphf conn
+>       , irradiance      = pin ft now' $ irradiancef conn
+>       , gbt_wind        = gbt_windf conn
+>       , gbt_irradiance  = gbt_irrf conn
 >       , opacity         = pin ft now' $ opacityf conn
 >       , tsys            = pin ft now' $ tsysf conn
 >       , totalStringency = stringencyf conn
@@ -123,89 +139,140 @@ forecast_type_id correctly using the forecast_time from the DB.
 > fromSql' SqlNull = Nothing
 > fromSql' x       = Just . fromSql $ x
 
+The frequency range of the weather DB is from 2 - 120 GHz.
+
 > freq2Index :: Frequency -> Int
-> freq2Index = min 50 . max 2 . round
+> freq2Index = min 120 . max 2 . round
+
+The elevation range of the weather DB is from 5 - 90 degrees.
 
 > elev2Index :: Radians -> Int
 > elev2Index =  min 90 . max 5 . round . rad2deg
 
 Both wind speeds and atmospheric temperature are values forecast independently
-of frequency.
+of frequency.  The initialized caces are created here.
 
-> getWinds' = do
+> getForecasts' = do
 >     cache <- newIORef M.empty
->     return (getWind cache, getW2Wind cache, getWindMPH cache)
+>     return (getWind cache
+>           , getWindMPH cache
+>           , getIrradiance cache)
 
-Generic method for pulling wind speeds from the weather DB tables.
+> getGbtWeather' = do
+>     cache <- newIORef M.empty
+>     return (getGbtWind cache
+>           , getGbtIrradiance cache)
+
+The cache for the 'forecasts' table is simply the (datetime, forecast type, 
+column name).
+
+> type ForecastFunc = IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
+
+> getWind, getWindMPH, getIrradiance :: ForecastFunc
+
+> getWind cache cnn ftype dt = withCache key cache $
+>     fetchForecastData cnn dt ftype column
+>   where
+>     column = "wind_speed"
+>     key = (dt, ftype, column)
+
+> getWindMPH cache cnn ftype dt = withCache key cache $
+>     fetchForecastData cnn dt ftype column
+>   where
+>     column = "wind_speed_mph"
+>     key = (dt, ftype, column)
+
+> getIrradiance cache cnn ftype dt = withCache key cache $
+>     fetchForecastData cnn dt ftype column
+>   where
+>     column = "irradiance"
+>     key = (dt, ftype, column)
+
+The cache for the 'gbt_weather' table is simply the (datetime, column name)
+
+> type GbtWeatherFunc = IORef (M.Map (Int, String) (Maybe Float)) -> Connection -> DateTime -> IO (Maybe Float)
+
+> getGbtWind, getGbtIrradiance :: GbtWeatherFunc
+
+> getGbtWind cache cnn dt = withCache key cache $
+>     fetchGbtWeatherData cnn dt' column
+>   where
+>     dt' = roundToHour . dateSafe $ dt
+>     column = "wind_speed"
+>     key = (dt', column)
+
+> getGbtIrradiance cache cnn dt = withCache key cache $
+>     fetchGbtWeatherData cnn dt' column
+>   where
+>     dt' = roundToHour . dateSafe $ dt
+>     column = "irradiance"
+>     key = (dt', column)
+
+
+Generic method for pulling scalar values from the forecasts table.
 Note column and try parameters: if you don't get any results w/ the
 given query (by forecast id), try again (getting most recent forecast).
 
-> fetchWind :: Connection -> DateTime -> Int -> String -> [SqlValue] -> String -> Bool -> IO (Maybe Float)
-> fetchWind cnn dt ftype query xs column try = handleSqlError $ do
+> fetchForecastData cnn dt ftype column = fetchForecastData' cnn dt ftype query xs column True
+>   where
+>     query = getForecastDataQuery column
+>     xs    = [toSql' dt, toSql ftype]
+
+> fetchForecastData' :: Connection -> DateTime -> Int -> String -> [SqlValue] -> String -> Bool -> IO (Maybe Float)
+> fetchForecastData' cnn dt ftype query xs column try = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
->       [[wind]] -> return $ fromSql' wind
->       _        -> if try then fetchAnyWind cnn dt ftype column else return Nothing
+>       [[value]] -> return $ fromSql' value
+>       _        -> if try then fetchAnyForecastValue cnn dt ftype column else return Nothing
 
-Note: only applicable for columns 'wind_speed' and 'wind_speed_mph'
+Get a value (ex: wind_speed) from the Forecasts table with the most recent
+forecast type.
+Note: only applicable for columns in the Forecasts table
 
-> fetchAnyWind :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
-> fetchAnyWind cnn dt ftype column = handleSqlError $ do
->   print $ "Wind " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
+> fetchAnyForecastValue :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
+> fetchAnyForecastValue cnn dt ftype column = handleSqlError $ do
+>   print $ "Value " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
 >   result <- quickQuery' cnn query xs
 >   case result of 
 >     [wind]:_ -> return $ fromSql' wind
 >     _        -> return Nothing
 >     where
 >       xs = [toSql' dt]
->       query = "SELECT " ++ column ++ " \n\
->              \FROM forecasts \n\
->              \INNER JOIN weather_dates \n\
->              \ON weather_date_id = weather_dates.id \n\
->              \WHERE weather_dates.date = ? \n\
->              \ORDER BY forecast_type_id"
+>       query = getAnyForecastQuery column 
 
-> getWind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> getWind cache cnn ftype dt = withCache key cache $
->     fetchWind cnn dt ftype query xs "wind_speed" True
->   where
->     key   = (dt, ftype)
->     query = "SELECT wind_speed \n\
+> getForecastDataQuery :: String -> String
+> getForecastDataQuery column = printf query column
+>   where 
+>     query = "SELECT %s \n\
 >              \FROM forecasts \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
->     xs    = [toSql' dt, toSql ftype]
 
-TBF: don't use the cache, since this won't be called very often.
-If we want to use the cache we'll have to come up with a different
-key to distinguish it from the wind_speed values.
-
-> getWindMPH :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> --getWindMPH cache cnn ftype dt = withCache key cache $
-> --    fetchWind cnn dt ftype query xs "wind_speed_mph" True
-> getWindMPH cache cnn ftype dt = fetchWind cnn dt ftype query xs "wind_speed_mph" True
+> getAnyForecastQuery :: String -> String
+> getAnyForecastQuery column = printf query column
 >   where
->     key   = (dt, ftype) -- TBF: this is the same as the wind_speed key
->     query = "SELECT wind_speed_mph \n\
->              \FROM forecasts \n\
->              \INNER JOIN weather_dates \n\
->              \ON weather_date_id = weather_dates.id \n\
->              \WHERE weather_dates.date = ? AND forecast_type_id = ?"
->     xs    = [toSql' dt, toSql ftype]
+>     query = "SELECT %s \n\
+>            \FROM forecasts \n\
+>            \INNER JOIN weather_dates \n\
+>            \ON weather_date_id = weather_dates.id \n\
+>            \WHERE weather_dates.date = ? \n\
+>            \ORDER BY forecast_type_id"
 
-> getW2Wind :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Int -> DateTime -> IO (Maybe Float)
-> getW2Wind cache cnn ftype dt = withCache key cache $
->     -- Note: returns Nothing if this first query fails
->     fetchWind cnn dt ftype query xs "" False
+> fetchGbtWeatherData :: Connection -> DateTime -> String -> IO (Maybe Float)
+> fetchGbtWeatherData cnn dt column = handleSqlError $ do
+>     result <- quickQuery' cnn query xs
+>     case result of
+>       [[value]] -> return $ fromSql' value
+>       _         -> return Nothing
 >   where
->     key   = (dt, 0)
->     query = "SELECT wind_speed \n\
+>     xs = [toSql' dt]
+>     query = printf q column
+>     q     = "SELECT %s \n\
 >              \FROM gbt_weather \n\
 >              \INNER JOIN weather_dates \n\
 >              \ON weather_date_id = weather_dates.id \n\
 >              \WHERE weather_dates.date = ?"
->     xs    = [toSql' dt]
 
 Changes wind miles per hour to PTCS meters to second
 with day/night correction
@@ -238,7 +305,7 @@ PTCS day/night correction for meters per second
 >                   -5.69079000e-01]::[Float]
 
 However, opacity and system temperature (tsys) are values forecast dependent
-on frequency.
+on frequency.  Here it's cache is initialized.
 
 > getOpacityAndTSys' = do
 >     cache <- newIORef M.empty
@@ -417,17 +484,17 @@ Just some test functions to make sure things are working.
 > testWeather = do
 >     w <- getWeather now
 >     return ( wind w target
->            , w2_wind w target
+>            , gbt_wind w target
 >            , opacity w target frequency
 >            , tsys w target frequency
 >            , totalStringency w frequency elevation
->            , minOpacity w frequency elevation
+>            --, minOpacity w frequency elevation
 >            , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
 >     elevation = pi / 4.0 :: Radians
->     now       = Just (fromGregorian 2004 05 03 12 00 00)
->     target    = fromGregorian 2004 05 03 12 00 00
+>     now       = Just (fromGregorian 2006 05 03 12 00 00)
+>     target    = fromGregorian 2006 05 03 12 00 00
 
 Quick Check Properties:
 
