@@ -84,7 +84,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_receiverBoost2
 >   , test_observerOnSite
 >   , test_scorePeriod
->   , test_mustang
+>   --, test_mustang -- TBF: we took out the MUSTANG Hack
 >   , test_elevationLimit
 >   ]
 
@@ -1194,9 +1194,12 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >                       , pForecast = startDt
 >                       }
 
+TBF: this won't work until we start using the expanded weather frequencies
+and irradiance
+
 > test_mustang = TestCase $ do
->     assertEqual "test_mustang_1" True (usesMustang ms)
->     assertEqual "test_mustang_2" False (usesMustang ds)
+>     --assertEqual "test_mustang_1" True (usesMustang ms)
+>     --assertEqual "test_mustang_2" False (usesMustang ds)
 >     w <- getWeather $ Just dtNight
 >
 >     -- Factor: Stringency
