@@ -206,10 +206,10 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >     -- Equation 12 - uses f
 >     let rmsTE' = rmsTrackingError dt wind'
 >     let f = (rmsTE' / theta')
->     -- Equation 27 - uses fv (TBF: temp. fix for MUSTANG)
+>     -- Equation 27 - uses fv 
 >     -- here we differ by Eq. 27 by dividing variableTrackingError by 2
->     --let fv = (variableTrackingError wind' / 2) / theta'
->     let rt = f
+>     let fv = (variableTrackingError wind' / 2) / theta'
+>     let rt = if (usesMustang s) then fv else f
 >     return $ (1.0 + 4.0 * log 2.0 * rt ^ 2) ^^ (-2)
 >   where
 >     theta' = theta . frequency $ s
@@ -429,7 +429,11 @@ TBF: include the elevation limit pattern matching once this is sponsor tested.
 > calculateTRELimit wind dt s = do
 >         wind' <- wind
 >         -- Equation 25
->         let f = rmsTrackingError dt wind' / (theta . frequency $ s)
+>         let f25 = rmsTrackingError dt wind' / (theta . frequency $ s)
+>         -- Equation 26, but with variableTracking divided by 2
+>         let f26 = (variableTrackingError wind' / 2) / (theta . frequency $ s)
+>         -- TBF: temporary fix for MUSTANG
+>         let f = if usesMustang s then f26 else f25
 >         return $ f <= maxErr
 >   where
 >     maxErr = 0.2 
@@ -1157,6 +1161,12 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 
 > factorToString :: Factor -> String
 > factorToString factor = (show factor) ++ "\n" 
+
+TBF: this is a cheap way of checking the receiver type.
+We need to be checking for filled arrays ...
+
+> usesMustang :: Session -> Bool
+> usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)
 
 Quick Check properties:
 
