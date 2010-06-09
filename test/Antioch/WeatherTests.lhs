@@ -21,6 +21,8 @@
 >   , test_forecastType_1
 >   , test_forecastType_2
 >   , test_correctWindSpeed
+>   , test_gbt_wind
+>   , test_wind
 >      ]
 
 This module (except for the test-forecastType_2 test) only tests weather
@@ -120,7 +122,7 @@ Test the forecastType function for non-2006 dates:
 >         let el = pi / 4.0 :: Radians
 >         w <- getWeather . Just $ dt
 >         return $ [ wind w target
->                  , w2_wind w target
+>                  , gbt_wind w target
 >         -- TBF: this does not work & is not being used: , tatm w target
 >                  , opacity w target f
 >                  , tsys w target f
@@ -135,7 +137,7 @@ Test the forecastType function for non-2006 dates:
 >   w <- getWeather $ Just now
 >   wind' <- wind w dt
 >   assertEqual "test_dataFirstLine_wind" 6.13935418989 (fromMaybe 0.0 wind')
->   wind' <- w2_wind w dt
+>   wind' <- gbt_wind w dt
 >   assertEqual "test_dataFirstLine_w2_wind" 6.57004 (fromMaybe 0.0 wind')
 >   
 
@@ -160,7 +162,7 @@ to 2006 date.
 >   let freq = 11.2
 >   w <- getWeather $ Just now
 >   wind' <- wind w dt
->   w2_wind' <- w2_wind w dt
+>   w2_wind' <- gbt_wind w dt
 >   opacity' <- opacity w dt freq
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_data0_11Night_opacity" 4 0.0149 (fromMaybe 0.0 opacity')
@@ -177,7 +179,7 @@ to 2006 date.
 >   let freq = 11.2
 >   w <- getWeather $ Just now
 >   wind' <- wind w dt
->   w2_wind' <- w2_wind w dt
+>   w2_wind' <- gbt_wind w dt
 >   opacity' <- opacity w dt freq
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_data0_11Day_opacity" 4 0.01682 (fromMaybe 0.0 opacity')
@@ -194,7 +196,7 @@ to 2006 date.
 >   let freq = 22.6
 >   w <- getWeather $ Just now
 >   wind' <- wind w dt
->   w2_wind' <- w2_wind w dt
+>   w2_wind' <- gbt_wind w dt
 >   opacity' <- opacity w dt freq
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_data36_47Night_opacity" 4 0.2493 (fromMaybe 0.0 opacity')
@@ -211,7 +213,7 @@ to 2006 date.
 >   let freq = 15.0 
 >   w <- getWeather $ Just now
 >   wind' <- wind w dt
->   w2_wind' <- w2_wind w dt
+>   w2_wind' <- gbt_wind w dt
 >   opacity' <- opacity w dt freq
 >   tsys' <- tsys w dt freq
 >   assertAlmostEqual "test_data36_47Day_opacity" 4 0.0269 (fromMaybe 0.0 opacity')
@@ -225,6 +227,33 @@ to 2006 date.
 >     where
 >       night = fromGregorian 2006 12 10 14 15 0 
 >       day = fromGregorian 2006 12 10 14 30 0 
+
+> test_gbt_wind = TestCase $ do
+>   let now = fromGregorian 2006 6 1 8 0 0 
+>   let dt = fromGregorian 2006 6 1 9 0 0 
+>   w <- getWeather $ Just now
+>   w2_wind' <- gbt_wind w dt
+>   assertEqual "test_gbt_wind_1"  1.564047 (fromMaybe 0.0 w2_wind')
+>   winds <- mapM (getGbtWind w) (dts dt)
+>   assertEqual "test_gbt_wind_2" exp winds
+>     where
+>       dts start = map (\q -> (q*15) `addMinutes'` start) [0..8]
+>       getGbtWind w d = gbt_wind w d
+>       exp = [Just 1.564047,Just 1.564047] ++ (take 4 $ repeat (Just 0.841112)) ++ (take 3 $ repeat (Just 0.636506))
+
+> test_wind = TestCase $ do
+>   let now = fromGregorian 2006 6 1 8 0 0 
+>   let dt = fromGregorian 2006 6 1 9 0 0 
+>   w <- getWeather $ Just now
+>   wind' <- wind w dt
+>   assertEqual "test_wind_1"  1.3301781 (fromMaybe 0.0 wind')
+>   winds <- mapM (getWind w) (dts dt)
+>   assertEqual "test_wind_2"  exp winds
+>     where
+>       dts start = map (\q -> (q*15) `addMinutes'` start) [0..8]
+>       getWind w d = wind w d
+>       exp = [Just 1.3301781, Just 1.3301781] ++ (take 4 $ repeat (Just 1.279996)) ++ (take 3 $ repeat (Just 1.2406306))
+
 
 Test utilities
 
