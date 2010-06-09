@@ -48,6 +48,7 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
+> data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing deriving (Eq, Show, Read)
 
 TBF: Initially, Open, Fixed, and Windowed all share the same contents.
 Ideally, we need to evolve these as we go and add new items and remove
@@ -78,6 +79,7 @@ use a single data structure for all sessions.
 >   , lowRFI      :: Bool
 >   , lstExclude  :: [(Float, Float)]
 >   , sType       :: SessionType
+>   , oType       :: ObservingType
 >   , transit     :: TransitType
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
@@ -266,6 +268,7 @@ Simple Functions for Periods:
 >   , lstExclude  = []
 >   , sClosed     = False
 >   , sType       = Open
+>   , oType       = SpectralLine
 >   , transit     = Optional
 >   , xi          = 1.0
 >   , elLimit     = Nothing

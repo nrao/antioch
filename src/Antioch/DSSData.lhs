@@ -214,10 +214,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, stype.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS stype, observing_types AS otype WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = stype.id AND s.observing_type_id = otype.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?;"
+>       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, stype.type, otype.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS stype, observing_types AS otype WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = stype.id AND s.observing_type_id = otype.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?;"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:oty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -238,6 +238,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , band = deriveBand $ fromSql freq
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
+>           , oType = toObservingType oty
 >         }
 
 > getSessionFromPeriod :: Int -> Connection -> IO Session
@@ -353,6 +354,11 @@ TBF: is this totaly legit?  and should it be somewhere else?
 > toSessionType val = read . toUpperFirst $ fromSql val
 >   where
 >     toUpperFirst x = [toUpper . head $ x] ++ tail x
+
+> toObservingType :: SqlValue -> ObservingType
+> toObservingType val = read . toUpperFirst $ fromSql val
+>   where
+>     toUpperFirst x = if x == "spectral line" then "SpectralLine" else [toUpper . head $ x] ++ tail x
 
 Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions
