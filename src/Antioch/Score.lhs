@@ -442,8 +442,22 @@ TBF: include the elevation limit pattern matching once this is sponsor tested.
 >   where
 >     variableTE = 1.2
 
-> atmosphericStabilityLimit _ _ =
->                            factor "atmosphericStabilityLimit" . Just $ 1.0
+For non-Continuum sessions, the atmosphere is always stable.
+
+> atmosphericStabilityLimit dt s = if (oType s == Continuum) then atmosphericStabilityLimit' dt s else boolean "atmosphericStabilityLimit" . Just $ True
+
+For continumm sessions, the atmospheric stability depends on the
+downward irradiance.
+
+> atmosphericStabilityLimit' dt s = do
+>   w <- weather
+>   di <- liftIO $ irradiance w dt
+>   boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di s 
+
+> calculateAtmStabilityLimit :: Maybe Float -> Session -> Maybe Bool
+> calculateAtmStabilityLimit di s = do
+>   di' <- di
+>   return $ if di' > 330.0 then False else True
 
 3.5 Other factors
 

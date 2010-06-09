@@ -86,6 +86,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_scorePeriod
 >   --, test_mustang -- TBF: we took out the MUSTANG Hack
 >   , test_elevationLimit
+>   , test_atmosphericStability
 >   ]
 
 > benchmark = do
@@ -1306,6 +1307,19 @@ and irradiance
 >                       , elLimit = Just . deg2rad $ 10.0  } 
 >   s3 = defaultSession { dec = 1.5 -- always up
 >                       , elLimit = Just . deg2rad $ 70.0  } 
+
+
+> test_atmosphericStability = TestCase $ do
+>     w <- getWeather $ Just dt
+>     fs <- runScoring w [] $ atmosphericStabilityLimit dt s1  
+>     -- TBF: will be False till we get irradiance into DB
+>     assertEqual "test_atmosphericStability_1" 0.0 (eval fs)
+>     fs <- runScoring w [] $ atmosphericStabilityLimit dt s2  
+>     assertEqual "test_atmosphericStability_2" 1.0 (eval fs)
+>   where
+>     s1 = defaultSession { dec = 1.5, oType = Continuum } -- always up
+>     dt = fromGregorian 2006 3 1 0 0 0
+>     s2 = defaultSession { dec = 1.5, oType = SpectralLine } -- always up
 
 Test utilities
 
