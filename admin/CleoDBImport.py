@@ -118,10 +118,10 @@ class CleoDBImport:
     def getWeather(self):
         "Make actual calls to cleo to populate weather data files."
 
-        print self.atmoCmdLine
+        self.reportLine("%s\n" % self.atmoCmdLine)
         system(self.atmoCmdLine)
 
-        print self.windCmdLine
+        self.reportLine("%s\n" % self.windCmdLine)
         system(self.windCmdLine)
 
         # where are the files?  See the cleo help:
