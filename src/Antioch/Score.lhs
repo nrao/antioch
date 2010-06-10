@@ -8,6 +8,8 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities
 > import Antioch.Weather
+> import Antioch.ReceiverTemperatures
+> import Antioch.Receiver
 > import Control.Monad.RWS.Strict
 > import Control.Monad      (liftM2)
 > import Data.Array
@@ -31,7 +33,9 @@ Ranking System from Memo 5.2, Section 3
 
 > calcEfficiency      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
->     let trx = receiverTemperature dt s
+>     rt <- receiverTemperatures
+>     trx <- liftIO $ getRcvrTemperature rt s
+>     --let trx = receiverTemperature dt s
 >     tk  <- kineticTemperature dt s 
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s 
@@ -39,8 +43,9 @@ Ranking System from Memo 5.2, Section 3
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
+>         trx' <- trx
 >         minTsysPrime'' <- minTsysPrime' >>= Just . (*xf)
->         let [eff, effTransit] = map (calcEff trx tk' minTsysPrime'' zod') [za, zat] 
+>         let [eff, effTransit] = map (calcEff trx' tk' minTsysPrime'' zod') [za, zat] 
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -68,30 +73,33 @@ Ranking System from Memo 5.2, Section 3
 >     where
 >       xf = xi s
 
-> systemNoiseTemperature :: Weather -> DateTime -> Session -> IO (Maybe Float)
-> systemNoiseTemperature w dt s = runScoring w [] $ do
+> systemNoiseTemperature :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
+> systemNoiseTemperature w rt dt s = runScoring w [] rt $ do
 >     zod <- zenithOpticalDepth dt s
 >     tk  <- kineticTemperature dt s
->     let trx = receiverTemperature dt s
+>     --let trx = receiverTemperature dt s
+>     trx <- liftIO $ getRcvrTemperature rt s
 >     let za  = zenithAngle dt s
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
->     return $ liftM2 (\x y ->
+>     return $ if (isJust trx) then liftM2 (\x y ->
 >         let opticalDepth = y / (cos . min 1.5 $ rndZa) in
 >         -- Equation 7
->         trx + 5.7 + x * (1 - exp (-opticalDepth))) tk zod
+>         (fromJust trx) + 5.7 + x * (1 - exp (-opticalDepth))) tk zod else Nothing
 
-> systemNoiseTemperature' :: Weather -> DateTime -> Session -> IO (Maybe Float)
-> systemNoiseTemperature' w dt s = runScoring w [] $ do
+> systemNoiseTemperature' :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
+> systemNoiseTemperature' w rt dt s = runScoring w [] rt $ do
 >     zod <- zenithOpticalDepth dt s
 >     tk  <- kineticTemperature dt s
->     let trx = receiverTemperature dt s
+>     --let trx = receiverTemperature dt s
+>     trx <- liftIO $ getRcvrTemperature rt s
 >     let za  = zenithAngle dt s
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
->     return $ liftM2 (\x y ->
+>     return $ if (isJust trx) then liftM2 (\x y ->
 >         let opticalDepth = y / (cos . min 1.5 $ rndZa) in
 >         -- Equation 7
->         (exp opticalDepth) * (trx + 5.7 + x * (1 - exp (-opticalDepth)))) tk zod
+>         (exp opticalDepth) * ((fromJust trx) + 5.7 + x * (1 - exp (-opticalDepth)))) tk zod else Nothing
 
+> {-
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
 >     case dropWhile (\(x, _) -> x <= freq) freqBand of
@@ -111,7 +119,7 @@ Ranking System from Memo 5.2, Section 3
 >                     , (40.0, 35.0)
 >                     , (50.0, 60.0)
 >                      ]
-
+> -}
 
 > kineticTemperature      :: DateTime -> Session -> Scoring (Maybe Float)
 > kineticTemperature dt s = do
@@ -727,8 +735,8 @@ TBF The fact that we have to pass in session is a kluge resulting from the
 fact that we have not tied the knots properly among projects, sessions,
 and periods.
 
-> scorePeriod :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> IO Score
-> scorePeriod p s ss w rs = do
+> scorePeriod :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO Score
+> scorePeriod p s ss w rs rt = do
 >   scores <- mapM scorePeriod' $ dts
 >   let retval = if 0.0 `elem` scores
 >                then 0.0
@@ -737,12 +745,12 @@ and periods.
 >     where
 >   st = startTime p
 >   scorePeriod' dt = do
->     fs <- runScoring w rs $ genPeriodScore st ss >>= \f -> f dt s
+>     fs <- runScoring w rs rt $ genPeriodScore st ss >>= \f -> f dt s
 >     return $ eval fs
 >   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
-> scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> IO Score
-> scoreSession st dur s ss w rs = do
+> scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO Score
+> scoreSession st dur s ss w rs rt = do
 >   scores <- mapM scoreSession' $ dts
 >   let retval = if elem 0.0 scores
 >                then 0.0
@@ -750,7 +758,7 @@ and periods.
 >   return retval
 >     where
 >   scoreSession' dt = do
->     fs <- runScoring w rs $ genScore st ss >>= \f -> f dt s
+>     fs <- runScoring w rs rt $ genScore st ss >>= \f -> f dt s
 >     return $ eval fs
 >   dts = [(i*quarter) `addMinutes'` st | i <- [0..((dur `div` quarter)-1)]]
 
@@ -849,6 +857,7 @@ to avoid long lists of repetitive parameters.
 >     envWeather      :: Weather
 >   , envReceivers    :: ReceiverSchedule
 >   , envMeasuredWind :: Bool
+>   , envRcvrTemps    :: ReceiverTemperatures
 >   }
 
 Just an easy way to pull the stuff like weather or the receiver schedule
@@ -863,6 +872,9 @@ the Scoring Monad, as in the action "w <- weather".
 
 > measuredWind :: Scoring Bool
 > measuredWind = asks envMeasuredWind
+
+> receiverTemperatures :: Scoring ReceiverTemperatures
+> receiverTemperatures = asks envRcvrTemps
 
 The Scoring monad encapsulates the concept of a scoring action,
 all the scoring functions live in the monad so they can
@@ -883,11 +895,11 @@ A scoring action returns its results inside the Scoring monad,
 runScoring allows one to extract those results from the monad
 resulting in simple types rather than monadic types.
 
-> runScoring      :: Weather -> ReceiverSchedule -> Scoring t -> IO t
-> runScoring w rs = liftM fst . runScoring' w rs
+> runScoring      :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> Scoring t -> IO t
+> runScoring w rs rt = liftM fst . runScoring' w rs rt
 
-> runScoring'        :: Weather -> ReceiverSchedule -> Scoring t -> IO (t, [Trace])
-> runScoring' w rs f = evalRWST f (ScoringEnv w rs False) ()
+> runScoring'        :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> Scoring t -> IO (t, [Trace])
+> runScoring' w rs rt f = evalRWST f (ScoringEnv w rs False rt) ()
 
 This allows us to run scoring multiple times, all within the same trace.  Mainly
 useful for simulation.
@@ -949,8 +961,9 @@ Need to translate a session's factors into the final product score.
 
 > subfactorFactors :: Session -> Weather -> DateTime -> IO Factors
 > subfactorFactors s w dt = do
->   sysNoiseTemp <- systemNoiseTemperature w dt s
->   sysNoiseTempPrime <- systemNoiseTemperature' w dt s
+>   rt <- getReceiverTemperatures
+>   sysNoiseTemp <- systemNoiseTemperature w rt dt s
+>   sysNoiseTempPrime <- systemNoiseTemperature' w rt dt s
 >   minSysNoiseTempPrime <- minTsys' w dt s
 >   return [("sysNoiseTemp",      sysNoiseTemp)
 >         , ("sysNoiseTempPrime", sysNoiseTempPrime)
@@ -969,8 +982,9 @@ Need to translate a session's factors into the final product score.
 
 > scoreFactors :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreFactors s w ss st dur rs = do
->   fs <- runScoring w rs $ genPeriodScore st ss
->   let score' w dt = runScoring w rs $ do
+>   rt <- getReceiverTemperatures
+>   fs <- runScoring w rs rt $ genPeriodScore st ss
+>   let score' w dt = runScoring w rs rt $ do
 >       sf <- fs dt s
 >       return sf
 >   factors <- mapM (score' w) times
@@ -981,8 +995,9 @@ Need to translate a session's factors into the final product score.
 
 > scoreElements :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreElements s w ss st dur rs = do
->   fs <- runScoring w rs $ genPeriodScore st ss
->   let score' w dt = runScoring w rs $ do
+>   rt <- getReceiverTemperatures
+>   fs <- runScoring w rs rt $ genPeriodScore st ss
+>   let score' w dt = runScoring w rs rt $ do
 >       sf <- fs dt s
 >       return sf
 >   pfactors <- mapM (positionFactors s) times
@@ -1174,10 +1189,11 @@ Quick Check properties:
 >   let es = map calcEff (sessions p) in normalized es  
 >   where
 >     calcEff s = unsafePerformIO $ do
+>       rt <- getReceiverTemperatures
 >       w <- theWeather
 >       w' <- newWeather w (Just $ fromGregorian 2006 10 14 9 15 2)
 >       let dt = fromGregorian 2006 10 15 12 0 0
->       Just result <- runScoring w' [] (efficiency dt s)
+>       Just result <- runScoring w' [] rt (efficiency dt s)
 >       return result
 
 > prop_surfaceObservingEfficiency = forAll genProject $ \p ->
@@ -1227,15 +1243,16 @@ Utilities for QuickCheck properties:
 > getPressureFunction f = unsafePerformIO $ do
 >     g <- getStdGen
 >     let sessions = generate 0 g $ genSessions 100
->     runScoring undefined [] $ f sessions
+>     runScoring undefined [] undefined $ f sessions
 
 > checkBoolScore p sf = let es = map (getScoringResult sf) (sessions p) in areBools es
 
 > getScoringResult sf s = unsafePerformIO $ do
+>     rt <- getReceiverTemperatures
 >     w <- theWeather
 >     w' <- newWeather w (Just $ fromGregorian 2006 4 15 0 0 0) 
 >     let dt = fromGregorian 2006 4 15 16 0 0
->     [(_, Just result)] <- runScoring w' [] (sf dt s)
+>     [(_, Just result)] <- runScoring w' [] rt (sf dt s)
 >     return result
 
 Used for checking that some scoring factors are 0 <= && <= 1, etc.
