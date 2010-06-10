@@ -10,6 +10,7 @@
 > import Antioch.Weather
 > import Antioch.TimeAccounting
 > import Antioch.Debug
+> import Antioch.ReceiverTemperatures
 > import Control.Arrow      ((&&&), second)
 > import Data.Array
 > import Data.Fixed         (div')
@@ -144,8 +145,9 @@ the first quarter.  We should be using the weighted average found in Score.
 
 > periodSchdFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
 > periodSchdFactors p sf w = do
+>   rt <- getReceiverTemperatures
 >   w' <- newWeather w $ Just $ pForecast p
->   fs <- runScoring w rs $ factorPeriod p sf  
+>   fs <- runScoring w rs rt $ factorPeriod p sf  
 >   return $ map eval fs
 >     where
 >   rs = [] -- TBF: how to pass this down?

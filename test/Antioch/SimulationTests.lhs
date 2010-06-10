@@ -5,7 +5,6 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.PProjects
-> import Antioch.Schedule
 > import Antioch.Simulate
 > import Antioch.Debug
 > import Antioch.Statistics (scheduleHonorsFixed)

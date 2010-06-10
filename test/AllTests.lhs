@@ -14,7 +14,6 @@
 > import qualified Antioch.StatisticsTests as StatsT
 > import qualified Antioch.SimulationTests as SimsT
 > import qualified Antioch.Schedule.PackTests as PackT
-> import qualified Antioch.Schedule.ScheduleTests as ScheduleT
 > --import qualified Antioch.SunRiseSetTests as SunT
 > import qualified Antioch.TimeAccountingTests as TimeAccountingT
 > import qualified Antioch.UtilitiesTests as UtilitiesT
@@ -35,7 +34,6 @@
 >   , ReceiverTempT.tests
 >   , ReportT.tests
 >   , ReservationsT.tests
->   , ScheduleT.tests
 >   , SimsT.tests
 >   --, SunT.tests
 >   , TimeAccountingT.tests

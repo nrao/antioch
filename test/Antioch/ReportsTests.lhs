@@ -2,8 +2,8 @@
 
 > --import Antioch.Reports
 > import Antioch.RunSimulation
-> import Antioch.Schedule
 > import Antioch.Reports
+> import Antioch.Schedule
 > import Test.HUnit
 > import Antioch.Types
 > import Antioch.DateTime

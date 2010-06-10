@@ -7,8 +7,8 @@
 > import Antioch.Reports
 > import Antioch.Simulate
 > import Antioch.DateTime
-> import Antioch.Generators
 > import Antioch.Schedule
+> import Antioch.Generators
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting

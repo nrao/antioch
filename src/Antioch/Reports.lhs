@@ -4,14 +4,15 @@
 > import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.Plots
 > import Antioch.Score
-> import Antioch.Schedule
 > import Antioch.Simulate
+> import Antioch.Schedule
 > import Antioch.Statistics
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hrs, printList)
 > import Antioch.Weather
 > import Antioch.Debug
 > import Antioch.TimeAccounting
+> import Antioch.ReceiverTemperatures
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > --import Antioch.Settings (dssDataDB)
@@ -677,7 +678,8 @@ Utilities
 > getObservingEfficiency w p = do 
 >     let now' = pForecast p
 >     w'     <- newWeather w $ Just now'
->     result <- runScoring w' [] (observingEfficiency (startTime p) (session p))
+>     rt <- getReceiverTemperatures
+>     result <- runScoring w' [] rt (observingEfficiency (startTime p) (session p))
 >     return $ eval result
 
 > historicalObsEff w = mapM (getObservingEfficiency w) 
@@ -694,7 +696,8 @@ will they be using?
 
 > historicalObsScore w ps = do
 >     w' <- newWeather w . Just $ dt
->     runScoring w' [] $ genScore dt (map session ps) >>= \sf -> mapM (getScore sf) ps
+>     rt <- getReceiverTemperatures
+>     runScoring w' [] rt $ genScore dt (map session ps) >>= \sf -> mapM (getScore sf) ps
 >       where
 >         dt = fromGregorian' 2006 1 1
 

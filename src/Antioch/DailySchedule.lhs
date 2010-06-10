@@ -2,13 +2,14 @@
 
 > import Antioch.DateTime
 > import Antioch.Score
-> import Antioch.Schedule
 > --import Antioch.Simulate
 > import Antioch.Filters
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hrs, printList, overlie)
 > import Antioch.Weather
 > import Antioch.Debug
+> import Antioch.Schedule
+> import Antioch.ReceiverTemperatures
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > import Antioch.Settings (dssDataDB)
@@ -168,8 +169,9 @@ to reproduce scores.
 >     let p = head $ filter (\p -> (startTime p) == dt) ps
 >     --print $ "session : " ++ (show . session $ p)
 >     w <- getWeather $ Just . pForecast $ p
+>     rt <- getReceiverTemperatures
 >     -- make sure we can reproduce the period's score
->     periodScore <- scorePeriod p s ss w []
+>     periodScore <- scorePeriod p s ss w [] rt
 >     print " "
 >     print $ "result: " ++ (show periodScore) ++ " vs. " ++ (show . pScore $ p)
 >     print " "

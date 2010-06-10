@@ -3,7 +3,6 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Schedule.Pack as P 
-> import Antioch.Schedule 
 > import Antioch.Score
 > import Antioch.Weather
 > import Antioch.PProjects

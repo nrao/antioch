@@ -2,7 +2,6 @@
 
 > import Antioch.DateTime
 > import Antioch.PProjects
-> import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Filters           (isNotComplete)
 > import Antioch.Types

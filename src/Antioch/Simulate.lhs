@@ -2,7 +2,6 @@
 
 > import Antioch.DateTime
 > import Antioch.Generators
-> import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.Statistics
@@ -10,10 +9,12 @@
 > import Antioch.Utilities    (between, showList', overlie)
 > import Antioch.Utilities    (printList, dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Schedule
 > import Antioch.DailySchedule
 > import Antioch.SimulateObserving
 > import Antioch.Filters
 > import Antioch.Debug
+> import Antioch.ReceiverTemperatures
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
@@ -30,10 +31,11 @@ we must do all the work that usually gets done in nell.
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
 >         w <- getWeather $ Just start
+>         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
 >         let sessions' = authorizeBySemester sessions start
 >         -- now we pack, and look for backups
->         (newSchedPending, newTrace) <- runScoring' w rs $ do
+>         (newSchedPending, newTrace) <- runScoring' w rs rt $ do
 >             -- it's important that we generate the score only once per
 >             -- simulation step; otherwise we screw up the trace that
 >             -- the plots depend on

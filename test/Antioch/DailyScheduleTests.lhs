@@ -6,9 +6,10 @@
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Score
-> import Antioch.Schedule
 > import Antioch.DailySchedule
+> import Antioch.Schedule
 > import Antioch.Filters
+> import Antioch.ReceiverTemperatures
 > import Data.List (zipWith6, sort, find)
 > import Data.Maybe
 > import Test.HUnit
@@ -63,9 +64,10 @@ just make sure it gets cut off properly.
 
 > test_runDailySchedule_1 = TestCase $ do
 >   w <- getWeather Nothing
+>   rt <- getRT
 >   -- get one big period
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history [s]  
->   results <- runScoring w [] $ do
+>   results <- runScoring w [] rt $ do
 >       sf <- genScore dt . scoringSessions dt $ [s]
 >       dailySchedule' sf Pack dt minutes history [s]  
 >   assertEqual "test_runDailySchedule_1_1" exp results
@@ -74,7 +76,7 @@ just make sure it gets cut off properly.
 >   assertEqual "test_runDailySchedule_1_2" exp filtered
 >   -- make sure you work around pre-scheduled ones
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history2 [s]  
->   results <- runScoring w [] $ do 
+>   results <- runScoring w [] rt $ do 
 >       sf <- genScore dt . scoringSessions dt $ [s]
 >       dailySchedule' sf Pack dt minutes history2 [s]  
 >   assertEqual "test_runDailySchedule_1_3" exp2 results
@@ -104,9 +106,10 @@ adjusting max duration and time between.
 
 > test_runDailySchedule_2 = TestCase $ do
 >   w <- getWeather Nothing
+>   rt <- getRT
 >   --sf <- genScore dt . scoringSessions dt $ [s]
 >   -- get a number of smaller periods
->   results <- runScoring w [] $ do 
+>   results <- runScoring w [] rt $ do 
 >       sf <- genScore dt . scoringSessions dt $ [s]
 >       dailySchedule' sf Pack dt minutes history [s]  
 >   assertEqual "test_runDailySchedule_2_1" exp results
@@ -130,9 +133,10 @@ adjusting max duration and time between.
 
 > test_runDailySchedule_3 = TestCase $ do
 >   w <- getWeather Nothing
+>   rt <- getRT
 >   let ss = concatMap sessions pTestProjects
 >   let ps = concatMap periods ss
->   results <- runScoring w [] $ do
+>   results <- runScoring w [] rt $ do
 >       sf <- genScore dt . scoringSessions dt $ ss 
 >       dailySchedule' sf Pack dt minutes ps ss
 >   assertEqual "test_runDailySchedule_3" p (head $ results)

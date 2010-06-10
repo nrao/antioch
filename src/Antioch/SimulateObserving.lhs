@@ -2,13 +2,13 @@
 
 > import Antioch.DateTime
 > import Antioch.Generators
-> import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, showList', dt2semester, overlie)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Antioch.Filters
+> import Antioch.Schedule
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)

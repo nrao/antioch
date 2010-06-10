@@ -11,6 +11,7 @@
 > import Antioch.Generators (generateTestSessions)
 > import Antioch.PProjects
 > import Antioch.Utilities
+> import Antioch.ReceiverTemperatures
 > import Test.HUnit
 > import Control.Monad.Reader
 > import Data.List (sort)
@@ -626,14 +627,15 @@ attributes of the packing algorithm:
 
 > test_ToItem = TestCase $ do
 >     w <- getWeather . Just $ starttime 
+>     rt <- getRT
 >     -- create an item without a mask, i.e. no scoring
->     item' <- runScoring w [] $ do
+>     item' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [testSession]
 >         toItem starttime 0 fs [] testSession
 >     assertEqual "test_ToItem_1" result1 item'
 >     assertEqual "test_ToItem_2" 0 (length . iFuture $ item')
 >     -- now try it with the mask (dts)
->     item' <- runScoring w [] $ do
+>     item' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [testSession]
 >         toItem starttime 0 fs dts testSession
 >     assertEqual "test_ToItem_4" 48 (length . iFuture $ item') 
@@ -659,7 +661,8 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 
 > test_ToItem2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     result <- runScoring w [] $ do
+>     rt <- getRT
+>     result <- runScoring w [] rt $ do
 >         fs <- genScore starttime [sess]
 >         toItem starttime 0 fs dts sess
 >     assertEqual "test_ToItem2" expected result
@@ -813,7 +816,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_Pack1 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
 >         pack fs starttime duration [] [candidate]
 >     assertEqual "test_Pack1_1" 1 (length periods')
@@ -833,7 +837,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_PackTransit1 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
 >         pack fs starttime duration [] [candidate]
 >     assertEqual "test_PackTransit1_1" 2 (length periods')
@@ -858,7 +863,8 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_PackTransit2 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
 >         pack fs starttime duration [] [candidate]
 >     assertEqual "test_PackTransit2_1" 1 (length periods')
@@ -880,18 +886,19 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_PackBt = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods1' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods1' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate1]
 >         pack fs starttime duration [] [candidate1]
 >     assertEqual "test_PackBt_1" 1 (length periods1')
 >     assertEqual "test_PackBt_2" expPeriod1 (head periods1')
->     periods2' <- runScoring w [] $ do
+>     periods2' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate2]
 >         pack fs starttime duration [] [candidate2]
 >     assertEqual "test_PackBt_3" 2 (length periods2')
 >     assertEqual "test_PackBt_4" expPeriod2_1 (head periods2')
 >     assertEqual "test_PackBt_5" expPeriod2_2 (head . tail $ periods2')
->     periods3' <- runScoring w [] $ do
+>     periods3' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate3]
 >         pack fs starttime duration [] [candidate3]
 >     assertEqual "test_PackBt_6" 1 (length periods3')
@@ -936,8 +943,9 @@ The main value of this test is to catch changes in the packing algorithm that
 produce changes in the final result.
 
 > test_Pack2 = TestCase $ do
+>     rt <- getRT
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime duration [] sess
 >     -- TBF: how to use 
@@ -1067,7 +1075,8 @@ TBF: Scores not right due to negative score for F1 !!!
 
 > test_Pack3 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods <- runScoring w [] $ do
+>     rt <- getRT
+>     periods <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime duration [fixed] sess
 >     assertEqual "test_Pack3" expPeriods periods  
@@ -1085,7 +1094,8 @@ around fixed periods.
 
 > test_Pack4 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack4" expPeriods periods'  
@@ -1120,17 +1130,18 @@ Same as above, but with even more fixed periods
 
 > test_Pack5 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime duration fixed sess
 >     --assertEqual "test_Pack5" expPeriods periods'  
 >     -- check that unsorted fixed periods are not a problem
->     periods' <- runScoring w [] $ do
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime duration unsortedFixed sess
 >     --assertEqual "test_Pack5_unsorted" expPeriods periods'  
 >     -- check that the score is an accurate accumulation
->     let scoreAt dt =  runScoring w [] $ do
+>     let scoreAt dt =  runScoring w [] rt $ do
 >         sf <- genScore starttime sess
 >         fs <- sf dt sCV
 >         return $ eval fs
@@ -1163,8 +1174,9 @@ Same as above, but with even more fixed periods
 revealed a bug where scores are turning negative in pact.
 
 > test_Pack6 = TestCase $ do
+>     rt <- getRT
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime ss
 >         pack fs starttime duration [] ss
 >     let negScores = [p | p <- periods', pScore p < 0.0]
@@ -1178,7 +1190,8 @@ revealed a bug where scores are turning negative in pact.
 
 > test_Pack7 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime ss
 >         pack fs starttime duration fixed ss
 >     assertEqual "test_Pack6" 3 (numFixed periods') --expPeriods periods'  
@@ -1197,7 +1210,8 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 
 > test_Pack8 = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
 >         pack fs starttime duration [] [candidate]
 >     assertEqual "test_Pack8_1" 1 (length periods')
@@ -1218,7 +1232,8 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 
 > test_Pack_overlapped_fixed = TestCase $ do
 >     w <- getWeather . Just $ starttime 
->     periods' <- runScoring w [] $ do
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime duration fixed sess
 >     assertEqual "test_Pack" expPeriods periods'  
@@ -1273,13 +1288,14 @@ Now we can use it in a test:
 
 > test_RandomScore = TestCase $ do
 >     w <- getWeather . Just $ dt
->     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt defaultSession)
+>     rt <- getRT
+>     [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt defaultSession)
 >     assertEqual "test_RandomScore" hr1Score result
->     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt1 defaultSession)
+>     [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt1 defaultSession)
 >     assertEqual "test_RandomScore" hr1Score result
->     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt2 defaultSession)
+>     [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt2 defaultSession)
 >     assertEqual "test_RandomScore" hr2Score result
->     [(_, Just result)] <- runScoring w [] (randomScoreFactor dt3 defaultSession)
+>     [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt3 defaultSession)
 >     assertEqual "test_RandomScore" hr3Score result
 >   where
 >     dt = pythonTestStarttime 
@@ -1295,13 +1311,14 @@ and test again:
 
 > test_RandomScore2 = TestCase $ do
 >     w <- getWeather . Just $ dt
->     scores <- mapM (score' w) times
+>     rt <- getRT
+>     scores <- mapM (score' w rt) times
 >     assertEqual "test_RandomScore2" expScores scores
 >   where
 >     dt = pythonTestStarttime
 >     times = [(15*q) `addMinutes'` dt | q <- [0..23]]
->     score' w dt = do
->         [(_, Just result)] <- runScoring w [] (randomScoreFactor dt defaultSession)
+>     score' w rt dt = do
+>         [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt defaultSession)
 >         return result
 >     expScores = concat [(replicate 4 x) | x <- (take 6 randomList)]
 
@@ -1313,7 +1330,8 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 > test_TestPack_pack1 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
 >     w <- getWeather Nothing
->     periods' <- runScoring w [] $ periods
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_Pack1_2" [expPeriod] periods'
 >   where
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
@@ -1324,7 +1342,8 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 > test_TestPack_pack1withHistory = TestCase $ do
 >     let periods = pack randomScore starttime duration [fixed] [testSession]
 >     w <- getWeather Nothing
->     periods' <- runScoring w [] $ periods
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_Pack1_2" [fixed,p2] periods'
 >   where
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
@@ -1340,7 +1359,8 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 > test_TestPack_pack2 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
 >     w <- getWeather Nothing
->     periods' <- runScoring w [] $ periods
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack2" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
@@ -1357,7 +1377,8 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 > test_TestPack_pack3 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
 >     w <- getWeather Nothing
->     periods' <- runScoring w [] $ periods
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack3" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
@@ -1379,7 +1400,8 @@ epsilon, and so is "correct".
 > test_TestPack_pack8 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] sessions 
 >     w <- getWeather Nothing
->     periods' <- runScoring w [] $ periods
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack8" 2 (length periods')
 >     assertEqual "test_TestPack_pack8" expPeriods periods'
 >   where

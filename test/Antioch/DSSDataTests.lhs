@@ -6,6 +6,7 @@
 > import Antioch.Score
 > import Antioch.DSSData
 > import Antioch.Utilities
+> import Antioch.ReceiverTemperatures (getRT)
 > import Antioch.Generators (internalConflicts, internalConflicts', validRA, validDec)
 > import Maybe
 > import List (nub, sort)
@@ -103,6 +104,7 @@ session scores zero through out a 24 hr period.
 
 > test_scoreDSSData = TestCase $ do
 >     w <- getWeather . Just $ starttime 
+>     rt <- getRT
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
 >     let sess' = fromJust . find (\s -> (sType s) == Open) $ ss
@@ -110,7 +112,7 @@ session scores zero through out a 24 hr period.
 >     let p' = project sess'
 >     let p = p' { observers = [defaultObserver] }
 >     let sess = sess' { project = p }
->     let score' w dt = runScoring w [] $ do
+>     let score' w dt = runScoring w [] rt $ do
 >         fs <- genScore starttime ss 
 >         s <- fs dt sess
 >         return $ eval s
@@ -126,6 +128,7 @@ from the database.
 
 > test_session_scores = TestCase $ do
 >     w <- getWeather $ Just start
+>     rt <- getRT
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
 >     -- get the session and give it an observer
@@ -133,7 +136,7 @@ from the database.
 >     let p' = project s'
 >     let p = p' { observers = [defaultObserver] }
 >     let s = s' { project = p }
->     let score' w dt = runScoring w [] $ do
+>     let score' w dt = runScoring w [] rt $ do
 >         fs <- genScore start ss 
 >         sf <- fs dt s
 >         return $ eval sf
