@@ -22,14 +22,6 @@
 This module's only responsibility is for maintaining a cache of the each
 rcvr's temperatures.
 
-> instance Convertible Float SqlValue where
->     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
-
-> instance Convertible SqlValue Float where
->     safeConvert x = do
->         val :: Double <- safeConvert x
->         return $ realToFrac val
-
 > data ReceiverTemperatures = ReceiverTemperatures {
 >     temperatures :: Receiver -> IO ([(Float, Float)])
 >   , temperature  :: Receiver -> Float -> [(Float, Float)] -> IO (Float)
@@ -43,6 +35,10 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 
 > getReceiverTemperatures :: IO ReceiverTemperatures
 > getReceiverTemperatures = readIORef globalConnection >>= \cnn -> updateReceiverTemperatures cnn
+
+I'm really getting tired of typing that long-ass name:
+
+> getRT = getReceiverTemperatures
 
 > getRcvrTemps = do
 >     cache <- newIORef M.empty

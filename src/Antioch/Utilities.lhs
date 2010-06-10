@@ -1,9 +1,14 @@
+> {-# OPTIONS -XMultiParamTypeClasses -XScopedTypeVariables #-}
+
 > module Antioch.Utilities where
 
 > import Antioch.DateTime
 > import Antioch.Types
 > import qualified Antioch.SLALib as SLA
 > import Test.QuickCheck hiding (frequency)
+> import Data.Convertible
+> import Database.HDBC
+> import Database.HDBC.PostgreSQL
 
 > gbtLat, gbtLong, gbtAlt :: Double
 > -- TBF Why isn't it?  Need a reference here!
@@ -104,6 +109,14 @@ Translates a relative sidereal time (lst) at the given absolute solar time
 > zipWith9 z (a:as) (b:bs) (c:cs) (d:ds) (e:es) (f:fs) (g:gs) (h:hs) (i:is)
 >                    =  z a b c d e f g h i : zipWith9 z as bs cs ds es fs gs hs is
 > zipWith9 _ _ _ _ _ _ _ _ _ _ = []
+
+> instance Convertible Float SqlValue where
+>     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
+
+> instance Convertible SqlValue Float where
+>     safeConvert x = do
+>         val :: Double <- safeConvert x
+>         return $ realToFrac val
 
 QuickCheck Properties:
 

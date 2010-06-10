@@ -29,14 +29,6 @@ This module provides an interface to the 'weather' DB that holds:
 Note that this module uses caches for optimization.  There is a cache
 for each different table we are pulling values from.
 
-> instance Convertible Float SqlValue where
->     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
-
-> instance Convertible SqlValue Float where
->     safeConvert x = do
->         val :: Double <- safeConvert x
->         return $ realToFrac val
-
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
 >   , wind_mph        :: DateTime -> IO (Maybe Float)  -- mph
