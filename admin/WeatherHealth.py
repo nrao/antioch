@@ -39,10 +39,16 @@ class WeatherHealth:
 
     def checkMissingForecasts(self, forecastTime):
 
-        query = "SELECT wd.date FROM forecasts as f, forecast_times as ft, weather_dates as wd WHERE wd.id = f.weather_date_id AND ft.id = f.forecast_time_id AND ft.date = '%s'" % forecastTime
+        query = "SELECT wd.date FROM forecasts as f, forecast_times as ft, weather_dates as wd WHERE wd.id = f.weather_date_id AND ft.id = f.forecast_time_id AND ft.date = '%s' order by wd.date" % forecastTime
 
         r = self.cnn.query(query)
         rows = r.dictresult()
+        start =  datetime.strptime(rows[0]['date'], self.dtFormat)
+        end   =  datetime.strptime(rows[-1]['date'], self.dtFormat)
+        dhours = (end - start).days * 24
+        shours = ((end - start).seconds) / (60 * 60)
+        hours = dhours + shours
+        print "hours span: ", hours
         for i in range(len(rows)-1):
             r1 = rows[i]
             r2 = rows[i+1]
@@ -51,7 +57,7 @@ class WeatherHealth:
             hours = ((dt2 - dt1).seconds) / (60 * 60)
 
             if hours != 1:
-                print "Missing forecasts: ", dt2, dt1
+                print "Missing %d forecasts between %s and %s" % ((hours -1), dt1, dt2)
 
     def checkForecastTimeHealth(self, forecastTime):
         "For a given forecast time, how does it's data look?"
