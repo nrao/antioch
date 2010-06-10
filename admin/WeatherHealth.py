@@ -1,4 +1,5 @@
 import pg
+import sys
 from datetime import *
 
 class WeatherHealth:
@@ -12,8 +13,12 @@ class WeatherHealth:
         self.cnn = pg.connect(user = "dss", dbname = dbname)
 
     def check(self):
-        self.getAllForecastTimes()
         self.checkMissingForecastTimes()
+
+        rows = self.getAllForecastTimes()
+        fts = [datetime.strptime(r['date'], self.dtFormat) for r in rows]
+        for ft in fts:
+            self.checkForecastTimeHealth(ft)
 
     def getAllForecastTimes(self):
         query = "SELECT * FROM forecast_times ORDER BY date;"
@@ -25,12 +30,28 @@ class WeatherHealth:
         for i in range(len(rows)-1):
             r1 = rows[i]
             r2 = rows[i+1]
-            dt1 = datetime.strptime(r1['date'], format)
-            dt2 = datetime.strptime(r2['date'], format)
+            dt1 = datetime.strptime(r1['date'], self.dtFormat)
+            dt2 = datetime.strptime(r2['date'], self.dtFormat)
             hours = ((dt2 - dt1).seconds) / (60 * 60)
             
             if hours != 6:
                 print dt1, dt2
+
+    def checkMissingForecasts(self, forecastTime):
+
+        query = "SELECT wd.date FROM forecasts as f, forecast_times as ft, weather_dates as wd WHERE wd.id = f.weather_date_id AND ft.id = f.forecast_time_id AND ft.date = '%s'" % forecastTime
+
+        r = self.cnn.query(query)
+        rows = r.dictresult()
+        for i in range(len(rows)-1):
+            r1 = rows[i]
+            r2 = rows[i+1]
+            dt1 = datetime.strptime(r1['date'], self.dtFormat)
+            dt2 = datetime.strptime(r2['date'], self.dtFormat)
+            hours = ((dt2 - dt1).seconds) / (60 * 60)
+
+            if hours != 1:
+                print "Missing forecasts: ", dt2, dt1
 
     def checkForecastTimeHealth(self, forecastTime):
         "For a given forecast time, how does it's data look?"
@@ -40,7 +61,9 @@ class WeatherHealth:
 
         r = self.cnn.query(query)
 
-        print len(r)
+        print forecastTime, len(r.dictresult())
+
+        self.checkMissingForecasts(forecastTime)
 
 if __name__ == '__main__':
     dbname = sys.argv[1]
