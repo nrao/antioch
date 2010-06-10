@@ -88,4 +88,35 @@ Here are the ranges for all receivers: this was copied from the DSS database.
 >                              temp <- temperature rt rcvr' freq rcvrTemps
 >                              return $ (Just temp)
 
+> getRcvrTemperature :: ReceiverTemperatures -> Session -> IO (Maybe Float)
+> -- Use this line to use the old rcvr temperatures again.
+> --getRcvrTemperature _ s = return $ Just $ oldReceiverTemperature undefined s
+> getRcvrTemperature rt s = do
+>     getReceiverTemperature rt rcvrName freq
+>   where
+>     freq = frequency s
+>     rcvrName = getPrimaryReceiver s
+
+Debugging: Plug this into getRcvrTemperature if you want the old unit tests
+to pass.
+
+> oldReceiverTemperature      :: DateTime -> Session -> Float
+> oldReceiverTemperature _ s =
+>     case dropWhile (\(x, _) -> x <= freq) freqBand of
+>         (x : _) -> snd x
+>         []      -> 60.0
+>   where 
+>         -- in real data, freqs can be < 2.0; the DB data is gaurded against
+>         -- this, but not this function.
+>         getFrequency s = if frequency s < 2.0 then 2.0 else frequency s
+>         freq = fromIntegral . round . getFrequency $ s
+>         freqBand =  [ (1.73,  6.0)
+>                     , (3.95, 10.0)
+>                     , (5.85,  5.0)
+>                     , (10.0, 13.0)
+>                     , (15.4, 14.0)
+>                     , (26.5, 21.0)
+>                     , (40.0, 35.0)
+>                     , (50.0, 60.0)
+>                      ]
 
