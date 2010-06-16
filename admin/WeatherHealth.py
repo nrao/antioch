@@ -43,6 +43,9 @@ class WeatherHealth:
 
         r = self.cnn.query(query)
         rows = r.dictresult()
+        if len(rows) == 0:
+            print "MISSING any forecasts for %s" % forecastTime
+            return
         start =  datetime.strptime(rows[0]['date'], self.dtFormat)
         end   =  datetime.strptime(rows[-1]['date'], self.dtFormat)
         dhours = (end - start).days * 24
