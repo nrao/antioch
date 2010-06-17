@@ -676,7 +676,8 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
->              [0.0, 0.0, 3.187729, 3.1933162]
+>              --[0.0, 0.0, 3.187729, 3.1933162]
+>              [0.0, 0.0, 3.1822224,3.1877997]
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -830,6 +831,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , sAllottedS = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , frequency = 2.0
 >                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
@@ -852,11 +854,12 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , sAllottedS = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , frequency = 2.0
 >                                , project = testProject
 >                                , ra = 1.8
 >                                , transit = Partial
 >                                }
->     expStartTime1 = fromGregorian 2006 11 9 6 30 0
+>     expStartTime1 = fromGregorian 2006 11 9 6 15 0
 >     expStartTime2 = fromGregorian 2006 11 10 4 45 0
 >     expPeriod1 = Period 0 candidate expStartTime1 360 3.142498 Pending expStartTime1 False 360
 >     expPeriod2 = Period 0 candidate expStartTime2 360 3.1426687 Pending expStartTime2 False 360
@@ -877,11 +880,12 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , sAllottedS = 24*60
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
+>                                , frequency = 2.0
 >                                , project = testProject
 >                                , ra = 1.6393563
 >                                , transit = Partial
 >                                }
->     expStartTime = fromGregorian 2006 2 19 21 30 0
+>     expStartTime = fromGregorian 2006 2 19 21 45 0
 >     expPeriod = Period 0 candidate expStartTime 360 3.0658152 Pending expStartTime False 360
 
 > test_PackBt = TestCase $ do
@@ -911,6 +915,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , sAllottedS = 24*60
 >                                , minDuration = 135
 >                                , maxDuration = 135
+>                                , frequency = 2.0
 >                                , timeBetween = 0
 >                                , project = testProject
 >                                }
@@ -920,6 +925,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , minDuration = 60
 >                                , maxDuration = 60
 >                                , timeBetween = 0
+>                                , frequency = 2.0
 >                                , project = testProject
 >                                }
 >     candidate3 = defaultSession { sName = "singleton"
@@ -927,6 +933,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , sAllottedS = 24*60
 >                                , minDuration = 60
 >                                , maxDuration = 60
+>                                , frequency = 2.0
 >                                , timeBetween = duration
 >                                , project = testProject
 >                                }
@@ -947,19 +954,20 @@ produce changes in the final result.
 >     w <- getWeather . Just $ starttime 
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
->         pack fs starttime duration [] sess
+>         pack fs starttime dur [] sess
 >     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'
 >   where
 >     sess = getOpenPSessions 
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     duration = 24*60
+>     dur = 24*60
 >     expPeriods = zipWith9 Period (repeat 0) ss times durs scores (repeat Pending) times (repeat False) durs
 >       where
 >         names = ["CV", "AS", "WV", "GB"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [210, 375, 360, 180]
+>         --durs = [210, 375, 360, 180]
+>         durs = [210,450,360,180]
 >         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         times = [ starttime
 >                 , fromGregorian 2006 11 8  15 30 0
@@ -1225,6 +1233,7 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >                                , minDuration = 2*60
 >                                , maxDuration = 6*60
 >                                , timeBetween = 24*60
+>                                , frequency = 2.0
 >                                , project = testProject
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 21 45 0
@@ -1253,7 +1262,7 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     fixed4 = Period 0 ds {sId = 1003, sName = "1003"} ft4 d 0.0 Pending starttime False d
 >     fixed = [fixed1, fixed2, fixed3, fixed4]
 >     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 210 3.5666382 Pending starttime False 210
->     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 375 3.373124 Pending starttime False 375
+>     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 390 3.373124 Pending starttime False 375
 >     open3 = Period 0 (ds {sName = "WV", sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 2 15 0) 345 11.547832 Pending starttime False 360
 >     open4 = Period 0 (ds {sName = "GB", sId = getPSessionId "GB"}) (fromGregorian 2006 11 9 8 0 0) 120 6.4604607 Pending starttime False 360
 >     expPeriods = [open1, open2, fixed2, open3, open4, fixed3]
@@ -1344,7 +1353,7 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 >     w <- getWeather Nothing
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ periods
->     assertEqual "test_Pack1_2" [fixed,p2] periods'
+>     assertEqual "test_Pack1_history_2" [fixed,p2] periods'
 >   where
 >     starttime = pythonTestStarttime --fromGregorian 2006 11 8 12 0 0
 >     duration = 6*60
@@ -1426,6 +1435,7 @@ Session data to pack:
 >                               , minDuration = 2*60
 >                               , maxDuration = 6*60
 >                               , project = testProject
+>                               , frequency = 2.0
 >                              }
 
 > testSession2 = defaultSession { sName = "second"
@@ -1434,14 +1444,18 @@ Session data to pack:
 >                               , minDuration = 4*60
 >                               , maxDuration = 8*60
 >                               , project = testProject
+>                               , frequency = 2.0
 >                               }
 
 This expected result for the scoring of the session in 15-min
 increments starting at starttime is taken from the ScoreTests.lhs
 
+> --defaultPackSessionScores = (replicate 39 0.0) ++ 
+> --                [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
+> --                ,3.1139324,3.140008,3.187729,3.1933162]
 > defaultPackSessionScores = (replicate 39 0.0) ++ 
->                 [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
->                 ,3.1139324,3.140008,3.187729,3.1933162]
+>                   [3.206269,3.2143917,3.2188866,2.9098673,3.0785065,3.1219227,3.1346142,3.1822224,3.1877997]
+
 
 This is the list of random numbers generated on the python side:
 

@@ -31,8 +31,33 @@ Ranking System from Memo 5.2, Section 3
 > efficiency   dt = fmap (fmap fst) . calcEfficiency dt
 > efficiencyHA dt = fmap (fmap snd) . calcEfficiency dt
 
-> calcEfficiency      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
+This top level function makes sure that frequencies below 2 GHz are handled
+properly: they do not retrieve weather at 2 GHz, but, rather, use the
+2 GHz results to approximate the below 2 GHz result
+
+> calcEfficiency :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
+>     if freq >= 2.0 then calcEfficiency' dt s else do
+>                         effs <- calcEfficiency' dt (s {frequency = 2.0}) 
+>                         correctAtmEffs freq effs
+>   where
+>     freq = frequency s
+
+> correctAtmEffs :: Float -> Maybe (Float, Float) -> Scoring (Maybe (Float, Float))
+> correctAtmEffs freq effs = do
+>   case effs of
+>       Nothing -> return Nothing
+>       Just (eff, effHA) -> return $ Just (correctAtmEff freq eff, correctAtmEff freq effHA) 
+
+For frequencies less then 2 GHz, we must implement the correction to 
+atmospheric efficiencies described in the addendum to Memo 5.2:
+eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2 
+
+> correctAtmEff :: Float -> Float -> Float
+> correctAtmEff freq eff = (1 + ((freq/2.0)^2 * ((1/(sqrt eff)) - 1.0)))^^(-2)
+
+> calcEfficiency'      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
+> calcEfficiency' dt s = do
 >     rt <- receiverTemperatures
 >     trx <- liftIO $ getRcvrTemperature rt s
 >     --let trx = receiverTemperature dt s

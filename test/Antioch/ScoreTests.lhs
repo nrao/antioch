@@ -42,6 +42,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_observingEfficiencyLimit
 >   , test_minObservingEfficiencyFactor
 >   , test_efficiency
+>   , test_efficiency_below2GHz
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
 >   , test_positionValues
@@ -361,8 +362,8 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sess) 
 >     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sess) 
 >     let sess = findPSessionByName "AS"
->     assertResult "test_efficiency 5" (Just wdt) 2 0.9614152 (efficiency dt sess) 
->     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.45480406 (efficiencyHA dt sess)
+>     assertResult "test_efficiency 5" (Just wdt) 2 0.997521 (efficiency dt sess) 
+>     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.94227356 (efficiencyHA dt sess)
 >     assertResult "test_efficiency 7" (Just wdt) 2 0.935551 (efficiency dt sessBug)
 >     assertResult "test_efficiency 8" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
@@ -796,6 +797,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , sAllottedT = 24*60
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
+>                           , frequency = 2.0
 >                           }
 >     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0)
 
@@ -817,7 +819,9 @@ Test the 24-hour scoring profile of the default session, per quarter.
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [0.5217929,0.5231148,0.5238463,0.4625782,0.49542525,0.5059413,0.51017797,0.5179315,0.5188393,0.51937324,0.5198584,0.5274695,0.52757597,0.5277754,0.5278681,0.5323486,0.5323486,0.53238064,0.53238064,0.532714,0.532714,0.5326842,0.53262156,0.5328553,0.5327895,0.5327549,0.5326802,0.5322283,0.53211904,0.5319976,0.53178895,0.5318738,0.5316135,0.5312978,0.5309066,0.53060484]
+> --defaultScores = [0.5217929,0.5231148,0.5238463,0.4625782,0.49542525,0.5059413,0.51017797,0.5179315,0.5188393,0.51937324,0.5198584,0.5274695,0.52757597,0.5277754,0.5278681,0.5323486,0.5323486,0.53238064,0.53238064,0.532714,0.532714,0.5326842,0.53262156,0.5328553,0.5327895,0.5327549,0.5326802,0.5322283,0.53211904,0.5319976,0.53178895,0.5318738,0.5316135,0.5312978,0.5309066,0.53060484]
+
+> defaultScores = [0.5209438,0.5222635,0.5229939,0.47278547,0.5001854,0.5072396,0.50930166,0.5170368,0.517943,0.518476,0.51896036,0.52645373,0.52656007,0.5267591,0.5273235,0.53213924,0.53213924,0.5321713,0.5321713,0.5325156,0.5325156,0.5324858,0.53242314,0.532653,0.5325872,0.5325526,0.5324779,0.5320406,0.53193134,0.53181005,0.5316014,0.5316953,0.5314352,0.5311195,0.53072846,0.5304281]
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeather . Just $ origin 
@@ -871,8 +875,8 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.436132 v
->     assertEqual "test_bestDurations 3 d" 375 d
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.4960268 v
+>     assertEqual "test_bestDurations 3 d" 450 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
 
@@ -920,6 +924,7 @@ Look at the scores over a range where none are zero.
 >     sess = defaultSession { sAllottedT = 24*60 
 >                           , minDuration = dur 
 >                           , maxDuration = 6*60
+>                           , frequency = 2.0
 >                           }
 >     score' w rt sf dt = do
 >         fs <- runScoring w [] rt (sf dt sess)
@@ -927,7 +932,7 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 4.0578547 :: Score  
+>     expectedTotal = 4.0697494::Score --4.0578547 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 > test_obsAvailable = TestCase $ do
@@ -1357,6 +1362,22 @@ and irradiance
 >     s1 = defaultSession { dec = 1.5, oType = Continuum } -- always up
 >     dt = fromGregorian 2006 3 1 0 0 0
 >     s2 = defaultSession { dec = 1.5, oType = SpectralLine } -- always up
+
+> test_efficiency_below2GHz = TestCase $ do
+>     w <- getWeather . Just $ wdt 
+>     rt <- getRT
+>     Just result <- runScoring w [] rt (efficiency dt s1) 
+>     assertEqual "test_efficiency_below2GHz_1" 0.9722724 result
+>     Just result <- runScoring w [] rt (efficiency dt s2) 
+>     assertEqual "test_efficiency_below2GHz_2" 0.99295783 result
+>     Just result <- runScoring w [] rt (efficiency dt s3) 
+>     assertEqual "test_efficiency_below2GHz_3" 0.99823254 result
+>   where
+>     wdt = fromGregorian 2006 9 1 1 0 0
+>     dt = fromGregorian 2006 9 2 14 30 0
+>     s1 = defaultSession { dec = 1.5, frequency = 2.0 } 
+>     s2 = defaultSession { dec = 1.5, frequency = 1.0 } 
+>     s3 = defaultSession { dec = 1.5, frequency = 0.5 } 
 
 Test utilities
 
