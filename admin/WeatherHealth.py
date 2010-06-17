@@ -11,6 +11,12 @@ class WeatherHealth:
         self.dbname = dbname # ex: "weather"
 
         self.cnn = pg.connect(user = "dss", dbname = dbname)
+        
+        self.sixHourForecastStart = datetime(2007, 12, 1)
+
+        # reports
+        self.missingForecastTimes = []
+        self.forecastTimes = {}
 
     def check(self):
         self.checkMissingForecastTimes()
@@ -36,15 +42,20 @@ class WeatherHealth:
             
             if hours != 6:
                 print dt1, dt2
+                self.missingForecastTimes.append((dt1, dt2))
 
     def checkMissingForecasts(self, forecastTime):
 
         query = "SELECT wd.date FROM forecasts as f, forecast_times as ft, weather_dates as wd WHERE wd.id = f.weather_date_id AND ft.id = f.forecast_time_id AND ft.date = '%s' order by wd.date" % forecastTime
 
+        #self.forecastTimes.update([(forecastTime, {})])
+        self.forecastTimes[forecastTime] = {}
+
         r = self.cnn.query(query)
         rows = r.dictresult()
         if len(rows) == 0:
             print "MISSING any forecasts for %s" % forecastTime
+            self.forecastTimes[forecastTime]["hour_span"] = 0
             return
         start =  datetime.strptime(rows[0]['date'], self.dtFormat)
         end   =  datetime.strptime(rows[-1]['date'], self.dtFormat)
@@ -52,6 +63,17 @@ class WeatherHealth:
         shours = ((end - start).seconds) / (60 * 60)
         hours = dhours + shours
         print "hours span: ", hours
+        self.forecastTimes[forecastTime]["hour_span"] = hours 
+        self.forecastTimes[forecastTime]["gaps"] = []
+
+        firstDt = datetime.strptime(rows[0]['date'], self.dtFormat)
+        if firstDt > forecastTime:
+            hours = ((firstDt - forecastTime).seconds) / (60 * 60)
+            print "Missing %d forecasts between %s and %s" % ((hours -1), forecastTime, firstDt)
+            self.forecastTimes[forecastTime]["gaps"].append((hours-1, forecastTime, firstDt))
+
+
+
         for i in range(len(rows)-1):
             r1 = rows[i]
             r2 = rows[i+1]
@@ -61,6 +83,8 @@ class WeatherHealth:
 
             if hours != 1:
                 print "Missing %d forecasts between %s and %s" % ((hours -1), dt1, dt2)
+                self.forecastTimes[forecastTime]["gaps"].append((hours-1, dt1, dt2))
+                
 
     def checkForecastTimeHealth(self, forecastTime):
         "For a given forecast time, how does it's data look?"
@@ -73,6 +97,31 @@ class WeatherHealth:
         print forecastTime, len(r.dictresult())
 
         self.checkMissingForecasts(forecastTime)
+
+    def report(self):
+        "After the DB has been checked, anything interesting in the results?"
+
+        # TBF: print this all to a file as well
+
+        print "Report: "
+
+        print "possible missing forecast times: "
+        print self.missingForecastTimes
+        
+        dts = self.forecastTimes.keys()
+        dts.sort()
+
+        print "String hour spans:"
+        for dt in dts:
+            span = self.forecastTimes[dt]["hour_span"] 
+            if span != 54 and span != 60 and dt < self.sixHourForecastStart:
+                print dt, span
+                
+        print "Gaps in weather dates: "
+        for dt in dts:
+            gaps = self.forecastTimes[dt].get("gaps", [])
+            for g in gaps:
+                print  "Missing %d forecasts between %s and %s for FT %s" % (g[0], g[1], g[2], dt)
 
     def cleanUp(self, start, end):
         """
@@ -145,6 +194,7 @@ if __name__ == '__main__':
     print "checking health of db: ", dbname
     wh = WeatherHealth(dbname)
     wh.check()
+    wh.report()
     #start = datetime(2007, 1, 1, 0)
     #end   = datetime(2008, 2, 1, 12)
     #wh.cleanUp(start, end)
