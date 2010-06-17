@@ -74,8 +74,77 @@ class WeatherHealth:
 
         self.checkMissingForecasts(forecastTime)
 
+    def cleanUp(self, start, end):
+        """
+        Delete all data entries linked to forecast times between (inclusive)
+        the two given dates
+        """
+
+        query = """
+        SELECT wd.date, f.forecast_type_id 
+        FROM weather_dates as wd, forecasts as f, forecast_times as ft
+        WHERE ft.id = f.forecast_time_id AND  wd.id = f.weather_date_id
+          AND ft.date >= '%s' AND ft.date <= '%s';
+        """ % (start, end)
+
+        r = self.cnn.query(query)
+
+        dts = []
+
+        for row in r.dictresult():
+            dt = row['date']
+            type = row['forecast_type_id']
+
+            if dt not in dts:
+                dts.append(dt)
+                print "weather date: ", dt
+
+            # cleanup frequencies
+            subquery = """
+            SELECT f.id
+            FROM weather_dates as wd, forecasts as f
+            WHERE wd.id = f.weather_date_id 
+                AND wd.date = '%s' 
+                AND f.forecast_type_id = %d
+            """ % (dt, type)
+
+            query = """
+            DELETE FROM forecast_by_frequency
+            USING forecasts
+            WHERE forecast_id = forecasts.id AND forecasts.id = (%s);
+            """ % subquery
+
+            r = self.cnn.query(query)
+            print "Deleted this many frequency forecasts: ", r, type
+
+            # now delete the forecasts
+            query = """
+            DELETE FROM forecasts
+            USING weather_dates
+            WHERE weather_date_id = weather_dates.id 
+               AND weather_dates.date = '%s'
+               AND forecast_type_id = %d
+            """ % (dt, type)
+
+            r = self.cnn.query(query)
+            print "Deleted this many forecasts: ", r, type
+
+
+        # finally, delete this forecast time
+        query = """
+        DELETE FROM forecast_times WHERE date >= '%s' 
+        AND date <= '%s';
+        """ % (start, end)    
+
+        r = self.cnn.query(query)
+        print "Deleted this many forecast_times: ", r
+           
+
 if __name__ == '__main__':
     dbname = sys.argv[1]
     print "checking health of db: ", dbname
     wh = WeatherHealth(dbname)
     wh.check()
+    #start = datetime(2007, 1, 1, 0)
+    #end   = datetime(2008, 2, 1, 12)
+    #wh.cleanUp(start, end)
