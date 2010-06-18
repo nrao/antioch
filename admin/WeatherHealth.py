@@ -4,7 +4,7 @@ from datetime import *
 
 class WeatherHealth:
 
-    def __init__(self, dbname):
+    def __init__(self, dbname, filename = None):
 
         self.dtFormat = "%Y-%m-%d %H:%M:%S"
 
@@ -15,16 +15,38 @@ class WeatherHealth:
         self.sixHourForecastStart = datetime(2007, 12, 1)
 
         # reports
+        self.quiet = False
+        self.filename = filename
+        self.reportLines = []
         self.missingForecastTimes = []
         self.forecastTimes = {}
+        self.badValues = {}
+
+    def add(self, lines):
+        "For use with printing reports"
+        if not self.quiet:
+            print lines
+        self.reportLines += lines
+
+    def writeReport(self, filename = None):
+        self.filename = filename
+        if self.filename is not None:
+            f = open(self.filename, 'w')
+            f.writelines(self.reportLines)
+            f.close()
 
     def check(self):
+        "Top level method for checking DB health"
+
+        self.checkForBadValues()    
         self.checkMissingForecastTimes()
 
         rows = self.getAllForecastTimes()
         fts = [datetime.strptime(r['date'], self.dtFormat) for r in rows]
         for ft in fts:
+            print ft
             self.checkForecastTimeHealth(ft)
+
 
     def getAllForecastTimes(self):
         query = "SELECT * FROM forecast_times ORDER BY date;"
@@ -41,7 +63,7 @@ class WeatherHealth:
             hours = ((dt2 - dt1).seconds) / (60 * 60)
             
             if hours != 6:
-                print dt1, dt2
+                #print dt1, dt2
                 self.missingForecastTimes.append((dt1, dt2))
 
     def checkMissingForecasts(self, forecastTime):
@@ -54,7 +76,7 @@ class WeatherHealth:
         r = self.cnn.query(query)
         rows = r.dictresult()
         if len(rows) == 0:
-            print "MISSING any forecasts for %s" % forecastTime
+            #print "MISSING any forecasts for %s" % forecastTime
             self.forecastTimes[forecastTime]["hour_span"] = 0
             return
         start =  datetime.strptime(rows[0]['date'], self.dtFormat)
@@ -62,14 +84,14 @@ class WeatherHealth:
         dhours = (end - start).days * 24
         shours = ((end - start).seconds) / (60 * 60)
         hours = dhours + shours
-        print "hours span: ", hours
+        #print "hours span: ", hours
         self.forecastTimes[forecastTime]["hour_span"] = hours 
         self.forecastTimes[forecastTime]["gaps"] = []
 
         firstDt = datetime.strptime(rows[0]['date'], self.dtFormat)
         if firstDt > forecastTime:
             hours = ((firstDt - forecastTime).seconds) / (60 * 60)
-            print "Missing %d forecasts between %s and %s" % ((hours -1), forecastTime, firstDt)
+            #print "Missing %d forecasts between %s and %s" % ((hours -1), forecastTime, firstDt)
             self.forecastTimes[forecastTime]["gaps"].append((hours-1, forecastTime, firstDt))
 
 
@@ -82,7 +104,7 @@ class WeatherHealth:
             hours = ((dt2 - dt1).seconds) / (60 * 60)
 
             if hours != 1:
-                print "Missing %d forecasts between %s and %s" % ((hours -1), dt1, dt2)
+                #print "Missing %d forecasts between %s and %s" % ((hours -1), dt1, dt2)
                 self.forecastTimes[forecastTime]["gaps"].append((hours-1, dt1, dt2))
                 
 
@@ -94,34 +116,78 @@ class WeatherHealth:
 
         r = self.cnn.query(query)
 
-        print forecastTime, len(r.dictresult())
+        #print forecastTime, len(r.dictresult())
 
         self.checkMissingForecasts(forecastTime)
+
+    def checkForBadValues(self):
+        "Looks for NULLs and default values from CLEO"
+
+        # look in forecasts
+        columns = ['wind_speed', 'wind_speed_mph', 'irradiance']
+        for col in columns:
+            query = """
+            SELECT id FROM forecasts where %s = -9999 or %s = NULL
+            """ % (col, col)
+            r = self.cnn.query(query)
+            self.badValues[col] = len(r.dictresult())
+
+        # look in frequencies
+        columns = ['opacity', 'tsys']
+        for col in columns:
+            query = """
+            SELECT id FROM forecast_by_frequency where %s = -9999 or %s = NULL
+            """ % (col, col)
+            r = self.cnn.query(query)
+            self.badValues[col] = len(r.dictresult())
+     
+        # TBF: we know that beforee 2005-02-02 there's a bunch of bad stuff
+        columns = ['opacity', 'tsys']
+        for col in columns:
+            query = """
+            SELECT ff.id 
+            FROM forecast_by_frequency as ff, forecasts as f, 
+                weather_dates as wd
+            WHERE wd.id = f.weather_date_id 
+                AND ff.forecast_id = f.id 
+                AND (%s = -9999 or %s = NULL)
+                AND wd.date > '2005-02-02 00:00:00'
+            """ % (col, col)
+            r = self.cnn.query(query)
+            self.badValues[col+"_past_bad_date"] = len(r.dictresult())
 
     def report(self):
         "After the DB has been checked, anything interesting in the results?"
 
         # TBF: print this all to a file as well
 
-        print "Report: "
+        self.add("Report: \n")
 
-        print "possible missing forecast times: "
-        print self.missingForecastTimes
+        self.add("Possible missing Forecast Times: \n")
+        self.add("%s\n" % self.missingForecastTimes)
+        #for m in self.missingForecastTimes:
+        #    self.add("%s\n" % m)
         
         dts = self.forecastTimes.keys()
         dts.sort()
 
-        print "String hour spans:"
+        self.add("Forecast Time hour spans: \n")
         for dt in dts:
             span = self.forecastTimes[dt]["hour_span"] 
             if span != 54 and span != 60 and dt < self.sixHourForecastStart:
-                print dt, span
+                self.add("%s - %d\n" % (dt, span))
                 
-        print "Gaps in weather dates: "
+        self.add("Gaps in weather dates: \n")
         for dt in dts:
             gaps = self.forecastTimes[dt].get("gaps", [])
             for g in gaps:
-                print  "Missing %d forecasts between %s and %s for FT %s" % (g[0], g[1], g[2], dt)
+                self.add("Missing %d forecasts between %s and %s for FT %s\n" % (g[0], g[1], g[2], dt))
+
+        self.add("Bad Values: \n")
+        for col, count in self.badValues.items():
+            self.add("Column %s has %d bad values\n" % (col, count))
+
+        self.writeReport(self.filename)
 
     def cleanUp(self, start, end):
         """
@@ -192,7 +258,8 @@ class WeatherHealth:
 if __name__ == '__main__':
     dbname = sys.argv[1]
     print "checking health of db: ", dbname
-    wh = WeatherHealth(dbname)
+    filename = 'weatherReport.txt'
+    wh = WeatherHealth(dbname, filename = filename)
     wh.check()
     wh.report()
     #start = datetime(2007, 1, 1, 0)
