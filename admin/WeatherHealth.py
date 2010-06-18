@@ -21,6 +21,7 @@ class WeatherHealth:
         self.missingForecastTimes = []
         self.forecastTimes = {}
         self.badValues = {}
+        self.missingFreqs = []
 
     def add(self, lines):
         "For use with printing reports"
@@ -112,13 +113,48 @@ class WeatherHealth:
         "For a given forecast time, how does it's data look?"
 
         # there should be a certain number of forecasts ... (ex: 85)
-        query = "SELECT f.id FROM forecasts as f, forecast_times as ft WHERE ft.id = f.forecast_time_id AND ft.date = '%s'" % forecastTime
+        #query = "SELECT f.id FROM forecasts as f, forecast_times as ft WHERE ft.id = f.forecast_time_id AND ft.date = '%s'" % forecastTime
 
-        r = self.cnn.query(query)
+        #r = self.cnn.query(query)
 
         #print forecastTime, len(r.dictresult())
 
         self.checkMissingForecasts(forecastTime)
+
+        self.checkMissingFrequencies(forecastTime)
+
+    def checkMissingFrequencies(self, forecastTime):
+
+        # get the forecasts for this forecast time
+        q = """
+        SELECT f.id 
+        FROM forecasts as f, forecast_times as ft 
+        WHERE f.forecast_time_id = ft.id 
+           AND ft.date = '%s'
+        """ % forecastTime
+
+        r = self.cnn.query(q)
+
+        # for each forecast, make sure they have the right number of freqs
+        for row in r.dictresult():
+           forecastId = int(row['id'])
+
+           q = """
+           SELECT count(ff.id) 
+           FROM forecast_by_frequency as ff, forecasts as f 
+           WHERE f.id = ff.forecast_id 
+              AND f.id = %d
+           """ % forecastId
+
+           r = self.cnn.query(q)
+
+           numFreqs = int(r.dictresult()[0]['count'])
+
+           print numFreqs
+           if numFreqs != 85:
+               self.missingFreqs.append((forecastTime, forecastId, numFreqs))
+
+            
 
     def checkForBadValues(self):
         "Looks for NULLs and default values from CLEO"
@@ -186,6 +222,9 @@ class WeatherHealth:
         self.add("Bad Values: \n")
         for col, count in self.badValues.items():
             self.add("Column %s has %d bad values\n" % (col, count))
+
+        # TBF:
+        print self.missingFreqs
 
         self.writeReport(self.filename)
 
