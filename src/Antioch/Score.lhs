@@ -473,7 +473,6 @@ TBF: include the elevation limit pattern matching once this is sponsor tested.
 >     maxErr = 0.2 
 
 >  -- Equation 11
-> --rmsTrackingError dt w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
 > rmsTrackingError dt w = sqrt (((rmsTE dt ^ 2) - (trErrSigmaNight ^ 2)) + (abs w / 2.1) ^ 4)
 
 >  -- Equation 15

@@ -677,7 +677,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
 >              --[0.0, 0.0, 3.187729, 3.1933162]
->              [0.0, 0.0, 3.1822224,3.1877997]
+>              [0.0, 0.0, 3.1832325,3.18881187]
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -967,12 +967,12 @@ produce changes in the final result.
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
 >         --durs = [210, 375, 360, 180]
->         durs = [210,450,360,180]
+>         durs = [225,435,360,225]
 >         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         times = [ starttime
->                 , fromGregorian 2006 11 8  15 30 0
->                 , fromGregorian 2006 11 9   3  0 0
->                 , fromGregorian 2006 11 9   9  0 0 ]
+>                 , fromGregorian 2006 11 8  15 45 0
+>                 , fromGregorian 2006 11 9   2 15 0
+>                 , fromGregorian 2006 11 9   8 15  0 ]
 >         scores = [3.5666382, 3.373124, 10.851959, 6.554545]
 
 Same test, but this time, stick some fixed periods in there.
@@ -1125,11 +1125,11 @@ around fixed periods.
 >         ids' = map getPSessionId names
 >         ids  = [head ids']++[1000,1001]++(tail ids')
 >         ss  = map (\i -> ds {sId = i}) ids
->         durs = [240, dur1, dur2, 360, 180]
+>         durs = [240, dur1, dur2, 360, 225]
 >         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
 >         times = [starttime, ft1, ft2
->                , fromGregorian 2006 11 9 3 0 0
->                , fromGregorian 2006 11 9 9 0 0] 
+>                , fromGregorian 2006 11 9 2 15 0
+>                , fromGregorian 2006 11 9 8 15 0] 
 >         -- TBF: don't tie pack tests to numerical scores
 >         -- TBF: bug - second score should be zero!!!!
 >         scores = [3.551355, 0.0, 0.0, 12.851959,6.554545]
@@ -1244,13 +1244,19 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
->         pack fs starttime duration fixed sess
+>         pack fs starttime dur fixed sess
+>     let expDurs = map duration expPeriods
+>     let gotDurs = map duration periods'
+>     assertEqual "test_Pack_overlapped_fixed_1" expDurs gotDurs
+>     let expStarts = map (toSqlString . startTime) expPeriods
+>     let gotStarts = map (toSqlString . startTime) periods'
+>     assertEqual "test_Pack_overlapped_fixed_2" expStarts gotStarts
 >     assertEqual "test_Pack" expPeriods periods'  
 >   where
 >     sess = getOpenPSessions 
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     duration = 24*60
+>     dur = 24*60
 >     ft1 = ((-4)*60)  `addMinutes'` starttime -- -outside range
 >     ft2 = (10*60) `addMinutes'` starttime -- inside range
 >     ft3 = (22*60) `addMinutes'` starttime -- overlaps end boundary
@@ -1261,8 +1267,8 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     fixed3 = Period 0 ds {sId = 1002, sName = "1002"} ft3 d 0.0 Pending starttime False d
 >     fixed4 = Period 0 ds {sId = 1003, sName = "1003"} ft4 d 0.0 Pending starttime False d
 >     fixed = [fixed1, fixed2, fixed3, fixed4]
->     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 210 3.5666382 Pending starttime False 210
->     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 390 3.373124 Pending starttime False 375
+>     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 225 3.5666382 Pending starttime False 210
+>     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 45 0) 375 3.373124 Pending starttime False 375
 >     open3 = Period 0 (ds {sName = "WV", sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 2 15 0) 345 11.547832 Pending starttime False 360
 >     open4 = Period 0 (ds {sName = "GB", sId = getPSessionId "GB"}) (fromGregorian 2006 11 9 8 0 0) 120 6.4604607 Pending starttime False 360
 >     expPeriods = [open1, open2, fixed2, open3, open4, fixed3]
@@ -1454,8 +1460,7 @@ increments starting at starttime is taken from the ScoreTests.lhs
 > --                [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
 > --                ,3.1139324,3.140008,3.187729,3.1933162]
 > defaultPackSessionScores = (replicate 39 0.0) ++ 
->                   [3.206269,3.2143917,3.2188866,2.9098673,3.0785065,3.1219227,3.1346142,3.1822224,3.1877997]
-
+>     [3.207287,3.2154124,3.219909,2.9261482,3.0864375,3.1245124,3.1356096,3.1832325,3.1888118]
 
 This is the list of random numbers generated on the python side:
 

@@ -269,7 +269,7 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >         return result
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
->     expected = [False, True, True, False, False, False, True]
+>     expected = [False, True, True, False, True, False, True]
 
 > test_observingEfficiency = TestCase $ do
 >     -- pTestProjects session CV
@@ -280,31 +280,31 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >     let s = findPSessionByName "CV"
 >     fs <- runScoring w [] rt (observingEfficiency dt s)
 >     let result = eval fs
->     assertAlmostEqual "test_observingEfficiency" 4 0.8577623 result
+>     assertAlmostEqual "test_observingEfficiency" 4 0.8590153 result
 
 > test_minObservingEfficiencyFactor = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 10 14 8 0 0
 >     rt <- getRT
 >     fs <- runScoring w [] rt (observingEfficiency dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 1" 0.48535314 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.49641892 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s1)
 >     assertEqual "test_minObservingEfficiencyFactor 2" 0.5247221 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 3" 3.173581e-13 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 1.811661e-11 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 4" 0.48535314  (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 0.49641892 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 5" 0.5247221 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 6" 3.173581e-13 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 1.811661e-11 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s3)
->     assertEqual "test_minObservingEfficiencyFactor 7" 0.7583644 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 7" 0.7756546 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 8" 0.81987834 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 9" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s4)
->     assertEqual "test_minObservingEfficiencyFactor 10" 0.9249718 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 10" 0.94606066 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s4)
@@ -328,12 +328,12 @@ BETA: TestObservingEfficiency.py test_efficiency
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
->     assertAlmostEqual "test_observingEfficiency2" 4 0.97434574 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2" 4 0.9766027 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
 >     -- BETA: difference due to Float vs. Double
 >     assertAlmostEqual "test_observingEfficiency2_2" 2 0.97567 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
->     assertAlmostEqual "test_observingEfficiency2_3" 2 0.71677315 (eval fs)
+>     assertAlmostEqual "test_observingEfficiency2_3" 2 0.760433 (eval fs)
 
 BETA: TestObservingEfficiencyLimit.testHaskell
 
@@ -345,10 +345,10 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit <18" 3.0780464e-4 result
+>     assertEqual "test_observingEfficiencyLimit <18" 3.952222e-4 result
 >     let s = findPSessionByName "GB"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit >=18" 1.6728761e-4 result
+>     assertEqual "test_observingEfficiencyLimit >=18" 2.080223e-4 result
 
 BETA: TestAtmosphericOpacity.py testefficiency
 
@@ -530,14 +530,14 @@ BETA: TestTrackingEfficiency.py testefficiencyHaskell
 >     -- session LP
 >     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency lp" Nothing 4 0.9976445 (trackingEfficiency dt sess)
+>     assertScoringResult "test_trackingEfficiency lp" Nothing 4 0.9999554 (trackingEfficiency dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
 >     rt <- getRT
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingEfficiency dt s)
->     assertAlmostEqual "test_trackingEfficiency cv" 3 0.9879579 result 
+>     assertAlmostEqual "test_trackingEfficiency cv" 3 0.98940104 result 
 
 BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 
@@ -672,7 +672,7 @@ BETA: TestSurfaceObservingEfficiency testefficiency
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV" 5 1.2679951e-3 result  
+>     assertAlmostEqual "test_scoreCV" 5 1.630488e-3 result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -686,7 +686,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 4.6854753 result  
+>     assertAlmostEqual "test_scoreCV2" 3 4.692339 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -814,14 +814,13 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = take 97 $ [2.327,2.3243728,2.321247,2.3177772,2.3132033] ++ (repeat 0.0)
+>     expected = take 97 $ [2.328064,2.3254356,2.3223083,2.3188372,2.314261] ++ (repeat 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> --defaultScores = [0.5217929,0.5231148,0.5238463,0.4625782,0.49542525,0.5059413,0.51017797,0.5179315,0.5188393,0.51937324,0.5198584,0.5274695,0.52757597,0.5277754,0.5278681,0.5323486,0.5323486,0.53238064,0.53238064,0.532714,0.532714,0.5326842,0.53262156,0.5328553,0.5327895,0.5327549,0.5326802,0.5322283,0.53211904,0.5319976,0.53178895,0.5318738,0.5316135,0.5312978,0.5309066,0.53060484]
 
-> defaultScores = [0.5209438,0.5222635,0.5229939,0.47278547,0.5001854,0.5072396,0.50930166,0.5170368,0.517943,0.518476,0.51896036,0.52645373,0.52656007,0.5267591,0.5273235,0.53213924,0.53213924,0.5321713,0.5321713,0.5325156,0.5325156,0.5324858,0.53242314,0.532653,0.5325872,0.5325526,0.5324779,0.5320406,0.53193134,0.53181005,0.5316014,0.5316953,0.5314352,0.5311195,0.53072846,0.5304281]
+> defaultScores = [0.5211093,0.5224294,0.52316,0.4754307,0.50147396,0.50766027,0.50946337,0.517201,0.5181075,0.51864064,0.51912516,0.526621,0.52672726,0.52692646,0.527491,0.5323082,0.5323082,0.5323403,0.5323403,0.53268474,0.53268474,0.5326549,0.53259224,0.53282213,0.5327564,0.53272176,0.5326471,0.53220946,0.5321003,0.53197885,0.53177017,0.53186417,0.53160393,0.5312882,0.53089696,0.53059655]
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeather . Just $ origin 
@@ -830,19 +829,19 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 4.3957114, 4*60 + 15)
+>     let expected = (s, 4.4021516, 4*60 + 15)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- best period length overriding min/max
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 4.3792863, 4*60)
+>     let expected = (s, 4.385702, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >     -- best period length using session's min/max, but only 4 hours left
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing exht
->     let expected = (exht, 4.3792863, 4*60)
+>     let expected = (exht, 4.385702, 4*60)
 >     assertEqual "test_bestDuration 3" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -871,11 +870,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertAlmostEqual "test_bestDurations 2 v" 5 4.3957114 v
+>     assertAlmostEqual "test_bestDurations 2 v" 5 4.4021516 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.4960268 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.4960961 v
 >     assertEqual "test_bestDurations 3 d" 450 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
@@ -932,7 +931,7 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 4.0697494::Score --4.0578547 :: Score  
+>     expectedTotal = 4.074926::Score --4.0578547 :: Score  
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 > test_obsAvailable = TestCase $ do
