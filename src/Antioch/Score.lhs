@@ -224,10 +224,11 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 > theta f = 740.0 / f
 
 > rmsTE :: DateTime -> Float
-> rmsTE dt = if isPTCSDayTime dt then sigmaDay else sigmaNight
->   where
->     sigmaDay = 3.3
->     sigmaNight = 2.8
+> rmsTE dt = if isPTCSDayTime dt then trErrSigmaDay else trErrSigmaNight
+
+> trErrSigmaNight, trErrSigmaDay :: Float
+> trErrSigmaNight = 2.8
+> trErrSigmaDay   = 3.3
 
 > trackingEfficiency dt s = do
 >   wind' <- getRealOrForecastedWind dt
@@ -472,7 +473,8 @@ TBF: include the elevation limit pattern matching once this is sponsor tested.
 >     maxErr = 0.2 
 
 >  -- Equation 11
-> rmsTrackingError dt w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
+> --rmsTrackingError dt w = sqrt (rmsTE dt ^ 2 + (abs w / 2.1) ^ 4)
+> rmsTrackingError dt w = sqrt (((rmsTE dt ^ 2) - (trErrSigmaNight ^ 2)) + (abs w / 2.1) ^ 4)
 
 >  -- Equation 15
 > variableTrackingError w = sqrt (variableTE ^ 2 + (abs w / 2.1) ^ 4)
