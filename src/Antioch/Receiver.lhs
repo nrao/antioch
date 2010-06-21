@@ -90,14 +90,12 @@ Here are the ranges for all receivers: this was copied from the DSS database.
 
 > getRcvrTemperature :: ReceiverTemperatures -> Session -> IO (Maybe Float)
 > -- Use this line to use the old rcvr temperatures again.
-> getRcvrTemperature _ s = return $ Just $ oldReceiverTemperature undefined s
-> {-
+> --getRcvrTemperature _ s = return $ Just $ oldReceiverTemperature undefined s
 > getRcvrTemperature rt s = do
 >     getReceiverTemperature rt rcvrName freq
 >   where
 >     freq = frequency s
 >     rcvrName = getPrimaryReceiver s
-> -}
 
 Debugging: Plug this into getRcvrTemperature if you want the old unit tests
 to pass.
