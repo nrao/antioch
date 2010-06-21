@@ -41,7 +41,6 @@ class WeatherHealth:
 
         self.checkForBadValues()    
         self.checkMissingForecastTimes()
-
         rows = self.getAllForecastTimes()
         fts = [datetime.strptime(r['date'], self.dtFormat) for r in rows]
         for ft in fts:
@@ -61,10 +60,10 @@ class WeatherHealth:
             r2 = rows[i+1]
             dt1 = datetime.strptime(r1['date'], self.dtFormat)
             dt2 = datetime.strptime(r2['date'], self.dtFormat)
-            hours = ((dt2 - dt1).seconds) / (60 * 60)
-            
+            hours = ((dt2 - dt1).seconds) / (60 * 60) + \
+                    ((dt2 - dt1).days * 24)
+           
             if hours != 6:
-                #print dt1, dt2
                 self.missingForecastTimes.append((dt1, dt2))
 
     def checkMissingForecasts(self, forecastTime):
@@ -150,11 +149,8 @@ class WeatherHealth:
 
            numFreqs = int(r.dictresult()[0]['count'])
 
-           print numFreqs
            if numFreqs != 85:
                self.missingFreqs.append((forecastTime, forecastId, numFreqs))
-
-            
 
     def checkForBadValues(self):
         "Looks for NULLs and default values from CLEO"
@@ -200,9 +196,9 @@ class WeatherHealth:
         self.add("Report: \n")
 
         self.add("Possible missing Forecast Times: \n")
-        self.add("%s\n" % self.missingForecastTimes)
-        #for m in self.missingForecastTimes:
-        #    self.add("%s\n" % m)
+        #self.add("%s\n" % self.missingForecastTimes)
+        for m in self.missingForecastTimes:
+            self.add("Missing FTs between %s and %s\n" % (m[0], m[1]))
         
         dts = self.forecastTimes.keys()
         dts.sort()
@@ -223,8 +219,8 @@ class WeatherHealth:
         for col, count in self.badValues.items():
             self.add("Column %s has %d bad values\n" % (col, count))
 
-        # TBF:
-        print self.missingFreqs
+        self.add("Number of forecasts missing frequencies: %d\n" % \
+            len(self.missingFreqs))
 
         self.writeReport(self.filename)
 
