@@ -60,7 +60,6 @@ eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2
 > calcEfficiency' dt s = do
 >     rt <- receiverTemperatures
 >     trx <- liftIO $ getRcvrTemperature rt s
->     --let trx = receiverTemperature dt s
 >     tk  <- kineticTemperature dt s 
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s 
@@ -70,7 +69,9 @@ eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2
 >         zod' <- zod
 >         trx' <- trx
 >         minTsysPrime'' <- minTsysPrime' >>= Just . (*xf)
->         let [eff, effTransit] = map (calcEff trx' tk' minTsysPrime'' zod') [za, zat] 
+>         --let [eff, effTransit] = map (calcEff trx' tk' minTsysPrime'' zod') [za, zat] 
+>         let [tsys, tsysTransit] = map (tSysPrime' trx' tk' zod') [za, zat] 
+>         let [eff, effTransit] = map (\t -> (minTsysPrime'' / t) ^2) [tsys, tsysTransit]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -78,17 +79,38 @@ eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2
 >     elevation' = (pi/2 - za)
 >     xf = xi s
 >            
->     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
->       where
->         -- Round off to the nearest degree to align with hist. min. opacities
->         rndZa = deg2rad . realToFrac . round . rad2deg $ za
->         -- Equation 4 & 6
->         opticalDepth = zod / (cos . min 1.5 $ rndZa)
->
->         -- Equation 7
->         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
->
->         tsys' = exp opticalDepth * tsys
+
+For given input, gather the necessary intermediate values needed from the
+resources: weather and receiver temperatures. Then pass them on to the 
+function that actually computes tsys':
+
+> tSysPrime :: Receiver -> Float -> Float -> DateTime -> Scoring (Maybe Float)
+> tSysPrime rcvr freq elev dt = do
+>   rt <- receiverTemperatures
+>   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
+>   w   <- weather
+>   tk' <- liftIO $ tsys w dt freq
+>   zod' <- liftIO $ opacity w dt freq
+>   let za = pi/2 - elev 
+>   return $ do 
+>       tk <- tk'
+>       zod <- zod'
+>       trx <- trx'
+>       return $ tSysPrime' trx tk zod za
+
+Actual Calculation of tsys prime (Equations 4, 6, 7).
+This is for use both in scoring a session and when calculating
+the historical weather (i.e. stringency and min. eff. system temp.)
+
+> tSysPrime' :: Float -> Float -> Float -> Float -> Float
+> tSysPrime' trx tk zod za = exp opticalDepth * tsys
+>   where
+>     -- Round off to the nearest degree to align with hist. min. opacities
+>     rndZa = deg2rad . realToFrac . round . rad2deg $ za
+>     -- Equation 4 & 6
+>     opticalDepth = zod / (cos . min 1.5 $ rndZa)
+>     -- Equation 7
+>     tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
