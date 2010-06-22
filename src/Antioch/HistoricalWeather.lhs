@@ -57,7 +57,9 @@ Here's our code:
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
 >   cnn <- connectDB
->   -- TBF: first init the DB
+>   -- First init the DB
+>   --truncateTable cnn "t_sys"
+>   --truncateTable cnn "stringency"
 >   -- Then the min. effective system temperature
 >   mapM (updateMinEffSysTemp cnn) getMinEffSysTempArgs 
 >   -- Then the stringency
@@ -190,13 +192,32 @@ TBF: refactor to share code from Weather and DSSData
 >   where
 >     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
 
+> truncateTable :: Connection -> String -> IO ()
+> truncateTable cnn table = do
+>   result <- quickQuery' cnn query []
+>   commit cnn
+>   return ()
+>     where
+>       query = "TRUNCATE TABLE " ++ table
+
 TBF: change schema to handle rcvrs
 
 > putMinEffSysTemp :: Connection -> Receiver -> Int -> Int -> Float -> IO ()
 > putMinEffSysTemp cnn rcvr freq elev tsys = do
->   result <- quickQuery' cnn query xs
+>   rcvrId <- getRcvrId cnn rcvr
+>   result <- quickQuery' cnn query (xs rcvrId)
 >   commit cnn
 >   return ()
 >     where
->       query = "INSERT INTO tsys (frequency, elevation, total) VALUES (?, ?, ?)"
->       xs = [toSql freq, toSql elev, toSql tsys]
+>       query = "INSERT INTO t_sys (receiver_id, frequency, elevation, total, prime) VALUES (?, ?, ?, ?, 0.0)"
+>       xs rcvrId = [toSql rcvrId, toSql freq, toSql elev, toSql tsys]
+
+TBF: this stolen from DSSData.lhs
+
+> getRcvrId :: Connection -> Receiver -> IO Int
+> getRcvrId cnn rcvr = do
+>     result <- quickQuery' cnn query xs
+>     return $ fromSql . head . head $ result 
+>   where
+>     query = "SELECT id FROM receivers WHERE name = ?;"
+>     xs = [toSql . show $ rcvr]

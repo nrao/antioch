@@ -56,7 +56,7 @@ TBF:
 >   w <- getWeather $ Just dt
 >   rt <- getReceiverTemperatures
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 False dt
->   assertEqual "stringencyLimit" (Just 1.0) sl
+>   assertEqual "stringencyLimit" (Just 0.0) sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 False dt
 >   assertEqual "stringencyLimit_2" (Just 0.0) sl
 >     where
