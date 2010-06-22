@@ -96,10 +96,10 @@ Returns an array of every hour that we have weather for
 >     return $ minimum $ concatMap maybeToList sysTemps
 
 > calculateEffSysTemps :: Receiver -> Int -> Int -> IO [(Maybe Float)]
-> calculateEffSysTemps rcvr freq elev = mapM (tSysPrimeNow rcvr f e)  getWeatherDates
->   where 
->     f = fromIntegral freq
->     e = fromIntegral elev
+> calculateEffSysTemps rcvr freq elev = mapM (tSysPrimeNow rcvr freq elev)  getWeatherDates
+>  -- where 
+>  --   f = fromIntegral freq
+>  --   e = fromIntegral elev
 
 > tSysPrimeNow :: Receiver -> Int -> Int -> DateTime -> IO (Maybe Float)
 > tSysPrimeNow rcvr freq elev dt = do
@@ -110,8 +110,68 @@ Returns an array of every hour that we have weather for
 >     where
 >       f = fromIntegral freq
 >       e = fromIntegral elev
-> 
-> 
+
+> getStringency :: Receiver -> Int -> Int -> Bool -> IO Float
+> getStringency rcvr freq elev cont = do
+>     limits <- calculateStringencyLimits rcvr freq elev cont
+>     return $ (fromIntegral . length $ limits) / (sum $ concatMap maybeToList limits)
+
+> calculateStringencyLimits :: Receiver -> Int -> Int -> Bool -> IO [(Maybe Float)]
+> calculateStringencyLimits rcvr freq elev cont = mapM (calcStringencyLimit rcvr freq elev cont) getWeatherDates
+
+> calcStringencyLimit ::  Receiver -> Int -> Int -> Bool -> DateTime -> IO (Maybe Float)
+> calcStringencyLimit rcvr freq elev cont dt = do
+>   w <- getWeather $ Just dt
+>   rt <- getReceiverTemperatures
+>   strg <- runScoring w [] rt $ stringencyLimit rcvr f e cont dt
+>   return strg
+>     where
+>       f = fromIntegral freq
+>       e = fromIntegral elev
+
+A combination of different limiting scoring factors (tracking error limit,
+observing efficiency limit, atmospheric stability limit, depending on observing
+type). Note that in order to reuse code from Score.lhs, we create a dummy
+session to score.
+TBF: should I put this in Score.lhs?
+
+> stringencyLimit :: Receiver -> Float -> Float -> Bool -> DateTime -> Scoring (Maybe Float)
+> stringencyLimit rcvr freq elev cont dt = do
+>   -- observing efficiency limit
+>   fs <- observingEfficiencyLimit dt s
+>   let obsEffLimit = eval fs
+>   let obsEffOK = obsEffLimit >= eta_min
+>   -- tracking error limit
+>   fs2 <- trackingErrorLimit dt s
+>   let trErrLimit = eval fs2
+>   let trErrOK = trErrLimit >= 1
+>   -- atmospheric statbility
+>   fs3 <- atmosphericStabilityLimit dt s
+>   let atmStbLimit = eval fs3
+>   let atmStbOK = atmStbLimit >= 1
+>   return $ if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
+>     where
+>       s = mkDummySession rcvr freq elev cont dt
+>       eta_min = 0.2 -- TBF???
+
+Creates a dummy session with the given attributes.  The only tricky part
+is giving the session a target that will be at the specified elevation
+at the specified time.
+
+> mkDummySession :: Receiver -> Float -> Float -> Bool -> DateTime -> Session
+> mkDummySession rcvr freq elev cont dt = defaultSession { frequency = freq
+>     , receivers = [[rcvr]]
+>     , ra = ra'
+>     , dec = dec'
+>     , oType = if cont then Continuum else SpectralLine }
+>   where
+>     ra' = fst $ getRaDec elev dt
+>     dec' = snd $ getRaDec elev dt
+
+TBF: this sucks, what constraint do I need to use to get this?
+
+> getRaDec :: Float -> DateTime -> (Float, Float)
+> getRaDec elev dt = (0.0, 1.5)
 
 TBF: refactor to share code from Weather and DSSData
 
