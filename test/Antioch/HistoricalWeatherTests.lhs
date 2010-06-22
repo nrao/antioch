@@ -20,8 +20,14 @@
 >                  ]
 
 > test_getWeatherDates = TestCase $ do
->     print $ map toSqlString getWeatherDates
+>     let wdts = map toSqlString getWeatherDates
 >     assertEqual "getWeatherDates" True True
+
+> test_getMinEffSysTempArgs = TestCase $ do
+>   let args = getMinEffSysTempArgs
+>   assertEqual "getMinEffSysTempArgs_1" 7396 (length args)
+>   assertEqual "getMinEffSysTempArgs_2" (Rcvr1_2,1,5) (head args)
+>   assertEqual "getMinEffSysTempArgs_3" (RcvrArray18_26,28,90) (last args)
 
 > test_getMinEffSysTemp = TestCase $ do
 >     m <- getMinEffSysTemp Rcvr1_2 1 10

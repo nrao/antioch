@@ -58,19 +58,29 @@ Here's our code:
 > updateHistoricalWeather = do
 >   cnn <- connectDB
 >   -- TBF: first init the DB
->   let args = [(r, f, e) | e <- elevs, f <- freqs, r <- rcvrs] 
->   -- For testing:
->   --let args = [(r, f, e) | e <- [5 .. 6], f <- [2 .. 3], r <- [Rcvr_342 .. Rcvr_450]] 
->   print args
->   values <- mapM (updateMinEffSysTemp cnn) args
->   print $ values
->     where
->       elevs = [5 .. 90]
->       freqs = [2 .. 52] ++ [54, 56 .. 120]
->       rcvrs = [Rcvr_342 .. RcvrArray18_26]
+>   -- Then the min. effective system temperature
+>   mapM (updateMinEffSysTemp cnn) getMinEffSysTempArgs 
+>   -- Then the stringency
+>   return ()
 
 > --getMinEffSysTemp' :: (Receiver, Int, Int) -> IO Float
 > --getMinEffSysTemp' (r, f, e) = getMinEffSysTemp r f e
+
+We need to not just iterate through all elevations, but, more complicated,
+iterate through the frequency range of each receiver, for every receiver.
+However, we don't need to go below 2 GHz, since we don't have forecast
+values below 2 GHz, so leave those receivers out.
+
+> getMinEffSysTempArgs :: [(Receiver, Int, Int)]
+> getMinEffSysTempArgs = [(r, f, e) | (r, f) <- rcvrFreqs, e <- elevations]
+>   where
+>     elevations = [5 .. 90]
+>     rcvrFreqs = concatMap getRcvrFreqs [Rcvr1_2 .. RcvrArray18_26]
+
+> getRcvrFreqs :: Receiver -> [(Receiver, Int)]
+> getRcvrFreqs rcvr = [(rcvr, freq) | freq <- [(round low) .. (round hi)]]
+>   where
+>     (low, hi) = getRcvrRange rcvr
 
 Returns an array of every hour that we have weather for
 
