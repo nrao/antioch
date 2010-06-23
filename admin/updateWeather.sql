@@ -148,6 +148,11 @@ ALTER TABLE t_sys ADD COLUMN receiver_id integer;
 CREATE INDEX t_sys_receiver_id ON t_sys USING btree (receiver_id);
 ALTER TABLE ONLY t_sys ADD CONSTRAINT t_sys_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES receivers(id) DEFERRABLE INITIALLY DEFERRED;
 
+ALTER TABLE ONLY t_sys
+    DROP CONSTRAINT t_sys_frequency_key;
+ALTER TABLE ONLY t_sys
+    ADD CONSTRAINT t_sys_frequency_key UNIQUE (frequency, elevation, receiver_id);
+
 -- add receiver_id and observing_type_id to stringency table
 
 ALTER TABLE stringency ADD COLUMN observing_type_id integer;
