@@ -77,10 +77,16 @@ values below 2 GHz, so leave those receivers out.
 > getMinEffSysTempArgs = [(r, f, e) | (r, f) <- rcvrFreqs, e <- elevations]
 >   where
 >     elevations = [5 .. 90]
->     rcvrFreqs = concatMap getRcvrFreqs [Rcvr1_2 .. RcvrArray18_26]
+>     -- for min eff sys temp, we dont want the PF rcvrs, and we don't want
+>     -- to go below 2 GHz
+>     rcvrFreqs = concatMap (getRcvrFreqs (\f -> f >= 2)) [Rcvr1_2 .. RcvrArray18_26]
 
-> getRcvrFreqs :: Receiver -> [(Receiver, Int)]
-> getRcvrFreqs rcvr = [(rcvr, freq) | freq <- [(round low) .. (round hi)]]
+Use the receivers frequency range to create an array that looks like:
+[(rcvr, low), (rcvr, low+1) .. (rcvr, high)].  Note one can specify a 
+gaurd as well to keep out unwanted frequencies.
+
+> getRcvrFreqs :: (Int -> Bool) -> Receiver -> [(Receiver, Int)]
+> getRcvrFreqs g rcvr = [(rcvr, freq) | freq <- [(round low) .. (round hi)], g freq]
 >   where
 >     (low, hi) = getRcvrRange rcvr
 
