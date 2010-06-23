@@ -172,6 +172,24 @@ tests.
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
+stringency
+
+Stringency vs. Frequency @ 90 degress elevation
+
+> plotStringency :: StatsPlot
+> plotStringency fn n _ _ _ = do
+>   w <- getWeather Nothing
+>   str <- mapM (stringency w) freqs
+>   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqs str
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "stringency", plotData)]
+>     where
+>   freqs = [2 .. 50]
+>   stringency w f = totalStringency w f (pi/2)
+>   title = "Stringency vs. Frequency (@90') " ++ n
+>   xl = "Freq. (GHz)"
+>   yl = "Stringency"
+>   --fn = "stringency.png"
+
 simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
@@ -808,6 +826,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
+>  , plotStringency     $ rootPath ++ "/stringency.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
