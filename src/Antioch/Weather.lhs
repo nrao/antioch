@@ -42,6 +42,9 @@ for each different table we are pulling values from.
 >   , minTSysPrime    :: Frequency -> Radians -> IO (Maybe Float)
 >   , newWeather      :: Maybe DateTime -> IO Weather
 >   , forecast        :: DateTime
+>   -- the 'best' set of functions ignores forecast type
+>   , bestOpacity     :: DateTime -> Frequency -> IO (Maybe Float)
+>   , bestTsys        :: DateTime -> Frequency -> IO (Maybe Float)
 >   }
 
 The "unsafePerformIO hack" is a way of emulating global variables in GHC.
@@ -97,6 +100,7 @@ Here the various caches are initialized.
 >     (windf, wind_mphf, irradiancef) <- getForecasts'
 >     (gbt_windf, gbt_irrf) <- getGbtWeather'
 >     (opacityf, tsysf)   <- getOpacityAndTSys'
+>     (bestOpacityf, bestTsysf)   <- getBestOpacityAndTSys'
 >     stringencyf         <- getTotalStringency'
 >     minOpacityf         <- getMinOpacity'
 >     minTSysf            <- getMinTSysPrime'
@@ -113,6 +117,8 @@ Here the various caches are initialized.
 >       , minTSysPrime    = minTSysf conn
 >       , newWeather      = updateWeather conn
 >       , forecast        = now'
+>       , bestOpacity     = bestOpacityf conn 
+>       , bestTsys        = bestTsysf conn 
 >       }
 
 forecastType takes both 'now' and a forecastTime since we have to be 
@@ -303,6 +309,12 @@ on frequency.  Here it's cache is initialized.
 >     cache <- newIORef M.empty
 >     return (getOpacity cache, getTSys cache)
 
+The 'Best' set of functions avoids dealing with forecast types.
+
+> getBestOpacityAndTSys' = do
+>     cache <- newIORef M.empty
+>     return (getBestOpacity cache, getBestTSys cache)
+
 > fetchOpacityAndTSys cnn dt freqIdx ftype = handleSqlError $ do
 >     result <- quickQuery' cnn query xs
 >     case result of
@@ -339,12 +351,32 @@ on frequency.  Here it's cache is initialized.
 >     freqIdx = freq2Index frequency
 >     key     = (dt, freqIdx, ftype)
 
+Unlike getOpacity, getBestOpacity avoids specifying a forecast type, and
+simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
+
+> getBestOpacity :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> DateTime -> Frequency -> IO (Maybe Float)
+> getBestOpacity cache cnn dt frequency = liftM fst. withCache key cache $
+>     fetchAnyOpacityAndTSys cnn dt freqIdx 
+>   where
+>     freqIdx = freq2Index frequency
+>     key     = (dt, freqIdx)
+
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
 >     fetchOpacityAndTSys cnn dt freqIdx ftype
 >   where
 >     freqIdx = freq2Index frequency
 >     key     = (dt, freqIdx, ftype)
+
+Unlike getTSys, getBestTSys avoids specifying a forecast type, and
+simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
+
+> getBestTSys :: IORef (M.Map (Int, Int) (Maybe Float, Maybe Float)) -> Connection -> DateTime -> Frequency -> IO (Maybe Float)
+> getBestTSys cache cnn dt frequency = liftM snd . withCache key cache $
+>     fetchAnyOpacityAndTSys cnn dt freqIdx 
+>   where
+>     freqIdx = freq2Index frequency
+>     key     = (dt, freqIdx)
 
 > getTotalStringency' = caching getTotalStringency
 > getMinOpacity'      = caching getMinOpacity
