@@ -30,19 +30,25 @@
 >   assertEqual "getMinEffSysTempArgs_3" (RcvrArray18_26,28,90) (last args)
 
 > test_getMinEffSysTemp = TestCase $ do
->     m <- getMinEffSysTemp Rcvr1_2 1 10
+>     w <- getWeather Nothing
+>     rts <- getReceiverTemperatures
+>     m <- getMinEffSysTemp w rts Rcvr1_2 2 10
 >     assertEqual "getMinEffSysTemp" 23.936523 m
 
 
 > test_calculateEffSysTemps = TestCase $ do
->   sysTemps <- calculateEffSysTemps Rcvr1_2 1 10
+>   w <- getWeather Nothing
+>   rts <- getReceiverTemperatures
+>   sysTemps <- calculateEffSysTemps w rts Rcvr1_2 1 10
 >   assertEqual "calculateEffSysTemps" 25 (length sysTemps)
 >   assertEqual "calculateEffSysTemps_2" 25 (length sysTemps)
 >   assertEqual "calculateEffSysTemps_3" (Just 23.964426) (head sysTemps)
 >   assertEqual "calculateEffSysTemps_4" (Just 23.982384) (last sysTemps)
 
 > test_tSysPrimeNow = TestCase $ do
->   tsys <- tSysPrimeNow Rcvr1_2 1 10 now
+>   w <- getWeather Nothing
+>   rts <- getReceiverTemperatures
+>   tsys <- tSysPrimeNow w rts Rcvr1_2 1 10 now
 >   assertEqual "tSysPrimeNow" (Just 23.964115) tsys
 >     where
 >   now = fromGregorian 2006 6 1 1 0 0

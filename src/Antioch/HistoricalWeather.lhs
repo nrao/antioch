@@ -10,6 +10,8 @@
 > import Data.Maybe (maybeToList)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
+> import System.CPUTime
+> import Control.Monad.RWS.Strict
 
 From Dana Balser:
 
@@ -54,19 +56,26 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 Here's our code:
 
+TBF: just running updateMinEffSysTemp, it's clear that we should optimize this.
+For example, just covering a year's worth of forecasts, to run getMinEffSysTemp
+(that is for a given receiver, frequency and elevation) takes ~5 minutes.
+That means it might take 20 days to run (for just one year's worth!).
+It seems that one flaw is how weather and recevier temperatures are not
+shared across calls to tSysPrimeNow.  
+
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
 >   cnn <- connectDB
+>   -- initialize the caches for these DB connections here
+>   rts <- getReceiverTemperatures
+>   w <- getWeather Nothing
 >   -- First init the DB
->   --truncateTable cnn "t_sys"
+>   truncateTable cnn "t_sys"
 >   --truncateTable cnn "stringency"
 >   -- Then the min. effective system temperature
->   mapM (updateMinEffSysTemp cnn) getMinEffSysTempArgs 
->   -- Then the stringency
+>   mapM (updateMinEffSysTemp cnn w rts) getMinEffSysTempArgs 
+>   -- TBF: Then the stringency
 >   return ()
-
-> --getMinEffSysTemp' :: (Receiver, Int, Int) -> IO Float
-> --getMinEffSysTemp' (r, f, e) = getMinEffSysTemp r f e
 
 We need to not just iterate through all elevations, but, more complicated,
 iterate through the frequency range of each receiver, for every receiver.
@@ -79,7 +88,8 @@ values below 2 GHz, so leave those receivers out.
 >     elevations = [5 .. 90]
 >     -- for min eff sys temp, we dont want the PF rcvrs, and we don't want
 >     -- to go below 2 GHz
->     rcvrFreqs = concatMap (getRcvrFreqs (\f -> f >= 2)) [Rcvr1_2 .. RcvrArray18_26]
+>     -- TBF: until the new weather DB is ready, don't go above 50 either
+>     rcvrFreqs = concatMap (getRcvrFreqs (\f -> f >= 2)) [Rcvr1_2 .. Rcvr40_52] --RcvrArray18_26]
 
 Use the receivers frequency range to create an array that looks like:
 [(rcvr, low), (rcvr, low+1) .. (rcvr, high)].  Note one can specify a 
@@ -91,43 +101,74 @@ gaurd as well to keep out unwanted frequencies.
 >     (low, hi) = getRcvrRange rcvr
 
 Returns an array of every hour that we have weather for
+TBF: eventually this should go from about May 2004 to the present (6 years!)
 
 > getWeatherDates :: [DateTime]
 > getWeatherDates = map (addHours start) [0 .. hours]
 >   where
->     start = fromGregorian 2006 6 1 0 0 0 -- TBF
->     end   = fromGregorian 2006 6 2 0 0 0 -- TBF
+>     start = fromGregorian 2006 2 1 0 0 0 -- TBF
+>     end   = fromGregorian 2006 12 30 0 0 0 -- TBF
 >     hours = (diffMinutes' end start) `div` 60
 >     addHours dt hrs = (hrs * 60) `addMinutes'` dt
 
-> updateMinEffSysTemp :: Connection -> (Receiver, Int, Int) -> IO ()
-> updateMinEffSysTemp cnn (rcvr, freq, elev) = do
->   print $ (show rcvr) ++ " " ++ (show freq) ++ " " ++ (show elev)
->   minEffSysTemp <- getMinEffSysTemp rcvr freq elev
->   -- TBF: uncomment this when you release
->   --putMinEffSysTemp cnn rcvr freq elev minEffSysTemp
->   print $ minEffSysTemp 
+---------------Min. Effective System Temperature---------------
 
-> getMinEffSysTemp :: Receiver -> Int -> Int ->  IO Float
-> getMinEffSysTemp rcvr freq elev = do 
->     sysTemps <- calculateEffSysTemps rcvr freq elev 
+Gets the Minimum Effective System Temperature, and writes it to the DB.
+
+> updateMinEffSysTemp :: Connection -> Weather -> ReceiverTemperatures -> (Receiver, Int, Int) -> IO ()
+> updateMinEffSysTemp cnn w rts (rcvr, freq, elev) = do
+>   print $ (show rcvr) ++ " " ++ (show freq) ++ " " ++ (show elev)
+>   --begin <- getCurrentTime
+>   minEffSysTemp <- getMinEffSysTemp w rts rcvr freq elev
+>   --print $ minEffSysTemp 
+>   --end <- getCurrentTime
+>   --let execTime = end - begin
+>   --print $ "mins to calculate: " ++ (show ((fromIntegral execTime) / 60.0))
+>   -- TBF: uncomment this when you release
+>   putMinEffSysTemp cnn rcvr freq elev minEffSysTemp
+>   return ()
+
+Gets the Minimum Effective System Temperature
+
+> getMinEffSysTemp :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int ->  IO Float
+> getMinEffSysTemp w rts rcvr freq elev = do 
+>     sysTemps <- calculateEffSysTemps w rts rcvr freq elev 
 >     return $ minimum $ concatMap maybeToList sysTemps
 
-> calculateEffSysTemps :: Receiver -> Int -> Int -> IO [(Maybe Float)]
-> calculateEffSysTemps rcvr freq elev = mapM (tSysPrimeNow rcvr freq elev)  getWeatherDates
->  -- where 
->  --   f = fromIntegral freq
->  --   e = fromIntegral elev
+> calculateEffSysTemps :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> IO [(Maybe Float)]
+> calculateEffSysTemps w rts rcvr freq elev = mapM (tSysPrimeNow w rts rcvr freq elev)  getWeatherDates
 
-> tSysPrimeNow :: Receiver -> Int -> Int -> DateTime -> IO (Maybe Float)
-> tSysPrimeNow rcvr freq elev dt = do
->   w <- getWeather $ Just dt
->   rt <- getReceiverTemperatures
->   tsys' <- runScoring w [] rt $ tSysPrime rcvr f e dt
+> tSysPrimeNow :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> DateTime -> IO (Maybe Float)
+> tSysPrimeNow w rts rcvr freq elev dt = do
+>   tsys' <- runScoring w [] rts $ tSysPrimeNow' rcvr f e dt
 >   return tsys'
 >     where
 >       f = fromIntegral freq
 >       e = fromIntegral elev
+
+We originally were able to use Score.sSysPrime directly, but for maximizing
+performance, we wanted to use the 'bestTsys/Opacity' methods below.  These
+methods allow us to maximize use of the cache and minimize our hits to the DB.
+Otherwise, it could take weeks to fill the t_sys table.
+
+> tSysPrimeNow' :: Receiver -> Float -> Float -> DateTime -> Scoring (Maybe Float)
+> tSysPrimeNow' rcvr freq elev dt = do
+>   rt <- receiverTemperatures
+>   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
+>   -- here we are using the 'best' methods to avoid having to deal
+>   -- with specifiying the forecast type, which 
+>   w   <- weather
+>   tk' <- liftIO $ bestTsys w dt freq
+>   zod' <- liftIO $ bestOpacity w dt freq
+>   let za = pi/2 - elev 
+>   return $ do 
+>       tk <- tk'
+>       zod <- zod'
+>       trx <- trx'
+>       -- Call the tSysPrime' method used in Score.lhs
+>       return $ tSysPrime' trx tk zod za
+
+--------------Stringency--------------------
 
 > getStringency :: Receiver -> Int -> Int -> Bool -> IO Float
 > getStringency rcvr freq elev cont = do
