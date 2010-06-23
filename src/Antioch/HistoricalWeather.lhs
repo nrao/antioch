@@ -6,6 +6,7 @@
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Antioch.Weather
+> import Antioch.Utilities
 > import Antioch.Settings                (weatherDB)
 > import Data.Maybe (maybeToList)
 > import Database.HDBC
@@ -160,7 +161,7 @@ Otherwise, it could take weeks to fill the t_sys table.
 >   w   <- weather
 >   tk' <- liftIO $ bestTsys w dt freq
 >   zod' <- liftIO $ bestOpacity w dt freq
->   let za = pi/2 - elev 
+>   let za = pi/2 - (deg2rad elev) 
 >   return $ do 
 >       tk <- tk'
 >       zod <- zod'
