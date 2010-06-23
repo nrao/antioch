@@ -156,6 +156,8 @@ Otherwise, it could take weeks to fill the t_sys table.
 > tSysPrimeNow' rcvr freq elev dt = do
 >   rt <- receiverTemperatures
 >   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
+>   -- Simply use this line to get results that agree with previous values
+>   --let trx' = Just $ oldReceiverTemperature dt defaultSession {frequency = freq}
 >   -- here we are using the 'best' methods to avoid having to deal
 >   -- with specifiying the forecast type, which 
 >   w   <- weather
