@@ -13,6 +13,7 @@
 > import Antioch.Debug
 > import Antioch.TimeAccounting
 > import Antioch.ReceiverTemperatures
+> import Antioch.HistoricalWeather
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > --import Antioch.Settings (dssDataDB)
@@ -172,6 +173,23 @@ tests.
 >   times = [(i*60) `addMinutes'` dt | i <- [0 .. hours]]
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
+
+minEffSysTemp
+
+minEffSysTemp vs. Frequency @ 90 degress elevation
+
+> plotMinEffSysTemp :: StatsPlot
+> plotMinEffSysTemp fn n _ _ _ = do
+>   w <- getWeather Nothing
+>   str <- mapM (mtsys w) freqs
+>   let plotData = zipWith (\a b -> (fromIntegral a, (maybe 0.0 id b))) freqs str
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "min eff sys temp", plotData)]
+>     where
+>   freqs = [f | (r, f) <- getMinEffSysTempFreqs]
+>   mtsys w f = minTSysPrime w (fromIntegral f) (pi/2)
+>   title = "Min. Effective Sys. Temp. vs. Frequency (@90') " ++ n
+>   xl = "Freq. (GHz)"
+>   yl = "Min. Effecitve System Temperature"
 
 simDecFreq (stars, crosses)
 
@@ -811,6 +829,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
+>  , plotMinEffSysTemp $ rootPath ++ "/minEffSysTemp.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
