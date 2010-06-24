@@ -259,23 +259,7 @@ class CleoDBImport:
         return self.addTimeToDB(timestamp, "import_times")
 
     def addWeatherDate(self, timestamp):
-        """
-        Searches for given timestamp value in the weather_dates
-        table.  If it doesn't exist, create it.
-        In any case returns it's ID.
-        """
-
-        # look to see if this timestamp already exists
-        r = self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
-
-        if len(r.dictresult()) == 0:
-            # it doesn't, insert it
-            self.c.query("INSERT INTO weather_dates (date) VALUES ('%s')" % timestamp)
-            # now get the id of what we just created
-            r = \
-                self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
-
-        return r.dictresult()[0]["id"]
+        return self.addTimeToDB(timestamp, "weather_dates")
 
     def addForecast(self
                   , forecast_type_id
