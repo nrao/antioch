@@ -16,7 +16,7 @@
 >  , test_calculateEffSysTemps
 >  , test_tSysPrimeNow
 >  , test_getRaDec
->  , test_stringencyLimit
+>  --, test_stringencyLimit
 >                  ]
 
 > test_getWeatherDates = TestCase $ do
@@ -69,8 +69,24 @@ TBF:
 >   dt = fromGregorian 2006 6 1 1 0 0
 >   rcvr = Rcvr2_3
 
+
+> {-
 > test_calculateStringencyLimits = TestCase $ do
 >   sls <- calculateStringencyLimits Rcvr4_6 5 45 False
 >   assertEqual "calculateStringencyLimits_1" 25 (length sls)
 >   sls <- calculateStringencyLimits Rcvr40_52 45 45 False
 >   assertEqual "calculateStringencyLimits_2" 25 (length sls)
+> -}
+
+> test_getStringencyArgs = TestCase $ do
+>   let args = getStringencyArgs
+>   assertEqual "getStringencyArgs_1" 8772 (length args)
+>   assertEqual "getStringencyArgs_2" (Rcvr1_2,1,5,False) (head args)
+>   assertEqual "getStringencyArgs_3" (RcvrArray18_26,28,90,True) (last args)
+
+> test_getStringencies = TestCase $ do
+>   rts <- getReceiverTemperatures
+>   let args = [(Rcvr1_2, 1, 5, False), (Rcvr1_2, 1, 5, True)]
+>   strs <- getStringencies rts args
+>   print strs
+>   assertEqual "getStringencies_1" True True 

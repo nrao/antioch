@@ -181,12 +181,12 @@ minEffSysTemp vs. Frequency @ 90 degress elevation
 > plotMinEffSysTemp :: StatsPlot
 > plotMinEffSysTemp fn n _ _ _ = do
 >   w <- getWeather Nothing
->   str <- mapM (mtsys w) freqs
->   let plotData = zipWith (\a b -> (fromIntegral a, (maybe 0.0 id b))) freqs str
+>   minTsys <- mapM (mtsys w) freqs
+>   let plotData = zipWith (\a b -> (fromIntegral . snd $ a, (maybe 0.0 id b))) freqs minTsys
 >   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "min eff sys temp", plotData)]
 >     where
->   freqs = [f | (r, f) <- getMinEffSysTempFreqs]
->   mtsys w f = minTSysPrime w (fromIntegral f) (pi/2)
+>   freqs = getMinEffSysTempFreqs --[f | (r, f) <- getMinEffSysTempFreqs]
+>   mtsys w (r, f) = minTSysPrime w (fromIntegral f) (pi/2) r
 >   title = "Min. Effective Sys. Temp. vs. Frequency (@90') " ++ n
 >   xl = "Freq. (GHz)"
 >   yl = "Min. Effecitve System Temperature"

@@ -6,6 +6,7 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.PProjects
+> import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Control.Monad.Trans  (lift, liftIO)
 > import Test.HUnit
@@ -207,20 +208,22 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
 >    -- session LP
 >    let sess = findPSessionByName "LP"
->    Just result <- minTSysPrime w (frequency sess) (elevation dt sess)
+>    Just result <- minTSysPrime w (frequency sess) (elevation dt sess) (r sess)
 >    assertAlmostEqual "test_minTsysPrime 1" 3 15.490067 result 
 >    -- session AS
 >    let sess = findPSessionByName "AS"
->    Just result <- minTSysPrime w (frequency sess) (elevation dt sess)
+>    Just result <- minTSysPrime w (frequency sess) (elevation dt sess) (r sess)
+
 >    assertAlmostEqual "test_minTsysPrime 2" 3 25.958 result 
 >    -- sessBug
->    Just result <- minTSysPrime w (frequency sessBug) (elevation dt sessBug)
+>    Just result <- minTSysPrime w (frequency sessBug) (elevation dt sessBug) (r sess)
 >    assertAlmostEqual "test_minTsysPrime 3" 3 92.365046 result 
 >    -- sessBug2
->    Just result <- minTSysPrime w (frequency sessBug2) (elevation dt sessBug2)
+>    Just result <- minTSysPrime w (frequency sessBug2) (elevation dt sessBug2) (r sess)
 >    assertAlmostEqual "test_minTsysPrime 4" 4 29.858517 result 
 >      where 
 >        dt = fromGregorian 2006 10 15 12 0 0
+>        r s = fromJust $ getPrimaryReceiver s
 
 > test_systemNoiseTemperature = TestCase $ do
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2

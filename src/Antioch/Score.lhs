@@ -63,7 +63,8 @@ eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2
 >     tk  <- kineticTemperature dt s 
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s 
->     minTsysPrime' <-  liftIO $ minTSysPrime w (frequency s) $ elevation'
+>     let rcvr = getPrimaryReceiver s
+>     minTsysPrime' <-  liftIO $ minTSysPrime w (frequency s) elevation' (fromJust rcvr)
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
@@ -114,11 +115,12 @@ the historical weather (i.e. stringency and min. eff. system temp.)
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
->     mts' <- minTSysPrime w (frequency s) (elevation dt s)
+>     mts' <- minTSysPrime w (frequency s) (elevation dt s) (fromJust rcvr) 
 >     return $ do
 >         mts' >>= Just . (*xf)
 >     where
 >       xf = xi s
+>       rcvr = getPrimaryReceiver s
 
 > systemNoiseTemperature :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperature w rt dt s = runScoring w [] rt $ do
@@ -296,10 +298,19 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 > stringency                 :: ScoreFunc
 > stringency _ s = do
 >     w <- weather
->     stringency' <- liftIO $ totalStringency w (frequency s) elevation'
->     factor "stringency" stringency'
+>     str <- liftIO $ stringency' w s 
+>     factor "stringency" str
+
+> stringency' :: Weather -> Session -> IO (Maybe Float)
+> stringency' w s = do
+>   case rcvr of
+>     Nothing  -> return Nothing
+>     (Just r) -> totalStringency w freq elevation' r obsType
 >   where
+>     freq = frequency s
 >     elevation' = pi/2 - zenithAngleAtTransit s
+>     rcvr = getPrimaryReceiver s
+>     obsType = oType s       
 
 3.3 Pressure Feedback
 

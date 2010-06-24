@@ -324,6 +324,7 @@ TBF: refactor to share code from Weather and DSSData
 
 TBF: this stolen from DSSData.lhs
 
+> {-
 > getRcvrId :: Connection -> Receiver -> IO Int
 > getRcvrId cnn rcvr = do
 >     result <- quickQuery' cnn query xs
@@ -345,5 +346,5 @@ TBF: this stolen from DSSData.lhs
 > fromObservingType obsType = toSql . toLowerFirst $ show obsType 
 >   where
 >     toLowerFirst x = if x == "SpectralLine" then "spectral line" else [toLower . head $ x] ++ tail x
-
+> -}
 

@@ -397,14 +397,12 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
               
 > getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
 > getTotalStringency cache conn frequency elevation rcvr obsType = withCache key cache $
->     fetchTotalStringency conn freqIdx elevIdx rcvr obsType --getFloat conn query [toSql freqIdx, toSql elevIdx]
+>     fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
 >   where
 >     freqIdx = freq2Index frequency
 >     elevIdx = round . rad2deg $ elevation
 >     obsIdx = if obsType == Continuum then 1 else 0
 >     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
->     --query   = "SELECT total FROM stringency\n\
->     --          \WHERE frequency = ? AND elevation = ?"
 
 > fetchTotalStringency :: Connection -> Int -> Int -> Receiver -> ObservingType -> IO (Maybe Float)
 > fetchTotalStringency conn freqIdx elevIdx rcvr obsType = do
@@ -427,15 +425,13 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >               \WHERE frequency = ? AND elevation = ?"
 
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
-> getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr --getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId]
+> getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
 >   where
 >     freqIdx = freq2Index frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
 >     elevation' = max (deg2rad 5.0) elevation
 >     elevIdx = round . rad2deg $ elevation'
 >     key     = (freqIdx, elevIdx, show rcvr)
->     --query   = "SELECT prime FROM t_sys\n\
->     --          \WHERE frequency = ? AND elevation = ? AND receiver_id = ?"
 
 > fetchMinTSysPrime :: Connection -> Int -> Int -> Receiver -> IO (Maybe Float)
 > fetchMinTSysPrime conn freqIdx elevIdx rcvr = do
