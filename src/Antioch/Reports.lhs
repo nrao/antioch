@@ -172,6 +172,40 @@ tests.
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
+stringency
+
+Stringency vs. Frequency @ 90 degress elevation
+
+> plotStringency :: StatsPlot
+> plotStringency fn n _ _ _ = do
+>   w <- getWeather Nothing
+>   str <- mapM (stringency w) freqs
+>   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqs str
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "stringency", plotData)]
+>     where
+>   freqs = [2 .. 50]
+>   stringency w f = totalStringency w f (pi/2)
+>   title = "Stringency vs. Frequency (@90') " ++ n
+>   xl = "Freq. (GHz)"
+>   yl = "Stringency"
+
+minEffSysTemp
+
+minEffSysTemp vs. Frequency @ 90 degress elevation
+
+> plotMinEffSysTemp :: StatsPlot
+> plotMinEffSysTemp fn n _ _ _ = do
+>   w <- getWeather Nothing
+>   str <- mapM (mtsys w) freqs
+>   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqs str
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "min eff sys temp", plotData)]
+>     where
+>   freqs = [2 .. 50]
+>   mtsys w f = minTSysPrime w f (pi/2)
+>   title = "Min. Effective Sys. Temp. vs. Frequency (@90') " ++ n
+>   xl = "Freq. (GHz)"
+>   yl = "Min. Effecitve System Temperature"
+
 simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
@@ -808,6 +842,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
+>  , plotStringency     $ rootPath ++ "/stringency.png"
+>  , plotMinEffSysTemp  $ rootPath ++ "/minEffSysTemp.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
