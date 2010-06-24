@@ -11,6 +11,7 @@
 > import Control.Monad     (liftM)
 > import Data.Convertible
 > import Data.IORef
+> import Data.Char         (toLower) 
 > import Data.List         (elemIndex)
 > import Data.Maybe        (fromJust, maybe, isJust, fromMaybe)
 > import Database.HDBC
@@ -37,9 +38,9 @@ for each different table we are pulling values from.
 >   , gbt_irradiance  :: DateTime -> IO (Maybe Float)  -- 
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
->   , totalStringency :: Frequency -> Radians -> IO (Maybe Float)
+>   , totalStringency :: Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
 >   , minOpacity      :: Frequency -> Radians -> IO (Maybe Float)
->   , minTSysPrime    :: Frequency -> Radians -> IO (Maybe Float)
+>   , minTSysPrime    :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
 >   , newWeather      :: Maybe DateTime -> IO Weather
 >   , forecast        :: DateTime
 >   -- the 'best' set of functions ignores forecast type
@@ -394,15 +395,26 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >             modifyIORef cache $ M.insert key val
 >             return val
               
-> getTotalStringency :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getTotalStringency cache conn frequency elevation = withCache key cache $
->     getFloat conn query [toSql freqIdx, toSql elevIdx]
+> getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
+> getTotalStringency cache conn frequency elevation rcvr obsType = withCache key cache $
+>     fetchTotalStringency conn freqIdx elevIdx rcvr obsType --getFloat conn query [toSql freqIdx, toSql elevIdx]
 >   where
 >     freqIdx = freq2Index frequency
 >     elevIdx = round . rad2deg $ elevation
->     key     = (freqIdx, elevIdx)
->     query   = "SELECT total FROM stringency\n\
->               \WHERE frequency = ? AND elevation = ?"
+>     obsIdx = if obsType == Continuum then 1 else 0
+>     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
+>     --query   = "SELECT total FROM stringency\n\
+>     --          \WHERE frequency = ? AND elevation = ?"
+
+> fetchTotalStringency :: Connection -> Int -> Int -> Receiver -> ObservingType -> IO (Maybe Float)
+> fetchTotalStringency conn freqIdx elevIdx rcvr obsType = do
+>   rcvrId <- getRcvrId conn rcvr
+>   obsTypeId <- getObservingTypeId conn obsType
+>   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId]
+>     where
+>       query   = "SELECT total FROM stringency\n\
+>                 \WHERE frequency = ? AND elevation = ?\n\
+>                 \AND receiver_id = ? AND observing_type_id = ?"
 
 > getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
 > getMinOpacity cache conn frequency elevation = withCache key cache $
@@ -414,17 +426,24 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >     query   = "SELECT opacity FROM min_weather\n\
 >               \WHERE frequency = ? AND elevation = ?"
 
-> getMinTSysPrime :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getMinTSysPrime cache conn frequency elevation = withCache key cache $
->     getFloat conn query [toSql freqIdx, toSql elevIdx]
+> getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
+> getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr --getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId]
 >   where
 >     freqIdx = freq2Index frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
 >     elevation' = max (deg2rad 5.0) elevation
 >     elevIdx = round . rad2deg $ elevation'
->     key     = (freqIdx, elevIdx)
->     query   = "SELECT prime FROM t_sys\n\
->               \WHERE frequency = ? AND elevation = ?"
+>     key     = (freqIdx, elevIdx, show rcvr)
+>     --query   = "SELECT prime FROM t_sys\n\
+>     --          \WHERE frequency = ? AND elevation = ? AND receiver_id = ?"
+
+> fetchMinTSysPrime :: Connection -> Int -> Int -> Receiver -> IO (Maybe Float)
+> fetchMinTSysPrime conn freqIdx elevIdx rcvr = do
+>   rcvrId <- getRcvrId conn rcvr
+>   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId]
+>     where
+>       query   = "SELECT prime FROM t_sys\n\
+>                 \WHERE frequency = ? AND elevation = ? AND receiver_id = ?"
 
 Creates a connection to the weather forecast database.
 
@@ -489,6 +508,33 @@ Get latest forecast time from the DB for given timestamp
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
 
+TBF: this stolen from DSSData.lhs
+
+> getRcvrId :: Connection -> Receiver -> IO Int
+> getRcvrId cnn rcvr = do
+>     result <- quickQuery' cnn query xs
+>     return $ fromSql . head . head $ result 
+>   where
+>     query = "SELECT id FROM receivers WHERE name = ?;"
+>     xs = [toSql . show $ rcvr]
+
+TBF: this is redundant too
+
+> getObservingTypeId :: Connection -> ObservingType -> IO Int
+> getObservingTypeId cnn obsType = do
+>     result <- quickQuery' cnn query xs
+>     return $ fromSql . head . head $ result 
+>   where
+>     query = "SELECT id FROM observing_types WHERE type = ?;"
+>     xs = [fromObservingType obsType]
+
+TBF: so is this is this is this.  this is redundant too.
+
+> fromObservingType :: ObservingType -> SqlValue
+> fromObservingType obsType = toSql . toLowerFirst $ show obsType 
+>   where
+>     toLowerFirst x = if x == "SpectralLine" then "spectral line" else [toLower . head $ x] ++ tail x
+
 Helper function to get singular Float values out of the database.
 
 > getFloat :: Connection -> String -> [SqlValue] -> IO (Maybe Float)
@@ -543,9 +589,9 @@ more then 100 tests.
 >         return [wind w target
 >             , opacity w target f
 >             , tsys w target f
->             , totalStringency w f el
+>             , totalStringency w f el Rcvr1_2 SpectralLine
 >         -- TBF: no table! but not being used: , minOpacity w f el
->             , minTSysPrime w f el
+>             , minTSysPrime w f el Rcvr1_2
 >             ]
 
 TBF: is this the right way to save connections?
