@@ -126,9 +126,9 @@ Test the forecastType function for non-2006 dates:
 >         -- TBF: this does not work & is not being used: , tatm w target
 >                  , opacity w target f
 >                  , tsys w target f
->                  , totalStringency w f el
+>                  , totalStringency w f el Rcvr1_2 SpectralLine 
 >         -- TBF: no table! but not being used: , minOpacity w f el
->                  , minTSysPrime w f el
+>                  , minTSysPrime w f el Rcvr1_2
 >             ]
 
 > test_dataFirstLine = TestCase $ do
