@@ -470,9 +470,8 @@ if __name__ == '__main__':
     print "checking health of db: ", dbname
     filename = 'weatherReport.txt'
     wh = WeatherHealth(dbname, filename = filename)
-    ##wh.check()
-    ##wh.report()
-    wh.fillGaps()
+    wh.check()
+    wh.report()
     #start = datetime(2007, 1, 1, 0)
     #end   = datetime(2008, 2, 1, 12)
     #wh.cleanUp(start, end)
