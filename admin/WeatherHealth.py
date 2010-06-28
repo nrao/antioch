@@ -12,7 +12,7 @@ class WeatherHealth:
 
         self.cnn = pg.connect(user = "dss", dbname = dbname)
         
-        self.sixHourForecastStart = datetime(2007, 12, 1)
+        self.sixHourForecastStart = datetime(2007, 10, 5)
 
         # reports
         self.quiet = False
@@ -206,7 +206,10 @@ class WeatherHealth:
         self.add("Forecast Time hour spans: \n")
         for dt in dts:
             span = self.forecastTimes[dt]["hour_span"] 
-            if span != 54 and span != 60 and dt < self.sixHourForecastStart:
+            if (span != 54 and span != 60 and dt < self.sixHourForecastStart) \
+              or \
+               (span not in [84] and dt >= self.sixHourForecastStart):
+                # or 78?
                 self.add("%s - %d\n" % (dt, span))
                 
         self.add("Gaps in weather dates: \n")
