@@ -6,6 +6,8 @@
 > import Antioch.Score
 > import Antioch.ReceiverTemperatures
 > import Antioch.Weather
+> import Antioch.Utilities
+> import Antioch.Score
 > --import Control.Monad.Trans  (lift, liftIO)
 > import Test.HUnit
 > import Data.Maybe           (isJust, fromJust)
@@ -56,7 +58,20 @@
 TBF:
 
 > test_getRaDec = TestCase $ do
->   assertEqual "getRaDec" True True
+>   let raDecs = map getRaDec' args
+>   let els = map (getElevs (head dts)) $ take 18 raDecs 
+>   let elsInt = map round els
+>   assertEqual "getRaDec" elsInt elevations
+>   let els = map (getElevs (last dts)) $ drop 18 raDecs 
+>   let elsInt = map round els
+>   assertEqual "getRaDec" elsInt elevations
+>     where
+>       elevations = [5,10 .. 90]::[Int]
+>       dts = [fromGregorian 2006 2 1 0 0 0
+>            , fromGregorian 2006 7 1 0 0 0]
+>       args = [(fromIntegral el, dt) | dt <- dts, el <- elevations]
+>       getRaDec' (el, dt) = getRaDec el dt
+>       getElevs dt (ra, dec) = rad2deg $ elevation dt (defaultSession {ra = ra, dec = dec})
 
 > test_stringencyLimit = TestCase $ do
 >   w <- getWeather $ Just dt

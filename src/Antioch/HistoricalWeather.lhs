@@ -73,14 +73,14 @@ shared across calls to tSysPrimeNow.
 >   rts <- getReceiverTemperatures
 >   w <- getWeather Nothing
 >   -- First init the DB
->   truncateTable cnn "t_sys"
->   truncateTable cnn "stringency"
+>   --truncateTable cnn "t_sys"
+>   --truncateTable cnn "stringency"
 >   -- Then the min. effective system temperature
->   mapM (updateMinEffSysTemp cnn w rts) getMinEffSysTempArgs 
+>   --mapM (updateMinEffSysTemp cnn w rts) getMinEffSysTempArgs 
 >   -- Then the stringency
->   let args = getStringencyArgs
->   strs <- getStringencies rts args
->   putStringencies cnn args strs
+>   --let args = getStringencyArgs
+>   --strs <- getStringencies rts args
+>   --putStringencies cnn args strs
 >   return ()
 
 We need to not just iterate through all elevations, but, more complicated,
@@ -273,10 +273,12 @@ at the specified time.
 >     ra' = fst $ getRaDec elev dt
 >     dec' = snd $ getRaDec elev dt
 
-TBF: this sucks, what constraint do I need to use to get this?
+> getRaDec :: Float -> DateTime -> (Radians, Radians)
+> getRaDec elev dt = (ra, dec)
+>   where
+>     ra = hrs2rad . utc2lstHours $ dt
+>     dec = realToFrac $ (realToFrac . deg2rad $ elev) - (pi/2 - gbtLat)
 
-> getRaDec :: Float -> DateTime -> (Float, Float)
-> getRaDec elev dt = (0.0, 1.5)
 
 -------------Database----------------------------
 
