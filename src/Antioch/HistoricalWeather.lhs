@@ -73,14 +73,20 @@ shared across calls to tSysPrimeNow.
 >   rts <- getReceiverTemperatures
 >   w <- getWeather Nothing
 >   -- First init the DB
->   --truncateTable cnn "t_sys"
->   --truncateTable cnn "stringency"
+>   truncateTable cnn "t_sys"
+>   truncateTable cnn "stringency"
 >   -- Then the min. effective system temperature
->   --mapM (updateMinEffSysTemp cnn w rts) getMinEffSysTempArgs 
+>   print "Updating min. eff. sys. temp."
+>   mapM (updateMinEffSysTemp cnn w rts) getMinEffSysTempArgs 
+>   print "Done updating min. eff. sys. temp."
 >   -- Then the stringency
->   --let args = getStringencyArgs
->   --strs <- getStringencies rts args
->   --putStringencies cnn args strs
+>   let args = getStringencyArgs
+>   strs <- getStringencies rts args
+>   print "Updating stringencies"
+>   putStringencies cnn args strs
+>   print "Done updating stringencies"
+>   -- sucker!
+>   disconnect cnn
 >   return ()
 
 We need to not just iterate through all elevations, but, more complicated,
@@ -90,29 +96,50 @@ values below 2 GHz, so leave those receivers out.
 
 > getMinEffSysTempArgs :: [(Receiver, Int, Int)]
 > getMinEffSysTempArgs = [(r, f, e) | (r, f) <- getMinEffSysTempFreqs, e <- [5 .. 90]]
->     -- for min eff sys temp, we dont want the PF rcvrs, and we don't want
->     -- to go below 2 GHz
->     -- TBF: until the new weather DB is ready, don't go above 50 either
->     --rcvrFreqs = concatMap (getRcvrFreqs (\f -> f >= 2)) [Rcvr1_2 .. Rcvr40_52] --RcvrArray18_26]
-
-> getMinEffSysTempFreqs = concatMap (getRcvrFreqs (\f -> f >= 2)) [Rcvr1_2 .. Rcvr40_52] --RcvrArray18_26
-
-> getStringencyArgs :: [(Receiver, Int, Int, Bool)]
-> getStringencyArgs = [(r, f, e, t) | (r, f) <- getStringencyFreqs, e <- [5 .. 90], t <- [False, True]]
 
 TBF: go all the way up to 120 GHz
-TBF: go down all the way to PF rcvrs - but what to do about freq's?
 
-> getStringencyFreqs = concatMap (getRcvrFreqs (\f -> True)) [Rcvr1_2 .. Rcvr40_52] --[Rcvr_342 .. RcvrArray18_26]
+> getMinEffSysTempFreqs :: [(Receiver, Int)]
+> getMinEffSysTempFreqs = concatMap (getRcvrFreqs (\f -> f >= 2) 1 1) [Rcvr1_2 .. RcvrArray18_26]
+
+> getStringencyArgs :: [(Receiver, Int, Int, Bool)]
+> getStringencyArgs = [(r, f, e, t) | (r, f) <- getStringencyFreqs, e <- [5 .. 90], t <- [False, True]] 
+
+TBF: go all the way up to 120 GHz
+Note: frequencies in MHz so that we can go below 1 GHz using ints
+
+> getStringencyFreqs :: [(Receiver, Int)]
+> getStringencyFreqs =  pfFreqs ++ gregorianFreqs 
+>   where
+>     gregorianFreqs = concatMap (getRcvrFreqs (\f -> True) 1000 1000) [Rcvr1_2 .. RcvrArray18_26]
+>     pfFreqs = concatMap (getRcvrFreqs (\f -> True) 1000 100) [Rcvr_RRI .. Rcvr_1070]
 
 Use the receivers frequency range to create an array that looks like:
 [(rcvr, low), (rcvr, low+1) .. (rcvr, high)].  Note one can specify a 
-gaurd as well to keep out unwanted frequencies.
+gaurd as well to keep out unwanted frequencies, and a factor to specify
+GHz (1.0) or MHz (1000.0), and a step size.
 
-> getRcvrFreqs :: (Int -> Bool) -> Receiver -> [(Receiver, Int)]
-> getRcvrFreqs g rcvr = [(rcvr, freq) | freq <- [(round low) .. (round hi)], g freq]
+This is simple for the Gregorian rcvrs, but note that we want the PF rcvrs
+to look something like this:
+[(Rcvr_342,300),(Rcvr_342,400),(Rcvr_450,400) ..]
+even though their ranges are specified like this:
+     (Rcvr_342,       ( 0.29, 0.395)),
+     (Rcvr_450,       ( 0.385,0.52)),
+And we put a cieling at 1000 MHz (i.e. no freqs like [(Rcvr_1070, 1100), etc.]).
+
+> getRcvrFreqs ::(Int -> Bool) -> Int -> Int -> Receiver -> [(Receiver, Int)]
+> getRcvrFreqs g x step rcvr = [(rcvr, freq) | freq <- freqs, g freq] 
 >   where
+>     freqs = nub $ [(toBound low), (toBound low) + step .. (toBound hi)]
 >     (low, hi) = getRcvrRange rcvr
+>     toBound f | rcvr < Rcvr1_2  = min 1000 $ round . (*(fromIntegral x)) . toMHzBound $ f 
+>               | rcvr >= Rcvr1_2 = (*x) . round $ f
+
+We want the receiver frequency bounds specified in GHz to go to only one
+decimal place.  Example: 0.29 -> 0.30 -> 300
+
+> toMHzBound :: Float -> Float  
+> toMHzBound freq = (/10) . fromIntegral . round . (*10.0) $ freq
 
 Returns an array of every hour that we have weather for
 TBF: eventually this should go from about May 2004 to the present (6 years!)
@@ -120,8 +147,8 @@ TBF: eventually this should go from about May 2004 to the present (6 years!)
 > getWeatherDates :: [DateTime]
 > getWeatherDates = map (addHours start) [0 .. hours]
 >   where
->     start = fromGregorian 2006 2 1 0 0 0 -- TBF
->     end   = fromGregorian 2006 12 30 0 0 0 -- TBF
+>     start = fromGregorian 2010 6 9 0 0 0 -- TBF
+>     end   = fromGregorian 2010 6 9 1 0 0 -- TBF
 >     hours = (diffMinutes' end start) `div` 60
 >     addHours dt hrs = (hrs * 60) `addMinutes'` dt
 
@@ -160,7 +187,7 @@ Gets the Minimum Effective System Temperature
 >       f = fromIntegral freq
 >       e = fromIntegral elev
 
-We originally were able to use Score.sSysPrime directly, but for maximizing
+We originally were able to use Score.tSysPrime directly, but for maximizing
 performance, we wanted to use the 'bestTsys/Opacity' methods below.  These
 methods allow us to maximize use of the cache and minimize our hits to the DB.
 Otherwise, it could take weeks to fill the t_sys table.
@@ -231,13 +258,14 @@ one with the arguments passed in.
 
 > stringencyLimit' w rts dt (rcvr, freq, elev, cont) = runScoring w [] rts $ stringencyLimit rcvr f e cont dt
 >   where
->     f = fromIntegral freq
+>     f = (fromIntegral freq) / 1000.0 -- MHz -> GHz
 >     e = fromIntegral elev
 
 A combination of different limiting scoring factors (tracking error limit,
 observing efficiency limit, atmospheric stability limit, depending on observing
 type). Note that in order to reuse code from Score.lhs, we create a dummy
 session to score.
+Note: frequency passed in should be in GHz
 TBF: should I put this in Score.lhs?
 
 > stringencyLimit :: Receiver -> Float -> Float -> Bool -> DateTime -> Scoring (Maybe Float)
@@ -245,7 +273,7 @@ TBF: should I put this in Score.lhs?
 >   -- observing efficiency limit
 >   fs <- observingEfficiencyLimit dt s
 >   let obsEffLimit = eval fs
->   let obsEffOK = obsEffLimit >= eta_min
+>   let obsEffOK = obsEffLimit >= 1 
 >   -- tracking error limit
 >   fs2 <- trackingErrorLimit dt s
 >   let trErrLimit = eval fs2
@@ -254,10 +282,14 @@ TBF: should I put this in Score.lhs?
 >   fs3 <- atmosphericStabilityLimit dt s
 >   let atmStbLimit = eval fs3
 >   let atmStbOK = atmStbLimit >= 1
->   return $ if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
+>   --return $ if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
+>   let r = if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
+>   --liftIO $ print $ "stringencyLimit for: " ++ (show rcvr) ++ " " ++ (show freq) ++ " " ++ (show elev) ++ " " ++ (show cont)
+>   --liftIO $ print $ (show obsEffLimit) ++ " " ++ (show . minObservingEff $ freq) ++ " " ++ (show trErrLimit) ++ " " ++ (show atmStbLimit)
+>   --liftIO $ print r
+>   return r
 >     where
 >       s = mkDummySession rcvr freq elev cont dt
->       eta_min = 0.2 -- TBF???
 
 Creates a dummy session with the given attributes.  The only tricky part
 is giving the session a target that will be at the specified elevation
