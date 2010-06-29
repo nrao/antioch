@@ -25,6 +25,25 @@
 >     let wdts = map toSqlString getWeatherDates
 >     assertEqual "getWeatherDates" True True
 
+> test_getRcvrFreqs = TestCase $ do
+>   let freqs = concatMap (getRcvrFreqs (\f -> f >= 2) 1 1) [Rcvr1_2 .. Rcvr2_3] 
+>   assertEqual "getRcvrFreqs_1" (tail exp) freqs
+>   let freqs = concatMap (getRcvrFreqs (\f -> True) 1 1) [Rcvr1_2 .. Rcvr2_3] 
+>   assertEqual "getRcvrFreqs_2" exp freqs
+>   let freqs = concatMap (getRcvrFreqs (\f -> True) 1000 1000) [Rcvr1_2 .. Rcvr2_3] 
+>   assertEqual "getRcvrFreqs_3" exp2 freqs
+>   let freqs = concatMap (getRcvrFreqs (\f -> True) 1000 100) [Rcvr_RRI .. Rcvr_1070] 
+>   assertEqual "getRcvrFreqs_3" exp3 freqs
+>     where
+>   exp = [(Rcvr1_2, 1), (Rcvr1_2, 2), (Rcvr2_3, 2), (Rcvr2_3, 3)]
+>   exp2 = map (\(r, f) -> (r, f*1000)) exp
+>   rriFreqs = [(Rcvr_RRI, f) | f <- [100, 200 .. 1000]]
+>   exp3 = rriFreqs ++ [(Rcvr_342, 300), (Rcvr_342, 400)
+>       , (Rcvr_450, 400), (Rcvr_450, 500)
+>       , (Rcvr_600, 500), (Rcvr_600, 600), (Rcvr_600, 700)
+>       , (Rcvr_800, 700), (Rcvr_800, 800), (Rcvr_800, 900)
+>       , (Rcvr_1070, 900), (Rcvr_1070, 1000)]
+
 > test_getMinEffSysTempArgs = TestCase $ do
 >   let args = getMinEffSysTempArgs
 >   assertEqual "getMinEffSysTempArgs_1" 7396 (length args)
