@@ -139,9 +139,18 @@ forecast_type_id correctly using the forecast_time from the DB.
 > fromSql' x       = Just . fromSql $ x
 
 The frequency range of the weather DB is from 2 - 120 GHz.
+However, the forecast_by_frequency values use the following 
+granularity: 2,3 .. 51,52,54,56 .. 118,120.
+But the t_sys frequency values 
+are: 2,3 .. 120
+
+> freq2Index' :: Frequency -> Int
+> freq2Index' = min 120 . max 2 . round
 
 > freq2Index :: Frequency -> Int
-> freq2Index = min 120 . max 2 . round
+> freq2Index f = if f' > 52 && odd f' then f' + 1 else f'
+>   where
+>     f' = freq2Index' f
 
 The elevation range of the weather DB is from 5 - 90 degrees.
 
@@ -399,7 +408,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getTotalStringency cache conn frequency elevation rcvr obsType = withCache key cache $
 >     fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2Index' frequency
 >     elevIdx = round . rad2deg $ elevation
 >     obsIdx = if obsType == Continuum then 1 else 0
 >     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
@@ -418,7 +427,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinOpacity cache conn frequency elevation = withCache key cache $
 >     getFloat conn query [toSql freqIdx, toSql elevIdx]
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2Index' frequency
 >     elevIdx = round . rad2deg $ elevation
 >     key     = (freqIdx, elevIdx)
 >     query   = "SELECT opacity FROM min_weather\n\
@@ -427,7 +436,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
 > getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2Index' frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
 >     elevation' = max (deg2rad 5.0) elevation
 >     elevIdx = round . rad2deg $ elevation'
@@ -435,10 +444,13 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 
 > fetchMinTSysPrime :: Connection -> Int -> Int -> Receiver -> IO (Maybe Float)
 > fetchMinTSysPrime conn freqIdx elevIdx rcvr = do
->   rcvrId <- getRcvrId conn rcvr
+>   rcvrId <- getRcvrId conn $ max Rcvr1_2 rcvr
+>   -- TBF, WTF: PF rcvrs aren't in t_sys table because we aren't
+>   -- calculating them below 2 GHz.  So for now this slight of hand.
+>   --let rcvrId = min 8 rcvrId'
 >   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId]
 >     where
->       query   = "SELECT prime FROM t_sys\n\
+>       query   = "SELECT total FROM t_sys\n\
 >                 \WHERE frequency = ? AND elevation = ? AND receiver_id = ?"
 
 Creates a connection to the weather forecast database.
