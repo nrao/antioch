@@ -35,7 +35,7 @@
 >               | Zpectrometer
 >               | Holography
 >               | RcvrArray18_26
->               deriving (Enum, Eq, Show, Read)
+>               deriving (Ord, Enum, Eq, Show, Read)
 
 Sessions store their desired Rcvrs in Conjugate Normal Form (CNF).
 Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
