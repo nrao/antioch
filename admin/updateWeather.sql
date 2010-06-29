@@ -71,8 +71,6 @@ ALTER TABLE ONLY receivers
 ALTER TABLE receivers ALTER COLUMN id SET DEFAULT nextval('receivers_id_seq'::regclass);
 
 -- init data!
---
-  Carl's
 INSERT INTO receivers VALUES (DEFAULT, 'NoiseSource',   'NS',   0.000,   0.000);
  --
 INSERT INTO receivers VALUES (DEFAULT, 'Rcvr_RRI',      'RRI',  0.100,   1.600);
