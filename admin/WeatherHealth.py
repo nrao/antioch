@@ -260,14 +260,10 @@ class WeatherHealth:
 
     def fillGaps(self):
         """
-        Repeatedly copies the previous day's best forecasts into "gaps",
-        i.e., weather_dates which have no forcasts, as a menas to 
-        create reasonable forecasts across a dates and times.
-        "Best prediction for tomorrow's weather is today's weather."
+        Insures all weather dates have a forecast by copying forecasts
+        from other parts of the database.
         Note: - modifies the database.
         """
-        d1 = timedelta(hours = 1)
-        d24 = timedelta(days = 1)
         import_time = datetime.now().replace(microsecond = 0)
         import_id = self.addImportTime(import_time)
         print "Using %s as import_time for filling gaps, id %d." % (import_time
@@ -275,18 +271,52 @@ class WeatherHealth:
         self.checkMissingWeatherDates()
         for b, e, d in self.missingWeatherDates:
             print "Filling gap between %s to %s for %d hours\n" % (b, e, d)
-            # get 24-hours' worth of previous best forecasts
-            first_gap = b + d1
-            forecasts = []
-            hour = first_gap - d24
-            while hour < first_gap:
-                forecasts.append(self.getForecast(hour))
-                hour += d1
-            # fill in missing forecasts
-            hour = b + d1
-            for i in range(d):
-                self.setForecast(import_id, hour, forecasts[i % 24])
-                hour += d1
+            if d > 3*24:
+                # get best forecasts from last year
+                self.fillLargeGap(import_id, b, e, d)
+            else:
+                # get best forecasts from yesterday
+                self.fillSmallGap(import_id, b, e, d)
+
+    def fillSmallGap(self, import_id, b, e, d):
+        """
+        Repeatedly copies the previous day's best forecasts into a "gap",
+        i.e., weather_dates which have no forcasts, as a menas to 
+        create reasonable forecasts across a dates and times.
+        "Best prediction for tomorrow's weather is today's weather."
+        Note: - modifies the database.
+        """
+        d24 = timedelta(days = 1)
+        d1 = timedelta(hours = 1)
+        # get 24-hours' worth of previous best forecasts
+        first_gap = b + d1
+        forecasts = []
+        fhour = first_gap - d24
+        while fhour < first_gap:
+            forecasts.append(self.getForecast(fhour))
+            fhour += d1
+        # fill in missing forecasts
+        whour = b + d1
+        for i in range(d):
+            self.setForecast(import_id, whour, forecasts[i % 24])
+            whour += d1
+
+    def fillLargeGap(self, import_id, b, e, d):
+        """
+        Copies the previous year's best forecasts into a "gap",
+        i.e., weather_dates which have no forcasts, as a means to 
+        create reasonable forecasts across a dates and times.
+        Note: - modifies the database.
+        """
+        dyear = timedelta(hours = 365*24)
+        d1 = timedelta(hours = 1)
+        first_gap = b + d1
+        fhour = first_gap - dyear
+        whour = b + d1
+        for i in range(d):
+            self.setForecast(import_id, whour, self.getForecast(fhour))
+            whour += d1
+            fhour += d1
 
     def addImportTime(self, timestamp):
         return self.addTimeToDB(timestamp, "import_times")
