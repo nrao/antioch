@@ -70,14 +70,14 @@ class CleoDBImport:
         else:
             historyOption = ''
 
-        self.atmoCmdLine = "%s -readCaches -sites %s -average -calculate %s -freqList %s -elevTsys 90 %s" % \
+        self.atmoCmdLine = "%s -sites %s -average -calculate %s -freqList %s -elevTsys 90 %s" % \
             (self.cleoCmdLine, sitesStr, measurementsStr, freqStr, historyOption)
 
         # Then the winds, etc.
         measurements = ["GroundTime", "CloudsPrecipTime"]
         measurementsStr = " ".join(measurements)
 
-        self.windCmdLine = "%s -readCaches -sites %s -average -calculate %s %s" % \
+        self.windCmdLine = "%s -sites %s -average -calculate %s %s" % \
             (self.cleoCmdLine, sitesStr, measurementsStr, historyOption)
 
     def reportLine(self, line):
