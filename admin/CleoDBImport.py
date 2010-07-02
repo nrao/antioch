@@ -207,11 +207,11 @@ class CleoDBImport:
                 continue
             # frequencies
             self.data[timestamp]['freqs'] = []
-            # OpacityTime<freq>List_HotSprings
+            # OpacityTime<freq>List_avrg
             self.data[timestamp]['tauCleo']  = []
-            # TsysTime<freq>List_HotSprings
+            # TsysTime<freq>List_avrg
             self.data[timestamp]['tSysCleo'] = []
-            # TatmTime<freq>List_HotSprings
+            # TatmTime<freq>List_avrg
             self.data[timestamp]['tAtmCleo'] = []
             num = self.numAtmoFreqs
             for i in range(num):
@@ -379,7 +379,7 @@ class CleoDBImport:
             if "Forecasts" in d])[-2:]
 
         # the frequency dependent realted stuff was written first    
-        atmFile =  self.path + "/" + f1 + '/time_HotSprings' + \
+        atmFile =  self.path + "/" + f1 + '/time_avrg' + \
             f1[9:] + '.txt'
 
         # then came the 'ground' or wind speed stuff     
