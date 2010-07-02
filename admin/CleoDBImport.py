@@ -53,11 +53,6 @@ class CleoDBImport:
         # here we init settings for the kind of info we're getting from the CLEO
         self.cleoCmdLine = "/home/dss/bin/forecastsCmdLine"
 
-        # First the Atmosphere by frequency:
-        # Frequencies: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 
-        #freqs = range(1, 51)
-
-        # Frequencies: 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 60 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120
         freqs = range(2, 53)
         freqs.extend(range(54, 122, 2))          
         self.atmoFreqs = freqs
@@ -66,7 +61,7 @@ class CleoDBImport:
 
         measurements = ["OpacityTime", "TsysTime", "TatmTime"]
         measurementsStr = " ".join(measurements)
-        sites = ["HotSprings"]
+        sites = ["Elkins", "HotSprings", "Lewisburg"]
         sitesStr = " ".join(sites)
 
         if self.history:
@@ -75,14 +70,12 @@ class CleoDBImport:
         else:
             historyOption = ''
 
-        self.atmoCmdLine = "%s -readCaches -sites %s -calculate %s -freqList %s -elevTsys 90 %s" % \
+        self.atmoCmdLine = "%s -readCaches -sites %s -average -calculate %s -freqList %s -elevTsys 90 %s" % \
             (self.cleoCmdLine, sitesStr, measurementsStr, freqStr, historyOption)
 
         # Then the winds, etc.
         measurements = ["GroundTime", "CloudsPrecipTime"]
         measurementsStr = " ".join(measurements)
-        sites = ["Elkins", "Lewisburg"]
-        sitesStr = " ".join(sites)
 
         self.windCmdLine = "%s -readCaches -sites %s -average -calculate %s %s" % \
             (self.cleoCmdLine, sitesStr, measurementsStr, historyOption)
@@ -162,7 +155,6 @@ class CleoDBImport:
         lines      = f.readlines()
         header     = lines[0]
         assert header.strip() == windFileHeader.strip()  
-        #windcol    = lines[0].split(' ').index('smphTimeList_avrg')
 
         for line in lines[1:]:
             row = line.split(' ')
