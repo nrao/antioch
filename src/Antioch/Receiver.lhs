@@ -47,18 +47,18 @@ session as a key.
 
 Is the given frequency in the range of the given receiver?
 
-> rcvrInFreqRange :: Float -> Receiver -> Bool
+> rcvrInFreqRange :: Frequency -> Receiver -> Bool
 > rcvrInFreqRange freq rcvr = low <= freq && freq <= high
 >   where
 >     low = fst $ getRcvrRange rcvr  
 >     high = snd $ getRcvrRange rcvr  
 
-> getRcvrRange :: Receiver -> (Float, Float)
+> getRcvrRange :: Receiver -> (Frequency, Frequency)
 > getRcvrRange rcvr = snd . head $ filter (\r -> (fst r) == rcvr) rcvrRanges
 
 Here are the ranges for all receivers: this was copied from the DSS database.
 
-> rcvrRanges :: [(Receiver, (Float, Float))]
+> rcvrRanges :: [(Receiver, (Frequency, Frequency))]
 > rcvrRanges = [
 >     (NoiseSource,    ( 0.0,  0.0)),
 >     (Rcvr_RRI,       ( 0.1,  1.6)),

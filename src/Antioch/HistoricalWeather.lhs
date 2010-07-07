@@ -81,13 +81,22 @@ shared across calls to tSysPrimeNow.
 >   print "Done updating min. eff. sys. temp."
 >   -- Then the stringency
 >   let args = getStringencyArgs
->   strs <- getStringencies rts args
 >   print "Updating stringencies"
+>   strs <- getStringencies rts args
 >   putStringencies cnn args strs
 >   print "Done updating stringencies"
 >   -- sucker!
 >   disconnect cnn
 >   return ()
+
+Not all Receivers are really receivers.  We don't want to compute 
+historical values for the Zpectrometer because it's really a backend.
+
+> allRcvrs, pfRcvrs, gregRcvrs :: [Receiver]
+> allRcvrs = filter (/=Zpectrometer) [Rcvr_RRI .. RcvrArray18_26]
+> pfRcvrs   = [Rcvr_RRI .. Rcvr_1070]
+> gregRcvrs = filter (/=Zpectrometer) [Rcvr1_2 .. RcvrArray18_26]
+
 
 We need to not just iterate through all elevations, but, more complicated,
 iterate through the frequency range of each receiver, for every receiver.
@@ -95,51 +104,29 @@ However, we don't need to go below 2 GHz, since we don't have forecast
 values below 2 GHz, so leave those receivers out.
 
 > getMinEffSysTempArgs :: [(Receiver, Int, Int)]
-> getMinEffSysTempArgs = [(r, f, e) | (r, f) <- getMinEffSysTempFreqs, e <- [5 .. 90]]
+> getMinEffSysTempArgs = [(r, f, e) | (r, f) <- getRcvrFreqArgs, e <- [5 .. 90]]
 
-TBF: go all the way up to 120 GHz
-
-> getMinEffSysTempFreqs :: [(Receiver, Int)]
-> getMinEffSysTempFreqs = concatMap (getRcvrFreqs (\f -> f >= 2) 1 1) [Rcvr1_2 .. RcvrArray18_26]
+TBF: we now plan on calculating these for ALL receivers, even though we
+don't yet have opacities < 2 GHz.  
 
 > getStringencyArgs :: [(Receiver, Int, Int, Bool)]
-> getStringencyArgs = [(r, f, e, t) | (r, f) <- getStringencyFreqs, e <- [5 .. 90], t <- [False, True]] 
+> getStringencyArgs = [(r, f, e, t) | (r, f) <- getRcvrFreqArgs, e <- [5 .. 90], t <- [False, True]] 
 
 TBF: go all the way up to 120 GHz
 Note: frequencies in MHz so that we can go below 1 GHz using ints
 
-> getStringencyFreqs :: [(Receiver, Int)]
-> getStringencyFreqs =  pfFreqs ++ gregorianFreqs 
+> getRcvrFreqArgs :: [(Receiver, Int)]
+> getRcvrFreqArgs = concatMap getRcvrFreqArgs' allRcvrs
+
+> getRcvrFreqArgs' :: Receiver -> [(Receiver, Int)]
+> getRcvrFreqArgs' rcvr = map (\i -> (rcvr, i)) . getRcvrFreqIndices $ rcvr
+
+> getRcvrFreqIndices :: Receiver -> [Int]
+> getRcvrFreqIndices rcvr = takeWhile (<=hi) . dropWhile (<lo) $ freqIndices
 >   where
->     gregorianFreqs = concatMap (getRcvrFreqs (\f -> True) 1000 1000) [Rcvr1_2 .. RcvrArray18_26]
->     pfFreqs = concatMap (getRcvrFreqs (\f -> True) 1000 100) [Rcvr_RRI .. Rcvr_1070]
-
-Use the receivers frequency range to create an array that looks like:
-[(rcvr, low), (rcvr, low+1) .. (rcvr, high)].  Note one can specify a 
-gaurd as well to keep out unwanted frequencies, and a factor to specify
-GHz (1.0) or MHz (1000.0), and a step size.
-
-This is simple for the Gregorian rcvrs, but note that we want the PF rcvrs
-to look something like this:
-[(Rcvr_342,300),(Rcvr_342,400),(Rcvr_450,400) ..]
-even though their ranges are specified like this:
-     (Rcvr_342,       ( 0.29, 0.395)),
-     (Rcvr_450,       ( 0.385,0.52)),
-And we put a cieling at 1000 MHz (i.e. no freqs like [(Rcvr_1070, 1100), etc.]).
-
-> getRcvrFreqs ::(Int -> Bool) -> Int -> Int -> Receiver -> [(Receiver, Int)]
-> getRcvrFreqs g x step rcvr = [(rcvr, freq) | freq <- freqs, g freq] 
->   where
->     freqs = nub $ [(toBound low), (toBound low) + step .. (toBound hi)]
->     (low, hi) = getRcvrRange rcvr
->     toBound f | rcvr < Rcvr1_2  = min 1000 $ round . (*(fromIntegral x)) . toMHzBound $ f 
->               | rcvr >= Rcvr1_2 = (*x) . round $ f
-
-We want the receiver frequency bounds specified in GHz to go to only one
-decimal place.  Example: 0.29 -> 0.30 -> 300
-
-> toMHzBound :: Float -> Float  
-> toMHzBound freq = (/10) . fromIntegral . round . (*10.0) $ freq
+>     (lo', hi') = getRcvrRange rcvr
+>     lo = freq2HistoryIndex lo'
+>     hi = freq2HistoryIndex hi'
 
 Returns an array of every hour that we have weather for
 TBF: eventually this should go from about May 2004 to the present (6 years!)
@@ -147,8 +134,8 @@ TBF: eventually this should go from about May 2004 to the present (6 years!)
 > getWeatherDates :: [DateTime]
 > getWeatherDates = map (addHours start) [0 .. hours]
 >   where
->     start = fromGregorian 2010 6 9 0 0 0 -- TBF
->     end   = fromGregorian 2010 6 9 1 0 0 -- TBF
+>     start = fromGregorian 2006 6 10 0 0 0 -- TBF
+>     end   = fromGregorian 2006 6 11 0 0 0 -- TBF
 >     hours = (diffMinutes' end start) `div` 60
 >     addHours dt hrs = (hrs * 60) `addMinutes'` dt
 
@@ -158,14 +145,7 @@ Gets the Minimum Effective System Temperature, and writes it to the DB.
 
 > updateMinEffSysTemp :: Connection -> Weather -> ReceiverTemperatures -> (Receiver, Int, Int) -> IO ()
 > updateMinEffSysTemp cnn w rts (rcvr, freq, elev) = do
->   print $ (show rcvr) ++ " " ++ (show freq) ++ " " ++ (show elev)
->   --begin <- getCurrentTime
 >   minEffSysTemp <- getMinEffSysTemp w rts rcvr freq elev
->   --print $ minEffSysTemp 
->   --end <- getCurrentTime
->   --let execTime = end - begin
->   --print $ "mins to calculate: " ++ (show ((fromIntegral execTime) / 60.0))
->   -- TBF: uncomment this when you release
 >   putMinEffSysTemp cnn rcvr freq elev minEffSysTemp
 >   return ()
 
@@ -176,7 +156,7 @@ Gets the Minimum Effective System Temperature
 >     sysTemps <- calculateEffSysTemps w rts rcvr freq elev 
 >     return $ minimum $ concatMap maybeToList sysTemps
 
-> calculateEffSysTemps :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> IO [(Maybe Float)]
+> calculateEffSysTemps :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> IO [Maybe Float]
 > calculateEffSysTemps w rts rcvr freq elev = mapM (tSysPrimeNow w rts rcvr freq elev)  getWeatherDates
 
 > tSysPrimeNow :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> DateTime -> IO (Maybe Float)
@@ -184,7 +164,7 @@ Gets the Minimum Effective System Temperature
 >   tsys' <- runScoring w [] rts $ tSysPrimeNow' rcvr f e dt
 >   return tsys'
 >     where
->       f = fromIntegral freq
+>       f = fromIntegral freq / 1000.0 -- MHz -> GHz
 >       e = fromIntegral elev
 
 We originally were able to use Score.tSysPrime directly, but for maximizing
@@ -192,16 +172,17 @@ performance, we wanted to use the 'bestTsys/Opacity' methods below.  These
 methods allow us to maximize use of the cache and minimize our hits to the DB.
 Otherwise, it could take weeks to fill the t_sys table.
 
-> tSysPrimeNow' :: Receiver -> Float -> Float -> DateTime -> Scoring (Maybe Float)
+> tSysPrimeNow' :: Receiver -> Frequency -> Float -> DateTime -> Scoring (Maybe Float)
 > tSysPrimeNow' rcvr freq elev dt = do
->   --rt <- receiverTemperatures
->   --trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
+>   rt   <- receiverTemperatures
+>   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
 >   -- Simply use this line to get results that agree with previous values
->   let trx' = Just $ oldReceiverTemperature dt defaultSession {frequency = freq}
+>   -- But don't forget that this could be changed in Receiver too! idiot
+>   --let trx' = Just $ oldReceiverTemperature dt defaultSession {frequency = freq}
 >   -- here we are using the 'best' methods to avoid having to deal
->   -- with specifiying the forecast type, which 
->   w   <- weather
->   tk' <- liftIO $ bestTsys w dt freq
+>   -- with specifiying the forecast type
+>   w    <- weather
+>   tk'  <- liftIO $ bestTsys w dt freq
 >   zod' <- liftIO $ bestOpacity w dt freq
 >   let za = pi/2 - (deg2rad elev) 
 >   return $ do 
@@ -215,25 +196,23 @@ Otherwise, it could take weeks to fill the t_sys table.
 
 This is the non-optimal way to calculate stringencies:
 
-> {-
-> getStringency :: Receiver -> Int -> Int -> Bool -> IO Float
-> getStringency rcvr freq elev cont = do
->     limits <- calculateStringencyLimits rcvr freq elev cont
->     return $ (fromIntegral . length $ limits) / (sum $ concatMap maybeToList limits)
+getStringency :: Receiver -> Int -> Int -> Bool -> IO Float
+getStringency rcvr freq elev cont = do
+    limits <- calculateStringencyLimits rcvr freq elev cont
+    return $ (fromIntegral . length $ limits) / (sum $ concatMap maybeToList limits)
 
-> calculateStringencyLimits :: Receiver -> Int -> Int -> Bool -> IO [(Maybe Float)]
-> calculateStringencyLimits rcvr freq elev cont = mapM (calcStringencyLimit rcvr freq elev cont) getWeatherDates
+calculateStringencyLimits :: Receiver -> Int -> Int -> Bool -> IO [Maybe Float]
+calculateStringencyLimits rcvr freq elev cont = mapM (calcStringencyLimit rcvr freq elev cont) getWeatherDates
 
-> calcStringencyLimit ::  Receiver -> Int -> Int -> Bool -> DateTime -> IO (Maybe Float)
-> calcStringencyLimit rcvr freq elev cont dt = do
->   w <- getWeather $ Just dt
->   rt <- getReceiverTemperatures
->   strg <- runScoring w [] rt $ stringencyLimit rcvr f e cont dt
->   return strg
->     where
->       f = fromIntegral freq
->       e = fromIntegral elev
-> -}
+calcStringencyLimit ::  Receiver -> Int -> Int -> Bool -> DateTime -> IO (Maybe Float)
+calcStringencyLimit rcvr freq elev cont dt = do
+  w <- getWeather $ Just dt
+  rt <- getReceiverTemperatures
+  strg <- runScoring w [] rt $ stringencyLimit rcvr f e cont dt
+  return strg
+    where
+      f = fromIntegral freq
+      e = fromIntegral elev
 
 Here is the faster way to do it: the resulting array should be one to
 one with the arguments passed in.
@@ -245,17 +224,23 @@ one with the arguments passed in.
 >   return $ map limitsToStringency limitsByArgs
 >   
 
-> limitsToStringency :: [(Maybe Float)] -> Float
+> limitsToStringency :: [Maybe Float] -> Float
 > limitsToStringency limits = (fromIntegral . length $ limits') / (sum limits')
 >   where
 >     limits' = concatMap maybeToList limits
 
-> stringencyLimitsByDate :: ReceiverTemperatures -> [(Receiver, Int, Int, Bool)] -> DateTime -> IO [(Maybe Float)]
+> stringencyLimitsByDate :: ReceiverTemperatures -> [(Receiver, Int, Int, Bool)] -> DateTime -> IO [Maybe Float]
 > stringencyLimitsByDate rts args dt = do
->   print . toSqlString $ dt
+>   -- print . toSqlString $ dt
+>   -- TBF: in the trunk, getRealOrForecastedWind has 
+>   -- if (dt' <= wDt) then gbt_wind .  But in our current branch, it's :
+>   -- if (dt' < wDt)  then gbt_wind (where dt' is the time requested,
+>   -- wDt is the 'forecast' variable for the weather (the origin).
+>   -- Here, we want the best forecast weather - NOT gbt weather (real)
 >   w <- getWeather $ Just dt
 >   mapM (stringencyLimit' w rts dt) args
 
+> stringencyLimit' :: Weather -> ReceiverTemperatures -> DateTime -> (Receiver, Int, Int, Bool) -> IO (Maybe Float)
 > stringencyLimit' w rts dt (rcvr, freq, elev, cont) = runScoring w [] rts $ stringencyLimit rcvr f e cont dt
 >   where
 >     f = (fromIntegral freq) / 1000.0 -- MHz -> GHz
@@ -282,11 +267,7 @@ TBF: should I put this in Score.lhs?
 >   fs3 <- atmosphericStabilityLimit dt s
 >   let atmStbLimit = eval fs3
 >   let atmStbOK = atmStbLimit >= 1
->   --return $ if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
 >   let r = if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
->   --liftIO $ print $ "stringencyLimit for: " ++ (show rcvr) ++ " " ++ (show freq) ++ " " ++ (show elev) ++ " " ++ (show cont)
->   --liftIO $ print $ (show obsEffLimit) ++ " " ++ (show . minObservingEff $ freq) ++ " " ++ (show trErrLimit) ++ " " ++ (show atmStbLimit)
->   --liftIO $ print r
 >   return r
 >     where
 >       s = mkDummySession rcvr freq elev cont dt
@@ -355,30 +336,3 @@ TBF: refactor to share code from Weather and DSSData
 >       query = "INSERT INTO stringency (receiver_id, observing_type_id, frequency, elevation, total) VALUES (?, ?, ?, ?, ?)"
 >       xs rcvrId obsTypeId = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]
 >       obsType cont = if cont then Continuum else SpectralLine
-
-TBF: this stolen from DSSData.lhs
-
-> {-
-> getRcvrId :: Connection -> Receiver -> IO Int
-> getRcvrId cnn rcvr = do
->     result <- quickQuery' cnn query xs
->     return $ fromSql . head . head $ result 
->   where
->     query = "SELECT id FROM receivers WHERE name = ?;"
->     xs = [toSql . show $ rcvr]
-
-
-> getObservingTypeId :: Connection -> ObservingType -> IO Int
-> getObservingTypeId cnn obsType = do
->     result <- quickQuery' cnn query xs
->     return $ fromSql . head . head $ result 
->   where
->     query = "SELECT id FROM observing_types WHERE type = ?;"
->     xs = [fromObservingType obsType]
-
-> fromObservingType :: ObservingType -> SqlValue
-> fromObservingType obsType = toSql . toLowerFirst $ show obsType 
->   where
->     toLowerFirst x = if x == "SpectralLine" then "spectral line" else [toLower . head $ x] ++ tail x
-> -}
-

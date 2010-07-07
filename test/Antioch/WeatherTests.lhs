@@ -25,6 +25,35 @@
 >   , test_wind
 >      ]
 
+> test_freq2ForecastIndex = TestCase $ do
+>   -- freq2ForecastIndex'
+>   assertEqual "test_freq2ForecastIndex" 120 (freq2ForecastIndex' 140.0)
+>   assertEqual "test_freqForecastIndex" 2   (freq2ForecastIndex' 1.0)
+>   assertEqual "test_freqForecastIndex" 5   (freq2ForecastIndex' 5.2)
+>   assertEqual "test_freqForecastIndex" 6   (freq2ForecastIndex' 5.5)
+>   -- freq2ForecastIndex'
+>   assertEqual "test_freq2ForecastIndex" 120 (freq2ForecastIndex 140.0)
+>   assertEqual "test_freq2ForecastIndex" 2   (freq2ForecastIndex 1.0)
+>   assertEqual "test_freq2ForecastIndex" 5   (freq2ForecastIndex 5.2)
+>   assertEqual "test_freq2ForecastIndex" 6   (freq2ForecastIndex 5.5)
+>   assertEqual "test_freq2ForecastIndex" 52  (freq2ForecastIndex 52.3)
+>   assertEqual "test_freq2ForecastIndex" 58  (freq2ForecastIndex 57.1)
+
+> test_freq2HistoryIndex = TestCase $ do
+>   -- freq2HistoryIndex'
+>   assertEqual "test_freq2HistoryIndex_1" 120000 (freq2HistoryIndex' 140.0)
+>   assertEqual "test_freqHistory2Index_2" 100   (freq2HistoryIndex' 0.02)
+>   assertEqual "test_freqHistory2Index_3" 5000   (freq2HistoryIndex' 5.2)
+>   assertEqual "test_freqHistory2Index_4" 6000   (freq2HistoryIndex' 5.5)
+>   -- freq2HistoryIndex'
+>   assertEqual "test_freq2HistoryIndex_5" 120000 (freq2HistoryIndex 140.0)
+>   assertEqual "test_freq2HistoryIndex_6" 100   (freq2HistoryIndex 0.02)
+>   assertEqual "test_freq2HistoryIndex_7" 5000   (freq2HistoryIndex 5.23)
+>   assertEqual "test_freq2HistoryIndex_8" 6000   (freq2HistoryIndex 5.5)
+>   assertEqual "test_freq2HistoryIndex_9" 52000  (freq2HistoryIndex 52.3)
+>   assertEqual "test_freq2HistoryIndex_10" 58000  (freq2HistoryIndex 57.1)
+>   assertEqual "test_freq2HistoryIndex_11" 102000  (freq2HistoryIndex 101.5)
+
 This module (except for the test-forecastType_2 test) only tests weather
 using dates for the year 2006.  2006 weather is labeled using 12-hour forecasts
 and has a deprecated (and WRONG) method for calculating the forecastType.
@@ -254,6 +283,27 @@ to 2006 date.
 >       getWind w d = wind w d
 >       exp = [Just 1.3301781, Just 1.3301781] ++ (take 4 $ repeat (Just 1.279996)) ++ (take 3 $ repeat (Just 1.2406306))
 
+> print_weather_values = TestCase $ do
+>   mapM print_weather (dts start)
+>   assertEqual "" True True 
+>     where
+>       start = fromGregorian 2004 6 10 0 0 0
+>       dts  start = map (\days -> (days*24*60) `addMinutes'` start) $ take 8 $ [0,30 ..]  
+>       print_weather dt = do
+>          w <- getWeather $ Just dt
+>          wind' <- wind w dt --(60 `addMinutes'` dt)
+>          wind_mph' <- wind_mph w dt
+>          ir <- irradiance w dt
+>          --gbt_wind' <- gbt_wind w dt --(60 `addMinutes'` dt)
+>          --gbt_ir <- gbt_irradiance w dt
+>          op2 <- opacity w dt 2
+>          tsys2 <- tsys w dt 2
+>          op20 <- opacity w dt 20
+>          tsys20 <- tsys w dt 20
+>          op100 <- opacity w dt 100
+>          tsys100 <- tsys w dt 100
+>          print $ (toSqlString dt) ++ ":" ++ (sv wind') ++ (sv wind_mph') ++ (sv ir) ++ (sv op2) ++ (sv tsys2)  ++ (sv op20) ++ (sv tsys20) ++ (sv op100) ++ (sv tsys100)
+>       sv v = " " ++ (show $ fromMaybe (-1.0) v)
 
 Test utilities
 

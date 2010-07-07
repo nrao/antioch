@@ -158,11 +158,14 @@ the graph produced by CLEO forecasts, requesting 'Ground Speed', just sites
 Elkins and Lewisburg, with the average.  An excellent tool for integration
 tests.
 
+hours offset vs. raw wind speed
+
 > plotWindMPH :: DateTime -> Minutes -> IO ()
 > plotWindMPH dt dur = do
 >   w <- getWeather $ Just dt
 >   winds_mph <- mapM (getWindsMPH' w) $ times
 >   let plotData = zipWith (\a b -> (fromInteger . toInteger $ a, (maybe 0.0 id b))) deltas winds_mph
+>   printList plotData
 >   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "wind_mph", plotData)]
 >     where
 >   title = "wind_mph, starting: " ++ (toSqlString dt)
@@ -174,22 +177,33 @@ tests.
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
-minEffSysTemp
+Frequency @ 90 degress elevation vs. minEffSysTemp 
 
-minEffSysTemp vs. Frequency @ 90 degress elevation
-
-> plotMinEffSysTemp :: StatsPlot
-> plotMinEffSysTemp fn n _ _ _ = do
+> plotMinEffSysTemp :: IO ()
+> plotMinEffSysTemp = do
 >   w <- getWeather Nothing
->   minTsys <- mapM (mtsys w) freqs
->   let plotData = zipWith (\a b -> (fromIntegral . snd $ a, (maybe 0.0 id b))) freqs minTsys
->   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "min eff sys temp", plotData)]
+>   pds <- mapM (minTsysPrimeData w) rcvrs
+>   linePlots (tail $ scatterAttrs title xl yl "minEffSysTemp.png") pds
 >     where
->   freqs = getMinEffSysTempFreqs --[f | (r, f) <- getMinEffSysTempFreqs]
->   mtsys w (r, f) = minTSysPrime w (fromIntegral f) (pi/2) r
->   title = "Min. Effective Sys. Temp. vs. Frequency (@90') " ++ n
->   xl = "Freq. (GHz)"
->   yl = "Min. Effecitve System Temperature"
+>       rcvrs = filter (/=Holography) allRcvrs
+>       title = "Min. Effective Sys. Temp. vs. Frequency (@90')"
+>       xl = "Freq. (MHz)"
+>       yl = "Min. Effecitve System Temperature"
+
+> minTsysPrimeData :: Weather -> Receiver -> IO (Maybe String, [(Float, Float)]) -- (rcvr, [(f, T)])
+> minTsysPrimeData w r = do
+>     let fs = map fromIntegral (getRcvrFreqIndices r)      -- TBF to GHz? i.e., (/1000.0)
+>     ts <- minTsysPrimeData' w r
+>     print $ (show r) ++ " " ++ (show . minimum $ ts) ++ " " ++ (show . maximum $ ts)
+>     let fts  =  zip fs ts
+>     return (Just . show $ r, fts)
+
+> minTsysPrimeData' :: Weather -> Receiver -> IO [Float]
+> minTsysPrimeData' w r = do
+>   ms <- mapM (mtsys w r) . getRcvrFreqIndices $ r
+>   return $ map (\t -> maybe 0.0 id t) ms
+>     where
+>       mtsys w r f = minTSysPrime w (fromIntegral (f `div` 1000)) (pi/2) r
 
 simDecFreq (stars, crosses)
 
@@ -829,7 +843,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
->  , plotMinEffSysTemp $ rootPath ++ "/minEffSysTemp.png"
+>  -- , plotMinEffSysTemp $ rootPath ++ "/minEffSysTemp.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"

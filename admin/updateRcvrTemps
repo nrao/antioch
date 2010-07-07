@@ -1,23 +1,24 @@
 #! /bin/bash
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_342 2007-08-01
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_450 2008-06-01 
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_600 2003-07-01
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_800 2008-06-01
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_1070 2003-03-01
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr1_2  2002-02-14
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr2_3  2008-08-01
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr4_6  2007-10-06
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr8_10 2007-06-15
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr12_18 2003-11-10
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr18_26 2003-09-19
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_342       2007-08-01
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_450       2008-06-01 
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_600       2003-07-01
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_800       2008-06-01
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_1070      2003-03-01
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr1_2        2002-02-14
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr2_3        2008-08-01
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr4_6        2007-10-06
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr8_10       2007-06-15
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr12_18      2003-11-10
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr18_26      2003-09-19
 runhaskell UpdateReceiverTemperatures.lhs $1 RcvrArray18_26 2010-03-08
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr26_40 2007-09-01
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr40_52 2008-11-01
-# we are faking the Mustang rcvr temps, so the date is irrelevant
-runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_PAR 2010-01-01 
-#runhaskell UpdateReceiverTemperatures.lhs $1 
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr26_40      2007-09-01
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr40_52      2008-11-01
+# we are faking these receiver temperatures, so the date is irrelevant
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_PAR       2010-01-01 
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_RRI       2010-01-01 
+runhaskell UpdateReceiverTemperatures.lhs $1 Holography     2010-01-01 
 
-# Notes:
+# Notes:        TBF what does this table signify?
 
 #| receiver       | date       |  notes
 
@@ -36,8 +37,9 @@ runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_PAR 2010-01-01
 #| Rcvr40_52      | 2008-11-01 | 2009-11-21 has all 1.0's; done
 
 #Not in Measurement:
-#Holography
-#NoiseSource
-#Rcvr_PAR use 120 K.
-#Rcvr_RRI
+#NoiseSource   (not used)
+#Zpectrometer  (not used)
+#Holography    (11.7,1e6),(12.2,1e6)
+#Rcvr_PAR      (80.0,120.0),(100.0,120.0)
+#Rcvr_RRI      (0.1,300.0),(1.6,300.0)
 

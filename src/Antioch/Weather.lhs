@@ -144,13 +144,29 @@ granularity: 2,3 .. 51,52,54,56 .. 118,120.
 But the t_sys frequency values 
 are: 2,3 .. 120
 
-> freq2Index' :: Frequency -> Int
-> freq2Index' = min 120 . max 2 . round
+> freqIndices :: [Int]
+> freqIndices = [100, 200 .. 900] ++ [1000, 2000 .. 51000] ++ [52000, 54000 .. 120000]
 
-> freq2Index :: Frequency -> Int
-> freq2Index f = if f' > 52 && odd f' then f' + 1 else f'
+> freq2ForecastIndex' :: Frequency -> Int
+> freq2ForecastIndex' = min 120 . max 2 . round
+
+> freq2ForecastIndex :: Frequency -> Int
+> freq2ForecastIndex f = if f' > 52 && odd f' then f' + 1 else f'
 >   where
->     f' = freq2Index' f
+>     f' = freq2ForecastIndex' f
+
+> freq2HistoryIndex' :: Frequency -> Int
+> freq2HistoryIndex' freq = min 120000 . max 100 $ f -- . round . (*1000.0) 
+>   where
+>     -- ex: 0.256 GHz -> 200 MHz
+>     f | freq < 1.0   = (*100) . round . (*10) $ freq 
+>       | otherwise = (*1000) . round $ freq 
+
+> freq2HistoryIndex :: Frequency -> Int
+> freq2HistoryIndex f = if f' > 52000 && odd' f' then f' + 1000 else f'
+>   where
+>     f' = freq2HistoryIndex' f
+>     odd' = odd . round . (/1000) . fromIntegral
 
 The elevation range of the weather DB is from 5 - 90 degrees.
 
@@ -358,7 +374,7 @@ The 'Best' set of functions avoids dealing with forecast types.
 > getOpacity cache cnn ftype dt frequency = liftM fst. withCache key cache $
 >     fetchOpacityAndTSys cnn dt freqIdx ftype
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx, ftype)
 
 Unlike getOpacity, getBestOpacity avoids specifying a forecast type, and
@@ -368,14 +384,14 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getBestOpacity cache cnn dt frequency = liftM fst. withCache key cache $
 >     fetchAnyOpacityAndTSys cnn dt freqIdx 
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx)
 
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
 > getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
 >     fetchOpacityAndTSys cnn dt freqIdx ftype
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx, ftype)
 
 Unlike getTSys, getBestTSys avoids specifying a forecast type, and
@@ -385,7 +401,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getBestTSys cache cnn dt frequency = liftM snd . withCache key cache $
 >     fetchAnyOpacityAndTSys cnn dt freqIdx 
 >   where
->     freqIdx = freq2Index frequency
+>     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx)
 
 > getTotalStringency' = caching getTotalStringency
@@ -408,7 +424,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getTotalStringency cache conn frequency elevation rcvr obsType = withCache key cache $
 >     fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
 >   where
->     freqIdx = freq2Index' frequency
+>     freqIdx = freq2HistoryIndex frequency
 >     elevIdx = round . rad2deg $ elevation
 >     obsIdx = if obsType == Continuum then 1 else 0
 >     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
@@ -427,7 +443,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinOpacity cache conn frequency elevation = withCache key cache $
 >     getFloat conn query [toSql freqIdx, toSql elevIdx]
 >   where
->     freqIdx = freq2Index' frequency
+>     freqIdx = freq2HistoryIndex frequency
 >     elevIdx = round . rad2deg $ elevation
 >     key     = (freqIdx, elevIdx)
 >     query   = "SELECT opacity FROM min_weather\n\
@@ -436,7 +452,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
 > getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
 >   where
->     freqIdx = freq2Index' frequency
+>     freqIdx = freq2HistoryIndex frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
 >     elevation' = max (deg2rad 5.0) elevation
 >     elevIdx = round . rad2deg $ elevation'
@@ -469,6 +485,7 @@ where as in Dec. of 2009 we went to 6 hour forecasts and compute the
 forecast_type_id correctly using the forecast_time from the DB.
 
 > forecastType :: DateTime -> DateTime -> DateTime -> Int
+> {-
 > forecastType target now ft = case year of
 >                           2006 -> forecastType2006 target now fTypes2006 1
 >                           _    -> forecastType' target ft fTypes 9
@@ -476,9 +493,14 @@ forecast_type_id correctly using the forecast_time from the DB.
 >     (year, _, _, _, _, _) = toGregorian target
 >     fTypes2006 = [12, 24, 36, 48, 60]
 >     fTypes = [t*6 | t <- [1 .. 16]]
+> -}
+> forecastType target _ ft = forecastType' target ft fTypes 1
+>   where
+>     fTypes = [t*6 | t <- [1 .. 16]]
 
 This method is only for unit tests.
 
+> {-
 > forecastType2006 :: DateTime -> DateTime -> [Int] -> Int -> Int
 > forecastType2006 target now forecast_types offset =
 >     -- this < is wrong: should be <=; that's why this only is used
@@ -487,6 +509,7 @@ This method is only for unit tests.
 >         []     -> length forecast_types
 >         (x:xs) -> fromJust (elemIndex x forecast_types) + offset
 >   where difference = (target - now) `div` 3600
+> -}
 
 Get the forecast_type_id that is used to represent the difference between 
 the two given timestamps.  Note that the  
