@@ -194,7 +194,7 @@ Frequency @ 90 degress elevation vs. minEffSysTemp
 > minTsysPrimeData w r = do
 >     let fs = map fromIntegral (getRcvrFreqIndices r)      -- TBF to GHz? i.e., (/1000.0)
 >     ts <- minTsysPrimeData' w r
->     print $ (show r) ++ " " ++ (show . minimum $ ts) ++ " " ++ (show . maximum $ ts)
+>     print $ (show r) ++ " " ++ (show . minimum $ ts) ++ " to " ++ (show . maximum $ ts)
 >     let fts  =  zip fs ts
 >     return (Just . show $ r, fts)
 

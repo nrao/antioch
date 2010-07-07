@@ -1189,7 +1189,7 @@ to return forecasted wind values, or wind values from weather station 2.
 >   w <- weather
 >   let wDt = forecast w
 >   let dt' = roundToHour dt
->   wind' <- if dt' < wDt
+>   wind' <- if dt' <= wDt
 >            then liftIO $ gbt_wind w dt
 >            else liftIO $ wind w dt 
 >   return wind'
