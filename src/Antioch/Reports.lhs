@@ -8,7 +8,7 @@
 > import Antioch.Schedule
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Utilities (rad2deg, rad2hrs, printList)
+> import Antioch.Utilities (deg2rad, rad2deg, rad2hrs, printList)
 > import Antioch.Weather
 > import Antioch.Debug
 > import Antioch.TimeAccounting
@@ -177,7 +177,35 @@ hours offset vs. raw wind speed
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
-Frequency @ 90 degress elevation vs. minEffSysTemp 
+Stringency versus frequency for elevation = 90 deg, all receivers,
+and both obs types.
+
+> plotStringencyVsFrequencySpecLine, plotStringencyVsFrequencyCont :: IO ()
+> plotStringencyVsFrequencySpecLine = plotStringencyVsFrequency "strinFreqSpecLine.png" SpectralLine (pi/2)
+> plotStringencyVsFrequencyCont = plotStringencyVsFrequency "strinFreqCont.png" Continuum (pi/2)
+
+> plotStringencyVsFrequency :: String -> ObservingType -> Radians -> IO ()
+> plotStringencyVsFrequency f ot el = do
+>   w <- getWeather Nothing
+>   pds <- mapM (totalStringencyData w el ot) rcvrs
+>   linePlots (tail $ scatterAttrs title xl yl f) pds
+>     where
+>       rcvrs = filter (/=Holography) allRcvrs
+>       title = "Stringency vs. Frequency (@90') for " ++ (show ot)
+>       xl = "Freq. (MHz)"
+>       yl = "Stringency"
+
+Stringency versus frequency for elevation = 25,35,50,75,90 deg,
+all receivers, and obs type = cont.
+
+> plotStringencyVsFrequencyElev :: IO [()]
+> plotStringencyVsFrequencyElev = mapM pltSF [25.0, 35.0, 50.0, 75.0, 90.0]
+>   where
+>     pltSF freq = plotStringencyVsFrequency (fn freq) Continuum (deg2rad freq)
+>     fn f = "strinFreqEl" ++ (show . round $ f) ++ ".png"
+
+Minimum effective system temperature versus frequency
+for elevation = 90 deg, all receivers.
 
 > plotMinEffSysTemp :: IO ()
 > plotMinEffSysTemp = do
@@ -192,7 +220,7 @@ Frequency @ 90 degress elevation vs. minEffSysTemp
 
 > minTsysPrimeData :: Weather -> Receiver -> IO (Maybe String, [(Float, Float)]) -- (rcvr, [(f, T)])
 > minTsysPrimeData w r = do
->     let fs = map fromIntegral (getRcvrFreqIndices r)      -- TBF to GHz? i.e., (/1000.0)
+>     let fs = map fromIntegral (getRcvrFreqIndices r)
 >     ts <- minTsysPrimeData' w r
 >     print $ (show r) ++ " " ++ (show . minimum $ ts) ++ " to " ++ (show . maximum $ ts)
 >     let fts  =  zip fs ts
@@ -204,6 +232,21 @@ Frequency @ 90 degress elevation vs. minEffSysTemp
 >   return $ map (\t -> maybe 0.0 id t) ms
 >     where
 >       mtsys w r f = minTSysPrime w (fromIntegral (f `div` 1000)) (pi/2) r
+
+> totalStringencyData :: Weather -> Radians -> ObservingType -> Receiver -> IO (Maybe String, [(Float, Float)]) -- (rcvr, [(f, S)])
+> totalStringencyData w el ot r = do
+>     let fs = map fromIntegral (getRcvrFreqIndices r)
+>     ts <- totalStringencyData' w el ot r 
+>     print $ (show r) ++ " " ++ (show . minimum $ ts) ++ " to " ++ (show . maximum $ ts)
+>     let fts  =  zip fs ts
+>     return (Just . show $ r, fts)
+
+> totalStringencyData' :: Weather -> Radians -> ObservingType -> Receiver -> IO [Float]
+> totalStringencyData' w el ot r = do
+>   ms <- mapM (tstr w r) . getRcvrFreqIndices $ r
+>   return $ map (\t -> maybe 0.0 id t) ms
+>     where
+>       tstr w r f = totalStringency w (fromIntegral (f `div` 1000)) el r ot
 
 simDecFreq (stars, crosses)
 
