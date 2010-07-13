@@ -1,3 +1,4 @@
+> {-# OPTIONS -XImplicitParams #-}
 > module Antioch.HistoricalWeather where
 
 > import Antioch.DateTime
@@ -10,11 +11,13 @@
 > import Antioch.Weather
 > import Control.Monad.RWS.Strict
 > import Data.Char         (toLower)
+> import Data.IORef        (IORef, newIORef, readIORef)
 > import Data.List 
-> import Data.Maybe        (maybeToList)
+> import Data.Maybe        (catMaybes, maybeToList)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import System.CPUTime
+> import System.IO.Unsafe  (unsafePerformIO)
 
 From Dana Balser:
 
@@ -67,10 +70,12 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 > ericWasHere     :: Connection -> IO ()
 > ericWasHere cnn = do
->     ?rts <- getReceiverTemperatures
->     ?w <- getWeather Nothing
->     forM_ allRcvrs $ \rcvr ->
->     forM_ getRcvrFreqIndices rcvr $ \freq ->
+>     rts <- getReceiverTemperatures
+>     let ?rts = rts
+>     w <- getWeather Nothing
+>     let ?w = w
+>     forM_ allRcvrs $ \rcvr -> do
+>     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
 >     forM_ [5 .. 90] $ \elev -> do
 >       minEffSysTemp <- getMinEffSysTemp rcvr freq elev
 >       putMinEffSysTemp cnn rcvr freq elev minEffSysTemp
