@@ -4,15 +4,18 @@
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Antioch.Score
-> import Antioch.Settings  (weatherDB)
+> import Antioch.Settings     (weatherDB)
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Weather
-> import Data.IORef        (newIORef, readIORef)
-> import Data.Maybe        (maybe)
+> import Control.Monad        (forM_)
+> import Control.Monad.Trans  (liftIO)
+> import Data.IORef           (newIORef, readIORef, writeIORef)
+> import Data.List            ((\\))
+> import Data.Maybe           (maybe)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
-> import System.IO.Unsafe  (unsafePerformIO)
+> import System.IO.Unsafe     (unsafePerformIO)
 > import qualified Data.Map as Map
 
 Calculate the minimum value of the effective system temperature.
@@ -54,7 +57,7 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 
 > start = fromGregorian 2006 6 10 0 0 0
-> end   = fromGregorian 2006 6 11 0 0 0
+> end   = fromGregorian 2006 6 17 0 0 0
 > hours = (end `diffMinutes'` start) `div` 60
 
 > updateHistoricalWeather :: IO ()
@@ -74,18 +77,18 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
->         forM_ [5 .. 90] $ \elev -> do
+>         forM_ [5 .. 90 :: Int] $ \elev -> do
 >           getMinEffSysTemp efficiencies rcvr freq elev dt
->           getStringency stringencies rcvr freq elev SpectralLine dt
 >           getStringency stringencies rcvr freq elev Continuum dt
+>           getStringency stringencies rcvr freq elev SpectralLine dt
 >     effs <- readIORef efficiencies
->     strs <- readIORef stringincies
+>     strs <- readIORef stringencies
 >     forM_ allRcvrs $ \rcvr -> do
 >     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
 >     forM_ [5 .. 90] $ \elev -> do
 >       putMinEffSysTemp cnn effs rcvr freq elev
->       putStringency cnn strs rcvr freq elev SpectralLine
 >       putStringency cnn strs rcvr freq elev Continuum
+>       putStringency cnn strs rcvr freq elev SpectralLine
 
 > getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. hours]]
 
@@ -98,15 +101,25 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 ---------------Min. Effective System Temperature---------------
 
-> getMinEffSysTemp efficiencies rcvr freq elev dt =
->     tSysPrimeNow' rcvr f e dt >>= \new -> alter efficiencies (updateEff new) (rcvr, freq, elev)
+> getMinEffSysTemp efficiencies rcvr freq elev dt = do
+>     new <- tSysPrimeNow' rcvr f e dt
+>     liftIO $ alter efficiencies (updateEff new) (rcvr, freq, elev)
 >   where
 >     f = fromIntegral freq / 1000.0  -- MHz -> GHz
 >     e = fromIntegral elev
 
-> alter ref f k = modifyIORef ref $ Map.alter f k
+> alter ref f key = do
+>     map <- readIORef ref
+>     f (Map.lookup key map) $ \new -> case new of
+>       Just val -> writeIORef ref $! Map.insert key val map
+>       Nothing  -> return ()
 
-> updateEff new = maybe new (\old -> Just $ new `min` old)
+> updateEff Nothing    Nothing    k = k Nothing
+> updateEff Nothing    (Just old) k = k $! Just old
+> updateEff (Just new) Nothing    k = k $! Just new
+> updateEff (Just new) (Just old) k
+>     | new < old = k $! Just new
+>     | otherwise = k $! Just old
 
 We originally were able to use Score.tSysPrime directly, but for
 maximizing performance, we wanted to use the 'bestTsys/Opacity' methods
@@ -135,14 +148,17 @@ table.
 
 --------------Stringency--------------------
 
-> getStringency stringincies rcvr freq elev obstype dt =
->     stringencyLimit rcvr f e obstype dt >>= \new -> alter stringencies (updateStr new) (rcvr, freq, elev, obstype)
+> getStringency stringencies rcvr freq elev obstype dt = do
+>     new <- stringencyLimit rcvr f e obstype dt
+>     liftIO $ alter stringencies (updateStr new) (rcvr, freq, elev, obstype)
 >   where
 >     f = fromIntegral freq
 >     e = fromIntegral elev
 
-> updateStr False = maybe 0 Just
-> updateStr True  = maybe 1 (Just . (1 +))
+> updateStr False Nothing    k = k $! Just 0
+> updateStr False (Just old) k = k $! Just old
+> updateStr True  Nothing    k = k $! Just 1
+> updateStr True  (Just old) k = let r = old + 1 in r `seq` (k $! Just r)
 
 A combination of different limiting scoring factors (tracking error limit,
 observing efficiency limit, atmospheric stability limit, depending on
@@ -170,7 +186,7 @@ is giving the session a target that will be at the specified elevation
 at the specified time.
 
 > mkDummySession rcvr freq elev obstype dt = defaultSession {
->     , frequency = freq
+>       frequency = freq
 >     , receivers = [[rcvr]]
 >     , ra = ra'
 >     , dec = dec'
@@ -185,24 +201,24 @@ at the specified time.
 > connectDB = connectPostgreSQL $ "dbname=" ++ weatherDB ++ " user=dss"
 
 > truncateTable cnn table = do
->     quickQuery' cnn ("TRUNCATE TABLE " ++ table) []
+>     run cnn ("TRUNCATE TABLE " ++ table) []
 >     commit cnn
 
 > putMinEffSysTemp cnn efficiencies rcvr freq elev = do
 >     let tsys = maybe 0.0 id $ Map.lookup (rcvr, freq, elev) efficiencies
 >     rcvrId <- getRcvrId cnn rcvr
->     result <- quickQuery' cnn query (xs rcvrId)
+>     run cnn query (xs rcvrId tsys)
 >     commit cnn
 >   where
 >     query = "INSERT INTO t_sys (receiver_id, frequency, elevation, total, prime) VALUES (?, ?, ?, ?, 0.0)"
->     xs rcvrId = [toSql rcvrId, toSql freq, toSql elev, toSql tsys]
+>     xs rcvrId tsys = [toSql rcvrId, toSql freq, toSql elev, toSql tsys]
 
-> putStringency cnn stringincies rcvr freq elev obstype = do
->     let str = maybe 0.0 (hours /) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
+> putStringency cnn stringencies rcvr freq elev obstype = do
+>     let str = maybe (0.0 :: Float) (\c -> fromIntegral hours / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
 >     rcvrId <- getRcvrId cnn rcvr
 >     obsTypeId <- getObservingTypeId cnn obstype
->     result <- quickQuery' cnn query (xs rcvrId obsTypeId)
+>     run cnn query (xs rcvrId obsTypeId str)
 >     commit cnn
 >   where
 >     query = "INSERT INTO stringency (receiver_id, observing_type_id, frequency, elevation, total) VALUES (?, ?, ?, ?, ?)"
->     xs rcvrId obsTypeId = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]
+>     xs rcvrId obsTypeId str = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]
