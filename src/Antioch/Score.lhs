@@ -1018,9 +1018,9 @@ Need to translate a session's factors into the final product score.
 >   --                     hours                    degrees
 >   return [("hourAngle", Just ha'), ("elevation", Just el')]
 
-> subfactorFactors :: Session -> Weather -> DateTime -> IO Factors
-> subfactorFactors s w dt = do
->   rt <- getReceiverTemperatures
+> subfactorFactors :: Session -> Weather -> ReceiverTemperatures -> DateTime -> IO Factors
+> subfactorFactors s w rt dt = do
+>   -- rt <- getReceiverTemperatures
 >   sysNoiseTemp <- systemNoiseTemperature w rt dt s
 >   sysNoiseTempPrime <- systemNoiseTemperature' w rt dt s
 >   minSysNoiseTempPrime <- minTsys' w dt s
@@ -1052,16 +1052,16 @@ Need to translate a session's factors into the final product score.
 >       times = [(15*q) `addMinutes'` st | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
 
-> scoreElements :: Session -> Weather -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
-> scoreElements s w ss st dur rs = do
->   rt <- getReceiverTemperatures
+> scoreElements :: Session -> Weather -> ReceiverTemperatures -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
+> scoreElements s w rt ss st dur rs = do
+>   -- rt <- getReceiverTemperatures
 >   fs <- runScoring w rs rt $ genPeriodScore st ss
 >   let score' w dt = runScoring w rs rt $ do
 >       sf <- fs dt s
 >       return sf
 >   pfactors <- mapM (positionFactors s) times
 >   wfactors <- mapM (weatherFactors s w) times
->   ffactors <- mapM (subfactorFactors s w) times
+>   ffactors <- mapM (subfactorFactors s w rt) times
 >   sfactors <- mapM (score' w) times
 >   return $ zipWith4 (\a b c d -> a ++ b ++ c ++ d) pfactors wfactors ffactors sfactors
 >     where
@@ -1212,9 +1212,10 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 > scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
 > scoringInfo s ss dt dur rs = do
 >   w <- liftIO $ getWeather Nothing
+>   rt <- getReceiverTemperatures
 >   factors <- scoreFactors s w ss dt dur rs
 >   let scores = map eval factors
->   elements <- scoreElements s w ss dt dur rs
+>   elements <- scoreElements s w rt ss dt dur rs
 >   let info = printFactors $ zip times $ zip scores elements
 >   let report = "Scoring Info for session: " ++ (sName s) ++ "\n\n" ++ info
 >   putStrLn report

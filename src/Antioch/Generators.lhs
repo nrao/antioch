@@ -185,10 +185,14 @@ Backup sessions should not use a transit flag
 >     tb         <- genTimeBetween bk
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
+>     stype      <- genSType
+>     wds        <- genWindows stype
+>     pds        <- genPreScheduledPeriods stype wds
 >     trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
->                , periods        = []
+>                , windows        = wds
+>                , periods        = pds
 >                , band           = b
 >                , frequency      = f
 >                , ra             = ra
@@ -202,6 +206,7 @@ Backup sessions should not use a transit flag
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
 >                , lowRFI         = lowRFIFlag
+>                , sType          = stype
 >                , transit        = trans
 >                , grade          = g
 >                , receivers      = [[r]]
@@ -424,8 +429,14 @@ Q      80     5.3%     3.2   6
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
 
+> genSType :: Gen SessionType
+> genSType = return Open
 
+> genWindows :: SessionType -> Gen [Window]
+> genWindows st = return []
 
+> genPreScheduledPeriods :: SessionType -> [Window] -> Gen [Period]
+> genPreScheduledPeriods st wds = return []
 
 > genBand     :: Int -> Gen Band
 > genBand sem = fmap (read . str) . elements $ bands !! sem

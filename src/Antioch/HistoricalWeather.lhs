@@ -1,40 +1,39 @@
-> module Antioch.HistoricalWeather where
+> module Antioch.HistoricalWeather (updateHistoricalWeather) where
 
 > import Antioch.DateTime
-> import Antioch.Types
-> import Antioch.Score
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
-> import Antioch.Weather
+> import Antioch.Score
+> import Antioch.Settings     (weatherDB)
+> import Antioch.Types
 > import Antioch.Utilities
-> import Antioch.Settings                (weatherDB)
-> import Data.Char                       (toLower)
-> import Data.Maybe (maybeToList)
-> import Data.List 
+> import Antioch.Weather
+> import Control.Monad        (forM_)
+> import Control.Monad.Trans  (liftIO)
+> import Data.IORef           (newIORef, readIORef, writeIORef)
+> import Data.List            ((\\))
+> import Data.Maybe           (maybe)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
-> import System.CPUTime
-> import Control.Monad.RWS.Strict
-
-From Dana Balser:
+> import System.IO.Unsafe     (unsafePerformIO)
+> import qualified Data.Map as Map
 
 Calculate the minimum value of the effective system temperature.
-First calculate the total system temperature (DSPN5.2 equation 7;
-the constant value is from spillover (3 K) and the comsic microwave
-background (2.7 K), so we should use 5.7 K instead of 6 K.  I think
-we are already doing this in the code.  Anyow, this will be updated
-in DSPN5.3).
-Calculate Stringency.  Loop over the receivers, observing type,
-frequency, and elevation.  For observing type we just have continuum
-and line.  For frequency, we should use the frequencies from the
-weather forecast database that reside within the receiver boundaries
-as specified by the reciever calibration data.  For elevation, we
-should use 5,6,...,89,90.  For each hour, over n full years we
-calculate the tracking error limit, the observing efficiency limit,
-and the stability limit and determine the number of times the
-condition below is met.  The stringency is just the total number of
-hours divided by the number of hours the condition is met.
 
+First calculate the total system temperature (DSPN5.2 equation 7; the
+constant value is from spillover (3 K) and the comsic microwave background
+(2.7 K), so we should use 5.7 K instead of 6 K.  I think we are already
+doing this in the code.  Anyhow, this will be updated in DSPN5.3).
+
+Calculate Stringency.  Loop over the receivers, observing type, frequency,
+and elevation.  For observing type we just have continuum and line.
+For frequency, we should use the frequencies from the weather forecast
+database that reside within the receiver boundaries as specified by the
+reciever calibration data.  For elevation, we should use 5,6,...,89,90.
+For each hour, over n full years we calculate the tracking error limit,
+the observing efficiency limit, and the stability limit and determine the
+number of times the condition below is met.  The stringency is just the
+total number of hours divided by the number of hours the condition is met.
 
 for jrx in range(len(rx)):                           # loop over receiver
     for jobs in range(len(obs)):                     # loop over observing type (cont=0/line=1)
@@ -42,10 +41,10 @@ for jrx in range(len(rx)):                           # loop over receiver
             for jelev in range(len(elev)):           # loop over elevation
                 for iweather in range(len(weather)): # loop over all weather hours
                     
-                    effective system temperature
+                    # effective system temperature
                     tsysEffective[jrx,jfreq,jelev,iweather] = tsysTotal[jrx,jfreq,jelev,iweather]*exp(opacity[jrx,jfreq,jelev,iweather])
 
-                     stringency
+                    # stringency
                     if jobs == 0:  # continuum
                         if trackingErrorLimit >= 1 and obsEffLimit >= self.eta_min and atmStabLimit >= 1:
                             istring[jrx,jobs,jfreq,jelev] += 1
@@ -57,122 +56,77 @@ minTsysEffective[jrx,jfreq,jelev] = min(tsysEffective[jrx,jfreq,jelev,])
 stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,jobs,jfreq,jelev])
 
 
-Here's our code:
-
-TBF: just running updateMinEffSysTemp, it's clear that we should optimize this.
-For example, just covering a year's worth of forecasts, to run getMinEffSysTemp
-(that is for a given receiver, frequency and elevation) takes ~5 minutes.
-That means it might take 20 days to run (for just one year's worth!).
-It seems that one flaw is how weather and recevier temperatures are not
-shared across calls to tSysPrimeNow.  
+> start = fromGregorian 2006 6 10 0 0 0
+> end   = fromGregorian 2006 6 17 0 0 0
+> hours = (end `diffMinutes'` start) `div` 60
 
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
->   cnn <- connectDB
->   -- initialize the caches for these DB connections here
->   rts <- getReceiverTemperatures
->   w <- getWeather Nothing
->   -- First init the DB
->   truncateTable cnn "t_sys"
->   truncateTable cnn "stringency"
->   -- Then the min. effective system temperature
->   print "Updating min. eff. sys. temp."
->   mapM (updateMinEffSysTemp cnn w rts) getMinEffSysTempArgs 
->   print "Done updating min. eff. sys. temp."
->   -- Then the stringency
->   let args = getStringencyArgs
->   print "Updating stringencies"
->   strs <- getStringencies rts args
->   putStringencies cnn args strs
->   print "Done updating stringencies"
->   -- sucker!
->   disconnect cnn
->   return ()
+>     cnn <- handleSqlError $ connectDB
+>     truncateTable cnn "t_sys"
+>     truncateTable cnn "stringency"
+>     ericWasHere cnn
+>     disconnect cnn
 
-Not all Receivers are really receivers.  We don't want to compute 
-historical values for the Zpectrometer because it's really a backend.
+> ericWasHere cnn = do
+>     efficiencies <- newIORef Map.empty
+>     stringencies <- newIORef Map.empty
+>     rts <- getReceiverTemperatures
+>     forM_ getWeatherDates $ \dt -> do
+>       w <- getWeather . Just $ dt
+>       runScoring w [] rts $ do
+>         forM_ allRcvrs $ \rcvr -> do
+>         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>         forM_ [5 .. 90 :: Int] $ \elev -> do
+>           getMinEffSysTemp efficiencies rcvr freq elev dt
+>           getStringency stringencies rcvr freq elev Continuum dt
+>           getStringency stringencies rcvr freq elev SpectralLine dt
+>     effs <- readIORef efficiencies
+>     strs <- readIORef stringencies
+>     forM_ allRcvrs $ \rcvr -> do
+>     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>     forM_ [5 .. 90] $ \elev -> do
+>       putMinEffSysTemp cnn effs rcvr freq elev
+>       putStringency cnn strs rcvr freq elev Continuum
+>       putStringency cnn strs rcvr freq elev SpectralLine
 
-> allRcvrs, pfRcvrs, gregRcvrs :: [Receiver]
-> allRcvrs = filter (/=Zpectrometer) [Rcvr_RRI .. RcvrArray18_26]
-> pfRcvrs   = [Rcvr_RRI .. Rcvr_1070]
-> gregRcvrs = filter (/=Zpectrometer) [Rcvr1_2 .. RcvrArray18_26]
+> getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. hours]]
 
+> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
-We need to not just iterate through all elevations, but, more complicated,
-iterate through the frequency range of each receiver, for every receiver.
-However, we don't need to go below 2 GHz, since we don't have forecast
-values below 2 GHz, so leave those receivers out.
-
-> getMinEffSysTempArgs :: [(Receiver, Int, Int)]
-> getMinEffSysTempArgs = [(r, f, e) | (r, f) <- getRcvrFreqArgs, e <- [5 .. 90]]
-
-TBF: we now plan on calculating these for ALL receivers, even though we
-don't yet have opacities < 2 GHz.  
-
-> getStringencyArgs :: [(Receiver, Int, Int, Bool)]
-> getStringencyArgs = [(r, f, e, t) | (r, f) <- getRcvrFreqArgs, e <- [5 .. 90], t <- [False, True]] 
-
-TBF: go all the way up to 120 GHz
-Note: frequencies in MHz so that we can go below 1 GHz using ints
-
-> getRcvrFreqArgs :: [(Receiver, Int)]
-> getRcvrFreqArgs = concatMap getRcvrFreqArgs' allRcvrs
-
-> getRcvrFreqArgs' :: Receiver -> [(Receiver, Int)]
-> getRcvrFreqArgs' rcvr = map (\i -> (rcvr, i)) . getRcvrFreqIndices $ rcvr
-
-> getRcvrFreqIndices :: Receiver -> [Int]
 > getRcvrFreqIndices rcvr = takeWhile (<=hi) . dropWhile (<lo) $ freqIndices
 >   where
 >     (lo', hi') = getRcvrRange rcvr
->     lo = freq2HistoryIndex lo'
->     hi = freq2HistoryIndex hi'
-
-Returns an array of every hour that we have weather for
-TBF: eventually this should go from about May 2004 to the present (6 years!)
-
-> getWeatherDates :: [DateTime]
-> getWeatherDates = map (addHours start) [0 .. hours]
->   where
->     start = fromGregorian 2006 6 10 0 0 0 -- TBF
->     end   = fromGregorian 2006 6 11 0 0 0 -- TBF
->     hours = (diffMinutes' end start) `div` 60
->     addHours dt hrs = (hrs * 60) `addMinutes'` dt
+>     [lo,  hi]  = map freq2HistoryIndex [lo', hi']
 
 ---------------Min. Effective System Temperature---------------
 
-Gets the Minimum Effective System Temperature, and writes it to the DB.
+> getMinEffSysTemp efficiencies rcvr freq elev dt = do
+>     new <- tSysPrimeNow' rcvr f e dt
+>     liftIO $ alter efficiencies (updateEff new) (rcvr, freq, elev)
+>   where
+>     f = fromIntegral freq / 1000.0  -- MHz -> GHz
+>     e = fromIntegral elev
 
-> updateMinEffSysTemp :: Connection -> Weather -> ReceiverTemperatures -> (Receiver, Int, Int) -> IO ()
-> updateMinEffSysTemp cnn w rts (rcvr, freq, elev) = do
->   minEffSysTemp <- getMinEffSysTemp w rts rcvr freq elev
->   putMinEffSysTemp cnn rcvr freq elev minEffSysTemp
->   return ()
+> alter ref f key = do
+>     map <- readIORef ref
+>     f (Map.lookup key map) $ \new -> case new of
+>       Just val -> writeIORef ref $! Map.insert key val map
+>       Nothing  -> return ()
 
-Gets the Minimum Effective System Temperature
+> updateEff Nothing    Nothing    k = k Nothing
+> updateEff Nothing    (Just old) k = k $! Just old
+> updateEff (Just new) Nothing    k = k $! Just new
+> updateEff (Just new) (Just old) k
+>     | new < old = k $! Just new
+>     | otherwise = k $! Just old
 
-> getMinEffSysTemp :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int ->  IO Float
-> getMinEffSysTemp w rts rcvr freq elev = do 
->     sysTemps <- calculateEffSysTemps w rts rcvr freq elev 
->     return $ minimum $ concatMap maybeToList sysTemps
+We originally were able to use Score.tSysPrime directly, but for
+maximizing performance, we wanted to use the 'bestTsys/Opacity' methods
+below.  These methods allow us to maximize use of the cache and minimize
+our hits to the DB.  Otherwise, it could take weeks to fill the t_sys
+table.
 
-> calculateEffSysTemps :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> IO [Maybe Float]
-> calculateEffSysTemps w rts rcvr freq elev = mapM (tSysPrimeNow w rts rcvr freq elev)  getWeatherDates
-
-> tSysPrimeNow :: Weather -> ReceiverTemperatures -> Receiver -> Int -> Int -> DateTime -> IO (Maybe Float)
-> tSysPrimeNow w rts rcvr freq elev dt = do
->   tsys' <- runScoring w [] rts $ tSysPrimeNow' rcvr f e dt
->   return tsys'
->     where
->       f = fromIntegral freq / 1000.0 -- MHz -> GHz
->       e = fromIntegral elev
-
-We originally were able to use Score.tSysPrime directly, but for maximizing
-performance, we wanted to use the 'bestTsys/Opacity' methods below.  These
-methods allow us to maximize use of the cache and minimize our hits to the DB.
-Otherwise, it could take weeks to fill the t_sys table.
-
-> tSysPrimeNow' :: Receiver -> Frequency -> Float -> DateTime -> Scoring (Maybe Float)
 > tSysPrimeNow' rcvr freq elev dt = do
 >   rt   <- receiverTemperatures
 >   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
@@ -194,145 +148,77 @@ Otherwise, it could take weeks to fill the t_sys table.
 
 --------------Stringency--------------------
 
-This is the non-optimal way to calculate stringencies:
-
-getStringency :: Receiver -> Int -> Int -> Bool -> IO Float
-getStringency rcvr freq elev cont = do
-    limits <- calculateStringencyLimits rcvr freq elev cont
-    return $ (fromIntegral . length $ limits) / (sum $ concatMap maybeToList limits)
-
-calculateStringencyLimits :: Receiver -> Int -> Int -> Bool -> IO [Maybe Float]
-calculateStringencyLimits rcvr freq elev cont = mapM (calcStringencyLimit rcvr freq elev cont) getWeatherDates
-
-calcStringencyLimit ::  Receiver -> Int -> Int -> Bool -> DateTime -> IO (Maybe Float)
-calcStringencyLimit rcvr freq elev cont dt = do
-  w <- getWeather $ Just dt
-  rt <- getReceiverTemperatures
-  strg <- runScoring w [] rt $ stringencyLimit rcvr f e cont dt
-  return strg
-    where
-      f = fromIntegral freq
-      e = fromIntegral elev
-
-Here is the faster way to do it: the resulting array should be one to
-one with the arguments passed in.
-
-> getStringencies ::  ReceiverTemperatures -> [(Receiver, Int, Int, Bool)] -> IO ([Float])
-> getStringencies rts args = do
->   limitsByDate <- mapM (stringencyLimitsByDate rts args) getWeatherDates
->   let limitsByArgs = transpose limitsByDate
->   return $ map limitsToStringency limitsByArgs
->   
-
-> limitsToStringency :: [Maybe Float] -> Float
-> limitsToStringency limits = (fromIntegral . length $ limits') / (sum limits')
+> getStringency stringencies rcvr freq elev obstype dt = do
+>     new <- stringencyLimit rcvr f e obstype dt
+>     liftIO $ alter stringencies (updateStr new) (rcvr, freq, elev, obstype)
 >   where
->     limits' = concatMap maybeToList limits
-
-> stringencyLimitsByDate :: ReceiverTemperatures -> [(Receiver, Int, Int, Bool)] -> DateTime -> IO [Maybe Float]
-> stringencyLimitsByDate rts args dt = do
->   -- print . toSqlString $ dt
->   -- TBF: in the trunk, getRealOrForecastedWind has 
->   -- if (dt' <= wDt) then gbt_wind .  But in our current branch, it's :
->   -- if (dt' < wDt)  then gbt_wind (where dt' is the time requested,
->   -- wDt is the 'forecast' variable for the weather (the origin).
->   -- Here, we want the best forecast weather - NOT gbt weather (real)
->   w <- getWeather $ Just dt
->   mapM (stringencyLimit' w rts dt) args
-
-> stringencyLimit' :: Weather -> ReceiverTemperatures -> DateTime -> (Receiver, Int, Int, Bool) -> IO (Maybe Float)
-> stringencyLimit' w rts dt (rcvr, freq, elev, cont) = runScoring w [] rts $ stringencyLimit rcvr f e cont dt
->   where
->     f = (fromIntegral freq) / 1000.0 -- MHz -> GHz
+>     f = fromIntegral freq
 >     e = fromIntegral elev
 
-A combination of different limiting scoring factors (tracking error limit,
-observing efficiency limit, atmospheric stability limit, depending on observing
-type). Note that in order to reuse code from Score.lhs, we create a dummy
-session to score.
-Note: frequency passed in should be in GHz
-TBF: should I put this in Score.lhs?
+> updateStr False Nothing    k = k $! Just 0
+> updateStr False (Just old) k = k $! Just old
+> updateStr True  Nothing    k = k $! Just 1
+> updateStr True  (Just old) k = let r = old + 1 in r `seq` (k $! Just r)
 
-> stringencyLimit :: Receiver -> Float -> Float -> Bool -> DateTime -> Scoring (Maybe Float)
-> stringencyLimit rcvr freq elev cont dt = do
->   -- observing efficiency limit
->   fs <- observingEfficiencyLimit dt s
->   let obsEffLimit = eval fs
->   let obsEffOK = obsEffLimit >= 1 
->   -- tracking error limit
->   fs2 <- trackingErrorLimit dt s
->   let trErrLimit = eval fs2
->   let trErrOK = trErrLimit >= 1
->   -- atmospheric statbility
->   fs3 <- atmosphericStabilityLimit dt s
->   let atmStbLimit = eval fs3
->   let atmStbOK = atmStbLimit >= 1
->   let r = if obsEffOK && trErrOK && atmStbOK then (Just 1.0) else (Just 0.0)
->   return r
->     where
->       s = mkDummySession rcvr freq elev cont dt
+A combination of different limiting scoring factors (tracking error limit,
+observing efficiency limit, atmospheric stability limit, depending on
+observing type). Note that in order to reuse code from Score.lhs, we
+create a dummy session to score.
+
+Note: frequency passed in should be in GHz
+
+> stringencyLimit rcvr freq elev obstype dt = do
+>     fs <- observingEfficiencyLimit dt s
+>     if eval fs >= 1
+>       then do
+>         fs2 <- trackingErrorLimit dt s
+>         if eval fs2 >= 1
+>           then do
+>             fs3 <- atmosphericStabilityLimit dt s
+>             return $ eval fs3 >= 1
+>           else return False
+>       else return False
+>   where
+>     s = mkDummySession rcvr freq elev obstype dt
 
 Creates a dummy session with the given attributes.  The only tricky part
 is giving the session a target that will be at the specified elevation
 at the specified time.
 
-> mkDummySession :: Receiver -> Float -> Float -> Bool -> DateTime -> Session
-> mkDummySession rcvr freq elev cont dt = defaultSession { frequency = freq
+> mkDummySession rcvr freq elev obstype dt = defaultSession {
+>       frequency = freq
 >     , receivers = [[rcvr]]
 >     , ra = ra'
 >     , dec = dec'
->     , oType = if cont then Continuum else SpectralLine }
+>     , oType = obstype
+>     }
 >   where
->     ra' = fst $ getRaDec elev dt
->     dec' = snd $ getRaDec elev dt
-
-> getRaDec :: Float -> DateTime -> (Radians, Radians)
-> getRaDec elev dt = (ra, dec)
->   where
->     ra = hrs2rad . utc2lstHours $ dt
->     dec = realToFrac $ (realToFrac . deg2rad $ elev) - (pi/2 - gbtLat)
-
+>     ra'  = hrs2rad . utc2lstHours $ dt
+>     dec' = realToFrac $ (realToFrac . deg2rad $ elev) - (pi/2 - gbtLat)
 
 -------------Database----------------------------
 
-TBF: refactor to share code from Weather and DSSData
+> connectDB = connectPostgreSQL $ "dbname=" ++ weatherDB ++ " user=dss"
 
-> connectDB :: IO Connection
-> connectDB = handleSqlError $ connectPostgreSQL cnnStr 
->   where
->     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
-
-> truncateTable :: Connection -> String -> IO ()
 > truncateTable cnn table = do
->   result <- quickQuery' cnn query []
->   commit cnn
->   return ()
->     where
->       query = "TRUNCATE TABLE " ++ table
+>     run cnn ("TRUNCATE TABLE " ++ table) []
+>     commit cnn
 
-> putMinEffSysTemp :: Connection -> Receiver -> Int -> Int -> Float -> IO ()
-> putMinEffSysTemp cnn rcvr freq elev tsys = do
->   rcvrId <- getRcvrId cnn rcvr
->   result <- quickQuery' cnn query (xs rcvrId)
->   commit cnn
->   return ()
->     where
->       query = "INSERT INTO t_sys (receiver_id, frequency, elevation, total, prime) VALUES (?, ?, ?, ?, 0.0)"
->       xs rcvrId = [toSql rcvrId, toSql freq, toSql elev, toSql tsys]
+> putMinEffSysTemp cnn efficiencies rcvr freq elev = do
+>     let tsys = maybe 0.0 id $ Map.lookup (rcvr, freq, elev) efficiencies
+>     rcvrId <- getRcvrId cnn rcvr
+>     run cnn query (xs rcvrId tsys)
+>     commit cnn
+>   where
+>     query = "INSERT INTO t_sys (receiver_id, frequency, elevation, total, prime) VALUES (?, ?, ?, ?, 0.0)"
+>     xs rcvrId tsys = [toSql rcvrId, toSql freq, toSql elev, toSql tsys]
 
-> putStringencies :: Connection -> [(Receiver, Int, Int, Bool)] -> [Float] -> IO ()
-> putStringencies cnn args strs = do
->   mapM (putStringency cnn) $ zip args strs
->   return ()
-
-> putStringency :: Connection -> ((Receiver, Int, Int, Bool), Float) -> IO ()
-> putStringency cnn ((rcvr, freq, elev, cont), str) = do
->   rcvrId <- getRcvrId cnn rcvr
->   obsTypeId <- getObservingTypeId cnn (obsType cont)
->   result <- quickQuery' cnn query (xs rcvrId obsTypeId)
->   commit cnn
->   return ()
->     where
->       query = "INSERT INTO stringency (receiver_id, observing_type_id, frequency, elevation, total) VALUES (?, ?, ?, ?, ?)"
->       xs rcvrId obsTypeId = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]
->       obsType cont = if cont then Continuum else SpectralLine
+> putStringency cnn stringencies rcvr freq elev obstype = do
+>     let str = maybe (0.0 :: Float) (\c -> fromIntegral hours / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
+>     rcvrId <- getRcvrId cnn rcvr
+>     obsTypeId <- getObservingTypeId cnn obstype
+>     run cnn query (xs rcvrId obsTypeId str)
+>     commit cnn
+>   where
+>     query = "INSERT INTO stringency (receiver_id, observing_type_id, frequency, elevation, total) VALUES (?, ?, ?, ?, ?)"
+>     xs rcvrId obsTypeId str = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]

@@ -48,7 +48,7 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
-> data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing deriving (Eq, Show, Read)
+> data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing deriving (Ord, Eq, Show, Read)
 
 TBF: Initially, Open, Fixed, and Windowed all share the same contents.
 Ideally, we need to evolve these as we go and add new items and remove
@@ -259,7 +259,7 @@ Simple Functions for Periods:
 >   , ra          = 0.0
 >   , dec         = 0.0
 >   , backup      = False
->   , receivers   = [[Rcvr12_18]]
+>   , receivers   = [[Rcvr1_2]]
 >   , enabled     = True
 >   , authorized  = True
 >   , grade       = 4.0

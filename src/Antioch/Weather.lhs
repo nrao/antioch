@@ -6,7 +6,7 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
-> import Antioch.Settings  (weatherDB)
+> import Antioch.Settings  (weatherDB, weatherUnitTestDB)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
 > import Data.Convertible
@@ -51,16 +51,27 @@ for each different table we are pulling values from.
 The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 
 > {-# NOINLINE globalConnection #-}
-> globalConnection :: IORef Connection
+> {-# NOINLINE globalConnectionTest #-}
+> globalConnection, globalConnectionTest :: IORef Connection
+
 > globalConnection = unsafePerformIO $ connect >>= newIORef
+
+> globalConnectionTest = unsafePerformIO $ connectTest >>= newIORef
 
 This interface method makes sure that dates don't get passed in
 that the DB has no data for.  Currently all modules are using this.
 DateTime is simply the current time in production use and the
 purported time or origin in testing and simulation.
 
-> getWeather :: Maybe DateTime -> IO Weather
+> getWeather, getWeatherTest :: Maybe DateTime -> IO Weather
+
 > getWeather dt = do
+>     now <- maybe getCurrentTimeSafe return dt
+>     case dt of
+>       Nothing -> getWeatherSafe now
+>       Just x  -> getWeatherSafe x
+
+> getWeatherTest dt = do
 >     now <- maybe getCurrentTimeSafe return dt
 >     case dt of
 >       Nothing -> getWeatherSafe now
@@ -69,8 +80,11 @@ purported time or origin in testing and simulation.
 Used for simulations/tests to ensure that we always get data, no matter what
 year's worth of weather is in the database, by modifiying the date.
 
-> getWeatherSafe :: DateTime -> IO Weather
+> getWeatherSafe, getWeatherSafeTest :: DateTime -> IO Weather
+
 > getWeatherSafe = getWeather' . Just . dateSafe 
+
+> getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
 Right now, the only historical weather we have is 2006.
 TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
@@ -88,8 +102,11 @@ so we've deprecated 'dateSafe'.
 >   dt <- getCurrentTime
 >   return $ dateSafe dt
 
-> getWeather'     :: Maybe DateTime -> IO Weather
+> getWeather', getWeatherTest' :: Maybe DateTime -> IO Weather
+
 > getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
+
+> getWeatherTest' now = readIORef globalConnectionTest >>= \cnn -> updateWeather cnn now
 
 Here the various caches are initialized.
 
@@ -194,20 +211,26 @@ column name).
 
 > getWind, getWindMPH, getIrradiance :: ForecastFunc
 
-> getWind cache cnn ftype dt = withCache key cache $
->     fetchForecastData cnn dt ftype column
+> getWind cache cnn ftype dt = do
+>     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     -- print ("getWind", toSqlString dt, result)
+>     return result
 >   where
 >     column = "wind_speed"
 >     key = (dt, ftype, column)
 
-> getWindMPH cache cnn ftype dt = withCache key cache $
->     fetchForecastData cnn dt ftype column
+> getWindMPH cache cnn ftype dt = do
+>     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     -- print ("getWindMPH", toSqlString dt, result)
+>     return result
 >   where
 >     column = "wind_speed_mph"
 >     key = (dt, ftype, column)
 
-> getIrradiance cache cnn ftype dt = withCache key cache $
->     fetchForecastData cnn dt ftype column
+> getIrradiance cache cnn ftype dt = do
+>     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     -- print ("getIrradiance", toSqlString dt, result)
+>     return result
 >   where
 >     column = "irradiance"
 >     key = (dt, ftype, column)
@@ -218,15 +241,19 @@ The cache for the 'gbt_weather' table is simply the (datetime, column name)
 
 > getGbtWind, getGbtIrradiance :: GbtWeatherFunc
 
-> getGbtWind cache cnn dt = withCache key cache $
->     fetchGbtWeatherData cnn dt' column
+> getGbtWind cache cnn dt = do
+>     result <- withCache key cache $ fetchGbtWeatherData cnn dt' column
+>     -- print ("getGbtWind", toSqlString dt, result)
+>     return result
 >   where
 >     dt' = roundToHour . dateSafe $ dt
 >     column = "wind_speed"
 >     key = (dt', column)
 
-> getGbtIrradiance cache cnn dt = withCache key cache $
->     fetchGbtWeatherData cnn dt' column
+> getGbtIrradiance cache cnn dt = do
+>     result <- withCache key cache $ fetchGbtWeatherData cnn dt' column
+>     -- print ("getGbtIrradiance", toSqlString dt, result)
+>     return result
 >   where
 >     dt' = roundToHour . dateSafe $ dt
 >     column = "irradiance"
@@ -371,8 +398,10 @@ The 'Best' set of functions avoids dealing with forecast types.
 >       xs    = [toSql' dt, toSql freqIdx]
 
 > getOpacity :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getOpacity cache cnn ftype dt frequency = liftM fst. withCache key cache $
->     fetchOpacityAndTSys cnn dt freqIdx ftype
+> getOpacity cache cnn ftype dt frequency = do
+>     result <- liftM fst. withCache key cache $ fetchOpacityAndTSys cnn dt freqIdx ftype
+>     -- print ("getOpacity", toSqlString dt, frequency, result)
+>     return result
 >   where
 >     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx, ftype)
@@ -388,8 +417,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >     key     = (dt, freqIdx)
 
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
->     fetchOpacityAndTSys cnn dt freqIdx ftype
+> getTSys cache cnn ftype dt frequency = do
+>     result <- liftM snd . withCache key cache $ fetchOpacityAndTSys cnn dt freqIdx ftype
+>     -- print ("getTSys", toSqlString dt, frequency, result)
+>     return result
 >   where
 >     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx, ftype)
@@ -421,8 +452,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >             return val
               
 > getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
-> getTotalStringency cache conn frequency elevation rcvr obsType = withCache key cache $
->     fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
+> getTotalStringency cache conn frequency elevation rcvr obsType = do
+>     result <- withCache key cache $ fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
+>     -- print ("getTotalStringency", frequency, elevation, result)
+>     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
 >     elevIdx = round . rad2deg $ elevation
@@ -440,8 +473,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >                 \AND receiver_id = ? AND observing_type_id = ?"
 
 > getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getMinOpacity cache conn frequency elevation = withCache key cache $
->     getFloat conn query [toSql freqIdx, toSql elevIdx]
+> getMinOpacity cache conn frequency elevation = do
+>     result <- withCache key cache $ getFloat conn query [toSql freqIdx, toSql elevIdx]
+>     -- print ("getMinOpacity", frequency, elevation, result)
+>     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
 >     elevIdx = round . rad2deg $ elevation
@@ -450,7 +485,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >               \WHERE frequency = ? AND elevation = ?"
 
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
-> getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
+> getMinTSysPrime cache conn frequency elevation rcvr = do
+>     result <- withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
+>     -- print ("getMinTSysPrime", frequency, elevation, result)
+>     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
@@ -471,11 +509,15 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 
 Creates a connection to the weather forecast database.
 
-> connect :: IO Connection
+> connect, connectTest :: IO Connection
+
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
 >     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
 
+> connectTest = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ weatherUnitTestDB ++ " user=dss"
 
 Helper function to determine the desired forecast type given two DateTimes.
 forecastType takes both 'now' and a forecastTime since we have to be 

@@ -4,8 +4,9 @@
 
 Databases:
 
-> weatherDB :: String
+> weatherDB, weatherUnitTestDB :: String
 > weatherDB = "weather_unit_tests"      --MODIFY--
+> weatherUnitTestDB = "weather_unit_tests"
 
 > hardwareScheduleDB = "dss_unit_tests" --MODIFY--
 > dssDataDB          = "dss_unit_tests" --MODIFY--

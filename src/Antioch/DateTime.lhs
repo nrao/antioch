@@ -127,6 +127,7 @@ Combine pieces and parts to produce a UTCTime.
 >     day'     = Calendar.fromGregorian (fromIntegral year) month day
 >     seconds' = 3600 * hours + 60 * minutes + seconds
 
+> roundToHour :: DateTime -> DateTime
 > roundToHour dt = 3600 * ((dt + 1800) `div` 3600)
 
 Getting closer to the machine: Not all the functionality of
