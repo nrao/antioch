@@ -568,9 +568,10 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 
 > test_subfactorFactors = TestCase $ do
 >     w <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
->     factors <- subfactorFactors s w dt
+>     factors <- subfactorFactors s w rt dt
 >     let sysNoiseTemp = fromJust . fromJust . lookup "sysNoiseTemp" $ factors
 >     assertEqual "test_subfactorFactors sysNoiseTemp" 14.862213 sysNoiseTemp
 >     let sysNoiseTempPrime = fromJust . fromJust . lookup "sysNoiseTempPrime" $ factors
@@ -637,7 +638,8 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
->     factors <- scoreElements s w pSessions dt dur []
+>     rt <- getReceiverTemperatures
+>     factors <- scoreElements s w rt pSessions dt dur []
 >     assertEqual "test_scoreElements 1" 29 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit

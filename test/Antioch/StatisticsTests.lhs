@@ -1,7 +1,6 @@
 > module Antioch.StatisticsTests where
 
 > import Antioch.DateTime
-> import Antioch.Generators (genSessions, genPeriods)
 > import Antioch.Statistics
 > import Antioch.Types
 > import Antioch.Weather

@@ -194,20 +194,26 @@ column name).
 
 > getWind, getWindMPH, getIrradiance :: ForecastFunc
 
-> getWind cache cnn ftype dt = withCache key cache $
->     fetchForecastData cnn dt ftype column
+> getWind cache cnn ftype dt = do
+>     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     -- print ("getWind", toSqlString dt, result)
+>     return result
 >   where
 >     column = "wind_speed"
 >     key = (dt, ftype, column)
 
-> getWindMPH cache cnn ftype dt = withCache key cache $
->     fetchForecastData cnn dt ftype column
+> getWindMPH cache cnn ftype dt = do
+>     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     -- print ("getWindMPH", toSqlString dt, result)
+>     return result
 >   where
 >     column = "wind_speed_mph"
 >     key = (dt, ftype, column)
 
-> getIrradiance cache cnn ftype dt = withCache key cache $
->     fetchForecastData cnn dt ftype column
+> getIrradiance cache cnn ftype dt = do
+>     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     -- print ("getIrradiance", toSqlString dt, result)
+>     return result
 >   where
 >     column = "irradiance"
 >     key = (dt, ftype, column)
@@ -218,15 +224,19 @@ The cache for the 'gbt_weather' table is simply the (datetime, column name)
 
 > getGbtWind, getGbtIrradiance :: GbtWeatherFunc
 
-> getGbtWind cache cnn dt = withCache key cache $
->     fetchGbtWeatherData cnn dt' column
+> getGbtWind cache cnn dt = do
+>     result <- withCache key cache $ fetchGbtWeatherData cnn dt' column
+>     -- print ("getGbtWind", toSqlString dt, result)
+>     return result
 >   where
 >     dt' = roundToHour . dateSafe $ dt
 >     column = "wind_speed"
 >     key = (dt', column)
 
-> getGbtIrradiance cache cnn dt = withCache key cache $
->     fetchGbtWeatherData cnn dt' column
+> getGbtIrradiance cache cnn dt = do
+>     result <- withCache key cache $ fetchGbtWeatherData cnn dt' column
+>     -- print ("getGbtIrradiance", toSqlString dt, result)
+>     return result
 >   where
 >     dt' = roundToHour . dateSafe $ dt
 >     column = "irradiance"
@@ -371,8 +381,10 @@ The 'Best' set of functions avoids dealing with forecast types.
 >       xs    = [toSql' dt, toSql freqIdx]
 
 > getOpacity :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getOpacity cache cnn ftype dt frequency = liftM fst. withCache key cache $
->     fetchOpacityAndTSys cnn dt freqIdx ftype
+> getOpacity cache cnn ftype dt frequency = do
+>     result <- liftM fst. withCache key cache $ fetchOpacityAndTSys cnn dt freqIdx ftype
+>     -- print ("getOpacity", toSqlString dt, frequency, result)
+>     return result
 >   where
 >     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx, ftype)
@@ -388,8 +400,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >     key     = (dt, freqIdx)
 
 > getTSys :: IORef (M.Map (Int, Int, Int) (Maybe Float, Maybe Float)) -> Connection -> Int -> DateTime -> Frequency -> IO (Maybe Float)
-> getTSys cache cnn ftype dt frequency = liftM snd . withCache key cache $
->     fetchOpacityAndTSys cnn dt freqIdx ftype
+> getTSys cache cnn ftype dt frequency = do
+>     result <- liftM snd . withCache key cache $ fetchOpacityAndTSys cnn dt freqIdx ftype
+>     -- print ("getTSys", toSqlString dt, frequency, result)
+>     return result
 >   where
 >     freqIdx = freq2ForecastIndex frequency
 >     key     = (dt, freqIdx, ftype)
@@ -421,8 +435,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >             return val
               
 > getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
-> getTotalStringency cache conn frequency elevation rcvr obsType = withCache key cache $
->     fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
+> getTotalStringency cache conn frequency elevation rcvr obsType = do
+>     result <- withCache key cache $ fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
+>     -- print ("getTotalStringency", frequency, elevation, result)
+>     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
 >     elevIdx = round . rad2deg $ elevation
@@ -440,8 +456,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >                 \AND receiver_id = ? AND observing_type_id = ?"
 
 > getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getMinOpacity cache conn frequency elevation = withCache key cache $
->     getFloat conn query [toSql freqIdx, toSql elevIdx]
+> getMinOpacity cache conn frequency elevation = do
+>     result <- withCache key cache $ getFloat conn query [toSql freqIdx, toSql elevIdx]
+>     -- print ("getMinOpacity", frequency, elevation, result)
+>     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
 >     elevIdx = round . rad2deg $ elevation
@@ -450,7 +468,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >               \WHERE frequency = ? AND elevation = ?"
 
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
-> getMinTSysPrime cache conn frequency elevation rcvr = withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
+> getMinTSysPrime cache conn frequency elevation rcvr = do
+>     result <- withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
+>     -- print ("getMinTSysPrime", frequency, elevation, result)
+>     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
