@@ -46,25 +46,13 @@ Ranking System from Memo 5.2, Section 3
 >         zod' <- zod
 >         minTsysPrime'' <- minTsysPrime' >>= Just . (*xf)
 >         -- MUSTANG uses rcvr temp of 120.0 K
->         let [eff, effTransit] = if not . usesMustang $ s then  map (calcEff trx tk' minTsysPrime'' zod') [za, zat] else map (mustangCalcEff 120.0 tk' minTsysPrime'' zod') [za, zat]
+>         let [eff, effTransit] = if not . usesMustang $ s then  map (calcAtmosphericEfficiency trx tk' minTsysPrime'' zod') [za, zat] else map (mustangCalcEff 120.0 tk' minTsysPrime'' zod') [za, zat]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
 >     zat = zenithAngleAtTransit s
 >     elevation' = (pi/2 - za)
 >     xf = xi s
->            
->     calcEff trx tk minTsysPrime' zod za = (minTsysPrime' / tsys') ^2
->       where
->         -- Round off to the nearest degree to align with hist. min. opacities
->         rndZa = deg2rad . realToFrac . round . rad2deg $ za
->         -- Equation 4 & 6
->         opticalDepth = zod / (cos . min 1.5 $ rndZa)
->
->         -- Equation 7
->         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
->
->         tsys' = exp opticalDepth * tsys
 >     mustangCalcEff trx tk minTsysPrime' zod_30 za = (minTsysPrime' / tsys') ^2
 >       where
 >         -- Round off to the nearest degree to align with hist. min. opacities
@@ -73,14 +61,31 @@ Ranking System from Memo 5.2, Section 3
 >         opticalDepth = ((zod_30 - 0.023)*6.0) / (cos . min 1.5 $ rndZa)
 >
 >         -- Equation 7
->         tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
+>         tsys  = systemNoiseTemperature' trx tk opticalDepth --trx + 5.7 + tk * (1 - exp (-opticalDepth))
 >
 >         tsys' = exp opticalDepth * tsys
+
+Equation 3 - 
+The ratio of the min. effective system temperature and 
+system noise temperature prime. 
+
+> calcAtmosphericEfficiency :: Float -> Float -> Float -> Float -> Float -> Float
+> calcAtmosphericEfficiency trx tk minTsysPrime zod za = (minTsysPrime / tsys') ^2
+>   where
+>     -- Round off to the nearest degree to align with hist. min. opacities
+>     rndZa = deg2rad . realToFrac . round . rad2deg $ za
+>     opticalDepth' = opticalDepth zod (min 1.5 rndZa) 
+>     tsys'  = systemNoiseTemperaturePrime' trx tk opticalDepth' 
+
+Equation 4 - 
+
+> opticalDepth :: Float -> Float -> Float
+> opticalDepth zod za = zod / (cos za)
 
 From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 
 > calcMustangTSysPrime :: Radians -> Float
-> calcMustangTSysPrime za = exp opticalDepth * tsys
+> calcMustangTSysPrime za = exp opticalDepth * tsys --systemNoiseTemperature'' trx tk opticalDepth
 >   where
 >     trx = 120.0
 >     tk = 260.0
@@ -88,7 +93,7 @@ From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 >     rndZa = deg2rad . realToFrac . round . rad2deg $ za
 >     opticalDepth = 0.04 / (cos . min 1.5 $ rndZa)
 >     -- Equation 7
->     tsys = trx + 5.7  + tk * (1 - exp (-opticalDepth))
+>     tsys = systemNoiseTemperature' trx tk opticalDepth --trx + 5.7  + tk * (1 - exp (-opticalDepth))
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
@@ -97,6 +102,8 @@ From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 >         mts' >>= Just . (*xf)
 >     where
 >       xf = xi s
+
+Equation 7 - given session, time.
 
 > systemNoiseTemperature :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperature w dt s = runScoring w [] $ do
@@ -107,11 +114,12 @@ From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
 >     return $ liftM2 (\x y ->
 >         let opticalDepth = y / (cos . min 1.5 $ rndZa) in
->         -- Equation 7
->         trx + 5.7 + x * (1 - exp (-opticalDepth))) tk zod
+>         (systemNoiseTemperature' trx x opticalDepth)) tk zod 
 
-> systemNoiseTemperature' :: Weather -> DateTime -> Session -> IO (Maybe Float)
-> systemNoiseTemperature' w dt s = runScoring w [] $ do
+Equation 7 * (exp opticalDepth) - given session, time.
+
+> systemNoiseTemperaturePrime :: Weather -> DateTime -> Session -> IO (Maybe Float)
+> systemNoiseTemperaturePrime w dt s = runScoring w [] $ do
 >     zod <- zenithOpticalDepth dt s
 >     tk  <- kineticTemperature dt s
 >     let trx = receiverTemperature dt s
@@ -119,8 +127,18 @@ From ProjectRequest23Q110, requirements for MUSTANG atmosphericEfficiency
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
 >     return $ liftM2 (\x y ->
 >         let opticalDepth = y / (cos . min 1.5 $ rndZa) in
->         -- Equation 7
->         (exp opticalDepth) * (trx + 5.7 + x * (1 - exp (-opticalDepth)))) tk zod
+>         (systemNoiseTemperaturePrime' trx x opticalDepth)) tk zod 
+
+Equation 7 - given all variables
+
+> systemNoiseTemperature' :: Float -> Float -> Float -> Float
+> systemNoiseTemperature' trx tk opticalDepth =  trx + 5.7  + tk * (1 - exp (-opticalDepth))
+
+Equation 7 * (exp opticalDepth)
+
+> systemNoiseTemperaturePrime' :: Float -> Float -> Float -> Float
+> systemNoiseTemperaturePrime' trx tk opticalDepth =  (exp opticalDepth) * systemNoiseTemperature' trx tk opticalDepth 
+
 
 > receiverTemperature      :: DateTime -> Session -> Float
 > receiverTemperature dt s =
@@ -286,7 +304,7 @@ TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
 >     factor "stringency" stringency''
 >   where
 >     elevation' = pi/2 - zenithAngleAtTransit s
-
+ 
 3.3 Pressure Feedback
 
 Generate a scoring function having the pressure factors.
@@ -433,20 +451,22 @@ Translates the total/used times pairs into pressure factors.
 > observingEfficiencyLimit dt s = do
 >     obsEff <- observingEfficiency dt s
 >     let obsEff' = eval obsEff
->     if obsEff' < minObsEff
->         -- Equation 24
->         then fac $ exp (-((obsEff' - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
->         else fac 1.0
+>     fac $ observingEfficiencyLimit' obsEff' minObsEff $ frequency s
 >   where
->     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)
->     sigma = if (frequency s) >= 18.0
->             then 0.1
->             else 0.02
 >     -- TBF: temporary fix for MUSTANG
 >     minObsEff = if usesMustang s then 0.4 else minObservingEff . frequency $ s
 >     fac = factor "observingEfficiencyLimit" . Just
 
-TBF: include the elevation limit pattern matching once this is sponsor tested.
+Equation 24 
+
+> observingEfficiencyLimit' :: Float -> Float -> Float -> Float
+> observingEfficiencyLimit' obsEff minObsEff freq = if obsEff < minObsEff then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2)) else 1.0
+>   where
+>     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)
+>     sigma = if freq >= 18.0
+>             then 0.1
+>             else 0.02
+
 
 > hourAngleLimit        dt s | isJust . elLimit $ s = elevationLimit dt s
 >                            | otherwise = efficiencyHA dt s' >>= \effHA -> hourAngleLimit' effHA dt s'
@@ -986,7 +1006,7 @@ Need to translate a session's factors into the final product score.
 > subfactorFactors :: Session -> Weather -> DateTime -> IO Factors
 > subfactorFactors s w dt = do
 >   sysNoiseTemp <- systemNoiseTemperature w dt s
->   sysNoiseTempPrime <- systemNoiseTemperature' w dt s
+>   sysNoiseTempPrime <- systemNoiseTemperaturePrime w dt s
 >   minSysNoiseTempPrime <- minTsys' w dt s
 >   return [("sysNoiseTemp",      sysNoiseTemp)
 >         , ("sysNoiseTempPrime", sysNoiseTempPrime)

@@ -20,7 +20,8 @@ The reason why this branch should be used is that a bug was found in this
 codes weather server used for unit tests (TWeather).  
 
 > tests = TestList [
->     test_hourAngleLimit
+>     test_calcAtmosphericEfficiency
+>   , test_hourAngleLimit
 >   , test_frequencyPressure
 >   , test_frequencyPressureComparison
 >   , test_rightAscensionPressure
@@ -34,11 +35,13 @@ codes weather server used for unit tests (TWeather).
 >   , test_minTsysPrime
 >   , test_minTsysPrime
 >   , test_systemNoiseTemperature
+>   , test_systemNoiseTemperature'
 >   , test_minTsys'
 >   , test_minimumObservingConditions
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
+>   , test_observingEfficiencyLimit'
 >   , test_minObservingEfficiencyFactor
 >   , test_efficiency
 >   , test_zenithOpticalDepth
@@ -225,14 +228,23 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    let sess = findPSessionByName "LP"
 >    Just result <- systemNoiseTemperature w dt sess
 >    assertEqual "test_systemNoiseTemperature 1" 15.348079 result 
->    Just result <- systemNoiseTemperature' w dt sess
+>    Just result <- systemNoiseTemperaturePrime w dt sess
 >    assertEqual "test_systemNoiseTemperature' 1" 15.630218 result 
 >    -- session AS
 >    let sess = findPSessionByName "AS"
 >    Just result <- systemNoiseTemperature w dt sess
 >    assertEqual "test_systemNoiseTemperature 2" 25.468143 result 
->    Just result <- systemNoiseTemperature' w dt sess
+>    Just result <- systemNoiseTemperaturePrime w dt sess
 >    assertEqual "test_systemNoiseTemperature' 2" 26.474463 result 
+
+> test_systemNoiseTemperature' = TestCase $ do
+>     assertEqual "test_snt_1" 15.348079 (snt  5.0 257.49832 1.8215785e-2)
+>     assertEqual "test_snt_2" 15.630218 (sntp 5.0 257.49832 1.8215785e-2)
+>     assertEqual "test_snt_3" 25.468143 (snt  10.0 256.9823 3.8752194e-2)
+>     assertEqual "test_snt_4" 26.474463 (sntp 10.0 256.9823 3.8752194e-2)
+>   where
+>     snt  = systemNoiseTemperature'
+>     sntp = systemNoiseTemperaturePrime'
 
 > test_minTsys' = TestCase $ do
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
@@ -340,6 +352,12 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
 >     assertEqual "test_observingEfficiencyLimit >=18" 1.6728761e-4 result
 
+> test_observingEfficiencyLimit' = TestCase $ do
+>     assertEqual "test_oel_1" 3.0780464e-4 (oel 0.8577623 0.93819135 4.3)
+>     assertEqual "test_oel_1" 1.6728761e-4 (oel 0.105431244 0.52246356 27.5)
+>   where
+>     oel = observingEfficiencyLimit'
+
 BETA: TestAtmosphericOpacity.py testefficiency
 
 > test_efficiency = TestCase $ do
@@ -365,6 +383,12 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     assertEqual "test_efficiency 9" 0.87132007 result
 >     Just result <- runScoring w [] (efficiencyHA dt s) 
 >     assertEqual "test_efficiencyHA 10" 0.783711 result
+
+> test_calcAtmosphericEfficiency = TestCase $ do
+>     assertEqual "test_cae_1" 0.98214704 (cae 5.0 257.49832 15.490067 7.985274e-3 1.1118549)
+>     assertEqual "test_cae_2" 0.8972108 (cae 35.0 259.85532 62.021393 4.3145142e-2 0.9910518)
+>   where
+>     cae = calcAtmosphericEfficiency
 
 BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
 
