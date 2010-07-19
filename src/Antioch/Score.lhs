@@ -109,7 +109,7 @@ the historical weather (i.e. stringency and min. eff. system temp.)
 >     -- Equation 4 & 6
 >     opticalDepth = zod / (cos . min 1.5 $ rndZa)
 >     -- Equation 7
->     tsys  = trx + 5.7 + tk * (1 - exp (-opticalDepth))
+>     tsys  = systemNoiseTemperature' trx tk opticalDepth --trx + 5.7 + tk * (1 - exp (-opticalDepth))
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
@@ -119,6 +119,11 @@ the historical weather (i.e. stringency and min. eff. system temp.)
 >     where
 >       xf = xi s
 >       rcvr = getPrimaryReceiver s
+
+Equation 7 - given all variables
+
+> systemNoiseTemperature' :: Float -> Float -> Float -> Float
+> systemNoiseTemperature' trx tk opticalDepth =  trx + 5.7  + tk * (1 - exp (-opticalDepth))
 
 > systemNoiseTemperature :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperature w rt dt s = runScoring w [] rt $ do
@@ -133,8 +138,8 @@ the historical weather (i.e. stringency and min. eff. system temp.)
 >         -- Equation 7
 >         (fromJust trx) + 5.7 + x * (1 - exp (-opticalDepth))) tk zod else Nothing
 
-> systemNoiseTemperature' :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
-> systemNoiseTemperature' w rt dt s = runScoring w [] rt $ do
+> systemNoiseTemperaturePrime :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
+> systemNoiseTemperaturePrime w rt dt s = runScoring w [] rt $ do
 >     zod <- zenithOpticalDepth dt s
 >     tk  <- kineticTemperature dt s
 >     --let trx = receiverTemperature dt s
@@ -451,19 +456,20 @@ Translates the total/used times pairs into pressure factors.
 > observingEfficiencyLimit dt s = do
 >     obsEff <- observingEfficiency dt s
 >     let obsEff' = eval obsEff
->     if obsEff' < minObsEff
->         -- Equation 24
->         then fac $ exp (-((obsEff' - minObsEff) ^ 2) / (2.0 * sigma ^ 2))
->         else fac 1.0
+>     fac $ observingEfficiencyLimit' obsEff' minObsEff $ frequency s
 >   where
->     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)
->     sigma = if (frequency s) >= 18.0
->             then 0.1
->             else 0.02
 >     minObsEff = minObservingEff . frequency $ s
 >     fac = factor "observingEfficiencyLimit" . Just
 
-TBF: include the elevation limit pattern matching once this is sponsor tested.
+Equation 24 
+
+> observingEfficiencyLimit' :: Float -> Float -> Float -> Float
+> observingEfficiencyLimit' obsEff minObsEff freq = if obsEff < minObsEff then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2)) else 1.0
+>   where
+>     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)
+>     sigma = if freq >= 18.0
+>             then 0.1
+>             else 0.02
 
 > hourAngleLimit        dt s | isJust . elLimit $ s = elevationLimit dt s
 >                            | otherwise = efficiencyHA dt s >>= \effHA -> hourAngleLimit' effHA dt s
@@ -1020,7 +1026,7 @@ Need to translate a session's factors into the final product score.
 > subfactorFactors s w rt dt = do
 >   -- rt <- getReceiverTemperatures
 >   sysNoiseTemp <- systemNoiseTemperature w rt dt s
->   sysNoiseTempPrime <- systemNoiseTemperature' w rt dt s
+>   sysNoiseTempPrime <- systemNoiseTemperaturePrime w rt dt s
 >   minSysNoiseTempPrime <- minTsys' w dt s
 >   return [("sysNoiseTemp",      sysNoiseTemp)
 >         , ("sysNoiseTempPrime", sysNoiseTempPrime)

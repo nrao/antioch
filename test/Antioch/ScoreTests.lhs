@@ -36,11 +36,13 @@ codes weather server used for unit tests (TWeather).
 >   , test_minTsysPrime
 >   , test_minTsysPrime
 >   , test_systemNoiseTemperature
+>   , test_systemNoiseTemperature'
 >   , test_minTsys'
 >   , test_minimumObservingConditions
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
+>   , test_observingEfficiencyLimit'
 >   , test_minObservingEfficiencyFactor
 >   , test_efficiency
 >   , test_efficiency_below2GHz
@@ -236,13 +238,13 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    let sess = findPSessionByName "LP"
 >    Just result <- systemNoiseTemperature w rt dt sess
 >    assertEqual "test_systemNoiseTemperature 1" 15.348079 result 
->    Just result <- systemNoiseTemperature' w rt dt sess
+>    Just result <- systemNoiseTemperaturePrime w rt dt sess
 >    assertEqual "test_systemNoiseTemperature' 1" 15.630218 result 
 >    -- session AS
 >    let sess = findPSessionByName "AS"
 >    Just result <- systemNoiseTemperature w rt dt sess
 >    assertEqual "test_systemNoiseTemperature 2" 25.468143 result 
->    Just result <- systemNoiseTemperature' w rt dt sess
+>    Just result <- systemNoiseTemperaturePrime w rt dt sess
 >    assertEqual "test_systemNoiseTemperature' 2" 26.474463 result 
 
 > test_minTsys' = TestCase $ do
@@ -356,6 +358,12 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
 >     assertEqual "test_observingEfficiencyLimit >=18" 2.080223e-4 result
 
+> test_observingEfficiencyLimit' = TestCase $ do
+>     assertEqual "test_oel_1" 3.0780464e-4 (oel 0.8577623 0.93819135 4.3)
+>     assertEqual "test_oel_1" 1.6728761e-4 (oel 0.105431244 0.52246356 27.5)
+>   where
+>     oel = observingEfficiencyLimit'
+
 BETA: TestAtmosphericOpacity.py testefficiency
 
 > test_efficiency = TestCase $ do
@@ -407,6 +415,12 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     let res = tSysPrime' 3.1 297.1 0.01 (deg2rad 37.0)
 >     let exp = 12.6543665
 >     assertEqual "test_tSysPrime' 2" exp res
+
+> test_systemNoiseTemperature' = TestCase $ do
+>     assertEqual "test_snt_1" 15.348079 (snt  5.0 257.49832 1.8215785e-2)
+>     assertEqual "test_snt_3" 25.468143 (snt  10.0 256.9823 3.8752194e-2)
+>   where
+>     snt  = systemNoiseTemperature'
 
 BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
 
