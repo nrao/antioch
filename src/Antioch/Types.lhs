@@ -67,7 +67,7 @@ use a single data structure for all sessions.
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
 >   , timeBetween :: Minutes
->   , frequency   :: Float
+>   , frequency   :: Frequency
 >   , ra          :: Radians
 >   , dec         :: Radians
 >   , backup      :: Bool

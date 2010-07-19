@@ -43,7 +43,7 @@ properly: they do not retrieve weather at 2 GHz, but, rather, use the
 >   where
 >     freq = frequency s
 
-> correctAtmEffs :: Float -> Maybe (Float, Float) -> Scoring (Maybe (Float, Float))
+> correctAtmEffs :: Frequency -> Maybe (Float, Float) -> Scoring (Maybe (Float, Float))
 > correctAtmEffs freq effs = do
 >   case effs of
 >       Nothing -> return Nothing
@@ -85,11 +85,9 @@ For given input, gather the necessary intermediate values needed from the
 resources: weather and receiver temperatures. Then pass them on to the 
 function that actually computes tsys':
 
-> tSysPrime :: Receiver -> Float -> Float -> DateTime -> Scoring (Maybe Float)
-> tSysPrime rcvr freq elev dt = do
->   rt <- receiverTemperatures
+> tSysPrime :: Weather -> ReceiverTemperatures -> Receiver -> Float -> Float -> DateTime -> Scoring (Maybe Float)
+> tSysPrime w rt rcvr freq elev dt = do
 >   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
->   w   <- weather
 >   tk' <- liftIO $ tsys w dt freq
 >   zod' <- liftIO $ opacity w dt freq
 >   let za = pi/2 - elev 
@@ -207,7 +205,7 @@ TBF: this was moved from Statistic to here, but it needs a better home.
 
 > elevationFromZenith :: Period -> Float
 > elevationFromZenith p =
->     90 - rad2deg (zenithAngle dt (session p))
+>     90.0 - rad2deg (zenithAngle dt (session p))
 >   where 
 >     dt = periodHalfTime p
 

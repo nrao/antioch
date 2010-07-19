@@ -1,4 +1,7 @@
-> module Antioch.HistoricalWeather (updateHistoricalWeather) where
+> module Antioch.HistoricalWeather
+>     (updateHistoricalWeather
+>    , allRcvrs
+>    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
 > import Antioch.Receiver

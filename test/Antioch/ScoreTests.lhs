@@ -44,6 +44,8 @@ codes weather server used for unit tests (TWeather).
 >   , test_minObservingEfficiencyFactor
 >   , test_efficiency
 >   , test_efficiency_below2GHz
+>   , test_tSysPrime
+>   , test_tSysPrime'
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
 >   , test_positionValues
@@ -64,6 +66,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_inWindows
 >   , test_scoreElements
 >   , test_zenithAngleLimit
+>   , test_rmsTrackingError
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
@@ -380,6 +383,31 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     Just result <- runScoring w [] rt (efficiencyHA dt s) 
 >     assertEqual "test_efficiencyHA 10" 0.783711 result
 
+> test_tSysPrime  = TestCase $ do
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 12 15 0
+>     rt <- getRT
+>     res <- runScoring w [] rt (tSysPrime w rt Rcvr_RRI 0.8 (deg2rad 35.0) dt)
+>     let exp = Just 313.0007
+>     assertEqual "test_tSysPrime 3" exp res
+>     res <- runScoring w [] rt (tSysPrime w rt Rcvr1_2 1.2 (deg2rad 45.0) dt)
+>     let exp = Just 19.56173
+>     assertEqual "test_tSysPrime 2" exp res
+>     res <- runScoring w [] rt (tSysPrime w rt Rcvr2_3 2.2 (deg2rad 65.0) dt)
+>     let exp = Just 17.214624
+>     assertEqual "test_tSysPrime 3" exp res
+>     res <- runScoring w [] rt (tSysPrime w rt Rcvr26_40 22.2 (deg2rad 70.0) dt)
+>     let exp = Just 62.94582
+>     assertEqual "test_tSysPrime 4" exp res
+
+> test_tSysPrime'  = TestCase $ do
+>     let res = tSysPrime' 31.3 244.0 2.1 (deg2rad 47.0)
+>     let exp = 5865.138
+>     assertEqual "test_tSysPrime' 1" exp res
+>     let res = tSysPrime' 3.1 297.1 0.01 (deg2rad 37.0)
+>     let exp = 12.6543665
+>     assertEqual "test_tSysPrime' 2" exp res
+
 BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
 
 > test_zenithOpticalDepth = TestCase $ do
@@ -658,6 +686,28 @@ BETA: TestZenithAngleLimit testScore
 >     let dt = fromGregorian 2006 10 15 0 0 0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sess)
+
+> test_rmsTrackingError = TestCase $ do
+>     let dt  = fromGregorian 2006 4 15 16 0 0
+>     let res = rmsTrackingError dt 3.4
+>     let exp = 3.1498086
+>     assertEqual "test_rmsTrackingError 1" exp res
+>     let res = rmsTrackingError dt 17.2
+>     let exp = 67.10665
+>     assertEqual "test_rmsTrackingError 2" exp res
+>     let res = rmsTrackingError dt 0.1
+>     let exp = 1.7464263
+>     assertEqual "test_rmsTrackingError 3" exp res
+>     let dt  = fromGregorian 2006 4 16 4 0 0
+>     let res = rmsTrackingError dt 3.4
+>     let exp = 2.6213157
+>     assertEqual "test_rmsTrackingError 4" exp res
+>     let res = rmsTrackingError dt 17.2
+>     let exp = 67.08392
+>     assertEqual "test_rmsTrackingError 5" exp res
+>     let res = rmsTrackingError dt 0.1
+>     let exp = 2.2675742e-3
+>     assertEqual "test_rmsTrackingError 6" exp res
 
 BETA: TestSurfaceObservingEfficiency testefficiency
 
