@@ -6,7 +6,7 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
-> import Antioch.Settings  (weatherDB)
+> import Antioch.Settings  (weatherDB, weatherUnitTestDB)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
 > import Data.Convertible
@@ -51,16 +51,27 @@ for each different table we are pulling values from.
 The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 
 > {-# NOINLINE globalConnection #-}
-> globalConnection :: IORef Connection
+> {-# NOINLINE globalConnectionTest #-}
+> globalConnection, globalConnectionTest :: IORef Connection
+
 > globalConnection = unsafePerformIO $ connect >>= newIORef
+
+> globalConnectionTest = unsafePerformIO $ connectTest >>= newIORef
 
 This interface method makes sure that dates don't get passed in
 that the DB has no data for.  Currently all modules are using this.
 DateTime is simply the current time in production use and the
 purported time or origin in testing and simulation.
 
-> getWeather :: Maybe DateTime -> IO Weather
+> getWeather, getWeatherTest :: Maybe DateTime -> IO Weather
+
 > getWeather dt = do
+>     now <- maybe getCurrentTimeSafe return dt
+>     case dt of
+>       Nothing -> getWeatherSafe now
+>       Just x  -> getWeatherSafe x
+
+> getWeatherTest dt = do
 >     now <- maybe getCurrentTimeSafe return dt
 >     case dt of
 >       Nothing -> getWeatherSafe now
@@ -69,8 +80,11 @@ purported time or origin in testing and simulation.
 Used for simulations/tests to ensure that we always get data, no matter what
 year's worth of weather is in the database, by modifiying the date.
 
-> getWeatherSafe :: DateTime -> IO Weather
+> getWeatherSafe, getWeatherSafeTest :: DateTime -> IO Weather
+
 > getWeatherSafe = getWeather' . Just . dateSafe 
+
+> getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
 Right now, the only historical weather we have is 2006.
 TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
@@ -88,8 +102,11 @@ so we've deprecated 'dateSafe'.
 >   dt <- getCurrentTime
 >   return $ dateSafe dt
 
-> getWeather'     :: Maybe DateTime -> IO Weather
+> getWeather', getWeatherTest' :: Maybe DateTime -> IO Weather
+
 > getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
+
+> getWeatherTest' now = readIORef globalConnectionTest >>= \cnn -> updateWeather cnn now
 
 Here the various caches are initialized.
 
@@ -492,11 +509,15 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 
 Creates a connection to the weather forecast database.
 
-> connect :: IO Connection
+> connect, connectTest :: IO Connection
+
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
 >     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
 
+> connectTest = handleSqlError $ connectPostgreSQL cnnStr 
+>   where
+>     cnnStr = "dbname=" ++ weatherUnitTestDB ++ " user=dss"
 
 Helper function to determine the desired forecast type given two DateTimes.
 forecastType takes both 'now' and a forecastTime since we have to be 
