@@ -1058,7 +1058,6 @@ Need to translate a session's factors into the final product score.
 
 > scoreElements :: Session -> Weather -> ReceiverTemperatures -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
 > scoreElements s w rt ss st dur rs = do
->   -- rt <- getReceiverTemperatures
 >   fs <- runScoring w rs rt $ genPeriodScore st ss
 >   let score' w dt = runScoring w rs rt $ do
 >       sf <- fs dt s

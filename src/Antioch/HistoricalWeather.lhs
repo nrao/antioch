@@ -1,7 +1,11 @@
+> module Antioch.HistoricalWeather where
+
+> {-
 > module Antioch.HistoricalWeather
 >     (updateHistoricalWeather
 >    , allRcvrs
 >    , getRcvrFreqIndices) where
+> -}
 
 > import Antioch.DateTime
 > import Antioch.Receiver
@@ -66,9 +70,15 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
 >     cnn <- handleSqlError $ connectDB
+>     print "truncating table t_sys"
 >     truncateTable cnn "t_sys"
+>     print "filling table t_sys"
+>     fillTsysTable cnn
+>     print "truncating table stringency"
 >     truncateTable cnn "stringency"
->     ericWasHere cnn
+>     print "filling table stringency"
+>     fillStringencyTable cnn
+>     -- ericWasHere cnn
 >     disconnect cnn
 
 > ericWasHere cnn = do
@@ -76,7 +86,8 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     stringencies <- newIORef Map.empty
 >     rts <- getReceiverTemperatures
 >     forM_ getWeatherDates $ \dt -> do
->       w <- getWeather . Just $ dt
+>       -- dt offset insures that we get forecasts & not real wind
+>       w <- getWeather . Just $ (addMinutes' (-60) dt)
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
@@ -93,6 +104,42 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >       putStringency cnn strs rcvr freq elev Continuum
 >       putStringency cnn strs rcvr freq elev SpectralLine
 
+> fillTsysTable cnn = do
+>     efficiencies <- newIORef Map.empty
+>     rts <- getReceiverTemperatures
+>     forM_ getWeatherDates $ \dt -> do
+>       -- dt offset insures that we get forecasts & not real wind
+>       w <- getWeather . Just $ (addMinutes' (-60) dt)
+>       runScoring w [] rts $ do
+>         forM_ allRcvrs $ \rcvr -> do
+>         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>         forM_ [5 .. 90 :: Int] $ \elev -> do
+>           getMinEffSysTemp efficiencies rcvr freq elev dt
+>     effs <- readIORef efficiencies
+>     forM_ allRcvrs $ \rcvr -> do
+>     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>     forM_ [5 .. 90] $ \elev -> do
+>       putMinEffSysTemp cnn effs rcvr freq elev
+
+> fillStringencyTable cnn = do
+>     stringencies <- newIORef Map.empty
+>     rts <- getReceiverTemperatures
+>     forM_ getWeatherDates $ \dt -> do
+>       -- dt offset insures that we get forecasts & not real wind
+>       w <- getWeather . Just $ (addMinutes' (-60) dt)
+>       runScoring w [] rts $ do
+>         forM_ allRcvrs $ \rcvr -> do
+>         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>         forM_ [5 .. 90 :: Int] $ \elev -> do
+>           getStringency stringencies rcvr freq elev Continuum dt
+>           getStringency stringencies rcvr freq elev SpectralLine dt
+>     strs <- readIORef stringencies
+>     forM_ allRcvrs $ \rcvr -> do
+>     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>     forM_ [5 .. 90] $ \elev -> do
+>       putStringency cnn strs rcvr freq elev Continuum
+>       putStringency cnn strs rcvr freq elev SpectralLine
+
 > getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. hours]]
 
 > allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
@@ -104,6 +151,7 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 ---------------Min. Effective System Temperature---------------
 
+> -- getMinEffSysTemp :: IOBase.IORef -> Receiver -> Frequency -> Radians -> DateTime -> IO ()
 > getMinEffSysTemp efficiencies rcvr freq elev dt = do
 >     new <- tSysPrimeNow' rcvr f e dt
 >     liftIO $ alter efficiencies (updateEff new) (rcvr, freq, elev)
@@ -189,7 +237,7 @@ is giving the session a target that will be at the specified elevation
 at the specified time.
 
 > mkDummySession rcvr freq elev obstype dt = defaultSession {
->       frequency = freq
+>       frequency = freq / 1000.0  -- MHz -> GHz
 >     , receivers = [[rcvr]]
 >     , ra = ra'
 >     , dec = dec'

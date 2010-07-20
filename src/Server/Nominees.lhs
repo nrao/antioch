@@ -36,6 +36,7 @@
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes)
 > import Antioch.Weather                       (getWeather)
+> import Antioch.ReceiverTemperatures
 
 > getNomineesHandler :: Handler()
 > getNomineesHandler = hMethodRouter [
@@ -86,8 +87,9 @@
 >     projs <- liftIO getProjects
 >     let ss = concatMap sessions projs
 >     w <- liftIO $ getWeather Nothing
+>     rt <- liftIO $ getReceiverTemperatures
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     nominees <- liftIO $ runScoring w rs $ do
+>     nominees <- liftIO $ runScoring w rs rt $ do
 >         sf <- genPartScore dt sfs . scoringSessions dt $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print nominees

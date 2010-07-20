@@ -8,6 +8,7 @@
 > import Antioch.HardwareSchedule             (getReceiverSchedule)
 > import Antioch.Score
 > import Antioch.Weather                      (getWeather)
+> import Antioch.ReceiverTemperatures
 > import Control.Monad.State.Lazy             (StateT)
 > import Control.Monad.Trans                  (liftIO)
 > import Data.Maybe                           (maybeToList)
@@ -34,7 +35,8 @@
 >     session <- liftIO $ getSession sessionId cnn
 >     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just start
->     moc <- liftIO $ runScoring w rs $ do
+>     rt <- liftIO $ getReceiverTemperatures
+>     moc <- liftIO $ runScoring w rs rt $ do
 >         minimumObservingConditions start session
 >     jsonHandler $ makeObj [("moc", showJSON . fromJust $ moc)]
 >   where

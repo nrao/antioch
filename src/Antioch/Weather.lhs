@@ -164,6 +164,8 @@ are: 2,3 .. 120
 > freqIndices :: [Int]
 > freqIndices = [100, 200 .. 900] ++ [1000, 2000 .. 51000] ++ [52000, 54000 .. 120000]
 
+Frequency in GHz (float) to GHz (integer) 2 to 120
+
 > freq2ForecastIndex' :: Frequency -> Int
 > freq2ForecastIndex' = min 120 . max 2 . round
 
@@ -171,6 +173,8 @@ are: 2,3 .. 120
 > freq2ForecastIndex f = if f' > 52 && odd f' then f' + 1 else f'
 >   where
 >     f' = freq2ForecastIndex' f
+
+Frequency in GHz (float) to MHz (integer) 100 to 120,000 (sparsely)
 
 > freq2HistoryIndex' :: Frequency -> Int
 > freq2HistoryIndex' freq = min 120000 . max 100 $ f -- . round . (*1000.0) 
