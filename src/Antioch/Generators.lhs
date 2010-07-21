@@ -11,6 +11,7 @@
 > import System.Random   (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
+> import Control.Monad.RWS.Strict
 
 > instance Arbitrary Project where
 >     arbitrary       = genProject
@@ -70,6 +71,94 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     pp <- genProjects n
 >     return $ p : pp
 
+> genProjectsByHrs :: Int -> Gen [Project]
+> genProjectsByHrs 0 = return []
+> genProjectsByHrs hrs | hrs < 0 = genProjectsByHrs 0
+>                      | otherwise = do
+>   p <- genProject
+>   pp <- genProjectsByHrs $ hrs - ((`div` 60) . pAllottedS $ p)
+>   return $ p : pp
+
+> genSimYear :: Int -> Int -> Gen [Project]
+> genSimYear hrs year = do
+>     projs <- genProjectsByHrs hrs
+>     maint <- genMaintenanceProj year
+>     return $ projs ++ [maint]
+
+
+Creates a maintenance project with a year's worth of pre-scheduled periods
+reflecting a realistic maintenance schedule.
+
+> genMaintenanceProj :: Int -> Gen Project
+> genMaintenanceProj year = do
+>   let project' = mkMaintProject year
+>   let session'' = mkMaintSession 
+>   let summerMaint = createSummerMaintenance year session''
+>   springMaint <- genWeeklyMaintPeriods springStart springEnd session'' 
+>   fallMaint <- genWeeklyMaintPeriods fallStart fallEnd session''
+>   let mntPeriods = nub . sort $ springMaint ++ summerMaint
+>   let totalTime = sum $ map duration mntPeriods
+>   let session' = session'' { sAllottedT = totalTime, sAllottedS = totalTime } 
+>   let session = makeSession session' [] mntPeriods
+>   return $ makeProject project' totalTime totalTime [session]
+>     where
+>       springStart = fromGregorian year 1 1 0 0 0  
+>       springEnd   = fromGregorian year 6 1 0 0 0  
+>       fallStart = fromGregorian year 9 15 0 0 0  
+>       fallEnd   = fromGregorian (year+1) 1 1 0 0 0  
+
+> mkMaintProject :: Int -> Project
+> mkMaintProject year = defaultProject { pName = "Maintenance"
+>                                      , semester = sem sem'}
+>   where
+>     sem' = (show $ year - 2000) ++ "A"
+>     sem s = if (length s) == 2 then "0" ++ s else s
+>      
+
+> mkMaintSession :: Session
+> mkMaintSession = defaultSession { sName = "Maintenance"
+>                                 , frequency = 2.0
+>                                 , band = L
+>                                 , receivers = [[Rcvr1_2]]
+>                                 , sType = Fixed }
+
+TBF: this will make an 8 hour maintenance day every 7 days - but we want it 
+to be randomly placed in the middle 5 days of each week.
+
+> genWeeklyMaintPeriods :: DateTime -> DateTime -> Session -> Gen [Period]
+> genWeeklyMaintPeriods start end s = return $ filter (\p -> (startTime p) < end) $ map (mkMaintPeriod s (8*60)) $ dts numWeeks
+>   where
+>     numWeeks = round $ (fromIntegral $ end - start) / (60*60*24*7)
+>     dts numWeeks = [(week*7*24*60) `addMinutes'` start | week <- [0 .. numWeeks]]
+
+We don't care about getting the days of the week correclty, as long
+as we have:
+   * during the summer months we have 4 days of 10 hour maintenance followed 
+     by three free days
+   * during the non-summer months, one random 8 hour maintenance day in the 
+     middle 5 days of each 7 days (week)
+
+> createSummerMaintenance :: Int -> Session -> [Period]
+> createSummerMaintenance year s = concatMap mkMaintWeek $ weekDts summerStart numWeeks
+>   where
+>     summerStart = fromGregorian year 6 1 0 0 0 
+>     summerEnd   = fromGregorian year 9 1 0 0 0 
+>     numWeeks = round $ (fromIntegral $ summerEnd - summerStart) / (60*60*24*7)
+>     weekDts start numWeeks = [(week*7*24*60) `addMinutes'` start | week <- [0 .. numWeeks]]
+>     dayDts start = [(day*24*60) `addMinutes'` start | day <- [1 .. 4]]
+>     mkMaintWeek start = map (mkMaintPeriod s (10*60)) $ dayDts start
+
+> mkMaintPeriod :: Session -> Minutes -> DateTime -> Period
+> mkMaintPeriod s dur date = defaultPeriod { startTime = start
+>                                     , session = s
+>                                     , duration = dur
+>                                     , pState = Scheduled 
+>                                     }
+>   where
+>     -- all maintenance periods start at 8 AM ET
+>     (year, month, day, _, _, _) = toGregorian date
+>     start = fromGregorian year month day (8+4) 0 0 -- UTC!
+
 > genScheduleProjects :: Gen [Project]
 > genScheduleProjects =
 >     -- TBF: generate unique ids for projects & sessions
@@ -80,6 +169,9 @@ at a time:
 
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["05C", "06A", "06B", "06C"]
+
+TBF: this will make an 8 hour maintenance day every 7 days - but we want it 
+to be randomly placed in the middle 5 days of each week.
 
 Each Project's Sessions can have a sAllottedT between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
