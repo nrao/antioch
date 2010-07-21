@@ -85,7 +85,7 @@ Get everything we need from the simulated input (Generators)
 >     projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
->     history = []
+>     history = concatMap periods ss 
 
 
 
