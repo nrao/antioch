@@ -5,6 +5,7 @@
 > import Antioch.SLALib  (slaGaleq)
 > import Antioch.Utilities
 > import Antioch.DateTime
+> import Antioch.Filters (filterHistory)
 > import Data.Char
 > import Data.List 
 > import Data.Maybe      (isJust, maybeToList)
@@ -80,14 +81,15 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >   pp <- genProjectsByHrs stype $ hrs - ((`div` 60) . pAllottedS $ p)
 >   return $ p : pp
 
-> genSimYear :: Int -> Int -> Gen [Project]
-> genSimYear hrs year = do
+> genSimTime :: Int -> DateTime -> Int -> Gen [Project]
+> genSimTime hrs start days = do
 >     -- create the maintenance schedule first
->     maint <- genMaintenanceProj year
+>     maint <- genMaintenanceProj start days
 >     let schedule = concatMap periods $ sessions maint
 >     let maintHrs = (/60) . fromIntegral . sum $ map duration schedule
 >     -- the remaining time now gets split up by type
->     let hrs' = (fromIntegral hrs) - maintHrs
+>     let hrs'' = (fromIntegral hrs) - maintHrs
+>     let hrs' = if hrs'' < 0 then 0 else hrs''
 >     let openHrs     = round $ 0.60 * hrs'
 >     let fixedHrs    = round $ 0.10 * hrs'
 >     let windowedHrs = round $ 0.30 * hrs'
@@ -96,13 +98,13 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     -- it's easiest to first assign the periods to the schedule,
 >     -- then assign sessions & projects to these periods
 >     -- TBF: for now, we can treat windowed like fixed
->     winPeriods <- genWindowedSchedule year schedule windowedHrs
+>     winPeriods <- genWindowedSchedule start days schedule windowedHrs
 >     wProjs <- genWindowedProjects  winPeriods --genWindowedProjects winPeriods
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
->     fixedPeriods <- genFixedSchedule year schedule' fixedHrs
+>     fixedPeriods <- genFixedSchedule start days schedule fixedHrs
 >     fProjs <- genFixedProjects fixedPeriods
 >     return $ oProjs ++ wProjs ++ fProjs ++ [maint]
->     --return $ oProjs ++ [maint]
+>     --return $ oProjs ++ fProjs ++ [maint]
 >   where
 >     hrs' = fromIntegral hrs
 
@@ -134,62 +136,64 @@ TBF: for now keep it real simple - a single proj & sess for each period
 Here we randomly generate periods in the given year that DON'T cause
 overlaps until we run out of time.
 
-> genFixedSchedule :: Int -> [Period] -> Int -> Gen [Period]
-> genFixedSchedule _ _ 0 = return []
-> genFixedSchedule year ps hrs | hrs < 0 = genFixedSchedule year ps 0
->                              | otherwise = do
->     p <- genFixedPeriod year
+> genFixedSchedule :: DateTime -> Int -> [Period] -> Int -> Gen [Period]
+> genFixedSchedule _ _ _ 0 = return []
+> genFixedSchedule start days ps hrs | hrs < 0 = genFixedSchedule start days ps 0
+>                                    | otherwise = do
+>     p <- genFixedPeriod start days
 >     --pp <- genFixedSchedule year ps $ hrs' p
 >     --return $ p : pp
 >     let ps' = sort $ ps ++ [p]
 >     --case (internalConflicts (sort $ ps ++ [p])) of
 >     case (internalConflicts ps') of
 >       False -> do
->           pp <- genFixedSchedule year ps' $ hrs' p
+>           pp <- genFixedSchedule start days ps' $ hrs' p
 >           return $ p : pp
->       True -> genFixedSchedule year ps hrs
+>       True -> genFixedSchedule start days ps hrs
 >   where
 >     hrs' p = hrs - ((`div` 60) . duration $ p)
 
-> genFixedPeriod :: Int -> Gen Period
-> genFixedPeriod year = do
->   day <- choose (1, 364)
+> genFixedPeriod :: DateTime -> Int -> Gen Period
+> genFixedPeriod start days = do
+>   day <- choose (1, days)
 >   hour <- choose (0, 23)
 >   duration <- choose (1, 8)
->   return $ defaultPeriod { startTime = start day hour
+>   return $ defaultPeriod { startTime = start' day hour
 >                          , duration  = duration*60
 >                          , pState    = Scheduled
 >                          }
 >     where
->   start day hour = addMinutes' ((day*24*60)+(hour*60)) (fromGregorian year 1 1 0 0 0)
+>   start' day hour = addMinutes' ((day*24*60)+(hour*60)) start
 
-> genWindowedSchedule :: Int -> [Period] -> Int -> Gen [[Period]]
-> genWindowedSchedule _ _ 0 = return []
-> genWindowedSchedule year ps hrs | hrs < 0 = genWindowedSchedule year ps 0
->                                 | otherwise = do
->     wp <- genWindowedPeriods year
+> genWindowedSchedule :: DateTime -> Int -> [Period] -> Int -> Gen [[Period]]
+> genWindowedSchedule _ _ _ 0 = return []
+> genWindowedSchedule start days ps hrs | hrs < 0 = genWindowedSchedule start days ps 0
+>                                       | otherwise = do
+>     wp <- genWindowedPeriods start days
 >     let ps' = sort $ ps ++ wp 
 >     case (internalConflicts ps') of
 >       False -> do
->           pp <- genWindowedSchedule year ps' $ hrs' wp
+>           pp <- genWindowedSchedule start days ps' $ hrs' wp
 >           return $! wp:pp
->       True -> genWindowedSchedule year ps hrs
+>       True -> genWindowedSchedule start days ps hrs
 >   where
 >     hrs' wp = hrs - ((`div` 60) . sum $ map duration wp)
 
-> genWindowedPeriods :: Int -> Gen [Period]
-> genWindowedPeriods year = do
+> genWindowedPeriods :: DateTime -> Int -> Gen [Period]
+> genWindowedPeriods start days = do
 >   numWindows <- choose (3,10)
 >   intervalDays <- choose (15, 60)
->   let sizeDays = numWindows * intervalDays
->   day <- choose (1, 364 - sizeDays)
+>   let sizeDays' = numWindows * intervalDays
+>   let sizeDays = if (sizeDays' >= days) then days - 3 else sizeDays'
+>   day <- choose (1, days - sizeDays)
 >   hour <- choose (0, 23)
 >   duration <- choose (1, 8) -- hours
->   let start = getStart day hour
->   let dts = [addMinutes' (d*24*60) start | d <- [0, intervalDays .. (numWindows * intervalDays)]]
+>   let firstStart = getStart day hour
+>   let dts = filter (<end) $ [addMinutes' (d*24*60) firstStart | d <- [0, intervalDays .. (numWindows * intervalDays)]]
 >   return $! map (mkPeriod duration) dts 
 >     where
->   getStart day hour = addMinutes' ((day*24*60)+(hour*60)) (fromGregorian year 1 1 0 0 0)
+>   end = addMinutes' (days*24*60) start
+>   getStart day hour = addMinutes' ((day*24*60)+(hour*60)) start
 >   mkPeriod dur dt = defaultPeriod { startTime = dt
 >                                   , duration  = dur*60
 >                                   , pState    = Scheduled }
@@ -219,33 +223,45 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >   return $ makeProject proj' total total [s]
 
 
-
-
 Creates a maintenance project with a year's worth of pre-scheduled periods
 reflecting a realistic maintenance schedule.
 
-> genMaintenanceProj :: Int -> Gen Project
-> genMaintenanceProj year = do
->   let project' = mkMaintProject year
->   let session'' = mkMaintSession 
->   let summerMaint = createSummerMaintenance year session''
->   springMaint <- genWeeklyMaintPeriods springStart springEnd session'' 
->   fallMaint <- genWeeklyMaintPeriods fallStart fallEnd session''
->   let mntPeriods = nub . sort $ springMaint ++ summerMaint
+> genMaintenanceProj :: DateTime -> Int -> Gen Project
+> genMaintenanceProj start days = do
+>   let project' = mkMaintProject start
+>   let session'' = mkMaintSession
+>   mntPeriods <- genMaintenancePeriods start days session''
 >   let totalTime = sum $ map duration mntPeriods
 >   let session' = session'' { sAllottedT = totalTime, sAllottedS = totalTime } 
 >   let session = makeSession session' [] mntPeriods
 >   return $ makeProject project' totalTime totalTime [session]
+
+> genMaintenancePeriods :: DateTime -> Int -> Session -> Gen [Period]
+> genMaintenancePeriods start days s = do
+>   let end = addMinutes' (days*24*60) start
+>   let (lastYear, _, _, _, _, _) = toGregorian end
+>   let (firstYear, _, _, _, _, _) = toGregorian start
+>   ps <- mapM (genMaintenancePeriodsByYear s) [firstYear .. lastYear]
+>   return $ filterHistory (concat ps) start days
+>     where
+>       
+> genMaintenancePeriodsByYear :: Session -> Int -> Gen [Period]
+> genMaintenancePeriodsByYear s year = do
+>   let summerMaint = createSummerMaintenance year s
+>   springMaint <- genWeeklyMaintPeriods springStart springEnd s
+>   fallMaint <- genWeeklyMaintPeriods fallStart fallEnd s
+>   return $ nub . sort $ springMaint ++ summerMaint ++ fallMaint
 >     where
 >       springStart = fromGregorian year 1 1 0 0 0  
 >       springEnd   = fromGregorian year 6 1 0 0 0  
 >       fallStart = fromGregorian year 9 15 0 0 0  
 >       fallEnd   = fromGregorian (year+1) 1 1 0 0 0  
 
-> mkMaintProject :: Int -> Project
-> mkMaintProject year = defaultProject { pName = "Maintenance"
+> mkMaintProject :: DateTime -> Project
+> mkMaintProject start = defaultProject { pName = "Maintenance"
 >                                      , semester = sem sem'}
 >   where
+>     (year, _, _, _, _, _) = toGregorian start 
 >     sem' = (show $ year - 2000) ++ "A"
 >     sem s = if (length s) == 2 then "0" ++ s else s
 >      
