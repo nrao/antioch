@@ -9,6 +9,7 @@
 > import Antioch.Settings  (weatherDB, weatherUnitTestDB)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
+> -- import Control.Monad.Trans (liftIO)
 > import Data.Convertible
 > import Data.IORef
 > import Data.Char         (toLower) 
@@ -491,7 +492,6 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
 > getMinTSysPrime cache conn frequency elevation rcvr = do
 >     result <- withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
->     -- print ("getMinTSysPrime", frequency, elevation, result)
 >     return result
 >   where
 >     freqIdx = freq2HistoryIndex frequency
@@ -502,7 +502,8 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 
 > fetchMinTSysPrime :: Connection -> Int -> Int -> Receiver -> IO (Maybe Float)
 > fetchMinTSysPrime conn freqIdx elevIdx rcvr = do
->   rcvrId <- getRcvrId conn $ max Rcvr1_2 rcvr
+>   rcvrId <- getRcvrId conn rcvr
+>   --rcvrId <- getRcvrId conn $ max Rcvr1_2 rcvr
 >   -- TBF, WTF: PF rcvrs aren't in t_sys table because we aren't
 >   -- calculating them below 2 GHz.  So for now this slight of hand.
 >   --let rcvrId = min 8 rcvrId'

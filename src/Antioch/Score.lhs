@@ -37,9 +37,10 @@ properly: they do not retrieve weather at 2 GHz, but, rather, use the
 
 > calcEfficiency :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
->     if freq >= 2.0 then calcEfficiency' dt s else do
->                         effs <- calcEfficiency' dt (s {frequency = 2.0}) 
->                         correctAtmEffs freq effs
+>     calcEfficiency' dt s
+>     --if freq >= 2.0 then calcEfficiency' dt s else do
+>     --                    effs <- calcEfficiency' dt (s {frequency = 2.0}) 
+>     --                    correctAtmEffs freq effs
 >   where
 >     freq = frequency s
 
@@ -456,6 +457,9 @@ Translates the total/used times pairs into pressure factors.
 > observingEfficiencyLimit dt s = do
 >     obsEff <- observingEfficiency dt s
 >     let obsEff' = eval obsEff
+>     --let result = observingEfficiencyLimit' obsEff' minObsEff $ frequency s
+>     --print ("observingEfficiencyLimit'", result)
+>     --fac result
 >     fac $ observingEfficiencyLimit' obsEff' minObsEff $ frequency s
 >   where
 >     minObsEff = minObservingEff . frequency $ s
@@ -463,7 +467,7 @@ Translates the total/used times pairs into pressure factors.
 
 Equation 24 
 
-> observingEfficiencyLimit' :: Float -> Float -> Float -> Float
+> observingEfficiencyLimit' :: Float -> Float -> Frequency -> Float
 > observingEfficiencyLimit' obsEff minObsEff freq = if obsEff < minObsEff then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2)) else 1.0
 >   where
 >     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)

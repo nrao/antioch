@@ -63,8 +63,8 @@ minTsysEffective[jrx,jfreq,jelev] = min(tsysEffective[jrx,jfreq,jelev,])
 stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,jobs,jfreq,jelev])
 
 
-> start = fromGregorian 2006 6 10 0 0 0
-> end   = fromGregorian 2006 6 17 0 0 0
+> start = fromGregorian 2006 1 1 0 0 0
+> end   = fromGregorian 2007 1 1 0 0 0
 > hours = (end `diffMinutes'` start) `div` 60
 
 > updateHistoricalWeather :: IO ()
@@ -78,7 +78,6 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     truncateTable cnn "stringency"
 >     print "filling table stringency"
 >     fillStringencyTable cnn
->     -- ericWasHere cnn
 >     disconnect cnn
 
 > ericWasHere cnn = do
@@ -126,6 +125,7 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     rts <- getReceiverTemperatures
 >     forM_ getWeatherDates $ \dt -> do
 >       -- dt offset insures that we get forecasts & not real wind
+>       -- print . toSqlString $ dt
 >       w <- getWeather . Just $ (addMinutes' (-60) dt)
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs $ \rcvr -> do
@@ -178,6 +178,7 @@ below.  These methods allow us to maximize use of the cache and minimize
 our hits to the DB.  Otherwise, it could take weeks to fill the t_sys
 table.
 
+> -- tSysPrimeNow' :: Antioch.Types.Receiver -> Float -> Float -> Antioch.DateTime.DateTime -> RWST ScoringEnv [Trace] () IO (Maybe Float)
 > tSysPrimeNow' rcvr freq elev dt = do
 >   rt   <- receiverTemperatures
 >   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
@@ -206,6 +207,7 @@ table.
 >     f = fromIntegral freq
 >     e = fromIntegral elev
 
+> updateStr :: (Num t) => Bool -> Maybe t -> (Maybe t -> b) -> b
 > updateStr False Nothing    k = k $! Just 0
 > updateStr False (Just old) k = k $! Just old
 > updateStr True  Nothing    k = k $! Just 1
@@ -218,7 +220,9 @@ create a dummy session to score.
 
 Note: frequency passed in should be in GHz
 
+> -- stringencyLimit :: Receiver -> Frequency -> Float -> ObservingType -> DateTime -> RWST ScoringEnv [Trace] () IO Bool
 > stringencyLimit rcvr freq elev obstype dt = do
+>     --liftIO $ print ("stringencyLimit: ", frequency s, rcvr, freq, elev, obstype, toSqlString dt)
 >     fs <- observingEfficiencyLimit dt s
 >     if eval fs >= 1
 >       then do
