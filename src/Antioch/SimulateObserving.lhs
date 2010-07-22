@@ -57,12 +57,13 @@ schedule this as deadtime.
 We only we want to be scheduling backups during the specified time range, 
 
 > scheduleBackup :: ScoreFunc -> StrategyName -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
-> scheduleBackup sf sn ss p dt dur | not $ inCancelRange p dt dur = return $ Just p
+> scheduleBackup sf sn ss p dt dur | cantBeCancelled p dt dur = return $ Just p
 >                                  | otherwise = do
 >   moc <- minimumObservingConditions (startTime p) (session p)
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
 >     backupSessions  = filterBackups sn ss p 
+>     cantBeCancelled p dt dur = (not $ inCancelRange p dt dur) || (not $ isTypeOpen dt  (session p))
 
 We only want to check each period for cancelation once.  We do this by 
 only checking those that are within the specified range.
