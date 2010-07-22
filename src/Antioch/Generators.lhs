@@ -85,19 +85,19 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     -- create the maintenance schedule first
 >     maint <- genMaintenanceProj year
 >     let schedule = concatMap periods $ sessions maint
->     let maintTime = sum $ map duration schedule
+>     let maintHrs = (/60) . fromIntegral . sum $ map duration schedule
 >     -- the remaining time now gets split up by type
->     let hrs' = fromIntegral $ hrs -- - maintTime
->     let openHrs     = round $ 0.80 * hrs'
->     let fixedHrs    = round $ 0.05 * hrs'
->     let windowedHrs = round $ 0.05 * hrs'
+>     let hrs' = (fromIntegral hrs) - maintHrs
+>     let openHrs     = round $ 0.60 * hrs'
+>     let fixedHrs    = round $ 0.10 * hrs'
+>     let windowedHrs = round $ 0.30 * hrs'
 >     oProjs <- genProjectsByHrs Open openHrs 
 >     -- becasuse we must build a schedule that has no overlaps,
 >     -- it's easiest to first assign the periods to the schedule,
 >     -- then assign sessions & projects to these periods
 >     -- TBF: for now, we can treat windowed like fixed
 >     winPeriods <- genWindowedSchedule year schedule windowedHrs
->     wProjs <- genFixedProjects $ concat winPeriods --genWindowedProjects winPeriods
+>     wProjs <- genWindowedProjects  winPeriods --genWindowedProjects winPeriods
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
 >     fixedPeriods <- genFixedSchedule year schedule' fixedHrs
 >     fProjs <- genFixedProjects fixedPeriods
@@ -108,35 +108,6 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 
 > genProjectByType :: SessionType -> Gen Project
 > genProjectByType Open     = genProject
-
-> {-
-> genProjectByType Fixed    = genFixedProject
-> genProjectByType Windowed = genFixedProject --genWindowedProject
-
-> genFixedProject :: Gen Project
-> genFixedProject = do
->     name     <- genProjectName
->     semester <- genSemesterName
->     thesis   <- genThesis
->     sessions <- genFixedSession
->     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
->     maxST    <- genMaxSemesterTime pAllottedT
->     let project = defaultProject {
->           pName = str name
->         , semester = semester
->         , thesis = thesis
->         , pAllottedS = maxST
->         }
->     return $ makeProject project pAllottedT pAllottedT sessions
-
-A Fixed Session can look just like an Open Session, except for it's type
-and the fact that it has 
-
-> 
-> genFixedSession :: Gen Session
-> genFixedSession = do
->   session <- genSession
->  -} 
 
 TBF: for now keep it real simple - a single proj & sess for each period
 
@@ -153,6 +124,7 @@ TBF: for now keep it real simple - a single proj & sess for each period
 >   let total = duration p
 >   let s'' = head . sessions $ proj'
 >   let s' = s'' { sType = Fixed
+>                , sName = "FixedS"
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                }
@@ -185,7 +157,8 @@ overlaps until we run out of time.
 >   hour <- choose (0, 23)
 >   duration <- choose (1, 8)
 >   return $ defaultPeriod { startTime = start day hour
->                          , duration = duration*60
+>                          , duration  = duration*60
+>                          , pState    = Scheduled
 >                          }
 >     where
 >   start day hour = addMinutes' ((day*24*60)+(hour*60)) (fromGregorian year 1 1 0 0 0)
@@ -217,7 +190,34 @@ overlaps until we run out of time.
 >   return $! map (mkPeriod duration) dts 
 >     where
 >   getStart day hour = addMinutes' ((day*24*60)+(hour*60)) (fromGregorian year 1 1 0 0 0)
->   mkPeriod dur dt = defaultPeriod { startTime = dt, duration = dur*60 }
+>   mkPeriod dur dt = defaultPeriod { startTime = dt
+>                                   , duration  = dur*60
+>                                   , pState    = Scheduled }
+
+TBF: for now keep it real simple - a single proj & sess for each set of periods
+
+> genWindowedProjects :: [[Period]] -> Gen [Project]
+> genWindowedProjects [] = return []
+> genWindowedProjects (wp:wps) = do
+>   proj <- genWindowedProject  wp
+>   projs <- genWindowedProjects wps
+>   return $ proj : projs --genFixedProjects ps
+
+> genWindowedProject :: [Period] -> Gen Project
+> genWindowedProject wp = do
+>   proj'' <- genProject
+>   let proj' = proj'' { pName = "WinP" }
+>   let total = sum $ map duration wp
+>   let s'' = head . sessions $ proj'
+>   let s' = s'' { sType = Windowed
+>                , sName = "WinS"
+>                , sAllottedS = total
+>                , sAllottedT = total
+>                }
+>   -- TBF: do we really need to create windows for this?
+>   let s = makeSession s' [] wp
+>   return $ makeProject proj' total total [s]
+
 
 
 
