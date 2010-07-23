@@ -129,6 +129,8 @@ TBF: for now keep it real simple - a single proj & sess for each period
 >                , sName = "FixedS"
 >                , sAllottedS = total
 >                , sAllottedT = total
+>                , ra = 0.0
+>                , dec = 1.5 -- TBF: this is just always up
 >                }
 >   let s = makeSession s' [] [p]
 >   return $ makeProject proj' total total [s]
@@ -217,6 +219,8 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >                , sName = "WinS"
 >                , sAllottedS = total
 >                , sAllottedT = total
+>                , ra = 0.0
+>                , dec = 1.5 -- TBF: this is just always up
 >                }
 >   -- TBF: do we really need to create windows for this?
 >   let s = makeSession s' [] wp
@@ -270,6 +274,8 @@ reflecting a realistic maintenance schedule.
 > mkMaintSession = defaultSession { sName = "Maintenance"
 >                                 , frequency = 2.0
 >                                 , band = L
+>                                 , ra = 0.0
+>                                 , dec = 1.5 -- TBF: this is just always up
 >                                 , receivers = [[Rcvr1_2]]
 >                                 , sType = Fixed }
 
