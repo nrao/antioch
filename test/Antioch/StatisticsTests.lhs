@@ -3,7 +3,6 @@
 > import Antioch.DateTime
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.Generators (generateTestData)
 > import Antioch.PProjects

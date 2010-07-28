@@ -4,6 +4,7 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
+> import Antioch.Receiver  (shiftFreqIntoRange)
 > import Antioch.Utilities
 > import Antioch.Generators
 > import Antioch.Settings  (weatherDB, weatherUnitTestDB)
@@ -54,9 +55,7 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 > {-# NOINLINE globalConnection #-}
 > {-# NOINLINE globalConnectionTest #-}
 > globalConnection, globalConnectionTest :: IORef Connection
-
 > globalConnection = unsafePerformIO $ connect >>= newIORef
-
 > globalConnectionTest = unsafePerformIO $ connectTest >>= newIORef
 
 This interface method makes sure that dates don't get passed in
@@ -70,20 +69,21 @@ purported time or origin in testing and simulation.
 >     now <- maybe getCurrentTimeSafe return dt
 >     case dt of
 >       Nothing -> getWeatherSafe now
+>       -- Nothing -> cannot just use getWeather' . Just $ now  TBF Why not?
 >       Just x  -> getWeatherSafe x
 
 > getWeatherTest dt = do
 >     now <- maybe getCurrentTimeSafe return dt
 >     case dt of
->       Nothing -> getWeatherSafe now
->       Just x  -> getWeatherSafe x
+>       Nothing -> getWeatherSafeTest now
+>       Just x  -> getWeatherSafeTest x
 
 Used for simulations/tests to ensure that we always get data, no matter what
 year's worth of weather is in the database, by modifiying the date.
 
 > getWeatherSafe, getWeatherSafeTest :: DateTime -> IO Weather
 
-> getWeatherSafe = getWeather' . Just . dateSafe 
+> getWeatherSafe = getWeather' . Just -- dateSafe 
 
 > getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
@@ -93,7 +93,7 @@ However, we are importing the latest weather forecasts into this DB,
 so we've deprecated 'dateSafe'.
 
 > dateSafe :: DateTime -> DateTime
-> dateSafe dt = dt --if (year == 2006) then dt else replaceYear 2006 dt
+> dateSafe dt = if (year == 2006) then dt else replaceYear 2006 dt
 >   where
 >     (year, _, _, _, _, _) = toGregorian dt
 > -- TBF: do this when you have more then one year:
@@ -104,9 +104,7 @@ so we've deprecated 'dateSafe'.
 >   return $ dateSafe dt
 
 > getWeather', getWeatherTest' :: Maybe DateTime -> IO Weather
-
 > getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
-
 > getWeatherTest' now = readIORef globalConnectionTest >>= \cnn -> updateWeather cnn now
 
 Here the various caches are initialized.
@@ -462,7 +460,8 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >     -- print ("getTotalStringency", frequency, elevation, result)
 >     return result
 >   where
->     freqIdx = freq2HistoryIndex frequency
+>     frequency' = shiftFreqIntoRange rcvr frequency
+>     freqIdx = freq2HistoryIndex frequency'
 >     elevIdx = round . rad2deg $ elevation
 >     obsIdx = if obsType == Continuum then 1 else 0
 >     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
@@ -492,9 +491,11 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
 > getMinTSysPrime cache conn frequency elevation rcvr = do
 >     result <- withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
+>     rcvrId <- getRcvrId conn rcvr
 >     return result
 >   where
->     freqIdx = freq2HistoryIndex frequency
+>     frequency' = shiftFreqIntoRange rcvr frequency
+>     freqIdx = freq2HistoryIndex frequency'
 >     -- guard against Weather server returning nothing for el's < 5.0.
 >     elevation' = max (deg2rad 5.0) elevation
 >     elevIdx = round . rad2deg $ elevation'
@@ -507,6 +508,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >   -- TBF, WTF: PF rcvrs aren't in t_sys table because we aren't
 >   -- calculating them below 2 GHz.  So for now this slight of hand.
 >   --let rcvrId = min 8 rcvrId'
+>   -- print ("fetchMinTSysPrime", freqIdx, elevIdx, rcvrId) need for Dana
 >   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId]
 >     where
 >       query   = "SELECT total FROM t_sys\n\
@@ -532,31 +534,9 @@ where as in Dec. of 2009 we went to 6 hour forecasts and compute the
 forecast_type_id correctly using the forecast_time from the DB.
 
 > forecastType :: DateTime -> DateTime -> DateTime -> Int
-> {-
-> forecastType target now ft = case year of
->                           2006 -> forecastType2006 target now fTypes2006 1
->                           _    -> forecastType' target ft fTypes 9
->   where
->     (year, _, _, _, _, _) = toGregorian target
->     fTypes2006 = [12, 24, 36, 48, 60]
->     fTypes = [t*6 | t <- [1 .. 16]]
-> -}
 > forecastType target _ ft = forecastType' target ft fTypes 1
 >   where
 >     fTypes = [t*6 | t <- [1 .. 16]]
-
-This method is only for unit tests.
-
-> {-
-> forecastType2006 :: DateTime -> DateTime -> [Int] -> Int -> Int
-> forecastType2006 target now forecast_types offset =
->     -- this < is wrong: should be <=; that's why this only is used
->     -- for unit tests
->     case dropWhile (< difference) forecast_types of
->         []     -> length forecast_types
->         (x:xs) -> fromJust (elemIndex x forecast_types) + offset
->   where difference = (target - now) `div` 3600
-> -}
 
 Get the forecast_type_id that is used to represent the difference between 
 the two given timestamps.  Note that the  

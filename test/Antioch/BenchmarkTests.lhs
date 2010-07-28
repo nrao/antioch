@@ -4,13 +4,14 @@
 > import Antioch.Types
 > import Antioch.Schedule.Pack as P 
 > import Antioch.Score
-> import Antioch.Weather
+> import Antioch.Weather                 (getWeatherTest, tsys)
+> import Antioch.ReceiverTemperatures
 > import Antioch.PProjects
 > import Antioch.Simulate
 > import Antioch.RunSimulation
 > import Antioch.Utilities
 > import Antioch.Reports
-> import Control.Exception (assert)
+> import Control.Exception               (assert)
 > import System.CPUTime
 
 > benchmarks :: IO ()
@@ -51,7 +52,8 @@ Introduced in rev 1028; no difference from rev 959
 
 > benchmark_weather_1 :: IO ()
 > benchmark_weather_1 = do
->   w <- getWeather . Just $ starttime 
+>   w <- getWeatherTest . Just $ starttime 
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
 >   tsysValues <- mapM (getWeatherData freq w) times
 >   stop <- getCPUTime
@@ -69,9 +71,10 @@ Introduced in rev 1028; no difference from rev 959
 
 > benchmark_score_1 :: IO ()
 > benchmark_score_1 = do
->   w <- getWeather . Just $ starttime 
+>   w <- getWeatherTest . Just $ starttime 
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   score <- runScoring w [] $ genScore starttime sess >>= \f -> f starttime s
+>   score <- runScoring w [] rt $ genScore starttime sess >>= \f -> f starttime s
 >   stop <- getCPUTime
 >   showExecTime "benchmark_score_1" start stop
 >     where
@@ -85,9 +88,10 @@ Reintroducing static isDayTime code brings it back to almost same time as 959!
 
 > benchmark_score_2 :: IO ()
 > benchmark_score_2 = do
->   w <- getWeather . Just $ starttime 
->   --score <- runScoring w [] $ genScore starttime sess >>= \f -> f starttime s
->   let score' w dt = runScoring w [] $ do
+>   w <- getWeatherTest . Just $ starttime 
+>   rt <- getReceiverTemperatures
+>   --score <- runScoring w [] rt $ genScore starttime sess >>= \f -> f starttime s
+>   let score' w dt = runScoring w [] rt $ do
 >       fs <- genScore dt sess
 >       score <- fs dt s
 >       return $ eval score
@@ -104,9 +108,10 @@ Reintroducing static isDayTime code brings it back to almost same time as 959!
 
 > benchmark_pack_1 :: IO ()
 > benchmark_pack_1 = do 
->   w <- getWeather . Just $ starttime 
+>   w <- getWeatherTest . Just $ starttime 
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   periods' <- runScoring w [] $ do
+>   periods' <- runScoring w [] rt $ do
 >       fs <- genScore starttime sess
 >       P.pack fs starttime duration [] sess
 >   stop <- getCPUTime
@@ -118,9 +123,10 @@ Reintroducing static isDayTime code brings it back to almost same time as 959!
 
 > benchmark_pack_2 :: IO ()
 > benchmark_pack_2 = do 
->   w <- getWeather . Just $ starttime 
+>   w <- getWeatherTest . Just $ starttime 
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   periods' <- runScoring w [] $ do
+>   periods' <- runScoring w [] rt $ do
 >       fs <- genScore starttime sess
 >       P.pack fs starttime duration [] sess
 >   stop <- getCPUTime
@@ -132,7 +138,8 @@ Reintroducing static isDayTime code brings it back to almost same time as 959!
 
 > benchmark_simulate_1 :: IO ()
 > benchmark_simulate_1 = do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
 >   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
@@ -152,7 +159,8 @@ More Sessions, for longer
 
 > benchmark_simulate_2 :: IO ()
 > benchmark_simulate_2 = do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
 >   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
@@ -171,7 +179,8 @@ More Sessions, for longer
 
 > benchmark_simulateScheduling_1 :: IO ()
 > benchmark_simulateScheduling_1 = do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
 >   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime
@@ -191,7 +200,8 @@ More sessions, for longer
 
 > benchmark_simulateScheduling_2 :: IO ()
 > benchmark_simulateScheduling_2 = do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
 >   start <- getCPUTime
 >   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
 >   stop <- getCPUTime

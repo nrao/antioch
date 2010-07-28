@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather
+> import Antioch.Weather    (getWeatherTest)
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Simulate
@@ -23,7 +23,7 @@
 Attempt to see if the old test_sim_pack still works:
 
 > test_simulateDailySchedule = TestCase $ do
->     w <- getWeather $ Just dt
+>     w <- getWeatherTest $ Just dt
 >     (result, t) <- simulateDailySchedule rs dt packDays simDays history ss True [] []
 >     -- TBF: why do we get disagreement w/ old test after the 4th period?
 >     print $ take 4 $ map duration result
@@ -59,7 +59,7 @@ Test to make sure that our time accounting isn't screwed up by the precence
 of pre-scheduled periods (history)
 
 > test_exhaustive_history = TestCase $ do
->     w <- getWeather $ Just dt
+>     w <- getWeatherTest $ Just dt
 >     -- first, a test where the history uses up all the time
 >     (result, t) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True [] []
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_1" True (scheduleHonorsFixed h1 result)
@@ -80,7 +80,7 @@ of pre-scheduled periods (history)
 >     simDays = 7
 >     packDays = 2
 >     cnl = []
->     ds = defaultSession
+>     ds = defaultSession { frequency = 2.0, receivers = [[Rcvr1_2]] }
 >     -- a period that uses up all the sessions' time!
 >     f1 = Period 0 ds {sId = sId cv} dt (sAllottedT cv) 0.0 Pending dt False (sAllottedT cv)
 >     h1 = [f1]

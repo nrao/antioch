@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather (getWeather)
+> import Antioch.Weather (getWeatherTest)
 > import Antioch.Score
 > import Antioch.DSSData
 > import Antioch.Utilities
@@ -103,7 +103,7 @@ Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
 
 > test_scoreDSSData = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
@@ -127,7 +127,7 @@ How a session scores can also reveal errors in how it was imported
 from the database.
 
 > test_session_scores = TestCase $ do
->     w <- getWeather $ Just start
+>     w <- getWeatherTest $ Just start
 >     rt <- getRT
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
@@ -146,7 +146,7 @@ from the database.
 >       name = "GBT09B-010-02"
 >       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [5.3182306,6.0050206,6.9971,7.3452687,7.3695917,7.3695917,7.407125,7.407125,7.407125,7.407125,7.4345226,7.412621,7.389343,7.364573,7.3613133,7.333729,7.2725444]
+>       expScores = [6.413383,6.4336977,6.4738965,6.6098256,6.626247,6.626247,6.6682663,6.6682663,6.6682663,6.6682663,6.690223,6.67603,6.6609187,6.6447935,6.6418443,6.623803,6.583639]
 
 Test a specific session's attributes:
 

@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather
+> import Antioch.Weather               (getWeatherTest)
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Score
@@ -10,10 +10,11 @@
 > import Antioch.Schedule
 > import Antioch.Filters
 > import Antioch.ReceiverTemperatures
-> import Data.List (zipWith6, sort, find)
+> import Data.List                     (zipWith6, sort, find)
 > import Data.Maybe
 > import Test.HUnit
 > import System.Random
+> import Control.Monad.Trans  (lift, liftIO) -- debug
 
 > tests = TestList [
 >       test_removeBuffer
@@ -63,13 +64,13 @@ Here do the simplest schedule you can handle: one giant period
 just make sure it gets cut off properly.
 
 > test_runDailySchedule_1 = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
 >   rt <- getRT
 >   -- get one big period
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history [s]  
 >   results <- runScoring w [] rt $ do
 >       sf <- genScore dt . scoringSessions dt $ [s]
->       dailySchedule' sf Pack dt minutes history [s]  
+>       dailySchedule' sf Pack dt minutes history [s]
 >   assertEqual "test_runDailySchedule_1_1" exp results
 >   -- nothing should get filtered out
 >   let filtered = removeBuffer start minutes results history
@@ -105,7 +106,7 @@ Now, make a number of shorter spaced out periods by
 adjusting max duration and time between.
 
 > test_runDailySchedule_2 = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
 >   rt <- getRT
 >   --sf <- genScore dt . scoringSessions dt $ [s]
 >   -- get a number of smaller periods
@@ -132,7 +133,7 @@ adjusting max duration and time between.
 >   exp2 = take 2 exp
 
 > test_runDailySchedule_3 = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest . Just $ (-60) `addMinutes` dt
 >   rt <- getRT
 >   let ss = concatMap sessions pTestProjects
 >   let ps = concatMap periods ss
@@ -168,6 +169,7 @@ Utilities:
 >                         , minDuration = 2*60
 >                         , maxDuration = 100*60
 >                         , frequency = 2.0
+>                         , receivers = [[Rcvr1_2]]
 >                         , ra = 0.0 
 >                         , dec = 1.5 --1.2217 -- always up
 >                          }

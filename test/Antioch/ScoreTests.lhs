@@ -3,7 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Score
 > import Antioch.Types
-> import Antioch.Weather
+> import Antioch.Weather      (Weather, getWeatherTest, minTSysPrime)
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Receiver
@@ -13,13 +13,6 @@
 > import Data.List            (zip4, zipWith4, zipWith5)
 > import Data.Maybe           (isJust, fromJust)
 > import Data.Array.IArray    (elems)
-
-Note: the keyword BETA throughout the unit tests denotes tests whose main
-purpose is to cross check results between this haskell code and the 2008
-DSS summer beta test python code.  Specifically, the python code found here:
-/home/sandboxes/mclark/trunk/simulation/antioch
-The reason why this branch should be used is that a bug was found in this
-codes weather server used for unit tests (TWeather).  
 
 > tests = TestList [
 >     test_hourAngleLimit
@@ -51,7 +44,6 @@ codes weather server used for unit tests (TWeather).
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
 >   , test_positionValues
->   --, test_receiverTemperature
 >   , test_minObservingEff
 >   , test_kineticTemperature
 >   , test_kineticTemperature2
@@ -92,7 +84,6 @@ codes weather server used for unit tests (TWeather).
 >   , test_receiverBoost2
 >   , test_observerOnSite
 >   , test_scorePeriod
->   --, test_mustang -- TBF: we took out the MUSTANG Hack
 >   , test_elevationLimit
 >   , test_atmosphericStability
 >   ]
@@ -103,13 +94,10 @@ codes weather server used for unit tests (TWeather).
 >     stop <- getCurrentTime
 >     putStrLn $ "Test Execution Speed: " ++ show (diffSeconds stop start) ++ " seconds"
 
-BETA: TestHourAngleLimit.py testcomputedScore
-for some reason, the two tests only overlap for the first half of the 
-tested time period
-
 > test_hourAngleLimit = TestCase $ do
+>     print "test_hourAngleLimit"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     scores <- mapM (score' w rt) times
 >     assertEqual "test_hourAngleLimit" expected scores
 >   where
@@ -122,22 +110,26 @@ tested time period
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 > test_frequencyPressure = TestCase $ do
+>     print "test_frequencyPressure"
 >     freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure defaultStartTime pSessions
->     assertScoringResult "test_frequencyPressure" Nothing 5 2.1132288 (freqPressure undefined . head $ pSessions)
+>     assertScoringResult' "test_frequencyPressure" Nothing 2.1132288 (freqPressure undefined . head $ pSessions)
 
 Test that a frequency NOT in the initial bins gives a pressure of 1.0
 
 > test_frequencyPressureComparison = TestCase $ do
+>     print "test_frequencyPressureComparison"
 >     freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure defaultStartTime pSessions
 >     assertScoringResult' "test_frequencyPressure comparison" Nothing 1.0 (freqPressure undefined . head $ ss)
 >   where
 >     ss = concatMap sessions pTestProjects
 
 > test_rightAscensionPressure = TestCase $ do
+>     print "test_rightAscensionPressure"
 >     raPressure <- runScoring undefined [] undefined $ genRightAscensionPressure defaultStartTime pSessions
->     assertScoringResult "test_rightAscensionPressure" Nothing 5 1.5259848 (raPressure undefined . head $ pSessions)
+>     assertScoringResult' "test_rightAscensionPressure" Nothing 1.5259848 (raPressure undefined . head $ pSessions)
 
 > test_initBins1 = TestCase $ do
+>     print "test_initBins1"
 >     assertEqual "test_initBins1" expected result
 >   where
 >     accessor s = (round . rad2hrs . ra $ s) `mod` 24
@@ -149,6 +141,7 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     startTime = fromGregorian' 2008 1 15
 
 > test_initBins2 = TestCase $ do
+>     print "test_initBins2"
 >     assertEqual "test_initBins2" expected result
 >   where
 >     expected  = [(1920,840),(0,0),(1080,480)
@@ -158,6 +151,7 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     startTime = fromGregorian' 2008 1 15
 
 > test_receiver = TestCase $ do
+>     print "test_receiver"
 >     let dt = fromGregorian 2006 6 15 12 0 0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sess)
@@ -168,151 +162,152 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     assertScoringResult' "test_receiver" Nothing 0.0 (receiver dt sess)
 
 > test_getReceivers = TestCase $ do
->     assertEqual "test_getReceivers1" [Rcvr4_6, Rcvr12_18] result1
->     assertEqual "test_getReceivers2" [Rcvr1_2, Rcvr12_18] result2
+>     print "test_getReceivers"
+>     assertEqual "test_getReceivers 1" [Rcvr4_6, Rcvr12_18] result1
+>     assertEqual "test_getReceivers 2" [Rcvr1_2, Rcvr12_18] result2
 >       where 
 >         result1 = getReceivers (fromGregorian 2006 6 24 16 0 0) rSched
 >         result2 = getReceivers (fromGregorian 2006 6 22 16 0 0) rSched
 
-BETA: TestAtmosphericOpacity.py testgetZenithAngle
-
 > test_zenithAngle = TestCase $ do
->    -- BETA: beta gets 63.88534, diff between Float vs. Double
->    let dt = fromGregorian 2006 10 15 12 0 0 
->    let sess = findPSessionByName "LP"
->    let result = zenithAngle dt sess
->    assertAlmostEqual "test_zenithAngle" 5 (deg2rad 63.704613) result 
->    let result = zenithAngle dt sessBug
->    assertAlmostEqual "test_zenithAngle" 4 (deg2rad 40.5076) result 
->    let result = zenithAngle dt sessBug2
->    assertAlmostEqual "test_zenithAngle" 4 (deg2rad 81.50164) result 
-
-BETA: TestAtmosphericOpacity.py testHaskell
+>     print "test_zenithAngle"
+>     let dt = fromGregorian 2006 10 15 12 0 0 
+>     let sess = findPSessionByName "LP"
+>     let result = zenithAngle dt sess
+>     assertEqual "test_zenithAngle 1" 1.1118549 result 
+>     let result = zenithAngle dt sessBug
+>     assertEqual "test_zenithAngle 2" 0.70699245 result 
+>     let result = zenithAngle dt sessBug2
+>     assertEqual "test_zenithAngle 3"  1.4224724 result 
 
 > test_zenithAngle2 = TestCase $ do
+>     print "test_zenithAngle2"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
 >     let sLP = findPSessionByName "LP" 
 >     let za = zenithAngle dt1 sLP
->     -- BETA: difference due to Float vs. Double
->     assertAlmostEqual "test_zenithAngle2" 2 (deg2rad 75.3003270409) za 
-
-BETA: TestAtmosphericOpacity testgetZenithAngle
+>     assertEqual "test_zenithAngle2" 1.3142384 za 
 
 > test_zenithAngleAtTransit = TestCase $ do
->    -- BETA
->    let sess = findPSessionByName "LP"
->    let result = zenithAngleAtTransit sess
->    assertEqual "test_zenithAngleAtTransit" (deg2rad 33.03313) result 
->    let result = zenithAngleAtTransit sessBug
->    assertAlmostEqual "test_zenithAngleAtTransit" 5 (deg2rad 30.98467) result 
->    let result = zenithAngleAtTransit sessBug2
->    assertAlmostEqual "test_zenithAngleAtTransit" 5 (deg2rad 44.62250) result 
+>     print "test_zenithAngleAtTransit"
+>     let sess = findPSessionByName "LP"
+>     let result = zenithAngleAtTransit sess
+>     assertEqual "test_zenithAngleAtTransit 1" 0.5765369 result 
+>     let result = zenithAngleAtTransit sessBug
+>     assertEqual "test_zenithAngleAtTransit 2" 0.54078466 result 
+>     let result = zenithAngleAtTransit sessBug2
+>     assertEqual "test_zenithAngleAtTransit 3" 0.7788097 result 
 
 > test_minTsysPrime = TestCase $ do
->    w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
->    -- session LP
->    let sess = findPSessionByName "LP"
->    Just result <- minTSysPrime w (frequency sess) (elevation dt sess) (r sess)
->    assertAlmostEqual "test_minTsysPrime 1" 3 15.490067 result 
->    -- session AS
->    let sess = findPSessionByName "AS"
->    Just result <- minTSysPrime w (frequency sess) (elevation dt sess) (r sess)
+>     print "test_minTsysPrime"
+>     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
+>     -- session LP
+>     let sess = findPSessionByName "LP"
+>     Just result <- minTSysPrime w (frequency sess) (elevation dt sess) (r sess)
+>     assertEqual "test_minTsysPrime 1" 17.102324 result 
+>     -- session AS
+>     let sess = findPSessionByName "AS"
+>     Just result <- minTSysPrime w (frequency sess) (elevation dt sess) (r sess)
 
->    assertAlmostEqual "test_minTsysPrime 2" 3 25.958 result 
->    -- sessBug
->    Just result <- minTSysPrime w (frequency sessBug) (elevation dt sessBug) (r sess)
->    assertAlmostEqual "test_minTsysPrime 3" 3 92.365046 result 
->    -- sessBug2
->    Just result <- minTSysPrime w (frequency sessBug2) (elevation dt sessBug2) (r sess)
->    assertAlmostEqual "test_minTsysPrime 4" 4 29.858517 result 
->      where 
->        dt = fromGregorian 2006 10 15 12 0 0
->        r s = fromJust $ getPrimaryReceiver s
+>     assertEqual "test_minTsysPrime 2" 29.415066 result 
+>     -- sessBug
+>     Just result <- minTSysPrime w (frequency sessBug) (elevation dt sessBug) (r sessBug)
+>     assertEqual "test_minTsysPrime 3" 170.40756 result 
+>     -- sessBug2
+>     Just result <- minTSysPrime w (frequency sessBug2) (elevation dt sessBug2) (r sessBug2)
+>     assertEqual "test_minTsysPrime 4" 27.511566 result 
+>       where 
+>         dt = fromGregorian 2006 10 15 12 0 0
+>         r s = fromJust $ getPrimaryReceiver s
 
 > test_systemNoiseTemperature = TestCase $ do
->    w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
->    rt <- getRT
->    let dt = fromGregorian 2006 10 15 12 0 0
->    -- session LP
->    let sess = findPSessionByName "LP"
->    Just result <- systemNoiseTemperature w rt dt sess
->    assertEqual "test_systemNoiseTemperature 1" 15.348079 result 
->    Just result <- systemNoiseTemperaturePrime w rt dt sess
->    assertEqual "test_systemNoiseTemperature' 1" 15.630218 result 
->    -- session AS
->    let sess = findPSessionByName "AS"
->    Just result <- systemNoiseTemperature w rt dt sess
->    assertEqual "test_systemNoiseTemperature 2" 25.468143 result 
->    Just result <- systemNoiseTemperaturePrime w rt dt sess
->    assertEqual "test_systemNoiseTemperature' 2" 26.474463 result 
+>     print "test_systemNoiseTemperature"
+>     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
+>     rt <- getReceiverTemperatures
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     -- session LP
+>     let sess = findPSessionByName "LP"
+>     Just result <- systemNoiseTemperature w rt dt sess
+>     assertEqual "test_systemNoiseTemperature 1" 16.631832 result 
+>     Just result <- systemNoiseTemperaturePrime w rt dt sess
+>     assertEqual "test_systemNoiseTemperature' 2" 16.94275 result 
+>     -- session AS
+>     let sess = findPSessionByName "AS"
+>     Just result <- systemNoiseTemperature w rt dt sess
+>     assertEqual "test_systemNoiseTemperature 3" 28.824364 result 
+>     Just result <- systemNoiseTemperaturePrime w rt dt sess
+>     assertEqual "test_systemNoiseTemperature' 4" 29.98423 result 
 
 > test_minTsys' = TestCase $ do
->    w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
->    let dt = fromGregorian 2006 10 15 12 0 0
->    -- session LP
->    let sess = findPSessionByName "LP"
->    Just result <- minTsys' w dt sess
->    assertAlmostEqual "test_minTsys' 1" 3 15.490067 result 
->    -- session AS
->    let sess = findPSessionByName "AS"
->    Just result <- minTsys' w dt sess
->    assertAlmostEqual "test_minTsys' 2" 3 25.958 result 
->    -- sessBug
->    Just result <- minTsys' w dt sessBug
->    assertAlmostEqual "test_minTsys' 3" 3 92.365046 result 
->    -- sessBug2
->    Just result <- minTsys' w dt sessBug2
->    assertAlmostEqual "test_minTsys' 4" 4 29.858517 result 
+>     print "test_minTsys'"
+>     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2
+>     let dt = fromGregorian 2006 10 15 12 0 0
+>     -- session LP
+>     let sess = findPSessionByName "LP"
+>     Just result <- minTsys' w dt sess
+>     assertEqual "test_minTsys' 1" 17.102324 result 
+>     -- session AS
+>     let sess = findPSessionByName "AS"
+>     Just result <- minTsys' w dt sess
+>     assertEqual "test_minTsys' 2" 29.415066 result 
+>     -- sessBug
+>     Just result <- minTsys' w dt sessBug
+>     assertEqual "test_minTsys' 3" 170.40756 result 
+>     -- sessBug2
+>     Just result <- minTsys' w dt sessBug2
+>     assertEqual "test_minTsys' 4" 27.511566 result 
 
 > test_minimumObservingConditions = TestCase $ do
->    let dt = fromGregorian 2006 10 13 16 0 0
->    w <- getWeatherTest . Just $ dt
->    rt <- getRT
->    mocs <- mapM (moc w rt dt) sess
->    assertEqual "test_minimumObservingConditions" expected mocs
+>     print "test_minimumObservingConditions"
+>     let dt = fromGregorian 2006 10 13 16 0 0
+>     w <- getWeatherTest . Just $ dt
+>     rt <- getReceiverTemperatures
+>     mocs <- mapM (moc w rt dt) sess
+>     assertEqual "test_minimumObservingConditions" expected mocs
 >   where
 >     moc w rt dt s = do
->         Just result <- runScoring w [] rt (minimumObservingConditions dt s)
->         return result
+>       Just result <- runScoring w [] rt (minimumObservingConditions dt s)
+>       return result
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
->     expected = [False, True, True, False, True, False, True]
+>     expected = [False,True,True,False,False,False,True]
 
 > test_observingEfficiency = TestCase $ do
+>     print "test_observingEfficiency"
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     fs <- runScoring w [] rt (observingEfficiency dt s)
 >     let result = eval fs
->     assertAlmostEqual "test_observingEfficiency" 4 0.8590153 result
+>     assertEqual "test_observingEfficiency" 0.988858 result
 
 > test_minObservingEfficiencyFactor = TestCase $ do
+>     print "test_minObservingEfficiencyFactor"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     fs <- runScoring w [] rt (observingEfficiency dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 1" 0.49641892 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.38989714 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 2" 0.5247221 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 2" 0.4121308 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 3" 1.811661e-11 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 6.751039e-34 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 4" 0.49641892 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 0.38989714 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 5" 0.5247221 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 5" 0.4121308 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 6" 1.811661e-11 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 6.751039e-34 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s3)
->     assertEqual "test_minObservingEfficiencyFactor 7" 0.7756546 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 7" 0.60921437 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s3)
->     assertEqual "test_minObservingEfficiencyFactor 8" 0.81987834 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 8" 0.6439545 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s3)
->     assertEqual "test_minObservingEfficiencyFactor 9" 1.0 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 9" 0.37867898 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s4)
->     assertEqual "test_minObservingEfficiencyFactor 10" 0.94606066 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 10" 0.9460519 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericOpacity dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s4)
@@ -321,94 +316,93 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >      dt = fromGregorian 2006 10 15 12 0 0
 >      s1 = defaultSession {sAllottedT = 24*60, minDuration = 2*60
 >                         , maxDuration = 6*60, frequency = 16.9
->                         , dec = 0.71, band = K}
+>                         , dec = 0.71, band = K
+>                         , receivers = [[Rcvr12_18]]}
 >      s2 = s1 {xi = 1.0}
 >      s3 = s1 {xi = 1.25}
 >      s4 = s1 {xi = 2.0}
 
-BETA: TestObservingEfficiency.py test_efficiency
-
 > test_observingEfficiency2 = TestCase $ do
+>     print "test_observingEfficiency2"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt1 = fromGregorian 2006 10 15 12 0 0 -- sunup  
 >     let dt2 = fromGregorian 2006 10 15 11 0 0 -- sundown
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
->     assertAlmostEqual "test_observingEfficiency2" 4 0.9766027 (eval fs)
+>     assertEqual "test_observingEfficiency2" 0.9943539 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
->     -- BETA: difference due to Float vs. Double
->     assertAlmostEqual "test_observingEfficiency2_2" 2 0.97567 (eval fs)
+>     assertEqual "test_observingEfficiency2_2" 0.99995875 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
->     assertAlmostEqual "test_observingEfficiency2_3" 2 0.760433 (eval fs)
-
-BETA: TestObservingEfficiencyLimit.testHaskell
+>     assertEqual "test_observingEfficiency2_3" 0.8634288 (eval fs)
 
 > test_observingEfficiencyLimit = TestCase $ do
+>     print "test_observingEfficiencyLimit"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
->     -- BETA: differences probably due to Float vs. Double
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit <18" 3.952222e-4 result
+>     assertEqual "test_observingEfficiencyLimit <18" 1.0 result
 >     let s = findPSessionByName "GB"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit >=18" 2.080223e-4 result
+>     assertEqual "test_observingEfficiencyLimit >=18" 1.9567063e-4 result
 
 > test_observingEfficiencyLimit' = TestCase $ do
+>     print "test_observingEfficiencyLimit'"
 >     assertEqual "test_oel_1" 3.0780464e-4 (oel 0.8577623 0.93819135 4.3)
 >     assertEqual "test_oel_1" 1.6728761e-4 (oel 0.105431244 0.52246356 27.5)
 >   where
 >     oel = observingEfficiencyLimit'
 
-BETA: TestAtmosphericOpacity.py testefficiency
-
 > test_efficiency = TestCase $ do
+>     print "test_efficiency"
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     let sess = findPSessionByName "LP"
->     assertResult "test_efficiency 1" (Just wdt) 2 0.98215 (efficiency dt sess)  
->     assertResult "test_efficiencyHA 2" (Just wdt) 2 0.72034 (efficiencyHA dt sess) 
+>     assertResult' "test_efficiency 1" (Just wdt) 1.0189254 (efficiency dt sess)  -- TBF over 1.0
+>     assertResult' "test_efficiencyHA 2" (Just wdt) 0.73512125 (efficiencyHA dt sess) 
 >     let sess = findPSessionByName "WV"
->     assertResult "test_efficiency 3" (Just wdt) 2 0.89721 (efficiency dt sess) 
->     assertResult "test_efficiencyHA 4" (Just wdt) 2 0.70341 (efficiencyHA dt sess) 
+>     assertResult' "test_efficiency 3" (Just wdt) 0.9164896 (efficiency dt sess) 
+>     assertResult' "test_efficiencyHA 4" (Just wdt) 0.6651696 (efficiencyHA dt sess) 
 >     let sess = findPSessionByName "AS"
->     assertResult "test_efficiency 5" (Just wdt) 2 0.997521 (efficiency dt sess) 
->     assertResult "test_efficiencyHA 6" (Just wdt) 2 0.94227356 (efficiencyHA dt sess)
->     assertResult "test_efficiency 7" (Just wdt) 2 0.935551 (efficiency dt sessBug)
->     assertResult "test_efficiency 8" (Just wdt) 4 0.95340 (efficiency dt sessBug2) 
+>     assertResult' "test_efficiency 5" (Just wdt) 0.9623961 (efficiency dt sess) 
+>     assertResult' "test_efficiencyHA 6" (Just wdt) 0.49517292 (efficiencyHA dt sess)
+>     assertResult' "test_efficiency 7" (Just wdt) 0.9745162 (efficiency dt sessBug)
+>     assertResult' "test_efficiency 8" (Just wdt) 0.9464483 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     Just result <- runScoring w [] rt (efficiency dt s) 
->     assertEqual "test_efficiency 9" 0.87132007 result
+>     assertEqual "test_efficiency 9" 1.1444719 result -- TBF over 1.0
 >     Just result <- runScoring w [] rt (efficiencyHA dt s) 
->     assertEqual "test_efficiencyHA 10" 0.783711 result
+>     assertEqual "test_efficiencyHA 10" 0.8480558 result
 
 > test_tSysPrime  = TestCase $ do
+>     print "test_tSysPrime"
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 12 15 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     res <- runScoring w [] rt (tSysPrime w rt Rcvr_RRI 0.8 (deg2rad 35.0) dt)
->     let exp = Just 313.0007
+>     let exp = Just 313.13425
 >     assertEqual "test_tSysPrime 3" exp res
 >     res <- runScoring w [] rt (tSysPrime w rt Rcvr1_2 1.2 (deg2rad 45.0) dt)
->     let exp = Just 19.56173
+>     let exp = Just 19.6149
 >     assertEqual "test_tSysPrime 2" exp res
 >     res <- runScoring w [] rt (tSysPrime w rt Rcvr2_3 2.2 (deg2rad 65.0) dt)
->     let exp = Just 17.214624
+>     let exp = Just 17.255747
 >     assertEqual "test_tSysPrime 3" exp res
 >     res <- runScoring w [] rt (tSysPrime w rt Rcvr26_40 22.2 (deg2rad 70.0) dt)
->     let exp = Just 62.94582
+>     let exp = Just 64.309074
 >     assertEqual "test_tSysPrime 4" exp res
 
 > test_tSysPrime'  = TestCase $ do
+>     print "test_tSysPrime'"
 >     let res = tSysPrime' 31.3 244.0 2.1 (deg2rad 47.0)
 >     let exp = 5865.138
 >     assertEqual "test_tSysPrime' 1" exp res
@@ -417,32 +411,32 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     assertEqual "test_tSysPrime' 2" exp res
 
 > test_systemNoiseTemperature' = TestCase $ do
+>     print "test_systemNoiseTemperature'"
 >     assertEqual "test_snt_1" 15.348079 (snt  5.0 257.49832 1.8215785e-2)
 >     assertEqual "test_snt_3" 25.468143 (snt  10.0 256.9823 3.8752194e-2)
 >   where
 >     snt  = systemNoiseTemperature'
 
-BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
-
 > test_zenithOpticalDepth = TestCase $ do
+>     print "test_zenithOpticalDepth"
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let sess = findPSessionByName "LP"
->     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.00798 (zenithOpticalDepth dtLP sess)
+>     assertResult' "test_zenithOpticalDepth 1" (Just wdt) 8.119332e-3 (zenithOpticalDepth dtLP sess)
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.0661772 (zenithOpticalDepth dt sessBug)
->     assertResult "test_zenithOpticalDepth" (Just wdt) 5 0.007394265 (zenithOpticalDepth dt sessBug2)
-
-BETA: TestAtmosphericOpacity.py testHaskell
+>     assertResult' "test_zenithOpticalDepth 1" (Just wdt) 6.637155e-2 (zenithOpticalDepth dt sessBug)
+>     assertResult' "test_zenithOpticalDepth 1" (Just wdt) 7.527518e-3 (zenithOpticalDepth dt sessBug2)
 
 > test_zenithOpticalDepth2 = TestCase $ do
+>     print "test_zenithOpticalDepth2"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
 >     let sLP = findPSessionByName "LP" 
 >     Just zod <- runScoring w [] rt (zenithOpticalDepth dt1 sLP)
->     assertEqual "test_zenithOpticalDepth2" 0.007960711 zod 
+>     assertEqual "test_zenithOpticalDepth2" 8.1259385e-3 zod 
 
 > test_positionValues = TestCase $ do
+>     print "test_positionValues"
 >     assertEqual "test_positionValues hourAngle" 1.0507135 (hourAngle dt lp)
 >     assertEqual "test_epositionValues elevation" 0.46234667 (elevation dt lp)
 >   where
@@ -450,63 +444,58 @@ BETA: TestAtmosphericOpacity.py testHaskell
 >     ss = concatMap sessions pTestProjects
 >     lp = head $ filter (\s -> "LP" == (sName s)) ss
 
-> {-
-> test_receiverTemperature = TestCase $ do
->     let sess = findPSessionByName "LP"
->     assertEqual "test_receiverTemperature" 5.0 $ receiverTemperature dtLP sess
->     let dt = fromGregorian 2006 10 15 12 0 0
->     assertEqual "test_receiverTemperature" 60.0 $ receiverTemperature dt sessBug
->     assertEqual "test_receiverTemperature" 10.0 $ receiverTemperature dt sessBug2
->     -- pTestProjects session CV
->     let dt = fromGregorian 2006 9 2 14 30 0
->     let ss = concatMap sessions pTestProjects
->     let s = findPSessionByName "CV"
->     let result = receiverTemperature dt s 
->     assertEqual "test_receiverTemperature" 5.0 result
-> -}
-
 > test_minObservingEff = TestCase $ do
->     -- pTestProjects session CV
+>     print "test_minObservingEff"
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     let result = minObservingEff . frequency $ s
 >     assertEqual "test_minObservingEff" 0.93819135 result
 
-BETA: TestAtmosphericOpacity.py testkineticTemperature
-
 > test_kineticTemperature = TestCase $ do
+>     print "test_kineticTemperature"
 >     let wdt = fromGregorian 2006 10 14 9 15 0
 >     let sess = findPSessionByName "LP"
->     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.49832 (kineticTemperature dtLP sess) 
+>     assertResult' "test_kineticTemperatureLP" (Just wdt) 257.57712 (kineticTemperature dtLP sess) 
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertResult' "test_kineticTemperatureBug" (Just wdt) 256.9823 (kineticTemperature dt sessBug2) 
->     -- pTestProjects session CV
+>     assertResult' "test_kineticTemperatureBug" (Just wdt) 257.0764 (kineticTemperature dt sessBug2) 
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     Just result <- runScoring w [] rt (kineticTemperature dt s) 
->     assertEqual "test_kineticTemperatureCV" 271.3523 result
-
-BETA: TestAtmosphericOpacity.py testHaskell
+>     assertEqual "test_kineticTemperatureCV" 270.8776 result
 
 > test_kineticTemperature2 = TestCase $ do
+>     print "test_kineticTemperature2"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
 >     let sLP = findPSessionByName "LP" 
 >     Just kt <- runScoring w [] rt (kineticTemperature dt1 sLP)
->     assertEqual "test_kineticTemperature2" 257.41776 kt 
-
-BETA: TestStringency.py testScore (first assert)
+>     assertEqual "test_kineticTemperature2" 257.526 kt 
 
 > test_stringency = TestCase $ do
+>     print "test_stringency"
 >     let dt = fromGregorian 2006 10 15 18 0 0
 >     let sess = findPSessionByName "LP"
->     assertScoringResult "test_stringency" Nothing 5 1.40086 (stringency dt sess)
+>     assertScoringResult' "test_stringency 1" Nothing 1.2931798 (stringency dt sess)
 >     let sess = findPSessionByName "AS"
->     assertScoringResult "test_stringency" Nothing 5 1.03437 (stringency dt sess)
+>     assertScoringResult' "test_stringency 2" Nothing 1.0064338 (stringency dt sess)
+>     -- test stringencies outside the receiver's frequency range
+>     w <- getWeatherTest . Just $ dt 
+>     rt <- getReceiverTemperatures
+>     let cv = findPSessionByName "CV"
+>     let sess = cv { frequency = 4.0 }
+>     [(_, Just low)] <- runScoring w rSched rt (stringency dt sess)
+>     let sess = cv { frequency = 6.0 }
+>     [(_, Just high)] <- runScoring w rSched rt (stringency dt sess)
+>     let sess = cv { frequency = 0.5 }
+>     assertScoringResult' "test_stringency 3" Nothing low (stringency dt sess)
+>     let sess = cv { frequency = 30.0 }
+>     assertScoringResult' "test_stringency 4" Nothing high (stringency dt sess)
+>     let sess = findPSessionByName "AS"
+>     assertScoringResult' "test_stringency 2" Nothing 1.0064338 (stringency dt sess)
 
 > makeTestProject :: Minutes -> Minutes -> Project
 > makeTestProject tl tt = makeProject proj' tt tt ss'
@@ -516,11 +505,13 @@ BETA: TestStringency.py testScore (first assert)
 >         defaultSession {
 >             periods = [defaultPeriod {duration = tt - tl, pDuration = tt - tl}]
 >           , sAllottedT = tt
+>           , receivers = [[Rcvr1_2]] 
 >           }
 >       ]
 >     ss'   = [ makeSession s [] (periods s) | s <- ss'' ]
 
 > test_scienceGrade = TestCase $ do
+>     print "test_scienceGrade"
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     let p1 = makeTestProject' dt 501 1000 500
 >     let s1 = head . sessions $ p1
@@ -541,24 +532,25 @@ BETA: TestStringency.py testScore (first assert)
 >                       ]
 >           , sAllottedT = tt
 >           , sAllottedS = ts
+>           , receivers = [[Rcvr1_2]] 
 >           }
 >       ]
 >     ss'   = [ makeSession s [] (periods s) | s <- ss'' ]
 
 
-BETA: TestProjectCompletion.py test_completion_score
-
 > test_projectCompletion = TestCase $ do
+>     print "test_projectCompletion"
 >     let dt = fromGregorian 2006 10 15 18 0 0 -- don't need!
 >     -- adjust the project's times to get desired results
 >     let p = makeTestProject 28740 33812
 >     let sess = findPSessionByName "LP"
 >     let s = sess {project = p}
->     assertScoringResult "test_projectCompletion" Nothing 3 1.015 (projectCompletion dt s)
+>     assertScoringResult' "test_projectCompletion" Nothing 1.0150006 (projectCompletion dt s)
 
 > test_politicalFactors = TestCase $ do
+>     print "test_politicalFactors"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 13 22 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     let s = head . filter (\s -> "CV" == (sName s)) . concatMap sessions $ pTestProjects
 >     -- missing window, transit, observerOnSite, and ObserverAvailable
@@ -569,30 +561,26 @@ BETA: TestProjectCompletion.py test_completion_score
 >     let result = eval fs
 >     assertEqual "test_politicalFactors" 1.0052 result
 
-BETA: TestTrackingEfficiency.py testefficiencyHaskell
-
 > test_trackingEfficiency = TestCase $ do
->     -- session LP
+>     print "test_trackingEfficiency"
 >     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult "test_trackingEfficiency lp" Nothing 4 0.9999554 (trackingEfficiency dt sess)
->     -- pTestProjects session CV
+>     assertScoringResult' "test_trackingEfficiency lp" Nothing 0.99996424 (trackingEfficiency dt sess)
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingEfficiency dt s)
->     assertAlmostEqual "test_trackingEfficiency cv" 3 0.98940104 result 
-
-BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
+>     assertEqual "test_trackingEfficiency cv" 0.99239165 result 
 
 > test_trackingErrorLimit = TestCase $ do
+>     print "test_trackingErrorLimit"
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
@@ -600,6 +588,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     assertEqual "test_trackingErrorLimit" 1.0 result
 
 > test_positionFactors = TestCase $ do
+>     print "test_positionFactors"
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     factors <- positionFactors s dt
@@ -609,35 +598,37 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     assertEqual "test_positionFactors elevation" 36.60029 elevation
 
 > test_subfactorFactors = TestCase $ do
+>     print "test_subfactorFactors"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     factors <- subfactorFactors s w rt dt
 >     let sysNoiseTemp = fromJust . fromJust . lookup "sysNoiseTemp" $ factors
->     assertEqual "test_subfactorFactors sysNoiseTemp" 14.862213 sysNoiseTemp
+>     assertEqual "test_subfactorFactors sysNoiseTemp" 21.15033 sysNoiseTemp
 >     let sysNoiseTempPrime = fromJust . fromJust . lookup "sysNoiseTempPrime" $ factors
->     assertEqual "test_subfactorFactors sysNoiseTempPrime" 15.093734 sysNoiseTempPrime
+>     assertEqual "test_subfactorFactors sysNoiseTempPrime" 21.466757 sysNoiseTempPrime
 >     let minSysNoiseTempPrime = fromJust . fromJust . lookup "minSysNoiseTempPrime" $ factors
->     assertEqual "test_subfactorFactors minSysNoiseTempPrime" 14.089174 minSysNoiseTempPrime
+>     assertEqual "test_subfactorFactors minSysNoiseTempPrime" 22.965136 minSysNoiseTempPrime
 
 > test_weatherFactors = TestCase $ do
+>     print "test_weatherFactors"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     factors <- weatherFactors s w dt
->     {-  TBF mph not in 2006
 >     let wind_mph = fromJust . fromJust . lookup "wind_mph" $ factors
->     assertEqual "test_weatherFactors wind_mph" 1.0 wind_mph
->     -}
+>     assertEqual "test_weatherFactors wind_mph" 12.485167 wind_mph
+>     --
 >     let wind_ms = fromJust . fromJust . lookup "wind_ms" $ factors
->     assertEqual "test_weatherFactors wind_ms" 5.6930013 wind_ms
+>     assertEqual "test_weatherFactors wind_ms" 5.2077017 wind_ms
 >     let opacity = fromJust . fromJust . lookup "opacity" $ factors
->     assertEqual "test_weatherFactors opacity" 9.302652e-3 opacity
+>     assertEqual "test_weatherFactors opacity" 8.936982e-3 opacity
 >     let tsys = fromJust . fromJust . lookup "tsys" $ factors
->     assertEqual "test_weatherFactors tsys" 271.3523 tsys
+>     assertEqual "test_weatherFactors tsys" 270.8776 tsys
 
 > test_scoreFactors = TestCase $ do
+>     print "test_scoreFactors"
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
@@ -650,8 +641,9 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     assertEqual "test_scoreFactors 3" 1.9724026 fPress
 
 > test_inWindows = TestCase $ do
+>     print "test_inWindows"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 20 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     -- test sessions with two windows,
 >     --     first not satisfied, i.e., no chosen period
 >     --     second is satisfied, i.e., has chosen period
@@ -676,6 +668,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     assertEqual "test_inWindows 6" 1.0 result 
 
 > test_scoreElements = TestCase $ do
+>     print "test_scoreElements"
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     let dur = 15::Minutes
@@ -688,20 +681,20 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
 >     assertEqual "test_scoreElements 3" 1.9724026 fPress
 >     let opacity = fromJust . fromJust . lookup "opacity" . head $ factors
->     assertEqual "test_scoreElements 4" 7.844159e-3 opacity
+>     assertEqual "test_scoreElements 4" 8.786574e-3 opacity
 >     let elevation = fromJust . fromJust . lookup "elevation" . head $ factors
 >     assertEqual "test_scoreElements 5" 36.60029 elevation
 >     let sysNoiseTemp = fromJust . fromJust . lookup "sysNoiseTemp" . head $ factors
->     assertEqual "test_scoreElements 6" 14.164635 sysNoiseTemp
-
-BETA: TestZenithAngleLimit testScore
+>     assertEqual "test_scoreElements 6" 21.054111 sysNoiseTemp
 
 > test_zenithAngleLimit = TestCase $ do
+>     print "test_zenithAngleLimit"
 >     let dt = fromGregorian 2006 10 15 0 0 0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sess)
 
 > test_rmsTrackingError = TestCase $ do
+>     print "test_rmsTrackingError"
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let res = rmsTrackingError dt 3.4
 >     let exp = 3.1498086
@@ -723,44 +716,46 @@ BETA: TestZenithAngleLimit testScore
 >     let exp = 2.2675742e-3
 >     assertEqual "test_rmsTrackingError 6" exp res
 
-BETA: TestSurfaceObservingEfficiency testefficiency
-
 > test_surfaceObservingEfficiency = TestCase $ do
+>     print "test_surfaceObservingEfficiency"
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
 >     let sess = findPSessionByName "LP"
->     assertScoringResult "test_surfaceObservingEfficienyLP" wdt 5 0.9943902 (surfaceObservingEfficiency dt sess)
+>     assertScoringResult' "test_surfaceObservingEfficienyLP" wdt 0.9943902 (surfaceObservingEfficiency dt sess)
 >     let sess = findPSessionByName "WV"
->     assertScoringResult "test_surfaceObservingEfficienyWV" wdt 5 0.7905864 (surfaceObservingEfficiency dt sess)
+>     assertScoringResult' "test_surfaceObservingEfficienyWV" wdt 0.7905864 (surfaceObservingEfficiency dt sess)
 
 > test_scoreCV = TestCase $ do
+>     print "test_scoreCV"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV" 5 1.630488e-3 result  
+>     assertEqual "test_scoreCV" 4.20185 result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
 
 > test_scoreCV2 = TestCase $ do
+>     print "test_scoreCV2"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 1 18 0 0
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     -- make sure that we don't use real wind!
->     let dt = fromGregorian 2006 10 1 18 1 0
+>     let dt = fromGregorian 2006 10 1 18 32 0
 >     let ss = concatMap sessions pTestProjects
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 4.692339 result  
+>     assertEqual "test_scoreCV2" 4.208913 result  
 
 > test_scoreForTime = TestCase $ do
+>     print "test_scoreForTime"
 >     -- score on top of weather
 >     w <- getWeatherTest $ Just dt
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     fs <- runScoring w [] rt $ do
 >         sf <- genScore dt ss
 >         sf dt s
@@ -785,8 +780,9 @@ to use in conjunction with Pack tests.
 > 
 
 > test_avgScoreForTime = TestCase $ do
+>     print "test_avgScoreForTime"
 >     -- score on top of weather
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     w <- getWeatherTest $ Just dt
 >     fs <- runScoring w [] rt $ do
 >         sf <- genScore dt ss
@@ -804,7 +800,7 @@ to use in conjunction with Pack tests.
 >         sf <- genScore dt ss
 >         avgScoreForTimeRealWind sf dt 15 s
 >     -- since we're using real (measured) wind, the scores should be the same
->     assertAlmostEqual "test_avgScoreForTime_2" 4 w1Score w3Score
+>     assertEqual "test_avgScoreForTime_2" w1Score w3Score
 >   where
 >     dt = fromGregorian 2006 10 1 18 0 0
 >     dt2 = fromGregorian 2006 10 1 0 0 0
@@ -813,8 +809,9 @@ to use in conjunction with Pack tests.
 > 
 
 > test_avgScoreForTime2 = TestCase $ do
+>     print "test_avgScoreForTime2"
 >     -- weather that shouldn't get used
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     w <- getWeatherTest $ Just dummytime
 >     -- score over a wide range of time, that includes zeros, and see
 >     -- how it zeros out the scores.
@@ -831,13 +828,15 @@ to use in conjunction with Pack tests.
 >     dummytime  = fromGregorian 2006 11 7 12 0 0
 >     starttime  = fromGregorian 2006 11 8 12 0 0
 >     starttime2 = fromGregorian 2006 11 8 22 0 0
->     s = defaultSession {sAllottedT = 24*60, minDuration=2*60, maxDuration=6*60}
->     -- scoring using a weather from starttime gives these scores for this
->     -- session in 24 hours
->     --expScores = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0) 
+>     s = defaultSession {frequency = 1.5
+>                       , sAllottedT = 24*60
+>                       , minDuration=2*60
+>                       , maxDuration=6*60
+>                       , receivers = [[Rcvr1_2]]}
 > 
 
 > test_weightedMeanScore = TestCase $ do
+>     print "test_weightedMeanScore"
 >     assertEqual "test_weightedMeanScore 0" 0.0 (weightedMeanScore [])
 >     assertEqual "test_weightedMeanScore 1" 0.0 (weightedMeanScore [17.0])
 >     assertEqual "test_weightedMeanScore 2" 6.5 (weightedMeanScore [17.0, 13.0])
@@ -847,8 +846,9 @@ to use in conjunction with Pack tests.
 Test the 24-hour scoring profile of the default session, per quarter.
 
 > test_score = TestCase $ do
+>     print "test_score"
 >     w <- getWeatherTest . Just $ starttime 
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let score' w rt dt = runScoring w [] rt $ do
 >         fs <- genScore dt [sess]
 >         s <- fs dt sess
@@ -867,12 +867,14 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           , minDuration = 2*60
 >                           , maxDuration = 6*60
 >                           , frequency = 2.0
+>                           , receivers = [[Rcvr1_2]]
 >                           }
->     expected = (replicate 39 0.0) ++ defaultScores ++ (replicate 22 0.0)
+>     expected = (replicate 40 0.0) ++ defaultScores ++ (replicate 23 0.0)
 
 > test_score_window = TestCase $ do
->     w <- getWeatherTest . Just $ starttime 
->     rt <- getRT
+>     print "test_score_window"
+>     w <- getWeatherTest . Just $ (-60) `addMinutes` starttime 
+>     rt <- getReceiverTemperatures
 >     scores <- mapM (score' w rt) times
 >     assertEqual "test_score_window" expected scores
 >   where
@@ -883,38 +885,38 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = take 97 $ [2.328064,2.3254356,2.3223083,2.3188372,2.314261] ++ (repeat 0.0)
+>     expected = [0.15556726,0.15722112,0.15910822,0.17624137,0.1805013] ++ (replicate 92 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-
-> defaultScores = [0.5211093,0.5224294,0.52316,0.4754307,0.50147396,0.50766027,0.50946337,0.517201,0.5181075,0.51864064,0.51912516,0.526621,0.52672726,0.52692646,0.527491,0.5323082,0.5323082,0.5323403,0.5323403,0.53268474,0.53268474,0.5326549,0.53259224,0.53282213,0.5327564,0.53272176,0.5326471,0.53220946,0.5321003,0.53197885,0.53177017,0.53186417,0.53160393,0.5312882,0.53089696,0.53059655]
+> defaultScores = [0.5056638,0.50721955,0.37434185,0.43374413,0.4618951,0.48932555,0.50997674,0.5110879,0.5117441,0.5123422,0.51817137,0.5183546,0.5186957,0.51932025,0.5250707,0.5250707,0.5251581,0.5251581,0.52677196,0.52677196,0.52670014,0.52654696,0.5260049,0.52581525,0.5257154,0.525498,0.5242645,0.5239553,0.5236119,0.5230266,0.5234527,0.5227402,0.5218849,0.5208408]
 
 > test_bestDuration = TestCase $ do
+>     print "test_bestDuration"
 >     w <- getWeatherTest . Just $ origin 
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     -- best period length using session's min/max
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 4.4021516, 4*60 + 15)
+>     let expected = (s, 3.964084, 4*60 + 15)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- best period length overriding min/max
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 4.385702, 4*60)
+>     let expected = (s, 3.9481738, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >     -- best period length using session's min/max, but only 4 hours left
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing exht
->     let expected = (exht, 4.385702, 4*60)
+>     let expected = (exht, 3.9481738, 4*60)
 >     assertEqual "test_bestDuration 3" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
->     starttime = fromGregorian 2006 10 1 18 0 0
+>     starttime = fromGregorian 2006 10 1 18 30 0
 >     -- a nearly exhausted session, i.e., only 4 hours left
 >     ss = concatMap sessions pTestProjects
 >     s = head $ filter (\s -> "CV" == (sName s)) ss
@@ -930,8 +932,9 @@ plus 40 quarters.
 >               }
 
 > test_bestDurations = TestCase $ do
->     w <- getWeatherTest . Just $ starttime 
->     rt <- getRT
+>     print "test_bestDurations"
+>     w <- getWeatherTest . Just $ (-60) `addMinutes` starttime
+>     rt <- getReceiverTemperatures
 >     let ss = concatMap sessions pTestProjects
 >     bestDurs <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
@@ -939,18 +942,19 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertAlmostEqual "test_bestDurations 2 v" 5 4.4021516 v
->     assertEqual "test_bestDurations 2 d" 255 d
+>     assertEqual "test_bestDurations 2 v" 4.0286345 v
+>     assertEqual "test_bestDurations 2 d" 345 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.4960961 v
+>     assertEqual "test_bestDurations 3 v" 3.3678703 v
 >     assertEqual "test_bestDurations 3 d" 450 d
 >   where
->     starttime = fromGregorian 2006 10 1 18 0 0
+>     starttime = fromGregorian 2006 10 1 17 0 0
 
 > test_averageScore = TestCase $ do
+>     print "test_averageScore"
 >     w <- getWeatherTest . Just $ starttime 
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     let score' w dt = runScoring w [] rt $ do
 >         fs <- genScore dt [sess]
 >         s <- fs dt sess
@@ -968,14 +972,17 @@ plus 40 quarters.
 >     sess = defaultSession { sAllottedT = 24*60 
 >                           , minDuration = 2*60 
 >                           , maxDuration = 6*60
+>                           , receivers = [[Rcvr12_18]]
+>                           , frequency = 12.8
 >                           }
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 
 Look at the scores over a range where none are zero.
 
 > test_averageScore2 = TestCase $ do
+>     print "test_averageScore2"
 >     w <- getWeatherTest . Just $ starttime 
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     (scoreTotal, scoreTotal', avgScore) <- runScoring w [] rt $ do
 >         sf <- genScore starttime [sess]
 >         scores <- lift $ mapM (score' w rt sf) times
@@ -984,8 +991,8 @@ Look at the scores over a range where none are zero.
 >         avgScore <- averageScore sf dt sess
 >         return (scoreTotal, scoreTotal', avgScore)
 >     assertEqual "test_averageScore2_addScores" expectedTotal scoreTotal
->     assertAlmostEqual "test_averageScore2_totalScore" 3  expectedTotal scoreTotal'
->     assertAlmostEqual "test_averageScore2_avgScore" 3 expectedAvg avgScore
+>     assertEqual "test_averageScore2_totalScore" expectedTotal scoreTotal'
+>     assertEqual "test_averageScore2_avgScore" expectedAvg avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     dur = 2*60
@@ -993,6 +1000,7 @@ Look at the scores over a range where none are zero.
 >                           , minDuration = dur 
 >                           , maxDuration = 6*60
 >                           , frequency = 2.0
+>                           , receivers = [[Rcvr1_2]] 
 >                           }
 >     score' w rt sf dt = do
 >         fs <- runScoring w [] rt (sf dt sess)
@@ -1000,10 +1008,11 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 4.074926::Score --4.0578547 :: Score  
+>     expectedTotal = 3.7932546
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 > test_obsAvailable = TestCase $ do
+>   print "test_obsAvailable"
 >   assertEqual "test_obsAvailable_1" True (obsAvailable dt s)
 >   assertEqual "test_obsAvailable_2" False (obsAvailable dt s2)
 >   assertEqual "test_obsAvailable_3" True (obsAvailable dt2 s2)
@@ -1019,6 +1028,7 @@ Look at the scores over a range where none are zero.
 If none is sanctioned, then there should never be an observer available
 
 > test_obsAvailable2 = TestCase $ do
+>   print "test_obsAvailable2"
 >   assertEqual "test_obsAvailable2_1" True  (obsAvailable dt s)
 >   assertEqual "test_obsAvailable2_2" False (obsAvailable dt s2)
 >   assertEqual "test_obsAvailable2_3" False (obsAvailable dt2 s2)
@@ -1032,9 +1042,10 @@ If none is sanctioned, then there should never be an observer available
 >       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
 
 > test_obsAvailable3 = TestCase $ do
+>   print "test_obsAvailable3"
 >   assertEqual "test_obsAvailable3_1" False  (obsAvailable dt s)
 >   w <- getWeatherTest Nothing
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   fs <- runScoring w [] rt (observerAvailable dt s)
 >   assertEqual "test_obsAvailable3_2" expFalse (eval fs)
 >     where
@@ -1057,8 +1068,9 @@ If none is sanctioned, then there should never be an observer available
 >       expFalse = 0.0
 
 > test_observerAvailable = TestCase $ do
+>   print "test_obsAvailable"
 >   w <- getWeatherTest Nothing
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   fs <- runScoring w [] rt (observerAvailable dt s)
 >   assertEqual "test_observerAvailable_1" expTrue (eval fs)
 >   fs <- runScoring w [] rt (observerAvailable dt s2)
@@ -1088,8 +1100,9 @@ If none is sanctioned, then there should never be an observer available
 >       expFalse = 0.0
 
 > test_needsLowRFI = TestCase $ do
+>   print "test_needsLowRFI"
 >   w <- getWeatherTest Nothing
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   assertEqual "test_needsLowRFI" True (isDayTime day)
 >   assertEqual "test_needsLowRFI" False (isDayTime night)
 >   fs <- runScoring w [] rt (needsLowRFI day sAnyTime)
@@ -1107,8 +1120,9 @@ If none is sanctioned, then there should never be an observer available
 >       sNightTime = sAnyTime { lowRFI = True }
 
 > test_lstExcepted = TestCase $ do
+>   print "test_lstExcpeted"
 >   w <- getWeatherTest Nothing
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   fs <- runScoring w [] rt (lstExcepted dtClear sAnyTime)
 >   assertEqual "test_lstExcpeted_1" 1.0 (eval fs)
 >   fs <- runScoring w [] rt (lstExcepted dtClear sExclude1)
@@ -1136,6 +1150,7 @@ If none is sanctioned, then there should never be an observer available
 >       sExclude3 = sAnyTime { lstExclude = [(4.4721766,8.396873)] }
 
 > test_enoughTimeBetween = TestCase $ do
+>   print "test_enoughTimeBetween"
 >   assertEqual "test_enoughTimeBetween_1" True r1
 >   assertEqual "test_enoughTimeBetween_2" True r2
 >   assertEqual "test_enoughTimeBetween_3" False r3
@@ -1145,7 +1160,7 @@ If none is sanctioned, then there should never be an observer available
 >   assertEqual "test_enoughTimeBetween_7" False r7
 >   assertEqual "test_enoughTimeBetween_8" True r8
 >   w <- getWeatherTest Nothing
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   fs <- runScoring w [] rt (enoughTimeBetween tdt1 s1)
 >   assertEqual "test_enoughTimeBetween_9" 1.0 (eval fs)
 >   --fs <- runScoring w [] (lstExcepted dtClear sExclude1)
@@ -1198,6 +1213,7 @@ If none is sanctioned, then there should never be an observer available
 TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 
 > test_receiverBoost = TestCase $ do
+>   print "test_receiverBoost"
 >   assertEqual "test_receiverBoost_1"  False (receiverBoost' s1)
 >   assertEqual "test_receiverBoost_2"  False (receiverBoost' s2)
 >   assertEqual "test_receiverBoost_3"  False (receiverBoost' s3)
@@ -1233,6 +1249,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       s10 = defaultSession { receivers = [[boost]], grade = 3.0 }
 
 > test_receiverBoost2 = TestCase $ do
+>   print "test_receiverBoost2"
 >   assertEqual "test_receiverBoost2_1"  False (receiverBoost' s1)
 >   assertEqual "test_receiverBoost2_2"  False (receiverBoost' s2)
 >   assertEqual "test_receiverBoost2_3"  False (receiverBoost' s3)
@@ -1257,6 +1274,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       s6 = s { receivers = [[Rcvr1_2, b1], [Rcvr1_2, b2]] }
 
 > test_observerOnSite = TestCase $ do
+>   print "test_observerOnSite"
 >   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
 >   assertEqual "test_observerOnSite_2" False (obsOnSite dt2 s1)
 >   assertEqual "test_observerOnSite_3" False (obsOnSite dt3 s1)
@@ -1278,16 +1296,17 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >       s2  = defaultSession { project = pr2 }
 
 > test_scorePeriod = TestCase $ do
+>   print "test_scorePeriod"
 >   -- do explicitly what scorePeriod is supposed to do
 >   w <- getWeatherTest $ Just startDt
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   scores <- mapM (scoreSession w rt) dts
 >   let weightedAvgScore = (sum . tail $ scores) / 4.0
 >   -- now 
 >   periodScore <- scorePeriod p s ss w [] rt
 >   assertEqual "test_scorePeriod_1" weightedAvgScore periodScore
 >   where
->     startDt = fromGregorian 2006 2 1 0 0 0
+>     startDt = fromGregorian 2006 2 1 0 30 0
 >     scoreSession w rt dt = do
 >       fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >       return $ eval fs
@@ -1303,105 +1322,13 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >                       , pForecast = startDt
 >                       }
 
-TBF: this won't work until we start using the expanded weather frequencies
-and irradiance
-
-> test_mustang = TestCase $ do
->     --assertEqual "test_mustang_1" True (usesMustang ms)
->     --assertEqual "test_mustang_2" False (usesMustang ds)
->     w <- getWeatherTest $ Just dtNight
->     rt <- getRT
->     -- Factor: Stringency
->     fs <- runScoring w [] rt (stringency dtDay ds)
->     assertEqual "test_mustang_3" True (eval fs /= 9.0)
->     fs <- runScoring w [] rt (stringency dtDay ms)
->     assertEqual "test_mustang_4" 9.0 (eval fs)
->
->     -- Factor: surfaceObservingEfficiency
->     fs <- runScoring w [] rt (surfaceObservingEfficiency dtNight ms)
->     assertEqual "test_mustang_5" 1.0 (eval fs) 
->     fs <- runScoring w [] rt (surfaceObservingEfficiency dtNight ds)
->     assertEqual "test_mustang_6" 1.0 (eval fs) 
->     fs <- runScoring w [] rt (surfaceObservingEfficiency dtDay ms)
->     -- TBF: 0.18 != 0.28
->     assertEqual "test_mustang_61" 0.20957701 (eval fs) 
->     fs <- runScoring w [] rt (surfaceObservingEfficiency dtDay ds)
->     assertEqual "test_mustang_62" 0.996918 (eval fs) 
->
->     -- Factor: trackingEfficiency
->     fs <- runScoring w [] rt (trackingEfficiency dtNight ds)
->     assertEqual "test_mustang_7" 0.9963897 (eval fs) --0.9980611 (eval fs) 
->     -- TBF: check this value
->     fs <- runScoring w [] rt (trackingEfficiency dtNight ms)
->     assertEqual "test_mustang_8" 0.73873913 (eval fs) -- 0.8946233 (eval fs) 
-
->     -- Factor: trackingErrorLimit
->     fs <- runScoring w [] rt (trackingErrorLimit dtNight ds)
->     assertEqual "test_mustang_9" 1.0 (eval fs) 
->     fs <- runScoring w [] rt (trackingErrorLimit dtDay ds)
->     assertEqual "test_mustang_10" 1.0 (eval fs) 
->     --wind_ms <- wind w dtDay
->     --wind_w2 <- w2_wind w dtDay
->     --print $ "wind: day " ++ (show $ wind_ms) ++ " " ++ (show wind_w2)
->     fs <- runScoring w [] rt (trackingErrorLimit dtDay ms)
->     assertEqual "test_mustang_11" 1.0 (eval fs) 
->     --wind_ms <- wind w dtNight
->     --wind_w2 <- w2_wind w dtNight
->     --print $ "wind: night " ++ (show $ wind_ms) ++ " " ++ (show wind_w2)
->     fs <- runScoring w [] rt (trackingErrorLimit dtNight ms)
->     assertEqual "test_mustang_12" 0.0 (eval fs) --1.0 (eval fs) 
->     
->     -- Factor: observingEfficiencyLimit
->     fs <- runScoring w [] rt (observingEfficiencyLimit dtNight ds)
->     assertEqual "test_mustang_13" 1.0 (eval fs) 
->     fs <- runScoring w [] rt (observingEfficiencyLimit dtDay ds)
->     assertEqual "test_mustang_14" 1.0 (eval fs) 
->     fs <- runScoring w [] rt (observingEfficiencyLimit dtNight ms)
->     assertEqual "test_mustang_15" False (eval fs < epsilon) 
->     fs <- runScoring w [] rt (observingEfficiencyLimit dtDay ms)
->     assertEqual "test_mustang_15_2" False (eval fs < epsilon) 
->
->     -- Factor: Hour Angle Limit
->     fs <- runScoring w [] rt (hourAngleLimit dtNight ds)
->     assertEqual "test_mustang_16" 1.0 (eval fs ) 
->     fs <- runScoring w [] rt (hourAngleLimit dtDay ds)
->     assertEqual "test_mustang_17" 1.0 (eval fs ) 
->     fs <- runScoring w [] rt (hourAngleLimit dtNight ms)
->     assertEqual "test_mustang_18" 1.0 (eval fs ) 
->     fs <- runScoring w [] rt (hourAngleLimit dtDay ms)
->     assertEqual "test_mustang_19" 1.0 (eval fs ) 
->     
->     -- Factor : atmosphericEfficiency
->     fs <- runScoring w [] rt (atmosphericOpacity dtNight ds)
->     assertEqual "test_mustang_20" 0.9742651 (eval fs ) 
->     fs <- runScoring w [] rt (atmosphericOpacity dtDay ds)
->     assertEqual "test_mustang_21" 0.9747749 (eval fs ) 
->     fs <- runScoring w [] rt (atmosphericOpacity dtNight ms)
->     assertEqual "test_mustang_22" 0.83687115 (eval fs ) 
->     fs <- runScoring w [] rt (atmosphericOpacity dtDay ms)
->     assertEqual "test_mustang_23" 0.7528943 (eval fs ) 
->     
->     -- Factor: Frequncy Pressure 
-
->   where
->     epsilon = 1.0e-5
->     ms = defaultSession { receivers = [[Rcvr_PAR]]
->                         , frequency = 90.0 
->                         , dec = 1.5 -- always up
->                         }
->     ds = defaultSession { frequency = 4.0 
->                         , dec = 1.5
->                         }
->     dtDay = fromGregorian 2006 2 1 14 0 0 
->     dtNight = fromGregorian 2006 2 1 5 0 0 
- 
-
 > test_elevationLimit = TestCase $ do
+>   print "test_elevationLimit"
 >   assertEqual "test_elevationLimit_1" True (elevationLimit' dt s1)
 >   assertEqual "test_elevationLimit_2" True (elevationLimit' dt s2)
 >   assertEqual "test_elevationLimit_3" False (elevationLimit' dt s3)
 >   -- now make sure we override hour angle limit properly
->   rt <- getRT
+>   rt <- getReceiverTemperatures
 >   w <- getWeatherTest $ Just dt
 >   fs <- runScoring w [] rt (hourAngleLimit dt s1)
 >   assertEqual "test_elevationLimit_4" 1.0 (eval fs)
@@ -1410,20 +1337,24 @@ and irradiance
 >   fs <- runScoring w [] rt (hourAngleLimit dt s3)
 >   assertEqual "test_elevationLimit_6" 0.0 (eval fs)
 >     where
->   s1 = defaultSession { dec = 1.5 } -- always up
 >   dt = fromGregorian 2006 3 1 0 0 0
->   s2 = defaultSession { dec = 1.5 -- always up
+>   s1 = defaultSession { receivers = [[Rcvr1_2]]
+>                       , frequency = 1.9
+>                       , dec = 1.5 } -- always up
+>   s2 = defaultSession { receivers = [[Rcvr1_2]]
+>                       , dec = 1.5 -- always up
 >                       , elLimit = Just . deg2rad $ 10.0  } 
->   s3 = defaultSession { dec = 1.5 -- always up
+>   s3 = defaultSession { receivers = [[Rcvr1_2]]
+>                       , dec = 1.5 -- always up
 >                       , elLimit = Just . deg2rad $ 70.0  } 
 
 
 > test_atmosphericStability = TestCase $ do
+>     print "test_atmosphericStability"
 >     w <- getWeatherTest $ Just dt
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     fs <- runScoring w [] rt $ atmosphericStabilityLimit dt s1  
->     -- TBF: will be False till we get irradiance into DB
->     assertEqual "test_atmosphericStability_1" 0.0 (eval fs)
+>     assertEqual "test_atmosphericStability_1" 1.0 (eval fs)
 >     fs <- runScoring w [] rt $ atmosphericStabilityLimit dt s2  
 >     assertEqual "test_atmosphericStability_2" 1.0 (eval fs)
 >   where
@@ -1432,20 +1363,21 @@ and irradiance
 >     s2 = defaultSession { dec = 1.5, oType = SpectralLine } -- always up
 
 > test_efficiency_below2GHz = TestCase $ do
+>     print "test_efficiency_below2GHz"
 >     w <- getWeatherTest . Just $ wdt 
->     rt <- getRT
->     Just result <- runScoring w [] rt (efficiency dt s1) 
->     assertEqual "test_efficiency_below2GHz_1" 0.9722724 result
+>     rt <- getReceiverTemperatures
+>     Just result <- runScoring w [] rt (efficiency dt s1)  --fromJust error
+>     assertEqual "test_efficiency_below2GHz_1" 0.97584516 result
 >     Just result <- runScoring w [] rt (efficiency dt s2) 
->     assertEqual "test_efficiency_below2GHz_2" 0.99295783 result
+>     assertEqual "test_efficiency_below2GHz_2" 0.9864369 result
 >     Just result <- runScoring w [] rt (efficiency dt s3) 
->     assertEqual "test_efficiency_below2GHz_3" 0.99823254 result
+>     assertEqual "test_efficiency_below2GHz_3" 0.51631737 result
 >   where
 >     wdt = fromGregorian 2006 9 1 1 0 0
 >     dt = fromGregorian 2006 9 2 14 30 0
->     s1 = defaultSession { dec = 1.5, frequency = 2.0 } 
->     s2 = defaultSession { dec = 1.5, frequency = 1.0 } 
->     s3 = defaultSession { dec = 1.5, frequency = 0.5 } 
+>     s1 = defaultSession { receivers = [[Rcvr1_2]], dec = 1.5, frequency = 2.0 } 
+>     s2 = defaultSession { receivers = [[Rcvr1_2]], dec = 1.5, frequency = 1.0 } 
+>     s3 = defaultSession { receivers = [[Rcvr_342]], dec = 1.5, frequency = 0.5 } 
 
 Test utilities
 
@@ -1458,28 +1390,28 @@ Test utilities
 > assertScoringResult :: String -> Maybe DateTime -> Int -> Float -> Scoring Factors -> IO ()
 > assertScoringResult name dt  digits expected scoref = do
 >     w <- getTestWeather dt  
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     [(_, Just result)] <- runScoring w rSched rt scoref
 >     assertAlmostEqual name digits expected result
 
 > assertScoringResult' :: String -> Maybe DateTime -> Float -> Scoring Factors -> IO ()
 > assertScoringResult' name dt expected scoref = do
 >     w <- getTestWeather dt 
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     [(_, Just result)] <- runScoring w rSched rt scoref
 >     assertEqual name expected result
 
 > assertResult :: String -> Maybe DateTime -> Int -> Float -> Scoring (Maybe Float) -> IO ()
 > assertResult name dt digits expected scoref = do
 >     w <- getTestWeather dt
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     Just result <- runScoring w rSched rt scoref
 >     assertAlmostEqual name digits expected result
 
 > assertResult' :: String -> Maybe DateTime -> Float -> Scoring (Maybe Float) -> IO ()
 > assertResult' name dt expected scoref = do
 >     w <- getTestWeather dt
->     rt <- getRT
+>     rt <- getReceiverTemperatures
 >     Just result <- runScoring w rSched rt scoref
 >     assertEqual name expected result
 
@@ -1523,6 +1455,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
+>           , receivers = [[Rcvr1_2]] 
 >         }
 
 > rSessions = zipWith5 genPSess tots useds ras bands grades
@@ -1540,6 +1473,7 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >           , ra = hrs2rad ra
 >           , band = b
 >           , grade = g
+>           , receivers = [[Rcvr1_2]] 
 >         }
 
 > rSched = [ (fromGregorian 2006 6 14 12 0 0, [Rcvr1_2, Rcvr26_40])

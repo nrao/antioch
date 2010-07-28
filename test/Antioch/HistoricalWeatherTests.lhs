@@ -5,7 +5,7 @@
 > import Antioch.HistoricalWeather
 > import Antioch.Score
 > import Antioch.ReceiverTemperatures
-> import Antioch.Weather
+> import Antioch.Weather       (getWeatherTest)
 > import Antioch.Utilities
 > import Antioch.Score
 > -- import Control.Monad.Trans  (lift, liftIO)
@@ -63,7 +63,7 @@ Interim solution: comparisons use some type of bigbox weather database.
 
 
 > test_tSysPrimeNow = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
 >   rts <- getReceiverTemperatures
 >   tsys <- tSysPrimeNow w rts Rcvr1_2 2000 10 now
 >   assertEqual "tSysPrimeNow" (Just 25.079811) tsys
@@ -88,14 +88,14 @@ Interim solution: comparisons use some type of bigbox weather database.
 > -}
 
 > test_stringencyLimit = TestCase $ do
->   w <- getWeather $ Just dt
+>   w <- getWeatherTest $ Just dt
 >   rt <- getReceiverTemperatures
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 SpectralLine dt
 >   assertEqual "stringencyLimit 1" True sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 SpectralLine dt
->   assertEqual "stringencyLimit 2" False sl
+>   assertEqual "stringencyLimit 2" True sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 Continuum dt
->   assertEqual "stringencyLimit 3" True sl
+>   assertEqual "stringencyLimit 3" False sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 Continuum dt
 >   assertEqual "stringencyLimit 4" False sl
 >     where
@@ -141,7 +141,7 @@ Also, this test should give an array that in turn leads to the above result
 
 > {-
 > test_calculateEffSysTemps = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
 >   rts <- getReceiverTemperatures
 >   assertEqual "calculateEffSysTemps_0" 25 (length getWeatherDates)
 >   sysTemps <- calculateEffSysTemps w rts Rcvr1_2 2000 10

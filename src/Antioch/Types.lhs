@@ -259,7 +259,7 @@ Simple Functions for Periods:
 >   , ra          = 0.0
 >   , dec         = 0.0
 >   , backup      = False
->   , receivers   = [[Rcvr1_2]]
+>   , receivers   = [] -- e.g., [[Rcvr12_18]]
 >   , enabled     = True
 >   , authorized  = True
 >   , grade       = 4.0

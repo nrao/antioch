@@ -50,11 +50,22 @@ Is the given frequency in the range of the given receiver?
 > rcvrInFreqRange :: Frequency -> Receiver -> Bool
 > rcvrInFreqRange freq rcvr = low <= freq && freq <= high
 >   where
->     low = fst $ getRcvrRange rcvr  
->     high = snd $ getRcvrRange rcvr  
+>     (low, high) = getRcvrRange rcvr
+
+Return a receiver's frequency range as a tuple
 
 > getRcvrRange :: Receiver -> (Frequency, Frequency)
 > getRcvrRange rcvr = snd . head $ filter (\r -> (fst r) == rcvr) rcvrRanges
+
+Regress any frequency to the nearest one in the receiver's range.
+
+> shiftFreqIntoRange :: Receiver -> Frequency -> Frequency
+> shiftFreqIntoRange r f 
+>   | f < low       = low
+>   | high < f      = high
+>   | otherwise     = f
+>     where
+>       (low, high) = getRcvrRange r
 
 Here are the ranges for all receivers: this was copied from the DSS database.
 

@@ -64,7 +64,7 @@ eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2
 >     tk  <- kineticTemperature dt s 
 >     w   <- weather
 >     zod <- zenithOpticalDepth dt s 
->     let rcvr = getPrimaryReceiver s
+>     let rcvr = getPrimaryReceiver s -- error Nothing
 >     minTsysPrime' <-  liftIO $ minTSysPrime w (frequency s) elevation' (fromJust rcvr)
 >     return $ do
 >         tk' <- tk
@@ -457,9 +457,6 @@ Translates the total/used times pairs into pressure factors.
 > observingEfficiencyLimit dt s = do
 >     obsEff <- observingEfficiency dt s
 >     let obsEff' = eval obsEff
->     --let result = observingEfficiencyLimit' obsEff' minObsEff $ frequency s
->     --print ("observingEfficiencyLimit'", result)
->     --fac result
 >     fac $ observingEfficiencyLimit' obsEff' minObsEff $ frequency s
 >   where
 >     minObsEff = minObservingEff . frequency $ s
