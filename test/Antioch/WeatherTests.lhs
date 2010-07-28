@@ -265,3 +265,27 @@ TBF: place this in utils ...
 >   where
 >     epsilon = 1.0 / 10.0 ** fromIntegral places
 
+Just a little utility that prints out random forecast values.
+
+> print_weather_values = TestCase $ do
+>   mapM print_weather (dts start)
+>   assertEqual "" True True 
+>     where
+>       start = fromGregorian 2004 6 10 0 0 0
+>       dts  start = map (\days -> (days*24*60) `addMinutes'` start) $ take 8 $ [0,30 ..]  
+>       print_weather dt = do
+>          w <- getWeather $ Just dt
+>          wind' <- wind w dt --(60 `addMinutes'` dt)
+>          wind_mph' <- wind_mph w dt
+>          ir <- irradiance w dt
+>          --gbt_wind' <- gbt_wind w dt --(60 `addMinutes'` dt)
+>          --gbt_ir <- gbt_irradiance w dt
+>          op2 <- opacity w dt 2
+>          tsys2 <- tsys w dt 2
+>          op20 <- opacity w dt 20
+>          tsys20 <- tsys w dt 20
+>          op100 <- opacity w dt 100
+>          tsys100 <- tsys w dt 100
+>          print $ (toSqlString dt) ++ ":" ++ (sv wind') ++ (sv wind_mph') ++ (sv ir) ++ (sv op2) ++ (sv tsys2)  ++ (sv op20) ++ (sv tsys20) ++ (sv op100) ++ (sv tsys100)
+>       sv v = " " ++ (show $ fromMaybe (-1.0) v)
+

@@ -172,6 +172,40 @@ tests.
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
+stringency
+
+Stringency vs. Frequency @ 90 degress elevation
+
+> plotStringency :: StatsPlot
+> plotStringency fn n _ _ _ = do
+>   w <- getWeather Nothing
+>   str <- mapM (stringency w) freqs
+>   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqs str
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "stringency", plotData)]
+>     where
+>   freqs = [2 .. 50]
+>   stringency w f = totalStringency w f (pi/2)
+>   title = "Stringency vs. Frequency (@90') " ++ n
+>   xl = "Freq. (GHz)"
+>   yl = "Stringency"
+
+minEffSysTemp
+
+minEffSysTemp vs. Frequency @ 90 degress elevation
+
+> plotMinEffSysTemp :: StatsPlot
+> plotMinEffSysTemp fn n _ _ _ = do
+>   w <- getWeather Nothing
+>   str <- mapM (mtsys w) freqs
+>   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqs str
+>   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "min eff sys temp", plotData)]
+>     where
+>   freqs = [2 .. 50]
+>   mtsys w f = minTSysPrime w f (pi/2)
+>   title = "Min. Effective Sys. Temp. vs. Frequency (@90') " ++ n
+>   xl = "Freq. (GHz)"
+>   yl = "Min. Effecitve System Temperature"
+
 simDecFreq (stars, crosses)
 
 > plotDecFreq          :: StatsPlot
@@ -808,6 +842,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
+>  , plotStringency     $ rootPath ++ "/stringency.png"
+>  , plotMinEffSysTemp  $ rootPath ++ "/minEffSysTemp.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
@@ -910,13 +946,14 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportSessionTypes :: [Session] -> [Period] -> String
 > reportSessionTypes ss ps = do
->     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3]
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3, l4]
 >   where
->     heading = "Simulation By Session Type: \n"
+>     heading = "Simulation By Session Type (Fixed includes Maint.): \n"
 >     hdr = printf "%-11s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
 >     l1 = reportSessionTypeHrs Open ss ps 
 >     l2 = reportSessionTypeHrs Fixed ss ps 
 >     l3 = reportSessionTypeHrs Windowed ss ps 
+>     l4 = reportSessionNameHrs "Maint." ss ps 
 
 > reportSessionTypeHrs :: SessionType -> [Session] -> [Period] -> String
 > reportSessionTypeHrs st ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
@@ -928,6 +965,15 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     pstCnt = length psTyped
 >     pstHrs =  totalPeriodHrs ps (\p -> (sType . session $ p) == st) 
 
+> reportSessionNameHrs :: String -> [Session] -> [Period] -> String
+> reportSessionNameHrs name ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (name) stCnt stHrs pstCnt pstHrs
+>   where
+>     ssTyped = filter (\s -> sName s == name) ss 
+>     psTyped = filter (\p -> (sName . session $ p) == name) ps 
+>     stCnt = length ssTyped
+>     stHrs =  totalHrs ss (\s -> sName s == name) 
+>     pstCnt = length psTyped
+>     pstHrs =  totalPeriodHrs ps (\p -> (sName . session $ p) == name) 
  
 > reportBandTimes :: [Session] -> [Period] -> String 
 > reportBandTimes ss ps = do

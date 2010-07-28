@@ -63,7 +63,7 @@ we must do all the work that usually gets done in nell.
 >         let sessions'' = updateSessions sessions' newlyScheduledPeriods cs
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
->         let newHistory = updateHistory history newSched start
+>         let newHistory = updateHistory history newSched cs 
 >         -- run the below assert if you have doubts about bookeeping
 >         -- make sure canceled periods have been removed from sessons
 >         --let sessPeriods = concatMap periods sessions''
@@ -99,13 +99,14 @@ before the algorithm was called, but there's two complications:
    * the output from the algo. is a combination of parts of the history and the newly scheduled periods
    * this same output is then modified: canclelations and replacements (backups) may occur.
 So, we need to intelligently combine the previous history and the algo. output.
-Basically, ignore any of the history that overlaps with the time range covered
-by the scheduling algorithm.
+What we do is we simply combine the history and the newly scheduled periods, 
+remove any redundancies (periods that were in both lists), then remove any 
+periods that we know just got canceled.
 
-> updateHistory :: [Period] -> [Period] -> DateTime -> [Period]
-> updateHistory history newSched start = oldHistory ++ newSched
+> updateHistory :: [Period] -> [Period] -> [Period] -> [Period]
+> updateHistory history newSched canceled = filter notCanceled $ nub . sort $ history ++ newSched 
 >   where
->     oldHistory = takeWhile (\p -> (periodEndTime p) <= start) history
+>     notCanceled p = not $ any (==p) canceled
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]

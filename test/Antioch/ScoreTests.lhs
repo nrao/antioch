@@ -20,7 +20,8 @@ The reason why this branch should be used is that a bug was found in this
 codes weather server used for unit tests (TWeather).  
 
 > tests = TestList [
->     test_hourAngleLimit
+>     test_calcAtmosphericEfficiency
+>   , test_hourAngleLimit
 >   , test_frequencyPressure
 >   , test_frequencyPressureComparison
 >   , test_rightAscensionPressure
@@ -34,11 +35,13 @@ codes weather server used for unit tests (TWeather).
 >   , test_minTsysPrime
 >   , test_minTsysPrime
 >   , test_systemNoiseTemperature
+>   , test_systemNoiseTemperature'
 >   , test_minTsys'
 >   , test_minimumObservingConditions
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
+>   , test_observingEfficiencyLimit'
 >   , test_minObservingEfficiencyFactor
 >   , test_efficiency
 >   , test_zenithOpticalDepth
@@ -225,14 +228,23 @@ BETA: TestAtmosphericOpacity testgetZenithAngle
 >    let sess = findPSessionByName "LP"
 >    Just result <- systemNoiseTemperature w dt sess
 >    assertEqual "test_systemNoiseTemperature 1" 15.348079 result 
->    Just result <- systemNoiseTemperature' w dt sess
+>    Just result <- systemNoiseTemperaturePrime w dt sess
 >    assertEqual "test_systemNoiseTemperature' 1" 15.630218 result 
 >    -- session AS
 >    let sess = findPSessionByName "AS"
 >    Just result <- systemNoiseTemperature w dt sess
 >    assertEqual "test_systemNoiseTemperature 2" 25.468143 result 
->    Just result <- systemNoiseTemperature' w dt sess
+>    Just result <- systemNoiseTemperaturePrime w dt sess
 >    assertEqual "test_systemNoiseTemperature' 2" 26.474463 result 
+
+> test_systemNoiseTemperature' = TestCase $ do
+>     assertEqual "test_snt_1" 15.348079 (snt  5.0 257.49832 1.8215785e-2)
+>     assertEqual "test_snt_2" 15.630218 (sntp 5.0 257.49832 1.8215785e-2)
+>     assertEqual "test_snt_3" 25.468143 (snt  10.0 256.9823 3.8752194e-2)
+>     assertEqual "test_snt_4" 26.474463 (sntp 10.0 256.9823 3.8752194e-2)
+>   where
+>     snt  = systemNoiseTemperature'
+>     sntp = systemNoiseTemperaturePrime'
 
 > test_minTsys' = TestCase $ do
 >    w <- getWeather . Just $ fromGregorian 2006 10 14 9 15 2
@@ -340,6 +352,12 @@ BETA: TestObservingEfficiencyLimit.testHaskell
 >     [(_, Just result)] <- runScoring w [] (observingEfficiencyLimit dt s)
 >     assertEqual "test_observingEfficiencyLimit >=18" 1.6728761e-4 result
 
+> test_observingEfficiencyLimit' = TestCase $ do
+>     assertEqual "test_oel_1" 3.0780464e-4 (oel 0.8577623 0.93819135 4.3)
+>     assertEqual "test_oel_1" 1.6728761e-4 (oel 0.105431244 0.52246356 27.5)
+>   where
+>     oel = observingEfficiencyLimit'
+
 BETA: TestAtmosphericOpacity.py testefficiency
 
 > test_efficiency = TestCase $ do
@@ -365,6 +383,12 @@ BETA: TestAtmosphericOpacity.py testefficiency
 >     assertEqual "test_efficiency 9" 0.87132007 result
 >     Just result <- runScoring w [] (efficiencyHA dt s) 
 >     assertEqual "test_efficiencyHA 10" 0.783711 result
+
+> test_calcAtmosphericEfficiency = TestCase $ do
+>     assertEqual "test_cae_1" 0.98214704 (cae 5.0 257.49832 15.490067 7.985274e-3 1.1118549)
+>     assertEqual "test_cae_2" 0.8972108 (cae 35.0 259.85532 62.021393 4.3145142e-2 0.9910518)
+>   where
+>     cae = calcAtmosphericEfficiency
 
 BETA: TestAtmosphericOpacity.py testZenithOpticalDepth
 
@@ -664,7 +688,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertAlmostEqual "test_scoreCV2" 3 4.6854753 result  
+>     assertAlmostEqual "test_scoreCV2" 3 4.645495 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -786,7 +810,8 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = take 97 $ [2.327,2.3243728,2.321247,2.3177772,2.3132033] ++ (repeat 0.0)
+>     --expected = take 97 $ [2.327,2.3243728,2.321247,2.3177772,2.3132033] ++ (repeat 0.0)
+>     expected = take 97 $ [2.3270137,2.3243866,2.321261,2.3177772,2.3132033] ++ (repeat 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
@@ -799,19 +824,19 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 4.3957114, 4*60 + 15)
+>     let expected = (s, 4.39336, 4*60 + 15)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- best period length overriding min/max
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 4.3792863, 4*60)
+>     let expected = (s, 4.376788, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >     -- best period length using session's min/max, but only 4 hours left
 >     bestDur <- runScoring w [] $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing exht
->     let expected = (exht, 4.3792863, 4*60)
+>     let expected = (exht, 4.376788, 4*60)
 >     assertEqual "test_bestDuration 3" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -839,11 +864,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertAlmostEqual "test_bestDurations 2 v" 5 4.3957114 v
+>     assertAlmostEqual "test_bestDurations 2 v" 5 4.39336 v
 >     assertEqual "test_bestDurations 2 d" 255 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertAlmostEqual "test_bestDurations 3 v" 5 3.436132 v
+>     assertAlmostEqual "test_bestDurations 3 v" 5 3.436115 v
 >     assertEqual "test_bestDurations 3 d" 375 d
 >   where
 >     starttime = fromGregorian 2006 10 1 18 0 0
@@ -1218,10 +1243,10 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >
 >     -- Factor: trackingEfficiency
 >     fs <- runScoring w [] (trackingEfficiency dtNight ds)
->     assertEqual "test_mustang_7" 0.9963897 (eval fs) --0.9980611 (eval fs) 
+>     assertEqual "test_mustang_7" 0.9980611 (eval fs) --0.9980611 (eval fs) 
 >     -- TBF: check this value
 >     fs <- runScoring w [] (trackingEfficiency dtNight ms)
->     assertEqual "test_mustang_8" 0.73873913 (eval fs) -- 0.8946233 (eval fs) 
+>     assertEqual "test_mustang_8" 0.8946233 (eval fs) -- 0.8946233 (eval fs) 
 
 >     -- Factor: trackingErrorLimit
 >     fs <- runScoring w [] (trackingErrorLimit dtNight ds)
@@ -1237,7 +1262,7 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >     --wind_w2 <- w2_wind w dtNight
 >     --print $ "wind: night " ++ (show $ wind_ms) ++ " " ++ (show wind_w2)
 >     fs <- runScoring w [] (trackingErrorLimit dtNight ms)
->     assertEqual "test_mustang_12" 0.0 (eval fs) --1.0 (eval fs) 
+>     assertEqual "test_mustang_12" 1.0 (eval fs) --1.0 (eval fs) 
 >     
 >     -- Factor: observingEfficiencyLimit
 >     fs <- runScoring w [] (observingEfficiencyLimit dtNight ds)

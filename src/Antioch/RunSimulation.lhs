@@ -28,7 +28,7 @@
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
 >     w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
+>     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
 >     let rs = [] -- TBF
 >     --print . show $ rs
 >     -- print . show $ ss
@@ -75,17 +75,29 @@ Get everything we need from the Database.
 >     let history = sort $ concatMap periods ss
 >     return $ (rs, ss, projs, history)
 
-Get everything we need from the simulated input (Generators)
+Get everything we need from the simulated input (Generators).
+WARNING: the ratio of the amount of session time requested to the
+simulation time range is important.  The generators will try to create 
+a random fixed and windowed schedule that satisfies a percentage of the
+session time requested all within the sim. time range.
+For examples:
+genSimTime 500 dt 10 : won't work, too many hours of pre-scheduled periods
+                       to cram into those 10 days.
+genSimTime 150 dt 10 : less pre-scheduled periods can fit in 10 days.
 
-> simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput = return $ (rs, ss, projs, history)
+NOTE: The old simulations ran for 365 days using 255 projects, which came 
+out to be about 10,000 hours.
+
+> simulatedInput :: DateTime -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
+> simulatedInput start days = return $ (rs, ss, projs, history)
 >   where
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
->     projs = generate 0 g $ genProjects 255
+>     -- NOTE: be careful here - the ratio of hours to length of simulation
+>     projs = generate 0 g $ genSimTime 10000 start days --genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
->     history = []
+>     history = sort $ concatMap periods ss 
 
 
 
