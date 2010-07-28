@@ -35,11 +35,25 @@ class Weather2DBImport:
         """
         Inserts a row of data into the weather table.
         """
-        query = """
-                INSERT INTO gbt_weather (weather_date_id,wind_speed,irradiance)
-                VALUES (%s, %s, %s)
-                """ % (weatherDateId, wind, irradiance)
-        self.c.query(query)
+        windOK = wind and wind == wind
+        irradianceOK = irradiance and irradiance == irradiance
+        if windOK and irradianceOK:
+            query = """
+                    INSERT INTO gbt_weather (weather_date_id,wind_speed,irradiance)
+                    VALUES (%s, %s, %s)
+                    """ % (weatherDateId, wind, irradiance)
+        elif windOK and not irradianceOK:
+            query = """
+                    INSERT INTO gbt_weather (weather_date_id,wind_speed)
+                    VALUES (%s, %s)
+                    """ % (weatherDateId, wind)
+        elif not windOK and irradianceOK:
+            query = """
+                    INSERT INTO gbt_weather (weather_date_id,irradiance)
+                    VALUES (%s, %s)
+                    """ % (weatherDateId, irradiance)
+        if windOK or irradianceOK:
+            self.c.query(query)
 
     def update(self):
         """
@@ -89,7 +103,7 @@ class Weather2DBImport:
             dt = datetime.strptime(dtStr, "%Y-%m-%d %H:%M:%S")
             v = callback(dt)
             # watch for NaN values
-            if v and v.__str__() != "nan":
+            if v and v == v:
                 results.append((id, dtStr, v))
                 self.updateRow(id, column, v)
         return results 
@@ -124,3 +138,6 @@ class Weather2DBImport:
         f.close()    
         print "printed report to: ", filename
 
+if __name__ == "__main__":
+    w = Weather2DBImport()
+    w.update()
