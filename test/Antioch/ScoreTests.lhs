@@ -23,6 +23,7 @@
 >   , test_initBins2
 >   , test_receiver
 >   , test_getReceivers
+>   , test_zenithAngle'
 >   , test_zenithAngle
 >   , test_zenithAngle2
 >   , test_zenithAngleAtTransit
@@ -41,17 +42,23 @@
 >   , test_efficiency_below2GHz
 >   , test_tSysPrime
 >   , test_tSysPrime'
+>   , test_opticalDepth
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
 >   , test_positionValues
 >   , test_minObservingEff
+>   , test_avgEff
 >   , test_kineticTemperature
 >   , test_kineticTemperature2
 >   , test_stringency
 >   , test_scienceGrade
 >   , test_projectCompletion
 >   , test_politicalFactors
+>   , test_theta
+>   , test_calculateTE
 >   , test_trackingEfficiency
+>   , test_maxTrackErr
+>   , test_maxTrackErrArray
 >   , test_trackingErrorLimit
 >   , test_positionFactors
 >   , test_subfactorFactors
@@ -61,6 +68,8 @@
 >   , test_scoreElements
 >   , test_zenithAngleLimit
 >   , test_rmsTrackingError
+>   , test_variableTrackingError
+>   , test_surfaceObservingEfficiency'
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
@@ -168,6 +177,20 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >       where 
 >         result1 = getReceivers (fromGregorian 2006 6 24 16 0 0) rSched
 >         result2 = getReceivers (fromGregorian 2006 6 22 16 0 0) rSched
+
+Equation 5
+
+> test_zenithAngle' = TestCase $ do
+>     print "test_zenithAngle'"
+>     assertEqual "test_zenithAngle' 1" 0.6707847  (zenithAngle' 0.0   0.0)
+>     assertEqual "test_zenithAngle' 2" 0.11421602 (zenithAngle' 0.785 0.0)
+>     assertEqual "test_zenithAngle' 3" 0.8992154  (zenithAngle' 1.57  0.0)
+>     assertEqual "test_zenithAngle' 4" 0.58927834 (zenithAngle' 0.785 0.785)
+>     assertEqual "test_zenithAngle' 5" 0.9000113  (zenithAngle' 1.57  1.57)
+>     assertEqual "test_zenithAngle' 6" 1.1154156  (zenithAngle' 0.785 1.57)
+>     assertEqual "test_zenithAngle' 7" 0.8994485  (zenithAngle' 1.57  0.785)
+>     assertEqual "test_zenithAngle' 8" 0.9834893  (zenithAngle' 0.0   0.785)
+>     assertEqual "test_zenithAngle' 9" 1.5701725  (zenithAngle' 0.0   1.57)
 
 > test_zenithAngle = TestCase $ do
 >     print "test_zenithAngle"
@@ -350,6 +373,8 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
 >     assertEqual "test_observingEfficiencyLimit >=18" 1.9567063e-4 result
 
+Equation 24
+
 > test_observingEfficiencyLimit' = TestCase $ do
 >     print "test_observingEfficiencyLimit'"
 >     assertEqual "test_oel_1" 3.0780464e-4 (oel 0.8577623 0.93819135 4.3)
@@ -401,6 +426,17 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     let exp = Just 64.309074
 >     assertEqual "test_tSysPrime 4" exp res
 
+Equation 4
+
+> test_opticalDepth = TestCase $ do
+>     print "test_opticalDepth"
+>     assertEqual "test_opticalDepth 1" 8.1687495e-3 (opticalDepth 8.124e-3 0.1)
+>     assertEqual "test_opticalDepth 2" 8.525134e-2 (opticalDepth 6.434e-2 0.707)
+>     assertEqual "test_opticalDepth 3" 0.3369283 (opticalDepth 9.287e-2 1.3)
+>     let x = opticalDepth 7.527e-3 1.5
+>     let y = opticalDepth 7.527e-3 1.6
+>     assertEqual "test_opticalDepth 4" x y
+
 > test_tSysPrime'  = TestCase $ do
 >     print "test_tSysPrime'"
 >     let res = tSysPrime' 31.3 244.0 2.1 (deg2rad 47.0)
@@ -409,6 +445,8 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     let res = tSysPrime' 3.1 297.1 0.01 (deg2rad 37.0)
 >     let exp = 12.6543665
 >     assertEqual "test_tSysPrime' 2" exp res
+
+Equation 7
 
 > test_systemNoiseTemperature' = TestCase $ do
 >     print "test_systemNoiseTemperature'"
@@ -443,6 +481,17 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     dt = fromGregorian 2009 12 9 16 24 0
 >     ss = concatMap sessions pTestProjects
 >     lp = head $ filter (\s -> "LP" == (sName s)) ss
+
+Equation 22
+
+> test_avgEff = TestCase $ do
+>     print "test_avgEff"
+>     assertEqual "test_avgEff 1" 0.9690155 (avgEff 3.0)
+>     assertEqual "test_avgEff 2" 0.7445902 (avgEff 15.0)
+>     assertEqual "test_avgEff 3" 0.581184 (avgEff 22.0)
+>     assertEqual "test_avgEff 4" 0.65445566 (avgEff 48.0)
+
+Equation 23
 
 > test_minObservingEff = TestCase $ do
 >     print "test_minObservingEff"
@@ -561,6 +610,34 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     let result = eval fs
 >     assertEqual "test_politicalFactors" 1.0052 result
 
+Equation 14
+
+> test_theta = TestCase $ do
+>     print "test_theta"
+>     assertEqual "test_theta" 33.035713 (theta 22.4)
+
+Equation 12
+
+> test_calculateTE = TestCase $ do
+>     print "test_calcualteTE"
+>     --let freq1 = 5.4
+>     --let freq2 = 4.3
+>     --let dt1 = fromGregorian 2006 10 15 12 0 0
+>     --let dt2 = fromGregorian 2006 9 2 14 30 0
+>     --let wind1 = Just 1.2388499
+>     --let wind2 = Just 5.2077017
+>     assertEqual "test_calcualteTE 1" (Just 0.99996424)  (calculateTE wind1 dt1 freq1 False)
+>     assertEqual "test_calcualteTE 2" (Just 0.99988484)  (calculateTE wind1 dt1 freq1 True)
+>     assertEqual "test_calcualteTE 3" (Just 0.99239165)  (calculateTE wind2 dt2 freq2 False)
+>     assertEqual "test_calcualteTE 4" (Just 0.99816483)  (calculateTE wind2 dt2 freq2 True)
+>      where
+>        freq1 = 5.4
+>        freq2 = 4.3
+>        dt1 = fromGregorian 2006 10 15 12 0 0
+>        dt2 = fromGregorian 2006 9 2 14 30 0
+>        wind1 = Just 1.2388499
+>        wind2 = Just 5.2077017
+
 > test_trackingEfficiency = TestCase $ do
 >     print "test_trackingEfficiency"
 >     let sess = findPSessionByName "LP"
@@ -572,6 +649,32 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingEfficiency dt s)
 >     assertEqual "test_trackingEfficiency cv" 0.99239165 result 
+
+Equation 25
+
+> test_maxTrackErr = TestCase $ do
+>     print "test_maxTrackErr"
+>     assertEqual "test_maxTrackErr 1" 2.5395744e-3 (maxTrackErr dt1 wind1 freq1)
+>     assertEqual "test_maxTrackErr 2" 3.714775e-2 (maxTrackErr dt2 wind2 freq2)
+>      where
+>        freq1 = 5.4
+>        freq2 = 4.3
+>        dt1 = fromGregorian 2006 10 15 12 0 0
+>        dt2 = fromGregorian 2006 9 2 14 30 0
+>        wind1 = 1.2388499
+>        wind2 = 5.2077017
+
+Equation 26
+
+> test_maxTrackErrArray = TestCase $ do
+>     print "test_maxTrackErr"
+>     assertEqual "test_maxTrackErrArray 1" 4.558789e-3 (maxTrackErrArray wind1 freq1)
+>     assertEqual "test_maxTrackErrArray 2" 1.8204344e-2 (maxTrackErrArray wind2 freq2)
+>      where
+>        freq1 = 5.4
+>        freq2 = 4.3
+>        wind1 = 1.2388499
+>        wind2 = 5.2077017
 
 > test_trackingErrorLimit = TestCase $ do
 >     print "test_trackingErrorLimit"
@@ -693,6 +796,8 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sess)
 
+Equation 11
+
 > test_rmsTrackingError = TestCase $ do
 >     print "test_rmsTrackingError"
 >     let dt  = fromGregorian 2006 4 15 16 0 0
@@ -715,6 +820,31 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >     let res = rmsTrackingError dt 0.1
 >     let exp = 2.2675742e-3
 >     assertEqual "test_rmsTrackingError 6" exp res
+
+Equation 15
+
+> test_variableTrackingError = TestCase $ do
+>     print "test_variableTrackingError"
+>     let res = variableTrackingError 3.4
+>     let exp = 2.882932
+>     assertEqual "test_variableTrackingError 1" exp res
+>     let res = variableTrackingError 17.2
+>     let exp = 67.09466
+>     assertEqual "test_variableTrackingError 2" exp res
+>     let res = variableTrackingError 0.1
+>     let exp = 1.2000022
+>     assertEqual "test_variableTrackingError 3" exp res
+
+> test_surfaceObservingEfficiency' = TestCase $ do
+>     print "test_surfaceObservingEfficiency'"
+>     assertEqual "test_surfaceObservingEfficiency' 1" 0.9982652 (surfaceObservingEfficiency' dt1 3.0)
+>     assertEqual "test_surfaceObservingEfficiency' 2" 0.95752126 (surfaceObservingEfficiency' dt1 15.0)
+>     assertEqual "test_surfaceObservingEfficiency' 3" 0.9108528 (surfaceObservingEfficiency' dt1 22.0)
+>     assertEqual "test_surfaceObservingEfficiency' 4" 0.6411505 (surfaceObservingEfficiency' dt1 48.0)
+>     assertEqual "test_surfaceObservingEfficiency' 5" 1.0 (surfaceObservingEfficiency' dt2 48.0)
+>       where
+>         dt1 = fromGregorian 2006 7 4 0 0 0          -- warming time
+>         dt2 = fromGregorian 2006 7 4 9 0 0          -- not warming time
 
 > test_surfaceObservingEfficiency = TestCase $ do
 >     print "test_surfaceObservingEfficiency"
