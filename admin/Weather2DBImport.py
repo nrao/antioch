@@ -3,6 +3,9 @@ from WeatherData     import WeatherData
 from PyrgeometerData import PyrgeometerData
 import pg
 
+if __name__ == "__main__":
+    import sys
+
 class Weather2DBImport:
     """
     This class contains logic to populate the weather database with
@@ -139,5 +142,6 @@ class Weather2DBImport:
         print "printed report to: ", filename
 
 if __name__ == "__main__":
-    w = Weather2DBImport()
+    print "Reading gbt weather data for database", sys.argv[1]
+    w = Weather2DBImport(sys.argv[1])
     w.update()
