@@ -43,6 +43,7 @@
 >   , test_tSysPrime
 >   , test_tSysPrime'
 >   , test_opticalDepth
+>   , test_zenithOpticalDepth'
 >   , test_zenithOpticalDepth
 >   , test_zenithOpticalDepth2
 >   , test_positionValues
@@ -454,6 +455,15 @@ Equation 7
 >     assertEqual "test_snt_3" 25.468143 (snt  10.0 256.9823 3.8752194e-2)
 >   where
 >     snt  = systemNoiseTemperature'
+
+> test_zenithOpticalDepth' = TestCase $ do
+>     print "test_zenithOpticalDepth'"
+>     let wdt = fromGregorian 2006 10 14 9 15 2
+>     assertResult' "test_zenithOpticalDepth' 1" (Just wdt) 7.527518e-3 (zenithOpticalDepth' dtLP 0.3)
+>     assertResult' "test_zenithOpticalDepth' 2" (Just wdt) 8.3219055e-3 (zenithOpticalDepth' dtLP 5.8)
+>     assertResult' "test_zenithOpticalDepth' 3" (Just wdt) 8.119332e-3 (zenithOpticalDepth' dtLP 5.4)
+>     assertResult' "test_zenithOpticalDepth' 4" (Just wdt) 4.8523504e-2 (zenithOpticalDepth' dtLP 22.6)
+>     assertResult' "test_zenithOpticalDepth' 5" (Just wdt) 0.5769451 (zenithOpticalDepth' dtLP 66.6)
 
 > test_zenithOpticalDepth = TestCase $ do
 >     print "test_zenithOpticalDepth"

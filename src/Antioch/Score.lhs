@@ -98,7 +98,6 @@ function that actually computes tsys':
 >       trx <- trx'
 >       return $ tSysPrime' trx tk zod za
 
-Actual Calculation of tsys prime (Equations 4 & 7).
 This is for use both in scoring a session and when calculating
 the historical weather (i.e. stringency and min. eff. system temp.)
 
@@ -158,9 +157,12 @@ Equation 7
 >     liftIO $ tsys w dt (frequency s)
 
 > zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
-> zenithOpticalDepth dt s = do
+> zenithOpticalDepth dt s = zenithOpticalDepth' dt (frequency s)
+
+> zenithOpticalDepth'      :: DateTime -> Frequency -> Scoring (Maybe Float)
+> zenithOpticalDepth' dt f = do
 >     w <- weather
->     liftIO $ opacity w dt (frequency s)
+>     liftIO $ opacity w dt f
 
 > hourAngle :: DateTime -> Session -> Radians
 > hourAngle dt s = lst - ra'
