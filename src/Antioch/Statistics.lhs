@@ -104,12 +104,12 @@ factor calculation.  See Score.initBins'.
 >     toDt day = (day * 24 * 60) `addMinutes'` start
 
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
-> historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericOpacity
+> historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericEfficiency
 > historicalSchdTrkEffs ps = historicalSchdFactors ps trackingEfficiency
 > historicalSchdSrfEffs ps = historicalSchdFactors ps surfaceObservingEfficiency
 
 > historicalSchdMeanObsEffs ps = historicalSchdMeanFactors ps observingEfficiency
-> historicalSchdMeanAtmEffs ps = historicalSchdMeanFactors ps atmosphericOpacity
+> historicalSchdMeanAtmEffs ps = historicalSchdMeanFactors ps atmosphericEfficiency
 > historicalSchdMeanTrkEffs ps = historicalSchdMeanFactors ps trackingEfficiency
 > historicalSchdMeanSrfEffs ps = historicalSchdMeanFactors ps surfaceObservingEfficiency
 

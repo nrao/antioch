@@ -42,24 +42,26 @@
 >   , test_efficiency_below2GHz
 >   , test_tSysPrime
 >   , test_tSysPrime'
->   , test_opticalDepth
->   , test_zenithOpticalDepth'
->   , test_zenithOpticalDepth
->   , test_zenithOpticalDepth2
+>   , test_atmosphericOpacity
+>   , test_zenithOpacity'
+>   , test_zenithOpacity
+>   , test_zenithOpacity2
+>   , test_zenithOpacityDryAir
 >   , test_positionValues
 >   , test_minObservingEff
->   , test_avgEff
+>   , test_avgObservingEff
 >   , test_kineticTemperature
 >   , test_kineticTemperature2
 >   , test_stringency
 >   , test_scienceGrade
 >   , test_projectCompletion
 >   , test_politicalFactors
->   , test_theta
+>   , test_halfPwrBeamWidth
 >   , test_calculateTE
+>   , test_trackingObservingEfficiency
 >   , test_trackingEfficiency
->   , test_maxTrackErr
->   , test_maxTrackErrArray
+>   , test_trackErr
+>   , test_trackErrArray
 >   , test_trackingErrorLimit
 >   , test_positionFactors
 >   , test_subfactorFactors
@@ -96,6 +98,7 @@
 >   , test_scorePeriod
 >   , test_elevationLimit
 >   , test_atmosphericStability
+>   , test_calculateAtmStabilityLimit
 >   ]
 
 > benchmark = do
@@ -258,9 +261,9 @@ Equation 5
 >     -- session AS
 >     let sess = findPSessionByName "AS"
 >     Just result <- systemNoiseTemperature w rt dt sess
->     assertEqual "test_systemNoiseTemperature 3" 28.824364 result 
+>     assertEqual "test_systemNoiseTemperature 3" 28.790943 result 
 >     Just result <- systemNoiseTemperaturePrime w rt dt sess
->     assertEqual "test_systemNoiseTemperature' 4" 29.98423 result 
+>     assertEqual "test_systemNoiseTemperature' 4" 29.945415 result 
 
 > test_minTsys' = TestCase $ do
 >     print "test_minTsys'"
@@ -306,33 +309,33 @@ Equation 5
 >     let s = findPSessionByName "CV"
 >     fs <- runScoring w [] rt (observingEfficiency dt s)
 >     let result = eval fs
->     assertEqual "test_observingEfficiency" 0.988858 result
+>     assertEqual "test_observingEfficiency" 0.99062 result
 
 > test_minObservingEfficiencyFactor = TestCase $ do
 >     print "test_minObservingEfficiencyFactor"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
 >     rt <- getReceiverTemperatures
 >     fs <- runScoring w [] rt (observingEfficiency dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 1" 0.38989714 (eval fs)
->     fs <- runScoring w [] rt (atmosphericOpacity dt s1)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.40076807 (eval fs)
+>     fs <- runScoring w [] rt (atmosphericEfficiency dt s1)
 >     assertEqual "test_minObservingEfficiencyFactor 2" 0.4121308 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s1)
 >     assertEqual "test_minObservingEfficiencyFactor 3" 6.751039e-34 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 4" 0.38989714 (eval fs)
->     fs <- runScoring w [] rt (atmosphericOpacity dt s2)
+>     fs <- runScoring w [] rt (atmosphericEfficiency dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 5" 0.4121308 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 6" 6.751039e-34 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 7" 0.60921437 (eval fs)
->     fs <- runScoring w [] rt (atmosphericOpacity dt s3)
+>     fs <- runScoring w [] rt (atmosphericEfficiency dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 8" 0.6439545 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 9" 0.37867898 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 10" 0.9460519 (eval fs)
->     fs <- runScoring w [] rt (atmosphericOpacity dt s4)
+>     fs <- runScoring w [] rt (atmosphericEfficiency dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 12" 1.0 (eval fs)
@@ -355,11 +358,11 @@ Equation 5
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
->     assertEqual "test_observingEfficiency2" 0.9943539 (eval fs)
+>     assertEqual "test_observingEfficiency2_1" 0.9971497 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
 >     assertEqual "test_observingEfficiency2_2" 0.99995875 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
->     assertEqual "test_observingEfficiency2_3" 0.8634288 (eval fs)
+>     assertEqual "test_observingEfficiency2_3" 0.9286454 (eval fs)
 
 > test_observingEfficiencyLimit = TestCase $ do
 >     print "test_observingEfficiencyLimit"
@@ -372,7 +375,7 @@ Equation 5
 >     assertEqual "test_observingEfficiencyLimit <18" 1.0 result
 >     let s = findPSessionByName "GB"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit >=18" 1.9567063e-4 result
+>     assertEqual "test_observingEfficiencyLimit >=18" 2.7421393e-4 result
 
 Equation 24
 
@@ -394,8 +397,8 @@ Equation 24
 >     assertResult' "test_efficiency 3" (Just wdt) 0.9164896 (efficiency dt sess) 
 >     assertResult' "test_efficiencyHA 4" (Just wdt) 0.6651696 (efficiencyHA dt sess) 
 >     let sess = findPSessionByName "AS"
->     assertResult' "test_efficiency 5" (Just wdt) 0.9623961 (efficiency dt sess) 
->     assertResult' "test_efficiencyHA 6" (Just wdt) 0.49517292 (efficiencyHA dt sess)
+>     assertResult' "test_efficiency 5" (Just wdt) 0.9648925 (efficiency dt sess) 
+>     assertResult' "test_efficiencyHA 6" (Just wdt) 0.496098 (efficiencyHA dt sess)
 >     assertResult' "test_efficiency 7" (Just wdt) 0.9745162 (efficiency dt sessBug)
 >     assertResult' "test_efficiency 8" (Just wdt) 0.9464483 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
@@ -429,14 +432,14 @@ Equation 24
 
 Equation 4
 
-> test_opticalDepth = TestCase $ do
->     print "test_opticalDepth"
->     assertEqual "test_opticalDepth 1" 8.1687495e-3 (opticalDepth 8.124e-3 0.1)
->     assertEqual "test_opticalDepth 2" 8.525134e-2 (opticalDepth 6.434e-2 0.707)
->     assertEqual "test_opticalDepth 3" 0.3369283 (opticalDepth 9.287e-2 1.3)
->     let x = opticalDepth 7.527e-3 1.5
->     let y = opticalDepth 7.527e-3 1.6
->     assertEqual "test_opticalDepth 4" x y
+> test_atmosphericOpacity = TestCase $ do
+>     print "test_atmosphericOpacity"
+>     assertEqual "test_atmosphericOpacity 1" 8.1687495e-3 (atmosphericOpacity 8.124e-3 0.1)
+>     assertEqual "test_atmosphericOpacity 2" 8.525134e-2 (atmosphericOpacity 6.434e-2 0.707)
+>     assertEqual "test_atmosphericOpacity 3" 0.3369283 (atmosphericOpacity 9.287e-2 1.3)
+>     let x = atmosphericOpacity 7.527e-3 1.5
+>     let y = atmosphericOpacity 7.527e-3 1.6
+>     assertEqual "test_atmosphericOpacity 4" x y
 
 > test_tSysPrime'  = TestCase $ do
 >     print "test_tSysPrime'"
@@ -456,32 +459,38 @@ Equation 7
 >   where
 >     snt  = systemNoiseTemperature'
 
-> test_zenithOpticalDepth' = TestCase $ do
->     print "test_zenithOpticalDepth'"
+> test_zenithOpacity' = TestCase $ do
+>     print "test_zenithOpacity'"
 >     let wdt = fromGregorian 2006 10 14 9 15 2
->     assertResult' "test_zenithOpticalDepth' 1" (Just wdt) 7.527518e-3 (zenithOpticalDepth' dtLP 0.3)
->     assertResult' "test_zenithOpticalDepth' 2" (Just wdt) 8.3219055e-3 (zenithOpticalDepth' dtLP 5.8)
->     assertResult' "test_zenithOpticalDepth' 3" (Just wdt) 8.119332e-3 (zenithOpticalDepth' dtLP 5.4)
->     assertResult' "test_zenithOpticalDepth' 4" (Just wdt) 4.8523504e-2 (zenithOpticalDepth' dtLP 22.6)
->     assertResult' "test_zenithOpticalDepth' 5" (Just wdt) 0.5769451 (zenithOpticalDepth' dtLP 66.6)
+>     assertResult' "test_zenithOpacity' 1" (Just wdt) 7.500619e-3 (zenithOpacity' dtLP 0.3)
+>     assertResult' "test_zenithOpacity' 2" (Just wdt) 8.3219055e-3 (zenithOpacity' dtLP 5.8)
+>     assertResult' "test_zenithOpacity' 3" (Just wdt) 8.119332e-3 (zenithOpacity' dtLP 5.4)
+>     assertResult' "test_zenithOpacity' 4" (Just wdt) 4.8523504e-2 (zenithOpacity' dtLP 22.6)
+>     assertResult' "test_zenithOpacity' 5" (Just wdt) 0.5769451 (zenithOpacity' dtLP 66.6)
 
-> test_zenithOpticalDepth = TestCase $ do
->     print "test_zenithOpticalDepth"
+> test_zenithOpacity = TestCase $ do
+>     print "test_zenithOpacity"
 >     let wdt = fromGregorian 2006 10 14 9 15 2
 >     let sess = findPSessionByName "LP"
->     assertResult' "test_zenithOpticalDepth 1" (Just wdt) 8.119332e-3 (zenithOpticalDepth dtLP sess)
+>     assertResult' "test_zenithOpacity 1" (Just wdt) 8.119332e-3 (zenithOpacity dtLP sess)
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertResult' "test_zenithOpticalDepth 1" (Just wdt) 6.637155e-2 (zenithOpticalDepth dt sessBug)
->     assertResult' "test_zenithOpticalDepth 1" (Just wdt) 7.527518e-3 (zenithOpticalDepth dt sessBug2)
+>     assertResult' "test_zenithOpacity 1" (Just wdt) 6.637155e-2 (zenithOpacity dt sessBug)
+>     assertResult' "test_zenithOpacity 1" (Just wdt) 7.527518e-3 (zenithOpacity dt sessBug2)
 
-> test_zenithOpticalDepth2 = TestCase $ do
->     print "test_zenithOpticalDepth2"
+> test_zenithOpacity2 = TestCase $ do
+>     print "test_zenithOpacity2"
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
 >     rt <- getReceiverTemperatures
 >     let dt1 = fromGregorian 2006 10 15 11 0 0
 >     let sLP = findPSessionByName "LP" 
->     Just zod <- runScoring w [] rt (zenithOpticalDepth dt1 sLP)
->     assertEqual "test_zenithOpticalDepth2" 8.1259385e-3 zod 
+>     Just zod <- runScoring w [] rt (zenithOpacity dt1 sLP)
+>     assertEqual "test_zenithOpacity2" 8.1259385e-3 zod 
+
+> test_zenithOpacityDryAir = TestCase $ do
+>     print "test_zenithOpacityDryAir"
+>     assertEqual "test_zenithOpacityDryAir 1" (Just 7.48875e-3) (zenithOpacityDryAir (Just 0.007) 0.3)
+>     assertEqual "test_zenithOpacityDryAir 2" (Just 2.4220312) (zenithOpacityDryAir (Just 4.3) 1.5)
+>     assertEqual "test_zenithOpacityDryAir 3" (Just 0.16798124) (zenithOpacityDryAir (Just 0.8) 0.9)
 
 > test_positionValues = TestCase $ do
 >     print "test_positionValues"
@@ -494,12 +503,18 @@ Equation 7
 
 Equation 22
 
-> test_avgEff = TestCase $ do
->     print "test_avgEff"
->     assertEqual "test_avgEff 1" 0.9690155 (avgEff 3.0)
->     assertEqual "test_avgEff 2" 0.7445902 (avgEff 15.0)
->     assertEqual "test_avgEff 3" 0.581184 (avgEff 22.0)
->     assertEqual "test_avgEff 4" 0.65445566 (avgEff 48.0)
+> test_avgObservingEff = TestCase $ do
+>     print "test_avgObservingEff"
+>     assertEqual "test_avgObservingEffLo 1" 0.9690155 (avgObservingEffLo 3.0)
+>     assertEqual "test_avgObservingEffLo 2" 0.7445902 (avgObservingEffLo 15.0)
+>     assertEqual "test_avgObservingEffLo 3" 0.581184 (avgObservingEffLo 22.0)
+>     assertEqual "test_avgObservingEffLo 4" 0.65445566 (avgObservingEffLo 48.0)
+>     assertEqual "test_avgObservingEffHi 1" 0.48187032 (avgObservingEffHi 63.0)
+>     assertEqual "test_avgObservingEffHi 2" 0.48187032 (avgObservingEffHi 75.0)
+>     assertEqual "test_avgObservingEffHi 3" 0.48187032 (avgObservingEffHi 82.0)
+>     assertEqual "test_avgObservingEffHi 4" 0.48187032 (avgObservingEffHi 116.0)
+>     assertEqual "test_avgObservingEff 1" (avgObservingEff 22.0) (avgObservingEffLo 22.0)
+>     assertEqual "test_avgObservingEff 2" (avgObservingEff 82.0) (avgObservingEffHi 82.0)
 
 Equation 23
 
@@ -622,24 +637,25 @@ Equation 23
 
 Equation 14
 
-> test_theta = TestCase $ do
->     print "test_theta"
->     assertEqual "test_theta" 33.035713 (theta 22.4)
-
-Equation 12
+> test_halfPwrBeamWidth = TestCase $ do
+>     print "test_halfPwrBeamWidth"
+>     assertEqual "test_halfPwrBeamWidth" 33.035713 (halfPwrBeamWidth 22.4)
 
 > test_calculateTE = TestCase $ do
 >     print "test_calcualteTE"
->     --let freq1 = 5.4
->     --let freq2 = 4.3
->     --let dt1 = fromGregorian 2006 10 15 12 0 0
->     --let dt2 = fromGregorian 2006 9 2 14 30 0
->     --let wind1 = Just 1.2388499
->     --let wind2 = Just 5.2077017
->     assertEqual "test_calcualteTE 1" (Just 0.99996424)  (calculateTE wind1 dt1 freq1 False)
->     assertEqual "test_calcualteTE 2" (Just 0.99988484)  (calculateTE wind1 dt1 freq1 True)
->     assertEqual "test_calcualteTE 3" (Just 0.99239165)  (calculateTE wind2 dt2 freq2 False)
->     assertEqual "test_calcualteTE 4" (Just 0.99816483)  (calculateTE wind2 dt2 freq2 True)
+>     assertEqual "test_calculateTE 1" 1.4436142    (calculateTE  0.4)
+>     assertEqual "test_calculateTE 2" 9.983187     (calculateTE  1.8)
+>     assertEqual "test_calculateTE 3" 19.742699    (calculateTE  2.6)
+
+Equation 12
+
+> test_trackingObservingEfficiency = TestCase $ do
+>     -- TBF over 1.0
+>     print "test_trackingObservingEfficiency"
+>     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99996424)  (trackingObservingEfficiency wind1 dt1 freq1 False)
+>     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99996424)  (trackingObservingEfficiency wind1 dt1 freq1 True)
+>     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9923971)  (trackingObservingEfficiency wind2 dt2 freq2 False)
+>     assertEqual "test_trackingObservingEfficiency 4" (Just 0.9929574)  (trackingObservingEfficiency wind2 dt2 freq2 True)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -658,14 +674,14 @@ Equation 12
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingEfficiency dt s)
->     assertEqual "test_trackingEfficiency cv" 0.99239165 result 
+>     assertEqual "test_trackingEfficiency cv" 0.9923971 result 
 
-Equation 25
+Equation 13
 
-> test_maxTrackErr = TestCase $ do
->     print "test_maxTrackErr"
->     assertEqual "test_maxTrackErr 1" 2.5395744e-3 (maxTrackErr dt1 wind1 freq1)
->     assertEqual "test_maxTrackErr 2" 3.714775e-2 (maxTrackErr dt2 wind2 freq2)
+> test_trackErr = TestCase $ do
+>     print "test_trackErr"
+>     assertEqual "test_trackErr 1" 2.0589652e-2 (trackErr dt1 wind1 freq1)
+>     assertEqual "test_trackErr 2" 4.0554617e-2 (trackErr dt2 wind2 freq2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -674,12 +690,12 @@ Equation 25
 >        wind1 = 1.2388499
 >        wind2 = 5.2077017
 
-Equation 26
+Equation 16
 
-> test_maxTrackErrArray = TestCase $ do
->     print "test_maxTrackErr"
->     assertEqual "test_maxTrackErrArray 1" 4.558789e-3 (maxTrackErrArray wind1 freq1)
->     assertEqual "test_maxTrackErrArray 2" 1.8204344e-2 (maxTrackErrArray wind2 freq2)
+> test_trackErrArray = TestCase $ do
+>     print "test_trackErr"
+>     assertEqual "test_trackErrArray 1" 9.117578e-3 (trackErrArray wind1 freq1)
+>     assertEqual "test_trackErrArray 2" 3.640869e-2 (trackErrArray wind2 freq2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -812,23 +828,23 @@ Equation 11
 >     print "test_rmsTrackingError"
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let res = rmsTrackingError dt 3.4
->     let exp = 3.1498086
+>     let exp = 4.214415
 >     assertEqual "test_rmsTrackingError 1" exp res
 >     let res = rmsTrackingError dt 17.2
->     let exp = 67.10665
+>     let exp = 67.16505
 >     assertEqual "test_rmsTrackingError 2" exp res
 >     let res = rmsTrackingError dt 0.1
->     let exp = 1.7464263
+>     let exp = 3.3000007
 >     assertEqual "test_rmsTrackingError 3" exp res
 >     let dt  = fromGregorian 2006 4 16 4 0 0
 >     let res = rmsTrackingError dt 3.4
->     let exp = 2.6213157
+>     let exp = 3.8355308
 >     assertEqual "test_rmsTrackingError 4" exp res
 >     let res = rmsTrackingError dt 17.2
->     let exp = 67.08392
+>     let exp = 67.142334
 >     assertEqual "test_rmsTrackingError 5" exp res
 >     let res = rmsTrackingError dt 0.1
->     let exp = 2.2675742e-3
+>     let exp = 2.800001
 >     assertEqual "test_rmsTrackingError 6" exp res
 
 Equation 15
@@ -845,12 +861,14 @@ Equation 15
 >     let exp = 1.2000022
 >     assertEqual "test_variableTrackingError 3" exp res
 
+Equation 9
+
 > test_surfaceObservingEfficiency' = TestCase $ do
 >     print "test_surfaceObservingEfficiency'"
->     assertEqual "test_surfaceObservingEfficiency' 1" 0.9982652 (surfaceObservingEfficiency' dt1 3.0)
->     assertEqual "test_surfaceObservingEfficiency' 2" 0.95752126 (surfaceObservingEfficiency' dt1 15.0)
->     assertEqual "test_surfaceObservingEfficiency' 3" 0.9108528 (surfaceObservingEfficiency' dt1 22.0)
->     assertEqual "test_surfaceObservingEfficiency' 4" 0.6411505 (surfaceObservingEfficiency' dt1 48.0)
+>     assertEqual "test_surfaceObservingEfficiency' 1" 0.99913067 (surfaceObservingEfficiency' dt1 3.0)
+>     assertEqual "test_surfaceObservingEfficiency' 2" 0.9784915 (surfaceObservingEfficiency' dt1 15.0)
+>     assertEqual "test_surfaceObservingEfficiency' 3" 0.95430493 (surfaceObservingEfficiency' dt1 22.0)
+>     assertEqual "test_surfaceObservingEfficiency' 4" 0.8003946 (surfaceObservingEfficiency' dt1 48.0)
 >     assertEqual "test_surfaceObservingEfficiency' 5" 1.0 (surfaceObservingEfficiency' dt2 48.0)
 >       where
 >         dt1 = fromGregorian 2006 7 4 0 0 0          -- warming time
@@ -861,9 +879,9 @@ Equation 15
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let wdt = Just $ fromGregorian 2006 4 15 0 0 0
 >     let sess = findPSessionByName "LP"
->     assertScoringResult' "test_surfaceObservingEfficienyLP" wdt 0.9943902 (surfaceObservingEfficiency dt sess)
+>     assertScoringResult' "test_surfaceObservingEfficienyLP" wdt 0.99718606 (surfaceObservingEfficiency dt sess)
 >     let sess = findPSessionByName "WV"
->     assertScoringResult' "test_surfaceObservingEfficienyWV" wdt 0.7905864 (surfaceObservingEfficiency dt sess)
+>     assertScoringResult' "test_surfaceObservingEfficienyWV" wdt 0.888959 (surfaceObservingEfficiency dt sess)
 
 > test_scoreCV = TestCase $ do
 >     print "test_scoreCV"
@@ -1502,6 +1520,13 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >     dt = fromGregorian 2006 3 1 0 0 0
 >     s2 = defaultSession { dec = 1.5, oType = SpectralLine } -- always up
 
+> test_calculateAtmStabilityLimit = TestCase $ do
+>     print "test_calculateAtmStabilityLimit"
+>     assertEqual "test_calculateAtmStabilityLimit 1" (Just False) (calculateAtmStabilityLimit (Just 330) Continuum 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 2" (Just True) (calculateAtmStabilityLimit (Just 329) Continuum 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 3" (Just True) (calculateAtmStabilityLimit (Just 330) SpectralLine 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 4" (Just True) (calculateAtmStabilityLimit (Just 330) Continuum 1.9)
+
 > test_efficiency_below2GHz = TestCase $ do
 >     print "test_efficiency_below2GHz"
 >     w <- getWeatherTest . Just $ wdt 
@@ -1509,9 +1534,9 @@ TBF: this test assumes the Rcvr getting boosted is Rcvr_1070.
 >     Just result <- runScoring w [] rt (efficiency dt s1)  --fromJust error
 >     assertEqual "test_efficiency_below2GHz_1" 0.97584516 result
 >     Just result <- runScoring w [] rt (efficiency dt s2) 
->     assertEqual "test_efficiency_below2GHz_2" 0.9864369 result
+>     assertEqual "test_efficiency_below2GHz_2" 0.9816546 result
 >     Just result <- runScoring w [] rt (efficiency dt s3) 
->     assertEqual "test_efficiency_below2GHz_3" 0.51631737 result
+>     assertEqual "test_efficiency_below2GHz_3" 0.5127198 result
 >   where
 >     wdt = fromGregorian 2006 9 1 1 0 0
 >     dt = fromGregorian 2006 9 2 14 30 0

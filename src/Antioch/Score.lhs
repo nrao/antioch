@@ -25,6 +25,11 @@
 
 Ranking System from Memo 5.2, Section 3
 
+Lowest Frequency having Forecasts
+
+> lff :: Frequency
+> lff = 2.0
+
 3.1 Observing Efficiency
 
 > efficiency, efficiencyHA :: DateTime -> Session -> Scoring (Maybe Float)
@@ -38,9 +43,6 @@ properly: they do not retrieve weather at 2 GHz, but, rather, use the
 > calcEfficiency :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
 >     calcEfficiency' dt s
->     --if freq >= 2.0 then calcEfficiency' dt s else do
->     --                    effs <- calcEfficiency' dt (s {frequency = 2.0}) 
->     --                    correctAtmEffs freq effs
 >   where
 >     freq = frequency s
 
@@ -50,12 +52,8 @@ properly: they do not retrieve weather at 2 GHz, but, rather, use the
 >       Nothing -> return Nothing
 >       Just (eff, effHA) -> return $ Just (correctAtmEff freq eff, correctAtmEff freq effHA) 
 
-For frequencies less then 2 GHz, we must implement the correction to 
-atmospheric efficiencies described in the addendum to Memo 5.2:
-eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2 
-
 > correctAtmEff :: Float -> Float -> Float
-> correctAtmEff freq eff = (1 + ((freq/2.0)^2 * ((1/(sqrt eff)) - 1.0)))^^(-2)
+> correctAtmEff freq eff = (1 + ((freq/lff)^2 * ((1/(sqrt eff)) - 1.0)))^^(-2)
 
 > calcEfficiency'      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency' dt s = do
@@ -63,15 +61,14 @@ eta_atmos = {1 + (freq/2GHz)^2*[1/sqrt(eta_atmos_2GHz)-1]}^-2
 >     trx <- liftIO $ getRcvrTemperature rt s
 >     tk  <- kineticTemperature dt s 
 >     w   <- weather
->     zod <- zenithOpticalDepth dt s 
->     let rcvr = getPrimaryReceiver s -- error Nothing
+>     zod <- zenithOpacity dt s 
+>     let rcvr = getPrimaryReceiver s
 >     minTsysPrime' <-  liftIO $ minTSysPrime w (frequency s) elevation' (fromJust rcvr)
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
 >         trx' <- trx
 >         minTsysPrime'' <- minTsysPrime' >>= Just . (*xf)
->         --let [eff, effTransit] = map (calcEff trx' tk' minTsysPrime'' zod') [za, zat] 
 >         let [tsys, tsysTransit] = map (tSysPrime' trx' tk' zod') [za, zat] 
 >         let [eff, effTransit] = map (\t -> (minTsysPrime'' / t) ^2) [tsys, tsysTransit]
 >         return (eff, eff / effTransit)
@@ -90,7 +87,7 @@ function that actually computes tsys':
 > tSysPrime w rt rcvr freq elev dt = do
 >   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
 >   tk' <- liftIO $ tsys w dt freq
->   zod' <- liftIO $ opacity w dt freq
+>   zod' <- zenithOpacity' dt freq
 >   let za = pi/2 - elev 
 >   return $ do 
 >       tk <- tk'
@@ -102,10 +99,10 @@ This is for use both in scoring a session and when calculating
 the historical weather (i.e. stringency and min. eff. system temp.)
 
 > tSysPrime' :: Float -> Float -> Float -> Float -> Float
-> tSysPrime' trx tk zod za = exp opticalDepth' * tsys
+> tSysPrime' trx tk zod za = exp atmosphericOpacity' * tsys
 >   where
->     opticalDepth' = opticalDepth zod za
->     tsys  = systemNoiseTemperature' trx tk opticalDepth'
+>     atmosphericOpacity' = atmosphericOpacity zod za
+>     tsys  = systemNoiseTemperature' trx tk atmosphericOpacity'
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
@@ -118,8 +115,8 @@ the historical weather (i.e. stringency and min. eff. system temp.)
 
 Equation 4
 
-> opticalDepth :: Float -> Radians -> Float
-> opticalDepth zod za = zod / (cos . min 1.5 $ rndZa)
+> atmosphericOpacity :: Float -> Radians -> Float
+> atmosphericOpacity zod za = zod / (cos . min 1.5 $ rndZa)
 >   where
 >     -- Round off to the nearest degree to align with hist. min. opacities
 >     rndZa = deg2rad . realToFrac . round . rad2deg $ za
@@ -127,42 +124,52 @@ Equation 4
 Equation 7
 
 > systemNoiseTemperature' :: Float -> Float -> Float -> Float
-> systemNoiseTemperature' trx tk opticalDepth' =  trx + 5.7  + tk * (1 - exp (-opticalDepth'))
+> systemNoiseTemperature' trx tk atmosphericOpacity' =  trx + 5.7  + tk * (1 - exp (-atmosphericOpacity'))
 
 > systemNoiseTemperature :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperature w rt dt s = runScoring w [] rt $ do
->     zod <- zenithOpticalDepth dt s
+>     zod <- zenithOpacity dt s
 >     tk  <- kineticTemperature dt s
 >     trx <- liftIO $ getRcvrTemperature rt s
 >     let za  = zenithAngle dt s
 >     return $ if (isJust trx) then liftM2 (\x y ->
->         let opticalDepth' = opticalDepth y za in
->         systemNoiseTemperature' (fromJust trx) x opticalDepth') tk zod else Nothing
+>         let atmosphericOpacity' = atmosphericOpacity y za in
+>         systemNoiseTemperature' (fromJust trx) x atmosphericOpacity') tk zod else Nothing
 
 > systemNoiseTemperaturePrime :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperaturePrime w rt dt s = runScoring w [] rt $ do
->     zod <- zenithOpticalDepth dt s
+>     zod <- zenithOpacity dt s
 >     tk  <- kineticTemperature dt s
->     --let trx = receiverTemperature dt s
 >     trx <- liftIO $ getRcvrTemperature rt s
 >     let za  = zenithAngle dt s
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
 >     return $ if (isJust trx) then liftM2 (\x y ->
->         let opticalDepth' = opticalDepth y za in
->         (exp opticalDepth') * (systemNoiseTemperature' (fromJust trx) x opticalDepth')) tk zod else Nothing
+>         let atmosphericOpacity' = atmosphericOpacity y za in
+>         (exp atmosphericOpacity') * (systemNoiseTemperature' (fromJust trx) x atmosphericOpacity')) tk zod else Nothing
 
 > kineticTemperature      :: DateTime -> Session -> Scoring (Maybe Float)
 > kineticTemperature dt s = do
 >     w <- weather
 >     liftIO $ tsys w dt (frequency s)
 
-> zenithOpticalDepth      :: DateTime -> Session -> Scoring (Maybe Float)
-> zenithOpticalDepth dt s = zenithOpticalDepth' dt (frequency s)
+Equation 3a
 
-> zenithOpticalDepth'      :: DateTime -> Frequency -> Scoring (Maybe Float)
-> zenithOpticalDepth' dt f = do
+> zenithOpacityDryAir :: Maybe Float -> Frequency -> Maybe Float
+> zenithOpacityDryAir zod f = do
+>   zod' <- zod
+>   return $ k + (zod' - k) * (f/lff)^^2
+>   where
+>     k = 0.0075
+
+> zenithOpacity :: DateTime -> Session -> Scoring (Maybe Float)
+> zenithOpacity dt s = zenithOpacity' dt (frequency s)
+
+> zenithOpacity' :: DateTime -> Frequency -> Scoring (Maybe Float)
+> zenithOpacity' dt f = do
 >     w <- weather
->     liftIO $ opacity w dt f
+>     zod <- liftIO $ opacity w dt lff
+>     if f < lff then return $ zenithOpacityDryAir zod f
+>                else liftIO $ opacity w dt f
 
 > hourAngle :: DateTime -> Session -> Radians
 > hourAngle dt s = lst - ra'
@@ -200,18 +207,16 @@ TBF: this was moved from Statistic to here, but it needs a better home.
 >     dt = periodHalfTime p
 
 > observingEfficiency        :: ScoreFunc
-> atmosphericOpacity         :: ScoreFunc
+> atmosphericEfficiency         :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
 
-> observingEfficiency = score [atmosphericOpacity, surfaceObservingEfficiency, trackingEfficiency]
+> observingEfficiency = score [atmosphericEfficiency, surfaceObservingEfficiency, trackingEfficiency]
 
-TBF:  atmosphericOpacity is a bad name, perhaps atmosphericEfficiency
-
-> atmosphericOpacity      dt s = efficiency dt s >>= \eff -> atmosphericOpacity' eff dt s
-> atmosphericOpacity' eff dt s = do
+> atmosphericEfficiency      dt s = efficiency dt s >>= \eff -> atmosphericEfficiency' eff dt s
+> atmosphericEfficiency' eff dt s = do
 >     let eff' = maybe Nothing (Just . min 1.0) eff
->     factor "atmosphericOpacity" eff'
+>     factor "atmosphericEfficiency" eff'
 
 Equation 9
 
@@ -225,8 +230,8 @@ Equation 9
 >   where
 >     c = 299792485.0
 >     -- As of 2009-12-16: day = 400, night = 340 (microns)
->     epsilonDay   = 0.35
->     epsilonNight = 0.26
+>     epsilonDay   = 0.30
+>     epsilonNight = 0.25
 >     epsilonFactor = epsilonDay ^ 2 - epsilonNight ^ 2
 >     k = 32.0 * pi^2 * 1e12 / (c ^ 2)
 
@@ -234,8 +239,8 @@ Equation 9
 
 Equation 14
 
-> theta :: Frequency -> Frequency
-> theta f = 740.0 / f
+> halfPwrBeamWidth :: Frequency -> Frequency
+> halfPwrBeamWidth f = 740.0 / f
 
 > rmsTE :: DateTime -> Float
 > rmsTE dt = if isPTCSDayTime dt then trErrSigmaDay else trErrSigmaNight
@@ -246,22 +251,25 @@ Equation 14
 
 > trackingEfficiency dt s = do
 >   wind <- getRealOrForecastedWind dt
->   factor "trackingEfficiency" $ calculateTE wind dt (frequency s) (usesMustang s)
+>   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (frequency s) (usesMustang s)
 
-Equation 12
-
-> calculateTE :: Maybe Float -> DateTime -> Frequency -> Bool -> Maybe Float
-> calculateTE wind dt f mustang = do
+> trackingObservingEfficiency :: Maybe Float -> DateTime -> Frequency -> Bool -> Maybe Float
+> trackingObservingEfficiency wind dt freq mustang = do
 >     wind' <- wind
->     let rmsTE' = rmsTrackingError dt wind'
->     let f = (rmsTE' / theta')
->     -- Equation 27 - uses fv   TBF what equation 27?
->     -- here we differ by Eq. 27 by dividing variableTrackingError by 2
->     let fv = (variableTrackingError wind' / 2) / theta'
->     let rt = if mustang then fv else f
->     return $ (1.0 + 4.0 * log 2.0 * rt ^ 2) ^^ (-2)
+>                                                          -- Equation:
+>     let f = trackErr dt wind' freq                       -- from 13
+>     let fmin = trErrSigmaNight / (halfPwrBeamWidth freq) -- 13a
+>     let fv = trackErrArray wind' freq                    -- from 16
+>     let fvmin = epsilonZero / (halfPwrBeamWidth freq)    -- 17b
+>     if mustang then return $ renormalize fvmin fv        -- 17a
+>                else return $ renormalize fmin f          -- 12a
 >   where
->     theta' = theta f
+>     renormalize fn fd = ((calculateTE fn) / (calculateTE fd))^2
+
+Base of exponential Equation 12
+
+> calculateTE :: Frequency -> Float
+> calculateTE f = 1.0 + 4.0 * log lff * f ^ 2
 
 > minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
 > minimumObservingConditions dt s = do
@@ -275,11 +283,8 @@ Equation 12
 >      let trkErrLimit = case trkErrLimit' of 
 >                             Just x  -> x
 >                             Nothing -> 1
->      -- new MOC
 >      let minObs' = exp(-0.05 + 1.5*log(minObs))
 >      let obsEffOK = obsEff' >= minObs'
->      -- old MOC
->      --let obsEffOK = obsEff' >= minObs - 0.1
 >      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
 
@@ -427,18 +432,31 @@ Equation 23
 
 > minObservingEff :: Frequency -> Float
 > minObservingEff freq  =
->     avgEff' - 0.02 - 0.1*(1.0 - avgEff')
+>     avgObservingEff' - 0.02 - 0.1*(1.0 - avgObservingEff')
 >   where
->     avgEff' = avgEff freq
+>     avgObservingEff' = avgObservingEff freq
+
+> avgObservingEff, avgObservingEffLo, avgObservingEffHi :: Frequency -> Float
+
+> avgObservingEff f
+>     -- not exactly right according to 5.3, but more prgamatic
+>     | f <= 52.0  = avgObservingEffLo f
+>     | otherwise  = avgObservingEffHi f
 
 Equation 22
 
-> avgEff :: Frequency -> Float
-> avgEff f = sum [x * cos (y*r) |
+> avgObservingEffLo f = sum [x * cos (y*f/nu0) |
 >                  (x, y) <- zip [0.74, 0.155, 0.12, -0.03, -0.01] [0..]]
 >   where
->     nu0 = 12.8
->     r = min 50 f / nu0
+>     nu0 = 12.8::Frequency
+
+Equation 22a
+
+> avgObservingEffHi f = sum [x * cos ((y*f - nu)/nu1) |
+>                  (x, y) <- zip [0.5, 0.0, 0.0, 0.0, 0.0] [0..]]
+>   where
+>     nu = 92.0::Frequency
+>     nu1 = 15.3::Frequency
 
 > observingEfficiencyLimit  :: ScoreFunc
 > hourAngleLimit            :: ScoreFunc
@@ -459,10 +477,7 @@ Equation 24
 > observingEfficiencyLimit' :: Float -> Float -> Frequency -> Float
 > observingEfficiencyLimit' obsEff minObsEff freq = if obsEff < minObsEff then exp (-((obsEff - minObsEff) ^ 2) / (2.0 * sigma ^ 2)) else 1.0
 >   where
->     -- Note: modification to Project Note 5.2 (helpdesk-dss #1559)
->     sigma = if freq >= 18.0
->             then 0.1
->             else 0.02
+>     sigma = 0.02
 
 > hourAngleLimit        dt s | isJust . elLimit $ s = elevationLimit dt s
 >                            | otherwise = efficiencyHA dt s >>= \effHA -> hourAngleLimit' effHA dt s
@@ -489,55 +504,58 @@ Equation 24
 >     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
 >     
 
-Equation 25
+Equation 13
 
-> maxTrackErr :: DateTime -> Float -> Frequency -> Float
-> maxTrackErr dt w f = rmsTrackingError dt w / (theta f)
+> trackErr :: DateTime -> Float -> Frequency -> Float
+> trackErr dt w f = rmsTrackingError dt w / (halfPwrBeamWidth f)
 
-Equation 26
+Equation 16
 
-> maxTrackErrArray :: Float -> Frequency -> Float
-> maxTrackErrArray w f = (variableTrackingError w / 2) / (theta f)
+> trackErrArray :: Float -> Frequency -> Float
+> trackErrArray w f = variableTrackingError w / (halfPwrBeamWidth f)
 
 > calculateTRELimit :: Maybe Float -> DateTime -> Session -> Maybe Bool
 > calculateTRELimit wind dt s = do
->         wind' <- wind
->         let f25 = maxTrackErr dt wind' (frequency s)
->         let f26 = maxTrackErrArray wind' (frequency s)
->         -- TBF: temporary fix for MUSTANG
->         let f = if usesMustang s then f26 else f25
->         return $ f <= maxErr
->   where
->     maxErr = 0.2 
+>     wind' <- wind
+>     let f  = trackErr dt wind' (frequency s)
+>     let fv = trackErrArray wind' (frequency s)
+>     let limit = if usesMustang s then if fv <= maxTrackErrArray then True
+>                                                                 else False
+>                                  else if f  <= maxTrackErr then True
+>                                                            else False
+>     return limit
+>       where
+>         maxTrackErr      = 0.2  -- Equation 25
+>         maxTrackErrArray = 0.4  -- Equation 26
 
 Equation 11
 
 > rmsTrackingError :: DateTime -> Float -> Float
-> rmsTrackingError dt w = do sqrt (((rmsTE dt ^ 2) - (trErrSigmaNight ^ 2)) + (abs w / 2.1) ^ 4)
+> rmsTrackingError dt w = do trackingError w (rmsTE dt)
 
 Equation 15
 
 > variableTrackingError :: Float -> Float
-> variableTrackingError w = sqrt (variableTE ^ 2 + (abs w / 2.1) ^ 4)
->   where
->     variableTE = 1.2
+> variableTrackingError w = trackingError w epsilonZero
 
-For non-Continuum sessions, the atmosphere is always stable.
+> trackingError :: Float -> Float -> Float
+> trackingError w te = sqrt $ te ^ 2 + (abs w / 2.1) ^ 4
 
-> atmosphericStabilityLimit dt s = if (oType s == Continuum) then atmosphericStabilityLimit' dt s else boolean "atmosphericStabilityLimit" . Just $ True
+> epsilonZero :: Float
+> epsilonZero = 1.2
 
-For continumm sessions, the atmospheric stability depends on the
-downward irradiance.
-
-> atmosphericStabilityLimit' dt s = do
+> atmosphericStabilityLimit dt s = do
 >   w <- weather
 >   di <- liftIO $ irradiance w dt
->   boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di s 
+>   boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
 
-> calculateAtmStabilityLimit :: Maybe Float -> Session -> Maybe Bool
-> calculateAtmStabilityLimit di s = do
+> calculateAtmStabilityLimit :: Maybe Float -> ObservingType -> Frequency -> Maybe Bool
+> calculateAtmStabilityLimit di ot f = do
 >   di' <- di
->   return $ if di' > 330.0 then False else True
+>   return $ if ot == Continuum &&
+>               f > lff &&
+>               di' >= 330 then False
+>                          else True
 
 3.5 Other factors
 
@@ -969,8 +987,8 @@ resulting in simple types rather than monadic types.
 > runScoring'        :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> Scoring t -> IO (t, [Trace])
 > runScoring' w rs rt f = evalRWST f (ScoringEnv w rs False rt) ()
 
-This allows us to run scoring multiple times, all within the same trace.  Mainly
-useful for simulation.
+This allows us to run scoring multiple times, all within the same trace.
+Mainly useful for simulation.
 
 > -- runScoring''        :: Weather -> ReceiverSchedule -> Scoring t -> IO t
 > -- runScoring'' w rs f = runReaderT f $ ScoringEnv w rs
@@ -1086,7 +1104,7 @@ for to generate new periods.
 > scoringFactors effs raPressure freqPressure =
 >        [
 >         stringency
->       , (atmosphericOpacity' . fmap fst) effs
+>       , (atmosphericEfficiency' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
 >       , raPressure
@@ -1122,7 +1140,7 @@ vacancy control panel.
 >     effs <- calcEfficiency dt s
 >     score ([
 >         stringency
->       , (atmosphericOpacity' . fmap fst) effs
+>       , (atmosphericEfficiency' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
 >       , raPressure
@@ -1162,7 +1180,7 @@ scores of zero.
 > periodFactors effs raPressure freqPressure =
 >        [
 >         stringency
->       , (atmosphericOpacity' . fmap fst) effs
+>       , (atmosphericEfficiency' . fmap fst) effs
 >       , surfaceObservingEfficiency
 >       , trackingEfficiency
 >       , raPressure
