@@ -860,9 +860,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps simInput
 >     r2 = reportScheduleChecks ss ps gaps history 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
->     r4 = reportSemesterTimes ss ps 
->     r5 = reportSemesterBandTimes ss ps 
->     r6 = reportBandTimes ss ps 
+>     r4 = reportSemesterTimes ss' ps' 
+>     r5 = reportSemesterBandTimes ss' ps' 
+>     r6 = reportBandTimes ss' ps' 
 >     r7 = reportScheduleScores scores
 >     r8 = reportSessionTypes ss ps
 >     r9 = reportRcvrSchedule rs
@@ -872,6 +872,11 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
 >     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13, r14] 
+>     ss' = removeMaintenanceS ss
+>     ps' = removeMaintenanceP ps
+>     removeMaintenanceS = filter (\s -> (sName s) /= "Maintenance") 
+>     removeMaintenanceP = filter (\p -> (sName . session $ p) /= "Maintenance")  
+>     
 
 > reportObserverDetails :: [Session] -> String
 > reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
@@ -949,14 +954,14 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3, l4]
 >   where
 >     heading = "Simulation By Session Type (Fixed includes Maint.): \n"
->     hdr = printf "%-11s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
+>     hdr = printf "%-13s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
 >     l1 = reportSessionTypeHrs Open ss ps 
 >     l2 = reportSessionTypeHrs Fixed ss ps 
 >     l3 = reportSessionTypeHrs Windowed ss ps 
->     l4 = reportSessionNameHrs "Maint." ss ps 
+>     l4 = reportSessionNameHrs "Maintenance" ss ps 
 
 > reportSessionTypeHrs :: SessionType -> [Session] -> [Period] -> String
-> reportSessionTypeHrs st ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
+> reportSessionTypeHrs st ss ps = printf "%-11s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
 >   where
 >     ssTyped = filter (\s -> sType s == st) ss 
 >     psTyped = filter (\p -> (sType . session $ p) == st) ps 
