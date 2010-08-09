@@ -874,9 +874,10 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
->     removeMaintenanceS = filter (\s -> (sName s) /= "Maintenance") 
->     removeMaintenanceP = filter (\p -> (sName . session $ p) /= "Maintenance")  
->     
+
+> removeMaintenanceS = filter (\s -> (sName s) /= "Maintenance") 
+
+> removeMaintenanceP = filter (\p -> (sName . session $ p) /= "Maintenance")  
 
 > reportObserverDetails :: [Session] -> String
 > reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
@@ -1090,7 +1091,9 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     --now <- getCurrentTime
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores simInput rs history quiet 
 >     -- create plots
->     mapM_ (\f -> f ss schedule trace) sps
+>     mapM_ (\f -> f ss' schedule' trace) sps
 >   where
 >     dur = days * 60 * 24
+>     ss' = removeMaintenanceS ss
+>     schedule' = removeMaintenanceP schedule
 
