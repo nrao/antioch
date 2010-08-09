@@ -81,18 +81,22 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >   pp <- genProjectsByHrs stype $ hrs - ((`div` 60) . pAllottedS $ p)
 >   return $ p : pp
 
-> genSimTime :: Int -> DateTime -> Int -> Gen [Project]
-> genSimTime hrs start days = do
+> genSimTime :: Int -> DateTime -> Int -> Gen [Project] 
+> genSimTime hrs start days = genSimTime' hrs start days True (1.0, 0.0, 0.0) --True (0.60, 0.10, 0.30)
+
+> genSimTime' :: Int -> DateTime -> Int -> Bool -> (Float, Float, Float) -> Gen [Project]
+> genSimTime' hrs start days useMaint (open, fixed, windowed) = do
+>     -- TBF: assert that open + fixed + windowed == 1.0
 >     -- create the maintenance schedule first
 >     maint <- genMaintenanceProj start days
->     let schedule = concatMap periods $ sessions maint
->     let maintHrs = (/60) . fromIntegral . sum $ map duration schedule
+>     let schedule = if useMaint then concatMap periods $ sessions maint else []
+>     let maintHrs = if useMaint then (/60) . fromIntegral . sum $ map duration schedule else 0.0
 >     -- the remaining time now gets split up by type
 >     let hrs'' = (fromIntegral hrs) - maintHrs
 >     let hrs' = if hrs'' < 0 then 0 else hrs''
->     let openHrs     = round $ 0.60 * hrs'
->     let fixedHrs    = round $ 0.10 * hrs'
->     let windowedHrs = round $ 0.30 * hrs'
+>     let openHrs     = round $ open     * hrs'
+>     let fixedHrs    = round $ fixed    * hrs'
+>     let windowedHrs = round $ windowed * hrs'
 >     oProjs <- genProjectsByHrs Open openHrs 
 >     -- becasuse we must build a schedule that has no overlaps,
 >     -- it's easiest to first assign the periods to the schedule,
@@ -103,7 +107,7 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
 >     fixedPeriods <- genFixedSchedule start days schedule fixedHrs
 >     fProjs <- genFixedProjects fixedPeriods
->     return $ oProjs ++ wProjs ++ fProjs ++ [maint]
+>     return $ oProjs ++ wProjs ++ fProjs ++ if useMaint then [maint] else []
 >     --return $ oProjs ++ fProjs ++ [maint]
 >   where
 >     hrs' = fromIntegral hrs
