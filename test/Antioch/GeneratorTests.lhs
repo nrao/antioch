@@ -267,8 +267,12 @@
 >     assertEqual "test_createWS_5" False (internalConflicts final) 
 >     assertEqual "test_createWS_6" True ((dt3<(minimum dts)) && ((maximum dts)<dt4)) 
 >     -- try sticking a lot of hours in a small time range
->     --let ps = concat $ generate 0 g $ genWindowedSchedule dt3 10 [] 60
->     --let total = (sum $ map duration ps) `div` 60
+>     let smallDays = 11
+>     let ratio = 0.30
+>     let bigHrs = round $ ((fromIntegral smallDays) * 24) * ratio
+>     print (bigHrs, " hrs of windows for: ", smallDays*24 , " hrs time range") 
+>     let ps = concat $ generate 0 g $ genWindowedSchedule dt smallDays [] bigHrs
+>     assertEqual "test_createWS_7" False (internalConflicts ps) 
 >   where
 >     dt = fromGregorian 2006 1 1 0 0 0
 >     dt2 = fromGregorian 2007 1 1 0 0 0

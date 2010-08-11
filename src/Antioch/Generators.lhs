@@ -208,7 +208,7 @@ overlaps until we run out of time.
 >   intervalDays <- choose (15, 60)
 >   let sizeDays' = numWindows * intervalDays
 >   let sizeDays = if (sizeDays' >= days) then days - 3 else sizeDays'
->   day <- choose (1, days - sizeDays)
+>   day <- choose (1, days - 1) --sizeDays)
 >   hour <- choose (0, 23)
 >   duration <- choose (1, 8) -- hours
 >   let firstStart = getStart day hour
