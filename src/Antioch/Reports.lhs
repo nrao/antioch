@@ -386,6 +386,27 @@ simFreqTime (circles, dt on x-axis)
 >     y = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
 
+> plotFreqVsTimeOpen         :: StatsPlot
+> plotFreqVsTimeOpen fn n ss ps tr = plotFreqVsTimeType Open fn n ss ps tr
+
+> plotFreqVsTimeFixed         :: StatsPlot
+> plotFreqVsTimeFixed fn n ss ps tr = plotFreqVsTimeType Fixed fn n ss ps tr
+
+> plotFreqVsTimeWindowed         :: StatsPlot
+> plotFreqVsTimeWindowed fn n ss ps tr = plotFreqVsTimeType Windowed fn n ss ps tr
+
+> --plotFreqVsTimeType 
+> plotFreqVsTimeType stype fn n _ ps _ =
+>     scatterPlot attrs $ zip (map fromIntegral $ historicalTime' ps') (historicalFreq ps')
+>   where
+>     t = "Freq vs Time for " ++ (show stype) ++ n
+>     x = "Time [days]"
+>     y = "Frequency [GHz]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
+>     ps' = filter (\p -> isType stype (session p)) ps
+
+> isType stype s = sType s == stype
+
 Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
 
@@ -812,6 +833,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
 >  , plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
 >  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
+>  , plotFreqVsTimeOpen     $ rootPath ++ "/simFreqTimeOpen.png"
+>  , plotFreqVsTimeFixed     $ rootPath ++ "/simFreqTimeFixed.png"
+>  , plotFreqVsTimeWindowed     $ rootPath ++ "/simFreqTimeWindowed.png"
 >  --, plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
