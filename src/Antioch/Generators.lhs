@@ -66,12 +66,17 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >         }
 >     return $ makeProject project pAllottedT pAllottedT sessions
 
+Generate n projects.
+
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []
 > genProjects (n + 1) = do
 >     p  <- genProject
 >     pp <- genProjects n
 >     return $ p : pp
+
+Generate projects such that the sum of their allotted hours is equal to 
+our greater then the specified amount.
 
 > genProjectsByHrs :: SessionType -> Int -> Gen [Project]
 > genProjectsByHrs _ 0 = return []
@@ -81,36 +86,48 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >   pp <- genProjectsByHrs stype $ hrs - ((`div` 60) . pAllottedS $ p)
 >   return $ p : pp
 
-> genSimTime :: Int -> DateTime -> Int -> Gen [Project] 
-> genSimTime hrs start days = genSimTime' hrs start days True (1.0, 0.0, 0.0) --True (0.60, 0.10, 0.30)
+This is a top level function for not just producing a set of Projects (w/
+their related child Sessions), but also pre-scheduled periods of different
+Session types (Fixed, Windowed, and the special case of Maintenance).
+The user can specify:
+   * the time range over which we want our pre-scheduled periods 
+   * whether to create Maintenance periods
+   * the rough ratio between Open, Fixed, and Windowed Session hours.
+   * how much extra time to give to Open sessions as 'backlog'
 
-> genSimTime' :: Int -> DateTime -> Int -> Bool -> (Float, Float, Float) -> Gen [Project]
-> genSimTime' hrs start days useMaint (open, fixed, windowed) = do
->     -- TBF: assert that open + fixed + windowed == 1.0
->     -- create the maintenance schedule first
+> genSimTime :: DateTime -> Int -> Bool -> (Float, Float, Float) -> Float -> Gen [Project]
+> genSimTime start days useMaint (open, fixed, windowed) backlog = do
+>     -- TBF: assert that open + fixed + windowed == 1.0 ?
+>     -- TBF: assert that backlog < 1.0 ?
+>     -- create the maintenance schedule first to see how much time it is
 >     maint <- genMaintenanceProj start days
 >     let schedule = if useMaint then concatMap periods $ sessions maint else []
 >     let maintHrs = if useMaint then (/60) . fromIntegral . sum $ map duration schedule else 0.0
 >     -- the remaining time now gets split up by type
->     let hrs'' = (fromIntegral hrs) - maintHrs
+>     let simHrs = days*24
+>     let hrs'' = (fromIntegral simHrs) - maintHrs
 >     let hrs' = if hrs'' < 0 then 0 else hrs''
->     let openHrs     = round $ open     * hrs'
+>     -- how much for fixed and windowed is straightforward
 >     let fixedHrs    = round $ fixed    * hrs'
 >     let windowedHrs = round $ windowed * hrs'
+>     -- how much for open must include the backlog
+>     let backlogHrs  = round $ backlog  * hrs'
+>     let openHrs'    = round $ open     * hrs'
+>     let openHrs     = openHrs' + backlogHrs
 >     oProjs <- genProjectsByHrs Open openHrs 
->     -- becasuse we must build a schedule that has no overlaps,
+>     -- Becasuse we must build a schedule that has no overlaps,
 >     -- it's easiest to first assign the periods to the schedule,
 >     -- then assign sessions & projects to these periods
+>     -- First, the windowed periods
 >     -- TBF: for now, we can treat windowed like fixed
 >     winPeriods <- genWindowedSchedule start days schedule windowedHrs
 >     wProjs <- genWindowedProjects  winPeriods --genWindowedProjects winPeriods
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
->     fixedPeriods <- genFixedSchedule start days schedule fixedHrs
+>     -- Now, the fixed periods
+>     fixedPeriods <- genFixedSchedule start days schedule' fixedHrs
 >     fProjs <- genFixedProjects fixedPeriods
+>     -- Finally, put all the projects togethor
 >     return $ oProjs ++ wProjs ++ fProjs ++ if useMaint then [maint] else []
->     --return $ oProjs ++ fProjs ++ [maint]
->   where
->     hrs' = fromIntegral hrs
 
 > genProjectByType :: SessionType -> Gen Project
 > genProjectByType Open     = genProject

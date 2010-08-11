@@ -27,35 +27,109 @@
 
 > test_genSimTime = TestCase $ do
 >     let g = mkStdGen 1
->     let projs = generate 0 g $ genSimTime simHrs start days
->     --print projs
->     let totalMins = sum $ map sAllottedT $ concatMap sessions projs
+>     let simMins = days*24*60
+> 
+>     -- a year with just open sessions 
+>     let projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 0.0 --(0.6, 0.3, 0.1) 0.25
+>     let totalMins = projTime projs 
 >     assertEqual "test_genSimYear_1" True (1 < length projs)
->     --print $ simHrs * 60
+>     assertEqual "test_genSimYear_1" True ((totalMins > simMins) && (totalMins < (simMins + (simMins `div` 2))))
+>     assertEqual "test_genSimYear_1" True (all (==Open) (map sType $ concatMap sessions projs))
+>
+>     -- a year of just Maintenance!
+>     let projs = generate 0 g $ genSimTime start days  True (0.0, 0.0, 0.0) 0.0
+>     assertEqual "test_genSimYear_4" 1 (length projs)
+>     assertEqual "test_genSimYear_5" "Maintenance" (pName . head $ projs)
+>
+>     -- a year with just open sessions and Maintenance
+>     let projs = generate 0 g $ genSimTime start days True (1.0, 0.0, 0.0) 0.0 
 >     --print totalMins
 >     --assertEqual "test_genSimYear_12" True ((simHrs*60) < totalMins)
+>     let totalMins = projTime projs 
 >     assertEqual "test_genSimYear_2" "Maintenance" (pName . last $ projs)
->     let maintMins = sum $ map sAllottedT $ sessions $ last projs
->     let nonMaintHrs = totalMins - maintMins
+>     let maintMins = sum $ map duration $ periods . last $ sessions . last $ projs
+>     --print ("totalMins", totalMins)
+>     --print ("maintMins", maintMins)
+>     assertEqual "test_genSimYear_1" 51840 maintMins
+>     assertEqual "test_genSimYear_1" True (1 < length projs)
+>     assertEqual "test_genSimYear_1" True ((totalMins > simMins) && (totalMins < (simMins + (simMins `div` 2))))
+>     assertEqual "test_genSimYear_1" True (all (==Open) (map sType $ concatMap sessions $ init projs))
+>
+>     -- a year with everyting!
+>     let projs = generate 0 g $ genSimTime start days True (0.90, 0.05, 0.05) 0.25
+>     let totalMins = projTime projs 
+>     assertEqual "test_genSimYear_12" True (simMins < totalMins)
+>     let schedule = concatMap periods $ concatMap sessions projs
+>     assertEqual "test_genMaintProj_1" False (internalConflicts schedule)
+>     assertEqual "test_genSimYear_2" "Maintenance" (pName . last $ projs)
+>     let maintMins = sum $ map duration $ periods . last $ sessions . last $ projs
+>     assertEqual "test_genSimYear_1" True (1 < length projs)
+>     assertEqual "test_genSimYear_1" True ((totalMins > simMins) && (totalMins < (simMins + (simMins `div` 2))))
+>     assertEqual "test_genSimYear_1" True (any (==Fixed) (map sType $ concatMap sessions projs))
+>     assertEqual "test_genSimYear_1" True (any (==Windowed) (map sType $ concatMap sessions projs))
+>     -- all this is to make sure that the number of hours of fixed is okay
+>     let fixedPs = filter (\p -> (sType . session $ p) == Fixed) $ concatMap periods $ concatMap sessions $ init projs -- don't include Maint. 
+>     let fixedMins = sum $ map duration fixedPs
+>     let fixedMins' = fromIntegral fixedMins
+>     let nonMaintMins = simMins - maintMins
+>     let expFixedMinsLower = (fromIntegral nonMaintMins) * (0.05::Float)
+>     let expFixedMinsUpper = expFixedMinsLower * 1.25
+>     --print ("simMins", simMins)
+>     --print ("maintMins", maintMins)
+>     --print ("fixedMins", fixedMins)
+>     --print ("expFixedMins", expFixedMinsLower, expFixedMinsUpper)
+>     assertEqual "test_genSimYear_10" True (expFixedMinsLower < fixedMins' && fixedMins' < expFixedMinsUpper) 
+>     -- all this is to make sure that the number of hours of windowed is okay
+>     let winPs = filter (\p -> (sType . session $ p) == Windowed) $ concatMap periods $ concatMap sessions $ projs 
+>     let winMins = sum $ map duration winPs
+>     let winMins' = fromIntegral winMins
+>     --let nonMaintMins = totalMins - maintMins
+>     let expMinsLower = (fromIntegral nonMaintMins) * (0.05::Float)
+>     let expMinsUpper = expMinsLower * 1.25
+>     --print ("simMins", simMins)
+>     --print ("maintMins", maintMins)
+>     --print ("winMins", winMins)
+>     --print ("expMins", expMinsLower, expMinsUpper)
+>     assertEqual "test_genSimYear_10" True (expMinsLower < winMins' && winMins' < expMinsUpper) 
+>     -- all this is to make sure that the number of hours of open is okay
+>     let openSs = filter (\s -> (sType s) == Open) $ concatMap sessions $ projs 
+>     let openMins = sum $ map sAllottedT openSs
+>     let openMins' = fromIntegral openMins
+>     --let nonMaintMins = totalMins - maintMins
+>     let expMinsLower = (fromIntegral nonMaintMins) * ((0.90+0.25)::Float)
+>     let expMinsUpper = expMinsLower * 1.50
+>     --print ("simMins", simMins)
+>     --print ("maintMins", maintMins)
+>     --print ("nonMaintMins", nonMaintMins)
+>     --print ("openMins", openMins)
+>     --print ("expMins", expMinsLower, expMinsUpper)
+>     assertEqual "test_genSimYear_10" True (expMinsLower < openMins' && openMins' < expMinsUpper) 
+>
+>
+>     
+>     --let maintMins = sum $ map sAllottedT $ sessions $ last projs
+>     --let nonMaintHrs = totalMins - maintMins
 >     --print nonMaintMins
 >     --assertEqual "test_genSimYear_12" True ((simHrs*60) < nonMaintMins)
 >     --assertEqual "test_genSimYear_3" True ((nonMaintHrs < shi) && (slow < nonMaintHrs))
->     let projs = generate 0 g $ genSimTime 0 start days 
->     assertEqual "test_genSimYear_4" 1 (length projs)
->     assertEqual "test_genSimYear_5" "Maintenance" (pName . head $ projs)
+>
 >     --print "small!:"
 >     --let projs2 = generate 0 g $ genSimTime 150 start 10
 >     --let ps = sort $ concatMap periods $ concatMap sessions projs2
 >     --printList ps
 >     --print $ length ps
 >     --print $ sum $ map duration ps 
+>     --genSimTimeTest start days True (0.90, 0.05, 0.05) 0.25
 >   where
 >     start = fromGregorian 2006 1 1 0 0 0
 >     days  = 365
->     simHrs = 2000
+>     simHrs = 365*24 
 >     tolerance = 200
 >     shi  = fromIntegral $ (simHrs + tolerance)
 >     slow = fromIntegral $ (simHrs - tolerance)
+>     projTime projs = sum $ map sAllottedT $ concatMap sessions projs
+
+
 
 
 
