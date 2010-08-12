@@ -4,7 +4,7 @@
 > import qualified Antioch.DateTimeTests as DateTimeT
 > import qualified Antioch.DebugTests as DebugT
 > import qualified Antioch.DSSDataTests as DSSDataT
-> import qualified Antioch.GeneratorTests as GeneratorT
+> import qualified Antioch.GenerateScheduleTests as GeneratorT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
 > import qualified Antioch.ReceiverTests as ReceiverT
 > import qualified Antioch.ReceiverTemperaturesTests as ReceiverTempT
