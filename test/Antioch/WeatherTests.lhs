@@ -24,35 +24,6 @@
 >   , test_wind
 >      ]
 
-> test_freq2ForecastIndex = TestCase $ do
->   -- freq2ForecastIndex'
->   assertEqual "test_freq2ForecastIndex" 120 (freq2ForecastIndex' 140.0)
->   assertEqual "test_freqForecastIndex" 2   (freq2ForecastIndex' 1.0)
->   assertEqual "test_freqForecastIndex" 5   (freq2ForecastIndex' 5.2)
->   assertEqual "test_freqForecastIndex" 6   (freq2ForecastIndex' 5.5)
->   -- freq2ForecastIndex'
->   assertEqual "test_freq2ForecastIndex" 120 (freq2ForecastIndex 140.0)
->   assertEqual "test_freq2ForecastIndex" 2   (freq2ForecastIndex 1.0)
->   assertEqual "test_freq2ForecastIndex" 5   (freq2ForecastIndex 5.2)
->   assertEqual "test_freq2ForecastIndex" 6   (freq2ForecastIndex 5.5)
->   assertEqual "test_freq2ForecastIndex" 52  (freq2ForecastIndex 52.3)
->   assertEqual "test_freq2ForecastIndex" 58  (freq2ForecastIndex 57.1)
-
-> test_freq2HistoryIndex = TestCase $ do
->   -- freq2HistoryIndex'
->   assertEqual "test_freq2HistoryIndex_1" 120000 (freq2HistoryIndex' 140.0)
->   assertEqual "test_freqHistory2Index_2" 100   (freq2HistoryIndex' 0.02)
->   assertEqual "test_freqHistory2Index_3" 5000   (freq2HistoryIndex' 5.2)
->   assertEqual "test_freqHistory2Index_4" 6000   (freq2HistoryIndex' 5.5)
->   -- freq2HistoryIndex'
->   assertEqual "test_freq2HistoryIndex_5" 120000 (freq2HistoryIndex 140.0)
->   assertEqual "test_freq2HistoryIndex_6" 100   (freq2HistoryIndex 0.02)
->   assertEqual "test_freq2HistoryIndex_7" 5000   (freq2HistoryIndex 5.23)
->   assertEqual "test_freq2HistoryIndex_8" 6000   (freq2HistoryIndex 5.5)
->   assertEqual "test_freq2HistoryIndex_9" 52000  (freq2HistoryIndex 52.3)
->   assertEqual "test_freq2HistoryIndex_10" 58000  (freq2HistoryIndex 57.1)
->   assertEqual "test_freq2HistoryIndex_11" 102000  (freq2HistoryIndex 101.5)
-
 > test_forecastType = TestCase $ do
 >   assertEqual "test_forecastType 1" 1 (forecastType dt1 dt1 dt1)
 >   assertEqual "test_forecastType 2" 1 (forecastType dt2 dt1 dt1)

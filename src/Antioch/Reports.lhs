@@ -8,7 +8,7 @@
 > import Antioch.Schedule
 > import Antioch.Statistics
 > import Antioch.Types
-> import Antioch.Utilities (deg2rad, rad2deg, rad2hrs, printList)
+> import Antioch.Utilities
 > import Antioch.Weather
 > import Antioch.Debug
 > import Antioch.TimeAccounting
@@ -20,6 +20,7 @@
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, (\\), nub)
+> import Data.Maybe (catMaybes)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -188,12 +189,53 @@ and both obs types.
 > plotStringencyVsFrequency f ot el = do
 >   w <- getWeather Nothing
 >   pds <- mapM (totalStringencyData w el ot) rcvrs
->   linePlots (tail $ scatterAttrs title xl yl f) pds
+>   print (f,ot,rad2deg el) 
+>   printList pds
+>   print ""
+>   linePlots (scatterAttrs title xl yl f) pds
 >     where
 >       rcvrs = filter (/=Holography) allRcvrs
->       title = "Stringency vs. Frequency (@90') for " ++ (show ot)
+>       title = "Stringency vs. Frequency (@" ++ (show . rad2deg $ el) ++ ") for " ++ (show ot)
 >       xl = "Freq. (MHz)"
 >       yl = "Stringency"
+
+tracking efficiency vs frequency
+
+> plotTrackObsEff :: IO [()]
+> plotTrackObsEff = mapM pltTOE [(day, True), (day, False), (night, True), (night, False)]
+>   where
+>     day   = fromGregorian 2008 8 3 17 0 0
+>     night = fromGregorian 2008 8 3 12 0 0
+>     pltTOE pr = plotTrackObsEff' dvn mt pr
+>     --title (dn, m) = "trackObsEff" ++ dvn ++ mt ++ ".png"
+>       where
+>         dvn = if (fst pr) == day then "Day"
+>                                  else "Night"
+>         mt  = if (snd pr) then "Mustang"
+>                           else ""
+
+> plotTrackObsEff' :: String -> String -> (DateTime, Bool) -> IO ()
+> plotTrackObsEff' dvn mt (dt, m) = do
+>     pds <- mapM (trackObsEffData dt m) [0.0, 1.0, 3.0, 5.0]
+>     linePlots (tail $ scatterAttrs title xl yl file) pds
+>     where
+>       xl = "Freq. (MHz)"
+>       yl = "Efficiency " ++ dvn ++ " " ++ mt
+>       title = "Tracking Efficiency vs. Frequency By Wind Speed"
+>       file = "trackObsEff" ++ dvn ++ mt ++ ".png"
+
+> trackObsEffData :: DateTime -> Bool -> Float -> IO (Maybe String, [(Float, Float)])
+> trackObsEffData dt m w = do
+>   let es = trackObsEffData' fgz w dt m
+>   let fes = zip fmz (catMaybes es)
+>   return (Just . show $ w, fes)
+>     where
+>       fmz = map fromIntegral freqIndices
+>       fgz = map (/1000.0) fmz
+
+> trackObsEffData' :: [Float] -> Float -> DateTime -> Bool -> [Maybe Float]
+> trackObsEffData' fs w dt m = do
+>    map (trackingObservingEfficiency (Just w) dt m) fs
 
 Stringency versus frequency for elevation = 25,35,50,75,90 deg,
 all receivers, and obs type = cont.
@@ -211,7 +253,7 @@ for elevation = 90 deg, all receivers.
 > plotMinEffSysTemp = do
 >   w <- getWeather Nothing
 >   pds <- mapM (minTsysPrimeData w) rcvrs
->   linePlots (tail $ scatterAttrs title xl yl "minEffSysTemp.png") pds
+>   linePlots (scatterAttrs title xl yl "minEffSysTemp.png") pds
 >     where
 >       rcvrs = filter (/=Holography) allRcvrs
 >       title = "Min. Effective Sys. Temp. vs. Frequency (@90')"
@@ -247,6 +289,18 @@ for elevation = 90 deg, all receivers.
 >   return $ map (\t -> maybe 0.0 id t) ms
 >     where
 >       tstr w r f = totalStringency w (fromIntegral (f `div` 1000)) el r ot
+
+average observing efficiency vs frequency
+
+> plotAvgObservingEff :: IO ()
+> plotAvgObservingEff = do
+>     linePlots (tail $ scatterAttrs title xl yl "avgObsEff.png") $ [(Just "efficiency", zip fs es)]
+>     where
+>       title = "Avg. Observing Efficiency vs. Frequency"
+>       xl = "Freq. (MHz)"
+>       yl = "Avg. Observing Efficiency"
+>       fs = map fromIntegral freqIndices
+>       es = map (avgObservingEff . (/1000.0)) fs
 
 simDecFreq (stars, crosses)
 

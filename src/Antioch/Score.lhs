@@ -21,7 +21,6 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
-> import Debug.Trace                   -- debug
 
 Ranking System from Memo 5.2, Section 3
 
@@ -55,7 +54,9 @@ properly: they do not retrieve weather at 2 GHz, but, rather, use the
 > correctAtmEff :: Float -> Float -> Float
 > correctAtmEff freq eff = (1 + ((freq/lff)^2 * ((1/(sqrt eff)) - 1.0)))^^(-2)
 
-> calcEfficiency'      :: DateTime -> Session -> Scoring (Maybe (Float, Float))
+Equation 3
+
+> calcEfficiency' :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency' dt s = do
 >     rt <- receiverTemperatures
 >     trx <- liftIO $ getRcvrTemperature rt s
@@ -70,7 +71,7 @@ properly: they do not retrieve weather at 2 GHz, but, rather, use the
 >         trx' <- trx
 >         minTsysPrime'' <- minTsysPrime' >>= Just . (*xf)
 >         let [tsys, tsysTransit] = map (tSysPrime' trx' tk' zod') [za, zat] 
->         let [eff, effTransit] = map (\t -> (minTsysPrime'' / t) ^2) [tsys, tsysTransit]
+>         let [eff, effTransit] = map (\t -> (minTsysPrime'' / t)^2) [tsys, tsysTransit]
 >         return (eff, eff / effTransit)
 >   where
 >     za  = zenithAngle dt s
@@ -97,6 +98,8 @@ function that actually computes tsys':
 
 This is for use both in scoring a session and when calculating
 the historical weather (i.e. stringency and min. eff. system temp.)
+
+Numerator or denominator of Equation 3
 
 > tSysPrime' :: Float -> Float -> Float -> Float -> Float
 > tSysPrime' trx tk zod za = exp atmosphericOpacity' * tsys
@@ -135,6 +138,8 @@ Equation 7
 >     return $ if (isJust trx) then liftM2 (\x y ->
 >         let atmosphericOpacity' = atmosphericOpacity y za in
 >         systemNoiseTemperature' (fromJust trx) x atmosphericOpacity') tk zod else Nothing
+
+TBF what problem is this function solving, and why rndZa???
 
 > systemNoiseTemperaturePrime :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperaturePrime w rt dt s = runScoring w [] rt $ do
@@ -251,10 +256,10 @@ Equation 14
 
 > trackingEfficiency dt s = do
 >   wind <- getRealOrForecastedWind dt
->   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (frequency s) (usesMustang s)
+>   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesMustang s) (frequency s)
 
-> trackingObservingEfficiency :: Maybe Float -> DateTime -> Frequency -> Bool -> Maybe Float
-> trackingObservingEfficiency wind dt freq mustang = do
+> trackingObservingEfficiency :: Maybe Float -> DateTime -> Bool -> Frequency -> Maybe Float
+> trackingObservingEfficiency wind dt mustang freq = do
 >     wind' <- wind
 >                                                          -- Equation:
 >     let f = trackErr dt wind' freq                       -- from 13
@@ -439,7 +444,7 @@ Equation 23
 > avgObservingEff, avgObservingEffLo, avgObservingEffHi :: Frequency -> Float
 
 > avgObservingEff f
->     -- not exactly right according to 5.3, but more prgamatic
+>     -- not exactly right according to 5.3, but more pragmatic
 >     | f <= 52.0  = avgObservingEffLo f
 >     | otherwise  = avgObservingEffHi f
 
@@ -1047,7 +1052,6 @@ Need to translate a session's factors into the final product score.
 
 > subfactorFactors :: Session -> Weather -> ReceiverTemperatures -> DateTime -> IO Factors
 > subfactorFactors s w rt dt = do
->   -- rt <- getReceiverTemperatures
 >   sysNoiseTemp <- systemNoiseTemperature w rt dt s
 >   sysNoiseTempPrime <- systemNoiseTemperaturePrime w rt dt s
 >   minSysNoiseTempPrime <- minTsys' w dt s

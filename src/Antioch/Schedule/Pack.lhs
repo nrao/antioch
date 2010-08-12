@@ -14,7 +14,6 @@
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
-> --import Debug.Trace
 
 > epsilon  =  1.0e-4 :: Score
 

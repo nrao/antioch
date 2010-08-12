@@ -4,8 +4,6 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> --import Antioch.Weather
-> --import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
@@ -74,17 +72,18 @@ I'm really getting tired of typing that long-ass name:
 >     toRcvrTempList = map toRcvrTemp
 >     toRcvrTemp (freq:temp:[]) = (fromSql freq, fromSql temp)
 
-> getRcvrTemp' ::  IORef (M.Map (String, Float) (Float)) -> Connection -> Receiver -> Float -> [(Float, Float)] -> IO (Float)
+> getRcvrTemp' ::  IORef (M.Map (String, Float) (Float)) -> Connection -> Receiver -> Frequency -> [(Float, Float)] -> IO (Float)
 > getRcvrTemp' cache cnn rcvr freq temps = withCache key cache $ findRcvrTemp rcvr freq temps
 >   where 
 >     key = (show rcvr, freq) 
 
-> findRcvrTemp ::  Receiver -> Float -> [(Float, Float)] -> IO (Float)
+> findRcvrTemp ::  Receiver -> Frequency -> [(Float, Float)] -> IO (Float)
 > findRcvrTemp rcvr freq temps = do
->     return $ snd . last $ takeWhile (findFreq freq') temps
+>     return $ snd . last $ takeWhile (findFreq freq'') temps
 >   where
 >     findFreq f freqTemp = f >= (fst freqTemp)
->     freq' = nearestNeighbor freq . map fst $ temps
+>     freq' = (/1000.0) . fromIntegral . freq2HistoryIndex rcvr $ freq
+>     freq'' = nearestNeighbor freq' . map fst $ temps
 
 TBF, WTF: I can't believe I couldn't steal code from somebody else to do 
 the nearest neighbor calculation.  So here it is:

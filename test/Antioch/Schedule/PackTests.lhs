@@ -626,7 +626,7 @@ attributes of the packing algorithm:
 >              ]
 
 > test_ToItem = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     -- create an item without a mask, i.e. no scoring
 >     item' <- runScoring w [] rt $ do
@@ -660,7 +660,7 @@ attributes of the packing algorithm:
 Same as test above, now just checking the affect of pre-scheduled periods:
 
 > test_ToItem2 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     result <- runScoring w [] rt $ do
 >         fs <- genScore starttime [sess]
@@ -676,8 +676,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
->              --[0.0, 0.0, 3.187729, 3.1933162]
->              [0.0, 0.0, 3.1832325,3.18881187]
+>              [0.0,0.0,3.1388562,3.145695]
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -816,7 +815,7 @@ Same test, >1 fixed
 Simplest test case of high-level 'pack': schedule a single candidate.
 
 > test_Pack1 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
@@ -839,7 +838,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     expPeriod = Period 0 candidate expStartTime 120 2.5292797 Pending expStartTime False 120
 
 > test_PackTransit1 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
@@ -867,7 +866,7 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     expPeriod2 = Period 0 candidate expStartTime2 360 3.1426687 Pending expStartTime2 False 360
 
 > test_PackTransit2 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
@@ -896,7 +895,7 @@ is it testing some specific aspect of packing, i.e., what deos Bt
 stand for?
 
 > test_PackBt = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods1' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate1]
@@ -963,11 +962,10 @@ produce changes in the final result.
 
 > test_Pack2 = TestCase $ do
 >     rt <- getRT
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
 >         pack fs starttime dur [] sess
->     -- TBF: how to use 
 >     assertEqual "test_Pack2" expPeriods periods'
 >   where
 >     sess = getOpenPSessions 
@@ -975,15 +973,14 @@ produce changes in the final result.
 >     dur = 24*60
 >     expPeriods = zipWith9 Period (repeat 0) ss times durs scores (repeat Pending) times (repeat False) durs
 >       where
->         names = ["CV", "AS", "GB"]
+>         names = ["CV", "AS", "CV"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [225,360,420]
+>         durs = [195,405,195]
 >         times = [ starttime
->                 , fromGregorian 2006 11 8  12  0 0
->                 , fromGregorian 2006 11 8  15 45 0
->                 , fromGregorian 2006 11 9   5  0 0 ]
->         scores = [3.3544624, 3.2704132, 3.0974262]
+>                 , fromGregorian 2006 11 8  15 15 0
+>                 , fromGregorian 2006 11 9   8 45 0 ]
+>         scores = [2.9165013, 3.2747638, 3.2450633]
 
 Same test, but this time, stick some fixed periods in there.
 TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
@@ -1092,7 +1089,7 @@ TBF: Scores not right due to negative score for F1 !!!
 >     sessions = map step open
 
 > test_Pack3 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
@@ -1111,7 +1108,7 @@ This is the original test that exposed many of the bugs with packing
 around fixed periods.
 
 > test_Pack4 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
@@ -1131,23 +1128,22 @@ around fixed periods.
 >     duration = 24*60
 >     expPeriods = zipWith9 Period (repeat 0) ss times durs scores (repeat Pending) times (repeat False) durs
 >       where
->         names = ["CV", "WV", "GB"]
+>         names = ["CV", "CV", "CV"]
 >         ids' = map getPSessionId names
->         ids  = [head ids']++[1000,1001]++(tail ids')
+>         ids  = [head ids']++[1000]++[head . tail $ ids']++[1001]++[last ids']
 >         ss  = map (\i -> ds {sId = i}) ids
->         durs = [240, dur1, dur2, 360, 225]
->         --times = scanl (\dur dt -> addMinutes' dt dur) starttime durs
->         times = [starttime, ft1, ft2
->                , fromGregorian 2006 11 9 2 15 0
->                , fromGregorian 2006 11 9 8 15 0] 
->         -- TBF: don't tie pack tests to numerical scores
->         -- TBF: bug - second score should be zero!!!!
->         scores = [3.551355, 0.0, 0.0, 12.851959,6.554545]
+>         durs = [240, dur1, 135, dur2, 195]
+>         times = [starttime
+>                , ft1
+>                , fromGregorian 2006 11 8 18 0 0
+>                , ft2
+>                , fromGregorian 2006 11 9 8 45 0] 
+>         scores = [3.0069895, 0.0, 1.5187624, 0.0, 3.2450633]
 
 Same as above, but with even more fixed periods
 
 > test_Pack5 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
@@ -1193,7 +1189,7 @@ revealed a bug where scores are turning negative in pact.
 
 > test_Pack6 = TestCase $ do
 >     rt <- getRT
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime ss
 >         pack fs starttime duration [] ss
@@ -1207,7 +1203,7 @@ revealed a bug where scores are turning negative in pact.
 >     ss = [s3, s19]
 
 > test_Pack7 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime ss
@@ -1227,7 +1223,7 @@ revealed a bug where scores are turning negative in pact.
 Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 
 > test_Pack8 = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate]
@@ -1247,11 +1243,11 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >                                , receivers = [[Rcvr1_2]]
 >                                , project = testProject
 >                                }
->     expStartTime = fromGregorian 2006 11 8 21 45 0
->     expPeriod = Period 0 candidate expStartTime 120 1.5167294 Pending expStartTime False 120
+>     expStartTime = fromGregorian 2006 11 8 22 0 0
+>     expPeriod = Period 0 candidate expStartTime 120 1.2334107 Pending expStartTime False 120
 
 > test_Pack_overlapped_fixed = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ do
 >         fs <- genScore starttime sess
@@ -1278,11 +1274,9 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     fixed3 = Period 0 ds {sId = 1002, sName = "1002"} ft3 d 0.0 Pending starttime False d
 >     fixed4 = Period 0 ds {sId = 1003, sName = "1003"} ft4 d 0.0 Pending starttime False d
 >     fixed = [fixed1, fixed2, fixed3, fixed4]
->     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 225 3.5666382 Pending starttime False 225
->     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 45 0) 360 3.373124 Pending starttime False 360
->     --open3 = Period 0 (ds {sName = "WV", sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 2 15 0) 345 11.547832 Pending starttime False 360
->     open4 = Period 0 (ds {sName = "GB", sId = getPSessionId "GB"}) (fromGregorian 2006 11 9 5 0 0) 300 2.252018 Pending starttime False 300
->     expPeriods = [open1, open2, fixed2, open4, fixed3]
+>     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 195 9165013 Pending starttime False 195
+>     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 15 0) 405 3.2747638 Pending starttime False 405
+>     expPeriods = [open1, open2, fixed2, fixed3]
 
 The beta test code runs packing using TScore, which is essentially a
 random score generator.  So to match the two code bases we have to choose:
@@ -1313,7 +1307,7 @@ Now we can create our actual scoring factor
 Now we can use it in a test:
 
 > test_RandomScore = TestCase $ do
->     w <- getWeather . Just $ dt
+>     w <- getWeatherTest . Just $ dt
 >     rt <- getRT
 >     [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt defaultSession)
 >     assertEqual "test_RandomScore" hr1Score result
@@ -1336,7 +1330,7 @@ Now we can use it in a test:
 and test again:
 
 > test_RandomScore2 = TestCase $ do
->     w <- getWeather . Just $ dt
+>     w <- getWeatherTest . Just $ dt
 >     rt <- getRT
 >     scores <- mapM (score' w rt) times
 >     assertEqual "test_RandomScore2" expScores scores
@@ -1355,7 +1349,7 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 
 > test_TestPack_pack1 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
->     w <- getWeather Nothing
+>     w <- getWeatherTest Nothing
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack1" [expPeriod] periods'
@@ -1367,7 +1361,7 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 
 > test_TestPack_pack1withHistory = TestCase $ do
 >     let periods = pack randomScore starttime duration [fixed] [testSession]
->     w <- getWeather Nothing
+>     w <- getWeatherTest Nothing
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_Pack1_history_2" [fixed,p2] periods'
@@ -1384,7 +1378,7 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 
 > test_TestPack_pack2 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
->     w <- getWeather Nothing
+>     w <- getWeatherTest Nothing
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack2" expPeriods periods'
@@ -1402,7 +1396,7 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 
 > test_TestPack_pack3 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] [testSession]
->     w <- getWeather Nothing
+>     w <- getWeatherTest Nothing
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack3" expPeriods periods'
@@ -1425,7 +1419,7 @@ epsilon, and so is "correct".
 
 > test_TestPack_pack8 = TestCase $ do
 >     let periods = pack randomScore starttime duration [] sessions 
->     w <- getWeather Nothing
+>     w <- getWeatherTest Nothing
 >     rt <- getRT
 >     periods' <- runScoring w [] rt $ periods
 >     assertEqual "test_TestPack_pack8" 2 (length periods')
@@ -1472,8 +1466,8 @@ increments starting at starttime is taken from the ScoreTests.lhs
 > --defaultPackSessionScores = (replicate 39 0.0) ++ 
 > --                [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
 > --                ,3.1139324,3.140008,3.187729,3.1933162]
-> defaultPackSessionScores = (replicate 39 0.0) ++ 
->     [3.207287,3.2154124,3.219909,2.9261482,3.0864375,3.1245124,3.1356096,3.1832325,3.1888118]
+> defaultPackSessionScores = (replicate 40 0.0) ++ 
+>     [3.1126366,3.1218858,2.33521,2.6951327,2.863466,3.0243123,3.1388562,3.145695]
 
 This is the list of random numbers generated on the python side:
 

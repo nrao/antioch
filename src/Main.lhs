@@ -11,6 +11,10 @@
 > import System.Environment
 > import Text.Printf
 
+./simulate --help
+
+./simulate -s=Pack -o=simulations -d=3 -n=test5_3
+
 > main = do 
 >   args <- getArgs
 >   (stgStr, dir, numDaysStr, name) <- simulateOpts args

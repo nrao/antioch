@@ -5,7 +5,7 @@
 > import Data.List     (find)
 > import Data.Ix
 
-> type Frequency = Float
+> type Frequency = Float   -- GHz
 > type Minutes   = Int
 > type Score     = Float
 > type Radians   = Float

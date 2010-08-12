@@ -6,6 +6,7 @@
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Simulate
+> import Antioch.Filters       -- debug
 > import Antioch.Debug
 > import Antioch.Statistics (scheduleHonorsFixed)
 > import Data.List (sort, find)
@@ -25,10 +26,9 @@ Attempt to see if the old test_sim_pack still works:
 > test_simulateDailySchedule = TestCase $ do
 >     w <- getWeatherTest $ Just dt
 >     (result, t) <- simulateDailySchedule rs dt packDays simDays history ss True [] []
->     -- TBF: why do we get disagreement w/ old test after the 4th period?
->     print $ take 4 $ map duration result
->     print $ take 4 $ map (toSqlString . startTime) result
->     print $ take 4 $ map (sName . session) result
+>     --print $ take 4 $ map duration result
+>     --print $ take 4 $ map (toSqlString . startTime) result
+>     --print $ take 4 $ map (sName . session) result
 >     assertEqual "SimulationTests_test_sim_pack" (take 4 exp) (take 4 result)
 >   where
 >     rs  = []
@@ -36,20 +36,21 @@ Attempt to see if the old test_sim_pack still works:
 >     simDays = 2
 >     packDays = 2
 >     history = []
->     cnl = []
 >     ss = getOpenPSessions
->     expSs = [gb, va, tx, tx, wv, mh, cv, cv, tx]
+>     expSs = [gb, cv, va, tx, tx, gb, lp, cv, tx, cv, as]
 >     dts = [ fromGregorian 2006 2 1  1 30 0
->           , fromGregorian 2006 2 1  6 30 0
->           , fromGregorian 2006 2 1 12 30 0
->           , fromGregorian 2006 2 1 16 30 0
->           , fromGregorian 2006 2 1 22 30 0
->           , fromGregorian 2006 2 2  4 30 0
->           , fromGregorian 2006 2 2 10  0 0
->           , fromGregorian 2006 2 2 12  0 0
->           , fromGregorian 2006 2 2 14 15 0
+>           , fromGregorian 2006 2 1  6 15 0
+>           , fromGregorian 2006 2 1  8 15 0
+>           , fromGregorian 2006 2 1 12 15 0
+>           , fromGregorian 2006 2 1 18  0 0
+>           , fromGregorian 2006 2 1 22 45 0
+>           , fromGregorian 2006 2 2  6 45 0
+>           , fromGregorian 2006 2 2 12 45 0
+>           , fromGregorian 2006 2 2 14 45 0
+>           , fromGregorian 2006 2 3  5  0 0
+>           , fromGregorian 2006 2 3 18 15 0
 >            ]
->     durs = [300, 360, 240, 240, 360, 330, 120, 135, 360]
+>     durs = [285, 120, 240, 345, 240, 480, 360, 120, 285, 195, 480]
 >     scores = replicate 10 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
@@ -73,25 +74,22 @@ of pre-scheduled periods (history)
 >     assertEqual "SimulationTests_test_sim_schd_pack_ex_hist_4" True (abs (observedTime - (sAllottedT s2)) <= (minDuration s2))
 >   where
 >     rs  = []
->     -- set it up to be like production 08B beta test scheduling
 >     dt = fromGregorian 2006 2 1 0 0 0
->     --dur = 60 * 24 * 7
->     --int = 60 * 24 * 2
 >     simDays = 7
 >     packDays = 2
->     cnl = []
 >     ds = defaultSession { frequency = 2.0, receivers = [[Rcvr1_2]] }
->     -- a period that uses up all the sessions' time!
->     f1 = Period 0 ds {sId = sId cv} dt (sAllottedT cv) 0.0 Pending dt False (sAllottedT cv)
+>     -- a period that uses up all the sessions' time (480)
+>     f1 = Period 0 ds {sId = sId cv} (fromGregorian 2006 2 4 3 0 0) 480 0.0 Pending dt False 480
 >     h1 = [f1]
 >     -- make sure that this session knows it's used up it's time
->     s1 = cv {periods = h1}
+>     s1 = makeSession (cv { sAllottedT = 480, sAllottedS = 480}) [] h1
 >     ss1 = [s1]
->     -- a period that uses MOST of the sessions' time!
->     f2 = Period 0 ds {sId = sId cv} (dt) (45*60) 0.0 Pending dt False (45*60)
+>
+>     -- a period that uses MOST of the sessions' time (375)
+>     f2 = Period 0 ds {sId = sId cv} (fromGregorian 2006 2 4 3 0 0) 375 0.0 Pending dt False 375
 >     h2 = [f2]
 >     -- make sure that this session knows it's used up MOST of it's time
->     s2 = cv {periods = h2}
+>     s2 = makeSession (cv { sAllottedT = 480, sAllottedS = 480}) [] h1
 >     ss2 = [s2]
 
 Here we attempt to schedule only a single high-frequency session - if it does

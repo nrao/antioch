@@ -66,13 +66,13 @@ we must do all the work that usually gets done in nell.
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
 >         let newHistory = updateHistory history newSched start
->         -- run the below assert if you have doubts about bookeeping
+>         -- run the below assert if you have doubts about bookkeeping
 >         -- make sure canceled periods have been removed from sessons
 >         --let sessPeriods = concatMap periods sessions''
 >         --let results = all (==True) $ map (\canceled -> (elem canceled sessPeriods) == False) cs
 >         --assert results
 >         -- move on to the next day in the simulation!
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet newHistory $! (trace ++ newTrace)
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) history sessions'' quiet newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
@@ -98,8 +98,10 @@ to future trimesters.
 
 We must combine the output of the scheduling algorithm with the history from
 before the algorithm was called, but there's two complications:
-   * the output from the algo. is a combination of parts of the history and the newly scheduled periods
-   * this same output is then modified: canclelations and replacements (backups) may occur.
+   * the output from the algo. is a combination of parts of the history and
+     the newly scheduled periods
+   * this same output is then modified: cancellations and replacements
+     (backups) may occur.
 So, we need to intelligently combine the previous history and the algo. output.
 Basically, ignore any of the history that overlaps with the time range covered
 by the scheduling algorithm.

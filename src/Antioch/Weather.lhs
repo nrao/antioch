@@ -4,7 +4,6 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Receiver  (shiftFreqIntoRange)
 > import Antioch.Utilities
 > import Antioch.Generators
 > import Antioch.Settings  (weatherDB, weatherUnitTestDB)
@@ -41,7 +40,7 @@ for each different table we are pulling values from.
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
 >   , totalStringency :: Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
->   , minOpacity      :: Frequency -> Radians -> IO (Maybe Float)
+>   , minOpacity      :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
 >   , minTSysPrime    :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
 >   , newWeather      :: Maybe DateTime -> IO Weather
 >   , forecast        :: DateTime
@@ -159,39 +158,6 @@ However, the forecast_by_frequency values use the following
 granularity: 2,3 .. 51,52,54,56 .. 118,120.
 But the t_sys frequency values 
 are: 2,3 .. 120
-
-> freqIndices :: [Int]
-> freqIndices = [100, 200 .. 900] ++ [1000, 2000 .. 51000] ++ [52000, 54000 .. 120000]
-
-Frequency in GHz (float) to GHz (integer) 2 to 120
-
-> freq2ForecastIndex' :: Frequency -> Int
-> freq2ForecastIndex' = min 120 . max 2 . round
-
-> freq2ForecastIndex :: Frequency -> Int
-> freq2ForecastIndex f = if f' > 52 && odd f' then f' + 1 else f'
->   where
->     f' = freq2ForecastIndex' f
-
-Frequency in GHz (float) to MHz (integer) 100 to 120,000 (sparsely)
-
-> freq2HistoryIndex' :: Frequency -> Int
-> freq2HistoryIndex' freq = min 120000 . max 100 $ f -- . round . (*1000.0) 
->   where
->     -- ex: 0.256 GHz -> 200 MHz
->     f | freq < 1.0   = (*100) . round . (*10) $ freq 
->       | otherwise = (*1000) . round $ freq 
-
-> freq2HistoryIndex :: Frequency -> Int
-> freq2HistoryIndex f = if f' > 52000 && odd' f' then f' + 1000 else f'
->   where
->     f' = freq2HistoryIndex' f
->     odd' = odd . round . (/1000) . fromIntegral
-
-The elevation range of the weather DB is from 5 - 90 degrees.
-
-> elev2Index :: Radians -> Int
-> elev2Index =  min 90 . max 5 . round . rad2deg
 
 Both wind speeds and atmospheric temperature are values forecast independently
 of frequency.  The initialized caces are created here.
@@ -457,11 +423,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
 > getTotalStringency cache conn frequency elevation rcvr obsType = do
 >     result <- withCache key cache $ fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
->     -- print ("getTotalStringency", frequency, elevation, result)
+>     -- print ("getTotalStringency", frequency, freqIdx, elevation, elevIdx, result)
 >     return result
 >   where
->     frequency' = shiftFreqIntoRange rcvr frequency
->     freqIdx = freq2HistoryIndex frequency'
+>     freqIdx = freq2HistoryIndex rcvr frequency
 >     elevIdx = round . rad2deg $ elevation
 >     obsIdx = if obsType == Continuum then 1 else 0
 >     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
@@ -476,13 +441,13 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >                 \WHERE frequency = ? AND elevation = ?\n\
 >                 \AND receiver_id = ? AND observing_type_id = ?"
 
-> getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> IO (Maybe Float)
-> getMinOpacity cache conn frequency elevation = do
+> getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
+> getMinOpacity cache conn frequency elevation rcvr = do
 >     result <- withCache key cache $ getFloat conn query [toSql freqIdx, toSql elevIdx]
 >     -- print ("getMinOpacity", frequency, elevation, result)
 >     return result
 >   where
->     freqIdx = freq2HistoryIndex frequency
+>     freqIdx = freq2HistoryIndex rcvr frequency
 >     elevIdx = round . rad2deg $ elevation
 >     key     = (freqIdx, elevIdx)
 >     query   = "SELECT opacity FROM min_weather\n\
@@ -494,8 +459,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >     rcvrId <- getRcvrId conn rcvr
 >     return result
 >   where
->     frequency' = shiftFreqIntoRange rcvr frequency
->     freqIdx = freq2HistoryIndex frequency'
+>     freqIdx = freq2HistoryIndex rcvr frequency
 >     -- guard against Weather server returning nothing for el's < 5.0.
 >     elevation' = max (deg2rad 5.0) elevation
 >     elevIdx = round . rad2deg $ elevation'
@@ -504,11 +468,6 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > fetchMinTSysPrime :: Connection -> Int -> Int -> Receiver -> IO (Maybe Float)
 > fetchMinTSysPrime conn freqIdx elevIdx rcvr = do
 >   rcvrId <- getRcvrId conn rcvr
->   --rcvrId <- getRcvrId conn $ max Rcvr1_2 rcvr
->   -- TBF, WTF: PF rcvrs aren't in t_sys table because we aren't
->   -- calculating them below 2 GHz.  So for now this slight of hand.
->   --let rcvrId = min 8 rcvrId'
->   -- print ("fetchMinTSysPrime", freqIdx, elevIdx, rcvrId) need for Dana
 >   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId]
 >     where
 >       query   = "SELECT total FROM t_sys\n\

@@ -28,12 +28,12 @@
 >   , ScoreT.tests
 >   , SLAlibT.tests
 >   , StatsT.tests
->   --, PackT.tests
+>   , PackT.tests
 >   , ReceiverT.tests
 >   , ReceiverTempT.tests
 >   , ReportT.tests
 >   , ReservationsT.tests
->   --, SimsT.tests
+>   , SimsT.tests
 >   , TimeAccountingT.tests
 >   , UtilitiesT.tests
 >   , WeatherT.tests

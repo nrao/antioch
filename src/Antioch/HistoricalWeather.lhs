@@ -69,6 +69,7 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
+>     print $ "Updating historical weather in " ++ (show weatherDB)
 >     cnn <- handleSqlError $ connectDB
 >     print "truncating table t_sys"
 >     truncateTable cnn "t_sys"
@@ -79,29 +80,6 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     print "filling table stringency"
 >     fillStringencyTable cnn
 >     disconnect cnn
-
-> ericWasHere cnn = do
->     efficiencies <- newIORef Map.empty
->     stringencies <- newIORef Map.empty
->     rts <- getReceiverTemperatures
->     forM_ getWeatherDates $ \dt -> do
->       -- dt offset insures that we get forecasts & not real wind
->       w <- getWeather . Just $ (addMinutes' (-60) dt)
->       runScoring w [] rts $ do
->         forM_ allRcvrs $ \rcvr -> do
->         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
->         forM_ [5 .. 90 :: Int] $ \elev -> do
->           getMinEffSysTemp efficiencies rcvr freq elev dt
->           getStringency stringencies rcvr freq elev Continuum dt
->           getStringency stringencies rcvr freq elev SpectralLine dt
->     effs <- readIORef efficiencies
->     strs <- readIORef stringencies
->     forM_ allRcvrs $ \rcvr -> do
->     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
->     forM_ [5 .. 90] $ \elev -> do
->       putMinEffSysTemp cnn effs rcvr freq elev
->       putStringency cnn strs rcvr freq elev Continuum
->       putStringency cnn strs rcvr freq elev SpectralLine
 
 > fillTsysTable cnn = do
 >     efficiencies <- newIORef Map.empty
@@ -125,7 +103,6 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     rts <- getReceiverTemperatures
 >     forM_ getWeatherDates $ \dt -> do
 >       -- dt offset insures that we get forecasts & not real wind
->       -- print . toSqlString $ dt
 >       w <- getWeather . Just $ (addMinutes' (-60) dt)
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs $ \rcvr -> do
@@ -140,18 +117,13 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >       putStringency cnn strs rcvr freq elev Continuum
 >       putStringency cnn strs rcvr freq elev SpectralLine
 
-> getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. hours]]
+> getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. (hours - 1)]]
 
 > allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
-> getRcvrFreqIndices rcvr = takeWhile (<=hi) . dropWhile (<lo) $ freqIndices
->   where
->     (lo', hi') = getRcvrRange rcvr
->     [lo,  hi]  = map freq2HistoryIndex [lo', hi']
-
 ---------------Min. Effective System Temperature---------------
 
-> -- getMinEffSysTemp :: IOBase.IORef -> Receiver -> Frequency -> Radians -> DateTime -> IO ()
+> -- getMinEffSysTemp :: IOBase.IORef -> Receiver -> Int -> Int -> DateTime -> IO ()
 > getMinEffSysTemp efficiencies rcvr freq elev dt = do
 >     new <- tSysPrimeNow' rcvr f e dt
 >     liftIO $ alter efficiencies (updateEff new) (rcvr, freq, elev)
@@ -181,21 +153,17 @@ table.
 > -- tSysPrimeNow' :: Antioch.Types.Receiver -> Float -> Float -> Antioch.DateTime.DateTime -> RWST ScoringEnv [Trace] () IO (Maybe Float)
 > tSysPrimeNow' rcvr freq elev dt = do
 >   rt   <- receiverTemperatures
->   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
->   -- Simply use this line to get results that agree with previous values
->   -- But don't forget that this could be changed in Receiver too! idiot
->   --let trx' = Just $ oldReceiverTemperature dt defaultSession {frequency = freq}
->   -- here we are using the 'best' methods to avoid having to deal
->   -- with specifiying the forecast type
+>   -- here we are using the 'best' methods to get close to "real" weather
 >   w    <- weather
 >   tk'  <- liftIO $ bestTsys w dt freq
 >   zod' <- liftIO $ bestOpacity w dt freq
+>   trx' <- liftIO $ getReceiverTemperature rt (Just rcvr) freq
 >   let za = pi/2 - (deg2rad elev) 
 >   return $ do 
 >       tk <- tk'
 >       zod <- zod'
 >       trx <- trx'
->       -- Call the tSysPrime' method used in Score.lhs
+>       -- finally use common code by calling the tSysPrime' from Score.lhs
 >       return $ tSysPrime' trx tk zod za
 
 --------------Stringency--------------------
@@ -222,7 +190,6 @@ Note: frequency passed in should be in GHz
 
 > -- stringencyLimit :: Receiver -> Frequency -> Float -> ObservingType -> DateTime -> RWST ScoringEnv [Trace] () IO Bool
 > stringencyLimit rcvr freq elev obstype dt = do
->     --liftIO $ print ("stringencyLimit: ", frequency s, rcvr, freq, elev, obstype, toSqlString dt)
 >     fs <- observingEfficiencyLimit dt s
 >     if eval fs >= 1
 >       then do
