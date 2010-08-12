@@ -1,5 +1,6 @@
-> module Antioch.GeneratorTests where
+> module Antioch.GenerateScheduleTests where
 
+> import Antioch.GenerateSchedule
 > import Antioch.Generators
 > import Antioch.DateTime
 > import Antioch.Types
@@ -270,7 +271,6 @@
 >     let smallDays = 11
 >     let ratio = 0.30
 >     let bigHrs = round $ ((fromIntegral smallDays) * 24) * ratio
->     print (bigHrs, " hrs of windows for: ", smallDays*24 , " hrs time range") 
 >     let ps = concat $ generate 0 g $ genWindowedSchedule dt smallDays [] bigHrs
 >     assertEqual "test_createWS_7" False (internalConflicts ps) 
 >   where

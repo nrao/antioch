@@ -1,18 +1,19 @@
 > module Antioch.RunSimulation where
 
 > import Antioch.DSSData
-> import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
+> --import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.HardwareSchedule
 > import Antioch.Filters
 > import Antioch.Reports
 > import Antioch.Simulate
 > import Antioch.DateTime
-> import Antioch.Generators
+> --import Antioch.Generators
+> import Antioch.GenerateSchedule
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester, overlie)
+> import Antioch.Utilities    
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
@@ -38,6 +39,8 @@
 >     let history = filterHistory history' dt days 
 >     print "pre-scheduled history: "
 >     printList history
+>     let total = sum $ map sAllottedT ss
+>     print ("total session time (mins): ", total, total `div` 60)
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
 >     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet [] []
@@ -95,8 +98,8 @@ out to be about 10,000 hours.
 >   where
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
->     -- NOTE: be careful here - the ratio of hours to length of simulation
->     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0.25 --genProjects 255
+>     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 1.5 
+>     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
 >     history = sort $ concatMap periods ss 
