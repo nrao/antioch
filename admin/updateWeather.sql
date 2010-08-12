@@ -47,3 +47,71 @@ CREATE TABLE import_times (
 );
 
 
+--
+-- Name: receiver_temperatures; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE TABLE receiver_temperatures (
+    id integer NOT NULL,
+    receiver_id integer NOT NULL,
+    frequency double precision NOT NULL,
+    temperature double precision NOT NULL
+);
+
+
+ALTER TABLE public.receiver_temperatures OWNER TO dss;
+
+--
+-- Name: receiver_temperatures_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE receiver_temperatures_id_seq
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.receiver_temperatures_id_seq OWNER TO dss;
+
+--
+-- Name: receiver_temperatures_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: dss
+--
+
+ALTER SEQUENCE receiver_temperatures_id_seq OWNED BY receiver_temperatures.id;
+
+
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dss
+--
+
+ALTER TABLE receiver_temperatures ALTER COLUMN id SET DEFAULT nextval('receiver_temperatures_id_seq'::regclass);
+
+
+--
+-- Name: receiver_temperatures_pkey; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
+--
+
+ALTER TABLE ONLY receiver_temperatures
+    ADD CONSTRAINT receiver_temperatures_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: receiver_temperatures_receiver_id; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE INDEX receiver_temperatures_receiver_id ON receiver_temperatures USING btree (receiver_id);
+
+
+--
+-- Name: receiver_temperatures_receiver_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
+ALTER TABLE ONLY receiver_temperatures
+    ADD CONSTRAINT receiver_temperatures_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES receivers(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- PostgreSQL database dump complete
+--
+
