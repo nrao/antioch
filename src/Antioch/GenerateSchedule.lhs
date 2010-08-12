@@ -91,9 +91,10 @@ TBF: for now keep it real simple - a single proj & sess for each period
 > genFixedProject p = do
 >   proj' <- genProject
 >   let total = duration p
->   let s'' = head . sessions $ proj'
->   let s' = s'' { sType = Fixed
->                , sName = "FixedS"
+>   -- TBF: genSessionFixed will figure things like sAllottedT, but we
+>   -- really want these based off the periods that are pre-generated
+>   s'' <- genSessionFixed
+>   let s' = s'' { sName = "FixedS"
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                , ra = 0.0
@@ -181,9 +182,8 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >   proj'' <- genProject
 >   let proj' = proj'' { pName = "WinP" }
 >   let total = sum $ map duration wp
->   let s'' = head . sessions $ proj'
->   let s' = s'' { sType = Windowed
->                , sName = "WinS"
+>   s'' <- genSessionWindowed
+>   let s' = s'' { sName = "WinS"
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                , ra = 0.0

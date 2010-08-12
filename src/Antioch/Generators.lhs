@@ -174,6 +174,8 @@ Backup sessions should not use a transit flag
 >       high <- choose (6.0, 12.0)
 >       return $ [(low, high)]
 
+Method for producing a generic Open Session.
+
 > genSession :: Gen Session
 > genSession = do
 >     project    <- genProject
@@ -217,6 +219,106 @@ Backup sessions should not use a transit flag
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
+>                }
+
+Method for producing a generic Fixed Session.
+TBF: currently this is a cut & paste of genSession; how these sessions should
+differ from Open ones is TBD.
+
+> genSessionFixed :: Gen Session
+> genSessionFixed = do
+>     project    <- genProject
+>     t          <- genSemester
+>     -- TBF: first generatre rcvr, then have everything else follow.
+>     --r          <- genRcvr t
+>     --let b      = receiver2Band r
+>     b          <- genBand t
+>     let r      = band2Receiver b
+>     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
+>     f          <- genFreq b
+>     bk         <- genBackupFlag f
+>     s          <- skyType
+>     (ra, dec)  <- genRaDec s
+>     sAllottedT <- choose (6*60, 30*60)
+>     minD       <- genMinTP f
+>     maxD       <- genMaxTP f
+>     --minD       <- choose (2*60, 6*60)
+>     --maxD       <- choose (11*60, 12*60)
+>     tb         <- genTimeBetween bk
+>     lstEx      <- genLSTExclusion
+>     lowRFIFlag <- genLowRFIFlag
+>     trans      <- genTransitFlag bk
+>     return $ defaultSession {
+>                  project        = project
+>                , periods        = []
+>                , band           = b
+>                , frequency      = f
+>                , ra             = ra
+>                , dec            = dec
+>                , minDuration    = round2quarter minD
+>                , maxDuration    = round2quarter maxD
+>                -- TBF: only for scheduleMinDuration; then go back
+>                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
+>                , sAllottedT      = round2quarter sAllottedT
+>                , sAllottedS      = round2quarter sAllottedT
+>                , timeBetween    = round2quarter tb
+>                , lstExclude     = lstEx
+>                , lowRFI         = lowRFIFlag
+>                , transit        = trans
+>                , grade          = g
+>                , receivers      = [[r]]
+>                , backup         = bk
+>                , sType          = Fixed
+>                }
+
+Method for producing a generic Windowed Session.
+TBF: currently this is a cut & paste of genSession; how these sessions should
+differ from Open ones is TBD.
+
+> genSessionWindowed :: Gen Session
+> genSessionWindowed = do
+>     project    <- genProject
+>     t          <- genSemester
+>     -- TBF: first generatre rcvr, then have everything else follow.
+>     --r          <- genRcvr t
+>     --let b      = receiver2Band r
+>     b          <- genBand t
+>     let r      = band2Receiver b
+>     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
+>     f          <- genFreq b
+>     bk         <- genBackupFlag f
+>     s          <- skyType
+>     (ra, dec)  <- genRaDec s
+>     sAllottedT <- choose (6*60, 30*60)
+>     minD       <- genMinTP f
+>     maxD       <- genMaxTP f
+>     --minD       <- choose (2*60, 6*60)
+>     --maxD       <- choose (11*60, 12*60)
+>     tb         <- genTimeBetween bk
+>     lstEx      <- genLSTExclusion
+>     lowRFIFlag <- genLowRFIFlag
+>     trans      <- genTransitFlag bk
+>     return $ defaultSession {
+>                  project        = project
+>                , periods        = []
+>                , band           = b
+>                , frequency      = f
+>                , ra             = ra
+>                , dec            = dec
+>                , minDuration    = round2quarter minD
+>                , maxDuration    = round2quarter maxD
+>                -- TBF: only for scheduleMinDuration; then go back
+>                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
+>                , sAllottedT      = round2quarter sAllottedT
+>                , sAllottedS      = round2quarter sAllottedT
+>                , timeBetween    = round2quarter tb
+>                , lstExclude     = lstEx
+>                , lowRFI         = lowRFIFlag
+>                , transit        = trans
+>                , grade          = g
+>                , receivers      = [[r]]
+>                , backup         = bk
+>                , sType          = Windowed
 >                }
 
 TBF: this is only for use with the scheduleMinDuration strategy.  We want
