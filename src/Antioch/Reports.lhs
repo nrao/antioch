@@ -247,6 +247,17 @@ the period was scheduled, because the Pack algorithm ignores the first quarter.
    * simSchdMeanTrkFreq - Tracking Efficiency
 simMeanObsEff - this plot shows the error bars for simSchdMeanEffFreq   
 
+Separate plots for the mean scheduled observing efficiency, by plot:
+
+> plotMeanObsEffVsFreqOpen fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Open
+> plotMeanObsEffVsFreqFixed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Fixed
+> plotMeanObsEffVsFreqWindowed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Windowed
+
+> plotMeanObsEffVsFreqByType fn n ss ps tr stype = plotMeanObsEffVsFreq fn n ss' ps' tr
+>   where
+>     ss' = filter (isType stype) ss
+>     ps' = filter (isTypePeriod stype) ps
+
 simSchdMeanEffFreq
 error bars done separately in simMeanObsEff
 
@@ -406,6 +417,7 @@ simFreqTime (circles, dt on x-axis)
 >     ps' = filter (\p -> isType stype (session p)) ps
 
 > isType stype s = sType s == stype
+> isTypePeriod stype p = (sType . session $ p) == stype
 
 Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
@@ -829,6 +841,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
 >  , plotEffVsFreq'     $ rootPath ++ "/simEffFreq.png"
 >  , plotMeanObsEffVsFreq $ rootPath ++ "/simSchdMeanEffFreq.png"
+>  , plotMeanObsEffVsFreqOpen $ rootPath ++ "/simSchdMeanEffFreqOpen.png"
+>  , plotMeanObsEffVsFreqFixed $ rootPath ++ "/simSchdMeanEffFreqFixed.png"
+>  , plotMeanObsEffVsFreqWindowed $ rootPath ++ "/simSchdMeanEffFreqWindowed.png"
 >  , plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
 >  , plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
 >  , plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
