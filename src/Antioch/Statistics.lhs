@@ -21,6 +21,18 @@
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
 
+> freqRange :: [Float]
+> freqRange = [0.0..50.0] --TBF: 120.0]
+
+> raRange :: [Float]
+> raRange = [0..24]
+
+> decRange :: [Float]
+> decRange = [-40..90]
+
+> bandRange :: [Band]
+> bandRange = [L .. Q] --TBF: W]
+
 To Do List (port from Statistics.py):
 
    * used in error bars (used in plotObsEffVsFreq and plotMeanObsEffVsFreq)
@@ -163,40 +175,43 @@ the first quarter.  We should be using the weighted average found in Score.
 > periodDecRA = promote sessionDecRA
 
 > sessionRA :: [Session] -> [(Radians, Float)]
-> sessionRA = count (rad2hrs . ra) [0..24]
+> sessionRA = count (rad2hrs . ra) raRange
 
 > periodRA :: [Period] -> [(Radians, Float)]
 > periodRA = promote sessionRA
 
 > sessionRAHrs :: [Session] -> [(Radians, Float)]
-> sessionRAHrs =  histogram [0..24] . ((fractionalHours . sAllottedT) `vs` (rad2hrs . ra))
+> sessionRAHrs =  histogram raRange . ((fractionalHours . sAllottedT) `vs` (rad2hrs . ra))
 
 > periodRAHrs :: [Period] -> [(Radians, Float)]
-> periodRAHrs = histogram [0..24] . ((fractionalHours . duration) `vs` (rad2hrs . ra . session))
+> periodRAHrs = histogram raRange . ((fractionalHours . duration) `vs` (rad2hrs . ra . session))
 
 > fractionalHours min = fromIntegral min / 60.0
 
 > sessionDec :: [Session] -> [(Radians, Float)]
-> sessionDec = count (rad2deg . dec) [-40..90]
+> sessionDec = count (rad2deg . dec) decRange --[-40..90]
 
 > periodDec :: [Period] -> [(Radians, Float)]
 > periodDec = promote sessionDec
 
 > sessionDecHrs :: [Session] -> [(Radians, Float)]
-> sessionDecHrs =  histogram [-40..90] . ((fractionalHours . sAllottedT) `vs` (rad2deg . dec))
+> sessionDecHrs =  histogram decRange . ((fractionalHours . sAllottedT) `vs` (rad2deg . dec))
 
 > periodDecHrs :: [Period] -> [(Float, Float)]
-> periodDecHrs = histogram [-40..90] . ((fractionalHours . duration) `vs` (rad2deg . dec . session)) 
+> periodDecHrs = histogram decRange . ((fractionalHours . duration) `vs` (rad2deg . dec . session)) 
 
 > sessionFreq :: [Session] -> [(Float, Minutes)]
-> sessionFreq = histogram [1.0..50.0] . (sAllottedT `vs` frequency)
+> --sessionFreq = histogram [1.0..50.0] . (sAllottedT `vs` frequency)
+> sessionFreq = histogram freqRange . (sAllottedT `vs` frequency)
 
 > sessionFreqHrs :: [Session] -> [(Float, Float)]
 > sessionFreqHrs = histogramToHours . sessionFreq
 
+> --statsFreqMinMax = (realToFrac . minimum $ statsFreqRange, realToFrac . maximum $ statsFreqRange)
+
 > periodFreq :: [Period] -> [(Float, Minutes)]
 > periodFreq =
->     histogram [1.0..50.0] . (duration `vs` (frequency . session))
+>     histogram freqRange . (duration `vs` (frequency . session))
 
 > periodFreqHrs :: [Period] -> [(Float, Float)]
 > periodFreqHrs = histogramToHours . periodFreq
@@ -295,26 +310,25 @@ Example of log histogram data:
 Compare allocated hours by frequency to observed hours by frequency.
 
 > periodBand :: [Period] -> [(Band, Float)]
-> periodBand = histogram [L .. Q] . ((fractionalHours . duration) `vs` (band . session))
+> periodBand = histogram bandRange . ((fractionalHours . duration) `vs` (band . session))
 
 > sessionBand :: [Session] -> [(Band, Float)]
-> sessionBand = histogram [L .. Q] . ((fractionalHours . sAllottedT) `vs` band)
+> sessionBand = histogram bandRange . ((fractionalHours . sAllottedT) `vs` band)
 
 > sessionAvBand :: [Session] -> [(Band, Float)]
-> sessionAvBand = histogram [L .. Q] . ((fractionalHours . availableTime) `vs` band)
+> sessionAvBand = histogram bandRange . ((fractionalHours . availableTime) `vs` band)
 
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
->     histogram bands . (effSchdMins `vs` (band . session . fst)) $ zip ps es
+>     histogram bandRange . (effSchdMins `vs` (band . session . fst)) $ zip ps es
 >   where 
->     bands = [L .. Q]
 >     effSchdMins (p, e) = e * (fractionalHours . duration $ p)
 
 > decVsElevation :: [Period] -> [(Float, Radians)]
 > decVsElevation ps = (dec . session) `vs` elevationFromZenith $ ps 
 
-> etaFn :: [(Frequency, Float)]
-> etaFn = [(f, minObservingEff f) | f <- [2.0 .. 60.0]]
+> --etaFn :: [(Frequency, Float)]
+> --etaFn = [(f, minObservingEff f) | f <- [2.0 .. 60.0]]
 
 > efficiencyVsFrequency :: [Session] -> [Float] -> [(Float, Float)]
 > efficiencyVsFrequency sessions =
@@ -369,13 +383,15 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >           | otherwise    = n
 
 > satisfactionRatio :: [Session] -> [Period] -> [(Float, Float, Float)]
-> satisfactionRatio ss ps = zip3 [1.0..50.0] sRatios sigmas
+> --satisfactionRatio ss ps = zip3 [1.0..50.0] sRatios sigmas
+> satisfactionRatio ss ps = zip3 freqs sRatios sigmas
 >   where 
 >     pMinutes   = map (fromIntegral . snd) (periodFreq ps) 
 >     sMinutes   = map (fromIntegral . snd) (sessionFreq ss)
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [killBad (x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
 >     sigmas     = [killBad (sqrt (x / y)) | (x, y) <- zip sRatios sMinutes]
+>     freqs      = tail freqRange
 
 > totalHrs      :: [Session] -> (Session -> Bool) -> Float
 > totalHrs ss f = fractionalHours . sum $ [sAllottedT s | s <- ss, f s]
@@ -394,7 +410,7 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 
 > bandPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > bandPressuresByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
->     map bandData [L .. Q]
+>     map bandData bandRange 
 >   where
 >     bandData band = [(fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
 >     fp    = getFreqPressureHistory trace -- [(array (L,W) [(L,9.850087), ..]]
@@ -410,7 +426,7 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 
 > bandPressureBinsByTime :: [Trace] -> [[(Float, (Int, Int))]]
 > bandPressureBinsByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
->     map bandData [L .. Q]
+>     map bandData bandRange
 >   where
 >     bandData band = [(fromIntegral x, y) | (x, y) <- zip days (getBandData band)]
 >     fp    = getFreqPressureBinHistory trace -- [(array (L,W) [(L,9.850087), ..]]
@@ -426,7 +442,7 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 
 > raPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > raPressuresByTime trace = 
->     map raData [0 .. 23]
+>     map (raData . round) raRange
 >   where
 >     raData ra = [(fromIntegral x, y) | (x, y) <- zip days (getRaData ra)]
 >     rap   = getRaPressureHistory trace
@@ -590,7 +606,7 @@ f is a function like mean', etc.
 
 > frequencyBins :: [Float]
 > frequencyBins =
->     [0.0, 2.0, 3.95, 5.85, 10.0, 15.4, 20.0, 24.0, 26.0, 30.0, 35.0, 40.0, 45.0, 50.0]
+>     [0.0, 2.0, 3.95, 5.85, 10.0, 15.4, 20.0, 24.0, 26.0, 30.0, 35.0, 40.0, 45.0, 50.0, 80.0, 85.0, 90.0, 95.0, 100.0, 105.0, 110.0, 115.0, 120.0]
 
 > promote   :: ([Session] -> t) -> [Period] -> t
 > promote f = f . map session

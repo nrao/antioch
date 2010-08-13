@@ -44,7 +44,8 @@ Here we are trying to reproduce subcompenents of the pressure calculations
 >   days = snd $ getPeriodRange ps
 >   ss = updateSessions ss' ps []
 >   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) [L .. Q]
+>   titles = map (\b -> (Just (show b))) bandRange
+
 
 simPastSemesterTime
 
@@ -64,16 +65,16 @@ simPastSemesterTime
 >   days = snd $ getPeriodRange ps
 >   ss = updateSessions ss' ps []
 >   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) [L .. Q]
+>   titles = map (\b -> (Just (show b))) bandRange 
 
 > sessionsByBand :: [Session] -> [[Session]]
-> sessionsByBand ss = map (ssBand ss) [L .. Q]
+> sessionsByBand ss = map (ssBand ss) bandRange
 >   where
 >     isBand bandName s = band s == bandName
 >     ssBand sess bandName = filter (isBand bandName) sess
 
 > periodsByBand :: [Period] -> [[Period]]
-> periodsByBand ps = map (psBand ps) [L .. Q]
+> periodsByBand ps = map (psBand ps) bandRange
 >   where
 >     isPBand bandName p = (band . session $ p) == bandName
 >     psBand periods bandName = filter (isPBand bandName) periods 
@@ -122,7 +123,7 @@ simFracBandTime
 >   days = snd $ getPeriodRange ps
 >   ssBands = sessionsByBand ss 
 >   psBands = periodsByBand ps 
->   titles = map (\b -> (Just (show b))) [L .. Q]
+>   titles = map (\b -> (Just (show b))) bandRange 
 
 simFracSemesterTime
 
@@ -172,6 +173,8 @@ tests.
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
+TBF: correct implementation of this plot in Phase One branch 
+
 stringency
 
 Stringency vs. Frequency @ 90 degress elevation
@@ -189,6 +192,8 @@ Stringency vs. Frequency @ 90 degress elevation
 >   xl = "Freq. (GHz)"
 >   yl = "Stringency"
 
+TBF: correct implementation of this plot in Phase One branch 
+
 minEffSysTemp
 
 minEffSysTemp vs. Frequency @ 90 degress elevation
@@ -197,7 +202,7 @@ minEffSysTemp vs. Frequency @ 90 degress elevation
 > plotMinEffSysTemp fn n _ _ _ = do
 >   w <- getWeather Nothing
 >   str <- mapM (mtsys w) freqs
->   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqs str
+>   let plotData = zipWith (\a b -> (a, (maybe 0.0 id b))) freqRange str
 >   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "min eff sys temp", plotData)]
 >     where
 >   freqs = [2 .. 50]
@@ -217,7 +222,9 @@ simDecFreq (stars, crosses)
 >     x   = "Frequency [GHz]"
 >     y   = "Declination [deg]"
 >     titles = [Just "Available", Just "Observed"]
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-40, 95)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange freqs, YRange decs]
+>     freqs = minMax freqRange
+>     decs  = (minMax (decRange ++ [95.0]))
 
 simDecRA (stars, crosses)
 
@@ -230,7 +237,7 @@ simDecRA (stars, crosses)
 >     x = "Right Ascension [hr]"
 >     y = "Declination [deg]"
 >     titles = [Just "Available", Just "Observed"]
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (-1, 25), YRange (-40, 95)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax raRange, YRange $ minMax decRange] 
 
 Efficiency Plots:
 
@@ -316,7 +323,7 @@ General purpose function for scatter plots of some kind of efficiency vs. freq
 >     scatterPlot attrs $ zip (historicalFreq ps) effs
 >   where
 >     x     = "Frequency [GHz]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
 
 simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
@@ -336,7 +343,7 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     t = "Observing Efficiency vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
 simTPFreq
 
@@ -355,17 +362,17 @@ simTPFreq
 >     t = "Telescope Period Length vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Telescope Period Length [Min]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)] --, YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 simMinObsEff - minimum observing efficiency (stand alone plot for now)
 
 > plotMinObsEff          :: StatsPlot
-> plotMinObsEff fn n _ _ _ = plotFunc attrs (linearScale 1000 (0, 50)) minObservingEff
+> plotMinObsEff fn n _ _ _ = plotFunc attrs (linearScale 1000 (minMax freqRange)) minObservingEff
 >   where
 >     t     = "Observing Efficiency vs Frequency" ++ n
 >     x     = "Frequency [GHz]"
 >     y     = "Observing Efficiency"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (minMax freqRange), YRange (-0.1, 1.1)]
 
 
 simTPVsFreq - this does not yet work
@@ -395,7 +402,7 @@ simFreqTime (circles, dt on x-axis)
 >     t = "Frequency vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Frequency [GHz]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
 
 > plotFreqVsTimeOpen         :: StatsPlot
 > plotFreqVsTimeOpen fn n ss ps tr = plotFreqVsTimeType Open fn n ss ps tr
@@ -413,7 +420,7 @@ simFreqTime (circles, dt on x-axis)
 >     t = "Freq vs Time for " ++ (show stype) ++ n
 >     x = "Time [days]"
 >     y = "Frequency [GHz]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
 >     ps' = filter (\p -> isType stype (session p)) ps
 
 > isType stype s = sType s == stype
@@ -431,7 +438,7 @@ simFreqSchTime (circles, dt on x-axis)
 >               , Just "Canceled"
 >               , Just "Backup"
 >               , Just "Scheduled Deadtime"]
->       attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
+>       attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
 >       ps' = [p | p <- ps, not . pBackup $ p]
 >       backups = [p | p <- ps, pBackup p]
 >       canceled = getCanceledPeriods trace
@@ -454,7 +461,7 @@ simSatisfyFreq (error bars)
 >     t = "Satisfaction Ratio vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Satisfaction Ratio"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 simEffElev
 
@@ -498,7 +505,7 @@ simElevDec
 >     t = "Dec vs Elevation" ++ n
 >     x = "Elevation [deg]"
 >     y = "Declination [deg]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-40, 95)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax decRange] 
 
 simPFLST - need pressure history
 
@@ -547,7 +554,7 @@ simScoreFreq
 >     t = "Score vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Score"
->     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (scatterAttrs t x y fn) ++ [XRange $ minMax freqRange]
 
 
 
@@ -560,7 +567,7 @@ simBandPFTime
 >     t = "Band Pressure Factor vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Factor"
->     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+>     titles = map (Just . show) bandRange 
 > 
 
 simBandPBinPastTime
@@ -575,7 +582,7 @@ simBandPBinPastTime
 >     t = "Band Pressure Past Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Past Bin"
->     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+>     titles = map (Just . show) bandRange 
 
 > plotBandPressureBinRemainingTime              :: StatsPlot
 > plotBandPressureBinRemainingTime fn n _ _ trace = do 
@@ -586,7 +593,7 @@ simBandPBinPastTime
 >     t = "Band Pressure Remainging Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Remainging Bin"
->     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+>     titles = map (Just . show) bandRange 
 
 > binsToPlotData :: [[(Float, (Int, Int))]] -> ((Int,Int) -> Int) -> [[(Float, Float)]]
 > binsToPlotData bins f = map (g f) bins
@@ -657,7 +664,7 @@ simHistEffHr
 >         pBand     = [((+1) . fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [((+1) . fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram" ++ n
->         x = "Band [L, S, C, X, U, K, A, Q]"
+>         x = "Band [" ++ (intercalate "," $ map show bandRange) ++ "]" --[L, S, C, X, U, K, A, Q]"
 >         y = "Counts [Scheduled Hours]"
 >         titles = [Just "Observed", Just "Obs * Eff"]
 
@@ -671,7 +678,7 @@ simHistFreq
 >     x = "Frequency [GHz]"
 >     y = "Counts [Hours]"
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
->     attrs = (histAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (histAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 
 simFracCanceledFreq
@@ -682,7 +689,7 @@ simFracCanceledFreq
 >     t = "Canceled/Scheduled by Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Canceled Hrs/Scheduled Hrs"
->     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 51), YRange (0, 0.5)]
+>     attrs = (tail $ histAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (0, 0.5)]
 
 simHistDec
 
@@ -740,6 +747,8 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780)]
 
 Utilities
+
+> minMax xs = (realToFrac $ minimum xs, realToFrac $ maximum xs)
 
 > getObservingEfficiency w p = do 
 >     let now' = pForecast p
