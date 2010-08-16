@@ -153,6 +153,24 @@ simFracSemesterTime
 >   psSemesters = map (psSemester ps) semesters
 >   titles = map (\b -> (Just (show b))) semesters
 
+We want to visualize the DSS receiver temps. because they will originally 
+be averages of what we can see in rcvrCalView, but then also we can
+make changes to them.
+
+> plotRcvrTemps :: IO ()
+> plotRcvrTemps = do
+>   rt <- getReceiverTemperatures
+>   rts' <- mapM (temperatures rt) rcvrs 
+>   result <- mapM plt $ zip rts' rcvrs
+>   print result
+>     where
+>       rcvrs = [Rcvr_RRI .. RcvrArray18_26]
+>       plt (rts, rcvr) = linePlots (tail $ scatterAttrs (title rcvr) xl yl (fn rcvr)) [(Just . show $ rcvr, rts)] 
+>       title r = "Rcvr Temps for " ++ (show r)
+>       xl = "Frequency (GHz)"
+>       yl = "Temperature (K)"
+>       fn r = (show r) ++ "Temp.png"
+
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
 the graph produced by CLEO forecasts, requesting 'Ground Speed', just sites
