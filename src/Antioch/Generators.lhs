@@ -183,6 +183,7 @@ Method for producing a generic Open Session.
 >     -- TBF: first generatre rcvr, then have everything else follow.
 >     --r          <- genRcvr t
 >     --let b      = receiver2Band r
+>     --f          <- genFreq' r
 >     b          <- genBand t
 >     let r      = band2Receiver b
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
@@ -539,9 +540,17 @@ TBF: other bands & rcvrs
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
 
-TBF: other bands & rcvrs
 
 > receiver2Band :: Receiver -> Band
+> -- TBF: when it's safe to add P band
+> {-
+> receiver2Band Rcvr_RRI = P
+> receiver2Band Rcvr_342 = P
+> receiver2Band Rcvr_450 = P
+> receiver2Band Rcvr_600 = P
+> receiver2Band Rcvr_800 = P
+> -}
+> receiver2Band Rcvr_1070 = L
 > receiver2Band Rcvr1_2 = L
 > receiver2Band Rcvr2_3 = S
 > receiver2Band Rcvr4_6 = C
@@ -550,10 +559,20 @@ TBF: other bands & rcvrs
 > receiver2Band Rcvr18_26 = K -- Rcvr18_22 -- Need Rcvr22_26
 > receiver2Band Rcvr26_40 = A
 > receiver2Band Rcvr40_52 = Q
+> receiver2Band Rcvr_PAR = W
+> receiver2Band Holography = U
+> receiver2Band RcvrArray18_26 = K 
 
-TBF: other bands & rcvrs
+This 'code' is only of use in the 'genRcvr' method, where we simply
+need a one character code to identity each receiver
 
 > code2Receiver :: String -> Receiver
+> code2Receiver "R" = Rcvr_RRI 
+> code2Receiver "3" = Rcvr_342 
+> code2Receiver "4" = Rcvr_450 
+> code2Receiver "6" = Rcvr_600 
+> code2Receiver "8" = Rcvr_800
+> code2Receiver "1" = Rcvr_1070
 > code2Receiver "L" = Rcvr1_2
 > code2Receiver "S" = Rcvr2_3
 > code2Receiver "C" = Rcvr4_6
@@ -562,7 +581,9 @@ TBF: other bands & rcvrs
 > code2Receiver "K" = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
 > code2Receiver "A" = Rcvr26_40
 > code2Receiver "Q" = Rcvr40_52
-> -- TBF: all the other receivers!
+> code2Receiver "W" = Rcvr_PAR
+> code2Receiver "H" = Holography
+> code2Receiver "F" = RcvrArray18_26
 
 TBF: other bands? ex: below L?
 
@@ -585,11 +606,22 @@ TBF: other receivers? ex: PF's, MBA, etc...
 >             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
 >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]
+> {-
+>     bands = [ "R34681WHFKKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
+>             , "R34681WHFKKKQQAAXUCCSSLLLLLLL"  -- 1
+>             , "R34681WHFKQQAXUCSLLLLLLLLLLLL"  -- 2
+>             , "R34681WHFKKQQAAAXXUCCSLLLLLLL"  -- 3
+>             ]
+> -}
 
+Generate frequency by Band.
 Assume we are observing the water line 40% of the time.
 
 > genFreq   :: Band -> Gen Float
 > genFreq K = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> -- TBF: when it's safe to add P band
+> --genFreq P = choose ( 0.35, 1.0) 
+> --genFreq L = choose ( 1.0,  2.0)
 > genFreq L = return 2.0
 > genFreq S = choose ( 2.0,  3.95)
 > genFreq C = choose ( 3.95, 5.85)
@@ -597,6 +629,30 @@ Assume we are observing the water line 40% of the time.
 > genFreq U = choose (12.0, 15.4)
 > genFreq A = choose (26.0, 40.0)
 > genFreq Q = choose (40.0, 50.0)
+> --genFreq W = choose (80.0, 100.0)
+
+Generate frequency by Receiver.
+
+> genFreq' :: Receiver -> Gen Float
+> genFreq' Rcvr18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq' RcvrArray18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq' Rcvr_RRI  = choose (0.1 , 1.6) 
+> genFreq' Rcvr_342  = choose (0.29 ,0.395) 
+> genFreq' Rcvr_450  = choose (0.385, 0.52) 
+> genFreq' Rcvr_600  = choose (0.51 , 0.69) 
+> genFreq' Rcvr_800  = choose (0.68 , 0.92) 
+> genFreq' Rcvr_1070 = choose (0.91, 1.23) 
+> genFreq' Rcvr1_2   = choose ( 1.0,  2.0)
+> genFreq' Rcvr2_3   = choose ( 2.0,  3.95)
+> genFreq' Rcvr4_6   = choose ( 3.95, 5.85)
+> genFreq' Rcvr8_10  = choose ( 8.0, 10.0)
+> genFreq' Rcvr12_18 = choose (12.0, 15.4)
+> genFreq' Rcvr26_40 = choose (26.0, 40.0)
+> genFreq' Rcvr40_52 = choose (40.0, 50.0)
+> genFreq' Rcvr_PAR  = choose (80.0, 100.0)
+> genFreq' Holography = choose (11.7, 12.2)
+
+
 
 > generate' f = do
 >     g <- getStdGen
