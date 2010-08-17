@@ -22,7 +22,7 @@
 > import Test.QuickCheck    (generate, choose)
 
 > freqRange :: [Float]
-> freqRange = [0.0..50.0] --TBF: 120.0]
+> freqRange = [1.0..50.0] --TBF: 120.0]
 
 > raRange :: [Float]
 > raRange = [0..24]
@@ -31,7 +31,7 @@
 > decRange = [-40..90]
 
 > bandRange :: [Band]
-> bandRange = [L .. Q] --TBF: W]
+> bandRange = [L .. Q] --TBF: [P .. W]
 
 To Do List (port from Statistics.py):
 
@@ -391,7 +391,7 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 >     totalRatio = ratio pMinutes sMinutes
 >     sRatios    = [killBad (x / y / totalRatio) | (x, y) <- zip pMinutes sMinutes]
 >     sigmas     = [killBad (sqrt (x / y)) | (x, y) <- zip sRatios sMinutes]
->     freqs      = tail freqRange
+>     freqs      = freqRange
 
 > totalHrs      :: [Session] -> (Session -> Bool) -> Float
 > totalHrs ss f = fractionalHours . sum $ [sAllottedT s | s <- ss, f s]
