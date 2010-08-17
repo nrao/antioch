@@ -994,7 +994,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
 >   where
 >     heading = "Simulation By Semester and Band: \n"
->     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
+>     bands = concatMap (flip (++) "         ") $ map show bandRange
+>     hdr = printf "%s      %s\n" "Type" bands
+>     --hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
 >     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterBandHrs ss ps) semesters
 
@@ -1034,7 +1036,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     heading ++ "    " ++ intercalate "    " [hdr, l1, l2]
 >   where
 >     heading = "Simulation By Band: \n"
->     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
+>     bands = concatMap (flip (++) "         ") $ map show bandRange
+>     hdr = printf "%s      %s\n" "Type" bands
 >     sessBandTimes = sessionBand ss
 >     periodBandTimes = periodBand ps
 >     l1 = "Sessions: " ++ toStr sessBandTimes
@@ -1047,7 +1050,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     semStr = printf "%-7s : " sem
 >     bandStrs = map (printf "%-9.2f ") bandSemHrs
->     bandSemHrs = map (bandSemHrs' ss) [L .. Q]
+>     bandSemHrs = map (bandSemHrs' ss) bandRange 
 >     bandSemHrs' sess b = totalHrs sess $ isInSemesterAndBand sem b
 >     isInSemesterAndBand semester b s = (isInSemester s semester) && (band s == b)
 
