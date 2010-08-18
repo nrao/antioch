@@ -456,7 +456,6 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 > getMinTSysPrime :: IORef (M.Map (Int, Int, String) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
 > getMinTSysPrime cache conn frequency elevation rcvr = do
 >     result <- withCache key cache $ fetchMinTSysPrime conn freqIdx elevIdx rcvr 
->     rcvrId <- getRcvrId conn rcvr
 >     return result
 >   where
 >     freqIdx = freq2HistoryIndex rcvr frequency

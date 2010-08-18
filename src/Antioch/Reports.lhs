@@ -196,6 +196,16 @@ hours offset vs. raw wind speed
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
+> plotHistoricalWeather :: IO ()
+> plotHistoricalWeather = do
+>     plotStringencyVsFrequencySpecLine
+>     plotStringencyVsFrequencyCont
+>     plotTrackObsEff
+>     plotStringencyVsFrequencyElev
+>     plotMinEffSysTemp
+>     plotAvgObservingEff
+>     plotRcvrTemps -- not really historical weather, but what the hey!
+
 Stringency versus frequency for elevation = 90 deg, all receivers,
 and both obs types.
 
