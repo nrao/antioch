@@ -82,7 +82,7 @@ year's worth of weather is in the database, by modifiying the date.
 
 > getWeatherSafe, getWeatherSafeTest :: DateTime -> IO Weather
 
-> getWeatherSafe = getWeather' . Just -- dateSafe 
+> getWeatherSafe = getWeather' . Just . dateSafe 
 
 > getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
@@ -92,7 +92,7 @@ However, we are importing the latest weather forecasts into this DB,
 so we've deprecated 'dateSafe'.
 
 > dateSafe :: DateTime -> DateTime
-> dateSafe dt = if (year == 2006) then dt else replaceYear 2006 dt
+> dateSafe dt = dt -- if (year == 2006) then dt else replaceYear 2006 dt
 >   where
 >     (year, _, _, _, _, _) = toGregorian dt
 > -- TBF: do this when you have more then one year:
