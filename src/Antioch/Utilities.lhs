@@ -132,20 +132,6 @@ Frequency in GHz (float) to MHz (integer) 100 to 120,000 (sparsely)
 >     mhz = round . (*1000.0) $ ghz
 >     rr  = getRcvrFreqIndices r
 
-> {-
-> freq2HistoryIndex' :: Frequency -> Int
-> freq2HistoryIndex' freq = min 120000 . max 100 $ f -- . round . (*1000.0) 
->   where
->     -- ex: 0.256 GHz -> 200 MHz
->     f | freq < 1.0   = (*100) . round . (*10) $ freq 
->       | otherwise = (*1000) . round $ freq 
-
-> freq2HistoryIndex f = if f' > 52000 && odd' f' then f' + 1000 else f'
->   where
->     f' = freq2HistoryIndex' f
->     odd' = odd . round . (/1000) . fromIntegral
-> -}
-
 Find the y in yys closest, lowest, or highest relative to x,
 note no guard against yys == [].
 

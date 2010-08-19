@@ -66,7 +66,7 @@ Is the given frequency in the range of the given receiver?
 >                              rcvrTemps <- temperatures rt rcvr'
 >                              temp <- temperature rt rcvr' freq rcvrTemps
 >                              return $ (Just temp)
-> -- substitue this function def to try and improve performance
+> -- substitute this function def to try and improve performance
 > --getReceiverTemperature rt rcvr freq = getReceiverTemperatureCache rt rcvr freq
 
 
