@@ -46,9 +46,7 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 Note: some of the bands specified below are simply for our own purposes,
 such as: P
 
-TBF: add band 'P' to the top of this list when ready 
-
-> data Band = L | S | C | X | U | K | A | Q | W
+> data Band = P | L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)

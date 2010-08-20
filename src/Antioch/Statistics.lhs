@@ -23,7 +23,7 @@
 > import Test.QuickCheck    (generate, choose)
 
 > freqRange :: [Float]
-> freqRange = [1.0..50.0] --TBF: 120.0]
+> freqRange = [0.0..120.0] 
 
 > raRange :: [Float]
 > raRange = [0..24]
@@ -32,7 +32,7 @@
 > decRange = [-40..90]
 
 > bandRange :: [Band]
-> bandRange = [L .. Q] --TBF: [P .. W]
+> bandRange = [P .. W]
 
 To Do List (port from Statistics.py):
 

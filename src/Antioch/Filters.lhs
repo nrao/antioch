@@ -127,7 +127,8 @@ scheduled.
 
 > schedulableCriteria :: [SelectionCriteria]
 > schedulableCriteria = [
->         hasTimeSchedulable
+>         isTypeOpen -- TBF: in simulations only!
+>       , hasTimeSchedulable
 >       , isNotComplete
 >       , isApproved
 >       , hasObservers

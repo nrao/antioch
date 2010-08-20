@@ -150,7 +150,7 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 > test_initBins2 = TestCase $ do
 >     assertEqual "test_initBins2" expected result
 >   where
->     expected  = [(1920,840),(0,0),(1080,480)
+>     expected  = [(0,0),(1920,840),(0,0),(1080,480)
 >                 ,(600,300),(0,0),(0,0)
 >                 ,(0,0),(0,0),(0,0)]
 >     result    = elems $ initBins startTime (minBound, maxBound) band pSessions

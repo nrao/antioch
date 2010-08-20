@@ -180,14 +180,11 @@ Method for producing a generic Open Session.
 > genSession = do
 >     project    <- genProject
 >     t          <- genSemester
->     -- TBF: first generatre rcvr, then have everything else follow.
->     --r          <- genRcvr t
->     --let b      = receiver2Band r
->     --f          <- genFreq' r
->     b          <- genBand t
->     let r      = band2Receiver b
+>     -- first generatre rcvr, then have everything else follow.
+>     r          <- genRcvr t
+>     let b      = receiver2Band r
+>     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -231,13 +228,11 @@ differ from Open ones is TBD.
 > genSessionFixed = do
 >     project    <- genProject
 >     t          <- genSemester
->     -- TBF: first generatre rcvr, then have everything else follow.
->     --r          <- genRcvr t
->     --let b      = receiver2Band r
->     b          <- genBand t
->     let r      = band2Receiver b
+>     -- first generatre rcvr, then have everything else follow.
+>     r          <- genRcvr t
+>     let b      = receiver2Band r
+>     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -281,13 +276,11 @@ differ from Open ones is TBD.
 > genSessionWindowed = do
 >     project    <- genProject
 >     t          <- genSemester
->     -- TBF: first generatre rcvr, then have everything else follow.
->     --r          <- genRcvr t
->     --let b      = receiver2Band r
->     b          <- genBand t
->     let r      = band2Receiver b
+>     -- first generatre rcvr, then have everything else follow.
+>     r          <- genRcvr t
+>     let b      = receiver2Band r
+>     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -529,7 +522,7 @@ Q      80     5.3%     3.2   6
 > genGrade :: [Grade] -> Gen Grade
 > genGrade = elements
 
-TBF: other bands & rcvrs
+Deprecated: now we specify the band from the receiver.
 
 > band2Receiver :: Band -> Receiver
 > band2Receiver L = Rcvr1_2
@@ -546,21 +539,18 @@ TBF: other bands & rcvrs
 
 
 > receiver2Band :: Receiver -> Band
-> -- TBF: when it's safe to add P band
-> {-
 > receiver2Band Rcvr_RRI = P
 > receiver2Band Rcvr_342 = P
 > receiver2Band Rcvr_450 = P
 > receiver2Band Rcvr_600 = P
 > receiver2Band Rcvr_800 = P
-> -}
 > receiver2Band Rcvr_1070 = L
 > receiver2Band Rcvr1_2 = L
 > receiver2Band Rcvr2_3 = S
 > receiver2Band Rcvr4_6 = C
 > receiver2Band Rcvr8_10 = X
 > receiver2Band Rcvr12_18 = U
-> receiver2Band Rcvr18_26 = K -- Rcvr18_22 -- Need Rcvr22_26
+> receiver2Band Rcvr18_26 = K 
 > receiver2Band Rcvr26_40 = A
 > receiver2Band Rcvr40_52 = Q
 > receiver2Band Rcvr_PAR = W
@@ -582,14 +572,14 @@ need a one character code to identity each receiver
 > code2Receiver "C" = Rcvr4_6
 > code2Receiver "X" = Rcvr8_10
 > code2Receiver "U" = Rcvr12_18
-> code2Receiver "K" = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
+> code2Receiver "K" = Rcvr18_26 
 > code2Receiver "A" = Rcvr26_40
 > code2Receiver "Q" = Rcvr40_52
 > code2Receiver "W" = Rcvr_PAR
 > code2Receiver "H" = Holography
 > code2Receiver "F" = RcvrArray18_26
 
-TBF: other bands? ex: below L?
+Deprecated: now we specifiy the band from the receiver
 
 > genBand     :: Int -> Gen Band
 > genBand sem = fmap (read . str) . elements $ bands !! sem
@@ -600,40 +590,32 @@ TBF: other bands? ex: below L?
 >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]
 
-TBF: other receivers? ex: PF's, MBA, etc...
+TBF: the below distribution of receivers is arbitrary, and runs across
+all frequencies for demo purposes only.  Dana needs to specify this.
 
 > genRcvr :: Int -> Gen Receiver
 > genRcvr sem = fmap (code2Receiver . str) . elements $ bands !! sem 
 >   where
->     bands = [ "KKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
->             , "KKKQQAAXUCCSSLLLLLLL"  -- 1
->             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
->             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
+>     bands = [ "R34681WKKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
+>             , "R34681WKKKQQAAXUCCSSLLLLLLL"  -- 1
+>             , "R34681WKQQAXUCSLLLLLLLLLLLL"  -- 2
+>             , "R34681WKKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]
-> {-
->     bands = [ "R34681WHFKKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
->             , "R34681WHFKKKQQAAXUCCSSLLLLLLL"  -- 1
->             , "R34681WHFKQQAXUCSLLLLLLLLLLLL"  -- 2
->             , "R34681WHFKKQQAAAXXUCCSLLLLLLL"  -- 3
->             ]
-> -}
 
 Generate frequency by Band.
 Assume we are observing the water line 40% of the time.
 
 > genFreq   :: Band -> Gen Float
 > genFreq K = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
-> -- TBF: when it's safe to add P band
-> --genFreq P = choose ( 0.35, 1.0) 
-> --genFreq L = choose ( 1.0,  2.0)
-> genFreq L = return 2.0
+> genFreq P = choose ( 0.35, 1.0) 
+> genFreq L = choose ( 1.0,  2.0)
 > genFreq S = choose ( 2.0,  3.95)
 > genFreq C = choose ( 3.95, 5.85)
 > genFreq X = choose ( 8.0, 10.0)
 > genFreq U = choose (12.0, 15.4)
 > genFreq A = choose (26.0, 40.0)
 > genFreq Q = choose (40.0, 50.0)
-> --genFreq W = choose (80.0, 100.0)
+> genFreq W = choose (80.0, 100.0)
 
 Generate frequency by Receiver.
 

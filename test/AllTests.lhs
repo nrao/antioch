@@ -25,7 +25,6 @@
 >   , DateTimeT.tests
 >   , DebugT.tests
 >   , DSSDataT.tests
->   , GeneratorT.tests
 >   , HardwareScheduleT.tests
 >   , ScoreT.tests
 >   , SLAlibT.tests
@@ -33,12 +32,13 @@
 >   , PackT.tests
 >   , ReceiverT.tests
 >   , ReceiverTempT.tests
->   , ReportT.tests
 >   , ReservationsT.tests
->   , SimsT.tests
 >   , TimeAccountingT.tests
 >   , UtilitiesT.tests
 >   , WeatherT.tests
+>   , GeneratorT.tests
+>   , ReportT.tests
+>   , SimsT.tests  -- place longer tests at the end
 >   ]
 
 > main = do
