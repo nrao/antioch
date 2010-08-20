@@ -24,6 +24,7 @@
 >                 , test_genSimTime
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
+>                 , test_genWindows
 >                 , test_genWeeklyMaintPeriods]
 
 > test_genSimTime = TestCase $ do
@@ -285,3 +286,19 @@
 >     hrs = 100
 >     schd = createSummerMaintenance 2006 defaultSession
 
+> test_genWindows = TestCase $ do
+>     let g = mkStdGen 1
+>     let ps = map mkPeriod dts
+>     let wins = generate 0 g $ genWindows ps
+>     let allPsInAWin = all (\(w, p) -> inWindow (startTime p) w) $ zip wins ps
+>     assertEqual "test_genWindows_1" True allPsInAWin
+>     -- make sure each period is only in one window
+>     let allInOne = all (==True) $ map (inJustOneWindow wins) ps
+>     assertEqual "test_genWindows_2" True allInOne
+>   where
+>     start = fromGregorian 2006 2 10 5 30 0
+>     psWidth = 30*24*60 -- days in minutes
+>     numPs = 5
+>     dts = [ addMinutes' (i*psWidth) start | i <- [0..numPs]]
+>     mkPeriod dt = defaultPeriod { startTime = dt, pDuration = 60 }
+>     inJustOneWindow ws p = 1 == (length $ filter (==True) $ map (inWindow $ startTime p) ws)

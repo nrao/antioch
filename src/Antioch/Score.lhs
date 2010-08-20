@@ -603,13 +603,8 @@ up, all the time.
 > inWindows :: DateTime -> (Session -> [Window]) -> Session -> Score
 > inWindows dt f s
 >       | sType s == Open           = 1.0
->       | any inWindow . f $ s      = 1.0
+>       | any (inWindow dt) $ f s      = 1.0
 >       | otherwise                 = 0.0
->   where
->     inWindow w = (wStart w) <= dt && dt <= (wEnd w)
->     -- window ends 1 minute before midnight of the last day
->     wEnd w = (wLength w) `addMinutes` (wStart w)
->     wLength w = (wDuration w) + ((60 * 24) - 1)
 
 > availWindows :: Session -> [Window]
 > availWindows = filter (not . wHasChosen) . windows

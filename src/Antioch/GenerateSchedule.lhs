@@ -189,10 +189,29 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >                , ra = 0.0
 >                , dec = 1.5 -- TBF: this is just always up
 >                }
->   -- TBF: do we really need to create windows for this?
->   let s = makeSession s' [] wp
+>   ws <- genWindows wp
+>   let s = makeSession s' ws wp
 >   return $ makeProject proj' total total [s]
 
+From an evenly spaced list of periods, create the list of windows
+
+> genWindows :: [Period] -> Gen [Window]
+> genWindows (p1:ps) = do
+>     let minWidth = 0
+>     -- a window can't be more then one day less then the separation between
+>     -- the periods.
+>     let maxWidth = pDiff - (24*60) 
+>     -- TBF 
+>     dur <- choose (maxWidth `div` 2, maxWidth)
+>     let (p1Year, p1Month, p1Day, _, _, _) = toGregorian . startTime $ p1
+>     let dayStart = fromGregorian p1Year p1Month p1Day 0 0 0
+>     let dts = [ addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
+>     return $ map (mkWindow dur) dts
+>   where
+>     pDiff = diffMinutes' (startTime . head $ ps) (startTime p1)
+>     numPs = length (p1:ps)
+>     mkWindow dur dt = defaultWindow { wStart = dt
+>                                     , wDuration = dur }
 
 Creates a maintenance project with a year's worth of pre-scheduled periods
 reflecting a realistic maintenance schedule.
