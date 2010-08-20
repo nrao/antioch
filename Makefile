@@ -1,16 +1,16 @@
-all: simulate serve 
+all:simulate serve genhist 
 
-simulate: src/Antioch/*.lhs
-	#ghc -o simulate --make src/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -prof -auto-all
-	ghc -o simulate --make src/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+simulate: FORCE
+	#ghc -o simulate --make src/Simulate.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -prof -auto-all
+	ghc -o simulate --make src/Simulate.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
-serve:
-	ghc -o serve --make src/Server/Main.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+serve: FORCE
+	ghc -o serve --make src/Server/Main.lhs -isrc -isrc/Antioch -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
-force:
-	touch src/Main.lhs
-	touch src/Server/Main.lhs
-	make
+genhist: FORCE
+	ghc -o genhist --make src/GenHistory.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+
+FORCE:
 
 run:
 	./simulate
@@ -29,3 +29,4 @@ clean:
 clobber: clean
 	$(RM) serve
 	$(RM) simulate
+	$(RM) genhist
