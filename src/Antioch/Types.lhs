@@ -43,6 +43,11 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 
 > type ReceiverGroup = [Receiver]
 
+Note: some of the bands specified below are simply for our own purposes,
+such as: P
+
+TBF: add band 'P' to the top of this list when ready 
+
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
