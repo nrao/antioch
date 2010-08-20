@@ -3,6 +3,9 @@ from WeatherData     import WeatherData
 from PyrgeometerData import PyrgeometerData
 import pg
 
+if __name__ == "__main__":
+    import sys
+
 class Weather2DBImport:
     """
     This class contains logic to populate the weather database with
@@ -49,22 +52,26 @@ class Weather2DBImport:
         """
         Inserts a row of data into the weather table.
         """
-        if wind is None:
-            query = """
-                    INSERT INTO gbt_weather (weather_date_id,irradiance)
-                    VALUES (%s, %s)
-                    """ % (weatherDateId, irradiance)
-        elif irradiance is None:
-            query = """
-                    INSERT INTO gbt_weather (weather_date_id,wind_speed)
-                    VALUES (%s, %s)
-                    """ % (weatherDateId, wind)
-        else:
+        # handle missing data - put in what you can
+        windOK = wind and wind == wind
+        irradianceOK = irradiance and irradiance == irradiance
+        if windOK and irradianceOK:
             query = """
                     INSERT INTO gbt_weather (weather_date_id,wind_speed,irradiance)
                     VALUES (%s, %s, %s)
                     """ % (weatherDateId, wind, irradiance)
-        self.c.query(query)
+        elif windOK and not irradianceOK:
+            query = """
+                    INSERT INTO gbt_weather (weather_date_id,wind_speed)
+                    VALUES (%s, %s)
+                    """ % (weatherDateId, wind)
+        elif not windOK and irradianceOK:
+            query = """
+                    INSERT INTO gbt_weather (weather_date_id,irradiance)
+                    VALUES (%s, %s)
+                    """ % (weatherDateId, irradiance)
+        if windOK or irradianceOK:
+            self.c.query(query)
 
     def update(self):
         """
@@ -117,7 +124,7 @@ class Weather2DBImport:
             dt = datetime.strptime(dtStr, "%Y-%m-%d %H:%M:%S")
             v = callback(dt)
             # watch for NaN values
-            if v and v.__str__() != "nan":
+            if v and v == v:
                 results.append((id, dtStr, v))
                 self.updateRow(id, column, v)
         return results 
@@ -181,3 +188,7 @@ class Weather2DBImport:
             print dt, wind, di
             self.insert(dtId, wind, di)
 
+if __name__ == "__main__":
+    print "Reading gbt weather data for database", sys.argv[1]
+    w = Weather2DBImport(sys.argv[1])
+    w.update()

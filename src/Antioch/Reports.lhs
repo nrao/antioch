@@ -47,7 +47,8 @@ Here we are trying to reproduce subcompenents of the pressure calculations
 >   days = snd $ getPeriodRange ps
 >   ss = updateSessions ss' ps []
 >   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) [L .. Q]
+>   titles = map (\b -> (Just (show b))) bandRange
+
 
 simPastSemesterTime
 
@@ -67,16 +68,16 @@ simPastSemesterTime
 >   days = snd $ getPeriodRange ps
 >   ss = updateSessions ss' ps []
 >   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) [L .. Q]
+>   titles = map (\b -> (Just (show b))) bandRange 
 
 > sessionsByBand :: [Session] -> [[Session]]
-> sessionsByBand ss = map (ssBand ss) [L .. Q]
+> sessionsByBand ss = map (ssBand ss) bandRange
 >   where
 >     isBand bandName s = band s == bandName
 >     ssBand sess bandName = filter (isBand bandName) sess
 
 > periodsByBand :: [Period] -> [[Period]]
-> periodsByBand ps = map (psBand ps) [L .. Q]
+> periodsByBand ps = map (psBand ps) bandRange
 >   where
 >     isPBand bandName p = (band . session $ p) == bandName
 >     psBand periods bandName = filter (isPBand bandName) periods 
@@ -125,7 +126,7 @@ simFracBandTime
 >   days = snd $ getPeriodRange ps
 >   ssBands = sessionsByBand ss 
 >   psBands = periodsByBand ps 
->   titles = map (\b -> (Just (show b))) [L .. Q]
+>   titles = map (\b -> (Just (show b))) bandRange 
 
 simFracSemesterTime
 
@@ -341,7 +342,9 @@ simDecFreq (stars, crosses)
 >     x   = "Frequency [GHz]"
 >     y   = "Declination [deg]"
 >     titles = [Just "Available", Just "Observed"]
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-40, 95)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange freqs, YRange decs]
+>     freqs = minMax freqRange
+>     decs  = (minMax (decRange ++ [95.0]))
 
 simDecRA (stars, crosses)
 
@@ -354,7 +357,7 @@ simDecRA (stars, crosses)
 >     x = "Right Ascension [hr]"
 >     y = "Declination [deg]"
 >     titles = [Just "Available", Just "Observed"]
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (-1, 25), YRange (-40, 95)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax raRange, YRange $ minMax decRange] 
 
 Efficiency Plots:
 
@@ -370,6 +373,17 @@ the period was scheduled, because the Pack algorithm ignores the first quarter.
    * simSchdMeanSrfFreq - Surface Efficiency
    * simSchdMeanTrkFreq - Tracking Efficiency
 simMeanObsEff - this plot shows the error bars for simSchdMeanEffFreq   
+
+Separate plots for the mean scheduled observing efficiency, by plot:
+
+> plotMeanObsEffVsFreqOpen fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Open
+> plotMeanObsEffVsFreqFixed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Fixed
+> plotMeanObsEffVsFreqWindowed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Windowed
+
+> plotMeanObsEffVsFreqByType fn n ss ps tr stype = plotMeanObsEffVsFreq fn n ss' ps' tr
+>   where
+>     ss' = filter (isType stype) ss
+>     ps' = filter (isTypePeriod stype) ps
 
 simSchdMeanEffFreq
 error bars done separately in simMeanObsEff
@@ -429,7 +443,7 @@ General purpose function for scatter plots of some kind of efficiency vs. freq
 >     scatterPlot attrs $ zip (historicalFreq ps) effs
 >   where
 >     x     = "Frequency [GHz]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
 
 simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
@@ -449,7 +463,7 @@ simMeanEffVsFreq - errorbar plot of efficiencies (stand alone plot for now)
 >     t = "Observing Efficiency vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Observing Efficiency"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
 simTPFreq
 
@@ -468,17 +482,17 @@ simTPFreq
 >     t = "Telescope Period Length vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Telescope Period Length [Min]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)] --, YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 simMinObsEff - minimum observing efficiency (stand alone plot for now)
 
 > plotMinObsEff          :: StatsPlot
-> plotMinObsEff fn n _ _ _ = plotFunc attrs (linearScale 1000 (0, 50)) minObservingEff
+> plotMinObsEff fn n _ _ _ = plotFunc attrs (linearScale 1000 (minMax freqRange)) minObservingEff
 >   where
 >     t     = "Observing Efficiency vs Frequency" ++ n
 >     x     = "Frequency [GHz]"
 >     y     = "Observing Efficiency"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51), YRange (-0.1, 1.1)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (minMax freqRange), YRange (-0.1, 1.1)]
 
 
 simTPVsFreq - this does not yet work
@@ -508,7 +522,29 @@ simFreqTime (circles, dt on x-axis)
 >     t = "Frequency vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Frequency [GHz]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
+
+> plotFreqVsTimeOpen         :: StatsPlot
+> plotFreqVsTimeOpen fn n ss ps tr = plotFreqVsTimeType Open fn n ss ps tr
+
+> plotFreqVsTimeFixed         :: StatsPlot
+> plotFreqVsTimeFixed fn n ss ps tr = plotFreqVsTimeType Fixed fn n ss ps tr
+
+> plotFreqVsTimeWindowed         :: StatsPlot
+> plotFreqVsTimeWindowed fn n ss ps tr = plotFreqVsTimeType Windowed fn n ss ps tr
+
+> --plotFreqVsTimeType 
+> plotFreqVsTimeType stype fn n _ ps _ =
+>     scatterPlot attrs $ zip (map fromIntegral $ historicalTime' ps') (historicalFreq ps')
+>   where
+>     t = "Freq vs Time for " ++ (show stype) ++ n
+>     x = "Time [days]"
+>     y = "Frequency [GHz]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
+>     ps' = filter (\p -> isType stype (session p)) ps
+
+> isType stype s = sType s == stype
+> isTypePeriod stype p = (sType . session $ p) == stype
 
 Same as above, but with scheduled periods, plus with backups & cancellations
 simFreqSchTime (circles, dt on x-axis)
@@ -522,7 +558,7 @@ simFreqSchTime (circles, dt on x-axis)
 >               , Just "Canceled"
 >               , Just "Backup"
 >               , Just "Scheduled Deadtime"]
->       attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (0, 51)]
+>       attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
 >       ps' = [p | p <- ps, not . pBackup $ p]
 >       backups = [p | p <- ps, pBackup p]
 >       canceled = getCanceledPeriods trace
@@ -545,7 +581,7 @@ simSatisfyFreq (error bars)
 >     t = "Satisfaction Ratio vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Satisfaction Ratio"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 simEffElev
 
@@ -589,7 +625,7 @@ simElevDec
 >     t = "Dec vs Elevation" ++ n
 >     x = "Elevation [deg]"
 >     y = "Declination [deg]"
->     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-40, 95)]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax decRange] 
 
 simPFLST - need pressure history
 
@@ -638,7 +674,7 @@ simScoreFreq
 >     t = "Score vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Score"
->     attrs = (scatterAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (scatterAttrs t x y fn) ++ [XRange $ minMax freqRange]
 
 
 
@@ -651,7 +687,7 @@ simBandPFTime
 >     t = "Band Pressure Factor vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Factor"
->     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+>     titles = map (Just . show) bandRange 
 > 
 
 simBandPBinPastTime
@@ -666,7 +702,7 @@ simBandPBinPastTime
 >     t = "Band Pressure Past Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Past Bin"
->     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+>     titles = map (Just . show) bandRange 
 
 > plotBandPressureBinRemainingTime              :: StatsPlot
 > plotBandPressureBinRemainingTime fn n _ _ trace = do 
@@ -677,7 +713,7 @@ simBandPBinPastTime
 >     t = "Band Pressure Remainging Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Remainging Bin"
->     titles = [Just "L", Just "S", Just "C", Just "X", Just "U", Just "K", Just "A", Just "Q"]
+>     titles = map (Just . show) bandRange 
 
 > binsToPlotData :: [[(Float, (Int, Int))]] -> ((Int,Int) -> Int) -> [[(Float, Float)]]
 > binsToPlotData bins f = map (g f) bins
@@ -748,7 +784,7 @@ simHistEffHr
 >         pBand     = [((+1) . fromIntegral . fromEnum $ b, d) | (b, d) <- periodBand ps]
 >         effByBand = [((+1) . fromIntegral . fromEnum $ b, e) | (b, e) <- periodEfficiencyByBand ps effs]
 >         t = "Hours by Band Histogram" ++ n
->         x = "Band [L, S, C, X, U, K, A, Q]"
+>         x = "Band [" ++ (intercalate "," $ map show bandRange) ++ "]" --[L, S, C, X, U, K, A, Q]"
 >         y = "Counts [Scheduled Hours]"
 >         titles = [Just "Observed", Just "Obs * Eff"]
 
@@ -762,7 +798,7 @@ simHistFreq
 >     x = "Frequency [GHz]"
 >     y = "Counts [Hours]"
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
->     attrs = (histAttrs t x y fn) ++ [XRange (0, 51)]
+>     attrs = (histAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 
 simFracCanceledFreq
@@ -773,7 +809,7 @@ simFracCanceledFreq
 >     t = "Canceled/Scheduled by Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Canceled Hrs/Scheduled Hrs"
->     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 51), YRange (0, 0.5)]
+>     attrs = (tail $ histAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (0, 0.5)]
 
 simHistDec
 
@@ -831,6 +867,8 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780)]
 
 Utilities
+
+> minMax xs = (realToFrac $ minimum xs, realToFrac $ maximum xs)
 
 > getObservingEfficiency w p = do 
 >     let now' = pForecast p
@@ -934,10 +972,16 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
 >  , plotEffVsFreq'     $ rootPath ++ "/simEffFreq.png"
 >  , plotMeanObsEffVsFreq $ rootPath ++ "/simSchdMeanEffFreq.png"
+>  , plotMeanObsEffVsFreqOpen $ rootPath ++ "/simSchdMeanEffFreqOpen.png"
+>  , plotMeanObsEffVsFreqFixed $ rootPath ++ "/simSchdMeanEffFreqFixed.png"
+>  , plotMeanObsEffVsFreqWindowed $ rootPath ++ "/simSchdMeanEffFreqWindowed.png"
 >  , plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
 >  , plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
 >  , plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
 >  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
+>  , plotFreqVsTimeOpen     $ rootPath ++ "/simFreqTimeOpen.png"
+>  , plotFreqVsTimeFixed     $ rootPath ++ "/simFreqTimeFixed.png"
+>  , plotFreqVsTimeWindowed     $ rootPath ++ "/simFreqTimeWindowed.png"
 >  --, plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
 >  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
 >  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
@@ -985,9 +1029,9 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r1 = reportSimulationGeneralInfo name now execTime dt days strategyName ss ps simInput
 >     r2 = reportScheduleChecks ss ps gaps history 
 >     r3 = reportSimulationTimes ss dt (24 * 60 * days) ps canceled
->     r4 = reportSemesterTimes ss ps 
->     r5 = reportSemesterBandTimes ss ps 
->     r6 = reportBandTimes ss ps 
+>     r4 = reportSemesterTimes ss' ps' 
+>     r5 = reportSemesterBandTimes ss' ps' 
+>     r6 = reportBandTimes ss' ps' 
 >     r7 = reportScheduleScores scores
 >     r8 = reportSessionTypes ss ps
 >     r9 = reportRcvrSchedule rs
@@ -997,6 +1041,12 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
 >     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13, r14] 
+>     ss' = removeMaintenanceS ss
+>     ps' = removeMaintenanceP ps
+
+> removeMaintenanceS = filter (\s -> (sName s) /= "Maintenance") 
+
+> removeMaintenanceP = filter (\p -> (sName . session $ p) /= "Maintenance")  
 
 > reportObserverDetails :: [Session] -> String
 > reportObserverDetails ss = "Observer Details: \n" ++ (concatMap (\s -> (show . observers . project $ s) ++ "\n") ss)
@@ -1065,22 +1115,25 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
 >   where
 >     heading = "Simulation By Semester and Band: \n"
->     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
+>     bands = concatMap (flip (++) "         ") $ map show bandRange
+>     hdr = printf "%s      %s\n" "Type" bands
+>     --hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
 >     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterBandHrs ss ps) semesters
 
 > reportSessionTypes :: [Session] -> [Period] -> String
 > reportSessionTypes ss ps = do
->     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3]
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2, l3, l4]
 >   where
->     heading = "Simulation By Session Type: \n"
->     hdr = printf "%-11s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
+>     heading = "Simulation By Session Type (Fixed includes Maint.): \n"
+>     hdr = printf "%-13s %-11s %-11s %-11s %-11s\n" "Type" "Session #" "Session Hrs" "Period #" "Period Hrs" 
 >     l1 = reportSessionTypeHrs Open ss ps 
 >     l2 = reportSessionTypeHrs Fixed ss ps 
 >     l3 = reportSessionTypeHrs Windowed ss ps 
+>     l4 = reportSessionNameHrs "Maintenance" ss ps 
 
 > reportSessionTypeHrs :: SessionType -> [Session] -> [Period] -> String
-> reportSessionTypeHrs st ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
+> reportSessionTypeHrs st ss ps = printf "%-11s : %-11d %-11.2f %-11d %-11.2f\n" (show st) stCnt stHrs pstCnt pstHrs
 >   where
 >     ssTyped = filter (\s -> sType s == st) ss 
 >     psTyped = filter (\p -> (sType . session $ p) == st) ps 
@@ -1089,13 +1142,23 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     pstCnt = length psTyped
 >     pstHrs =  totalPeriodHrs ps (\p -> (sType . session $ p) == st) 
 
+> reportSessionNameHrs :: String -> [Session] -> [Period] -> String
+> reportSessionNameHrs name ss ps = printf "%-9s : %-11d %-11.2f %-11d %-11.2f\n" (name) stCnt stHrs pstCnt pstHrs
+>   where
+>     ssTyped = filter (\s -> sName s == name) ss 
+>     psTyped = filter (\p -> (sName . session $ p) == name) ps 
+>     stCnt = length ssTyped
+>     stHrs =  totalHrs ss (\s -> sName s == name) 
+>     pstCnt = length psTyped
+>     pstHrs =  totalPeriodHrs ps (\p -> (sName . session $ p) == name) 
  
 > reportBandTimes :: [Session] -> [Period] -> String 
 > reportBandTimes ss ps = do
 >     heading ++ "    " ++ intercalate "    " [hdr, l1, l2]
 >   where
 >     heading = "Simulation By Band: \n"
->     hdr = printf "%s      %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Type" "L" "S" "C" "X" "Ku" "K" "Ka" "Q"
+>     bands = concatMap (flip (++) "         ") $ map show bandRange
+>     hdr = printf "%s      %s\n" "Type" bands
 >     sessBandTimes = sessionBand ss
 >     periodBandTimes = periodBand ps
 >     l1 = "Sessions: " ++ toStr sessBandTimes
@@ -1108,7 +1171,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     semStr = printf "%-7s : " sem
 >     bandStrs = map (printf "%-9.2f ") bandSemHrs
->     bandSemHrs = map (bandSemHrs' ss) [L .. Q]
+>     bandSemHrs = map (bandSemHrs' ss) bandRange 
 >     bandSemHrs' sess b = totalHrs sess $ isInSemesterAndBand sem b
 >     isInSemesterAndBand semester b s = (isInSemester s semester) && (band s == b)
 
@@ -1200,7 +1263,9 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     --now <- getCurrentTime
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores simInput rs history quiet 
 >     -- create plots
->     mapM_ (\f -> f ss schedule trace) sps
+>     mapM_ (\f -> f ss' schedule' trace) sps
 >   where
 >     dur = days * 60 * 24
+>     ss' = removeMaintenanceS ss
+>     schedule' = removeMaintenanceP schedule
 

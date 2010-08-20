@@ -8,7 +8,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, showList', overlie)
 > import Antioch.Utilities    (printList, dt2semester)
-> import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Weather      (Weather(..), getWeather, getWeatherTest)
 > import Antioch.Schedule
 > import Antioch.DailySchedule
 > import Antioch.SimulateObserving
@@ -17,7 +17,6 @@
 > import Antioch.ReceiverTemperatures
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 > import Test.HUnit
 
@@ -25,12 +24,15 @@
 Here we leave the meta-strategy to do the work of scheduling, but inbetween,
 we must do all the work that usually gets done in nell.
 
-> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
-> simulateDailySchedule rs start packDays simDays history sessions quiet schedule trace
+> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
+> simulateDailySchedule rs start packDays simDays history sessions quiet test schedule trace
 >     | packDays > simDays = return (schedule, trace)
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
->         w <- getWeather $ Just start
+>         -- you MUST create the weather here, so that each iteration of 
+>         -- the simulation has a new date for the weather origin - this
+>         -- makes sure that the forecast types will be correct.
+>         w <- if test then getWeatherTest $ Just start else getWeather $ Just start
 >         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
 >         let sessions' = authorizeBySemester sessions start
@@ -42,9 +44,9 @@ we must do all the work that usually gets done in nell.
 >             sf <- genScore start . scoringSessions start $ sessions'
 >             -- acutally schedule!!!
 >             newSched' <- dailySchedule sf Pack start packDays history sessions' quiet
->             
 >             -- simulate observing
 >             newSched'' <- scheduleBackups sf Pack sessions newSched' start (24 * 60 * 1)
+>             
 >             return $ newSched''
 >         -- This writeFile is a necessary hack to force evaluation of the pressure histories.
 >         liftIO $ writeFile "/dev/null" (show newTrace)
@@ -65,14 +67,14 @@ we must do all the work that usually gets done in nell.
 >         let sessions'' = updateSessions sessions' newlyScheduledPeriods cs
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
->         let newHistory = updateHistory history newSched start
->         -- run the below assert if you have doubts about bookkeeping
+>         let newHistory = updateHistory history newSched cs 
+>         -- run the below assert if you have doubts about bookeeping
 >         -- make sure canceled periods have been removed from sessons
 >         --let sessPeriods = concatMap periods sessions''
 >         --let results = all (==True) $ map (\canceled -> (elem canceled sessPeriods) == False) cs
 >         --assert results
 >         -- move on to the next day in the simulation!
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) history sessions'' quiet newHistory $! (trace ++ newTrace)
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
@@ -103,13 +105,14 @@ before the algorithm was called, but there's two complications:
    * this same output is then modified: cancellations and replacements
      (backups) may occur.
 So, we need to intelligently combine the previous history and the algo. output.
-Basically, ignore any of the history that overlaps with the time range covered
-by the scheduling algorithm.
+What we do is we simply combine the history and the newly scheduled periods, 
+remove any redundancies (periods that were in both lists), then remove any 
+periods that we know just got canceled.
 
-> updateHistory :: [Period] -> [Period] -> DateTime -> [Period]
-> updateHistory history newSched start = oldHistory ++ newSched
+> updateHistory :: [Period] -> [Period] -> [Period] -> [Period]
+> updateHistory history newSched canceled = filter notCanceled $ nub . sort $ history ++ newSched 
 >   where
->     oldHistory = takeWhile (\p -> (periodEndTime p) <= start) history
+>     notCanceled p = not $ any (==p) canceled
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]

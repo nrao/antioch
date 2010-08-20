@@ -5,12 +5,15 @@
 > import Antioch.SLALib  (slaGaleq)
 > import Antioch.Utilities
 > import Antioch.DateTime
+> import Antioch.Filters (filterHistory)
 > import Data.Char
 > import Data.List 
 > import Data.Maybe      (isJust, maybeToList)
 > import System.Random   (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
+> import Control.Monad.RWS.Strict
+> import System.IO.Unsafe  (unsafePerformIO)
 
 > instance Arbitrary Project where
 >     arbitrary       = genProject
@@ -63,6 +66,8 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >         }
 >     return $ makeProject project pAllottedT pAllottedT sessions
 
+Generate n projects.
+
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []
 > genProjects (n + 1) = do
@@ -80,6 +85,9 @@ at a time:
 
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["05C", "06A", "06B", "06C"]
+
+TBF: this will make an 8 hour maintenance day every 7 days - but we want it 
+to be randomly placed in the middle 5 days of each week.
 
 Each Project's Sessions can have a sAllottedT between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
@@ -166,10 +174,16 @@ Backup sessions should not use a transit flag
 >       high <- choose (6.0, 12.0)
 >       return $ [(low, high)]
 
+Method for producing a generic Open Session.
+
 > genSession :: Gen Session
 > genSession = do
 >     project    <- genProject
 >     t          <- genSemester
+>     -- TBF: first generatre rcvr, then have everything else follow.
+>     --r          <- genRcvr t
+>     --let b      = receiver2Band r
+>     --f          <- genFreq' r
 >     b          <- genBand t
 >     let r      = band2Receiver b
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
@@ -186,13 +200,9 @@ Backup sessions should not use a transit flag
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
 >     stype      <- genSType
->     wds        <- genWindows stype
->     pds        <- genPreScheduledPeriods stype wds
 >     trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
->                , windows        = wds
->                , periods        = pds
 >                , band           = b
 >                , frequency      = f
 >                , ra             = ra
@@ -211,6 +221,106 @@ Backup sessions should not use a transit flag
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
+>                }
+
+Method for producing a generic Fixed Session.
+TBF: currently this is a cut & paste of genSession; how these sessions should
+differ from Open ones is TBD.
+
+> genSessionFixed :: Gen Session
+> genSessionFixed = do
+>     project    <- genProject
+>     t          <- genSemester
+>     -- TBF: first generatre rcvr, then have everything else follow.
+>     --r          <- genRcvr t
+>     --let b      = receiver2Band r
+>     b          <- genBand t
+>     let r      = band2Receiver b
+>     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
+>     f          <- genFreq b
+>     bk         <- genBackupFlag f
+>     s          <- skyType
+>     (ra, dec)  <- genRaDec s
+>     sAllottedT <- choose (6*60, 30*60)
+>     minD       <- genMinTP f
+>     maxD       <- genMaxTP f
+>     --minD       <- choose (2*60, 6*60)
+>     --maxD       <- choose (11*60, 12*60)
+>     tb         <- genTimeBetween bk
+>     lstEx      <- genLSTExclusion
+>     lowRFIFlag <- genLowRFIFlag
+>     trans      <- genTransitFlag bk
+>     return $ defaultSession {
+>                  project        = project
+>                , periods        = []
+>                , band           = b
+>                , frequency      = f
+>                , ra             = ra
+>                , dec            = dec
+>                , minDuration    = round2quarter minD
+>                , maxDuration    = round2quarter maxD
+>                -- TBF: only for scheduleMinDuration; then go back
+>                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
+>                , sAllottedT      = round2quarter sAllottedT
+>                , sAllottedS      = round2quarter sAllottedT
+>                , timeBetween    = round2quarter tb
+>                , lstExclude     = lstEx
+>                , lowRFI         = lowRFIFlag
+>                , transit        = trans
+>                , grade          = g
+>                , receivers      = [[r]]
+>                , backup         = bk
+>                , sType          = Fixed
+>                }
+
+Method for producing a generic Windowed Session.
+TBF: currently this is a cut & paste of genSession; how these sessions should
+differ from Open ones is TBD.
+
+> genSessionWindowed :: Gen Session
+> genSessionWindowed = do
+>     project    <- genProject
+>     t          <- genSemester
+>     -- TBF: first generatre rcvr, then have everything else follow.
+>     --r          <- genRcvr t
+>     --let b      = receiver2Band r
+>     b          <- genBand t
+>     let r      = band2Receiver b
+>     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
+>     f          <- genFreq b
+>     bk         <- genBackupFlag f
+>     s          <- skyType
+>     (ra, dec)  <- genRaDec s
+>     sAllottedT <- choose (6*60, 30*60)
+>     minD       <- genMinTP f
+>     maxD       <- genMaxTP f
+>     --minD       <- choose (2*60, 6*60)
+>     --maxD       <- choose (11*60, 12*60)
+>     tb         <- genTimeBetween bk
+>     lstEx      <- genLSTExclusion
+>     lowRFIFlag <- genLowRFIFlag
+>     trans      <- genTransitFlag bk
+>     return $ defaultSession {
+>                  project        = project
+>                , periods        = []
+>                , band           = b
+>                , frequency      = f
+>                , ra             = ra
+>                , dec            = dec
+>                , minDuration    = round2quarter minD
+>                , maxDuration    = round2quarter maxD
+>                -- TBF: only for scheduleMinDuration; then go back
+>                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
+>                , sAllottedT      = round2quarter sAllottedT
+>                , sAllottedS      = round2quarter sAllottedT
+>                , timeBetween    = round2quarter tb
+>                , lstExclude     = lstEx
+>                , lowRFI         = lowRFIFlag
+>                , transit        = trans
+>                , grade          = g
+>                , receivers      = [[r]]
+>                , backup         = bk
+>                , sType          = Windowed
 >                }
 
 TBF: this is only for use with the scheduleMinDuration strategy.  We want
@@ -419,6 +529,8 @@ Q      80     5.3%     3.2   6
 > genGrade :: [Grade] -> Gen Grade
 > genGrade = elements
 
+TBF: other bands & rcvrs
+
 > band2Receiver :: Band -> Receiver
 > band2Receiver L = Rcvr1_2
 > band2Receiver S = Rcvr2_3
@@ -432,11 +544,52 @@ Q      80     5.3%     3.2   6
 > genSType :: Gen SessionType
 > genSType = return Open
 
-> genWindows :: SessionType -> Gen [Window]
-> genWindows st = return []
 
-> genPreScheduledPeriods :: SessionType -> [Window] -> Gen [Period]
-> genPreScheduledPeriods st wds = return []
+> receiver2Band :: Receiver -> Band
+> -- TBF: when it's safe to add P band
+> {-
+> receiver2Band Rcvr_RRI = P
+> receiver2Band Rcvr_342 = P
+> receiver2Band Rcvr_450 = P
+> receiver2Band Rcvr_600 = P
+> receiver2Band Rcvr_800 = P
+> -}
+> receiver2Band Rcvr_1070 = L
+> receiver2Band Rcvr1_2 = L
+> receiver2Band Rcvr2_3 = S
+> receiver2Band Rcvr4_6 = C
+> receiver2Band Rcvr8_10 = X
+> receiver2Band Rcvr12_18 = U
+> receiver2Band Rcvr18_26 = K -- Rcvr18_22 -- Need Rcvr22_26
+> receiver2Band Rcvr26_40 = A
+> receiver2Band Rcvr40_52 = Q
+> receiver2Band Rcvr_PAR = W
+> receiver2Band Holography = U
+> receiver2Band RcvrArray18_26 = K 
+
+This 'code' is only of use in the 'genRcvr' method, where we simply
+need a one character code to identity each receiver
+
+> code2Receiver :: String -> Receiver
+> code2Receiver "R" = Rcvr_RRI 
+> code2Receiver "3" = Rcvr_342 
+> code2Receiver "4" = Rcvr_450 
+> code2Receiver "6" = Rcvr_600 
+> code2Receiver "8" = Rcvr_800
+> code2Receiver "1" = Rcvr_1070
+> code2Receiver "L" = Rcvr1_2
+> code2Receiver "S" = Rcvr2_3
+> code2Receiver "C" = Rcvr4_6
+> code2Receiver "X" = Rcvr8_10
+> code2Receiver "U" = Rcvr12_18
+> code2Receiver "K" = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
+> code2Receiver "A" = Rcvr26_40
+> code2Receiver "Q" = Rcvr40_52
+> code2Receiver "W" = Rcvr_PAR
+> code2Receiver "H" = Holography
+> code2Receiver "F" = RcvrArray18_26
+
+TBF: other bands? ex: below L?
 
 > genBand     :: Int -> Gen Band
 > genBand sem = fmap (read . str) . elements $ bands !! sem
@@ -447,10 +600,32 @@ Q      80     5.3%     3.2   6
 >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]
 
+TBF: other receivers? ex: PF's, MBA, etc...
+
+> genRcvr :: Int -> Gen Receiver
+> genRcvr sem = fmap (code2Receiver . str) . elements $ bands !! sem 
+>   where
+>     bands = [ "KKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
+>             , "KKKQQAAXUCCSSLLLLLLL"  -- 1
+>             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
+>             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
+>             ]
+> {-
+>     bands = [ "R34681WHFKKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
+>             , "R34681WHFKKKQQAAXUCCSSLLLLLLL"  -- 1
+>             , "R34681WHFKQQAXUCSLLLLLLLLLLLL"  -- 2
+>             , "R34681WHFKKQQAAAXXUCCSLLLLLLL"  -- 3
+>             ]
+> -}
+
+Generate frequency by Band.
 Assume we are observing the water line 40% of the time.
 
 > genFreq   :: Band -> Gen Float
 > genFreq K = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> -- TBF: when it's safe to add P band
+> --genFreq P = choose ( 0.35, 1.0) 
+> --genFreq L = choose ( 1.0,  2.0)
 > genFreq L = return 2.0
 > genFreq S = choose ( 2.0,  3.95)
 > genFreq C = choose ( 3.95, 5.85)
@@ -458,6 +633,30 @@ Assume we are observing the water line 40% of the time.
 > genFreq U = choose (12.0, 15.4)
 > genFreq A = choose (26.0, 40.0)
 > genFreq Q = choose (40.0, 50.0)
+> --genFreq W = choose (80.0, 100.0)
+
+Generate frequency by Receiver.
+
+> genFreq' :: Receiver -> Gen Float
+> genFreq' Rcvr18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq' RcvrArray18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq' Rcvr_RRI  = choose (0.1 , 1.6) 
+> genFreq' Rcvr_342  = choose (0.29 ,0.395) 
+> genFreq' Rcvr_450  = choose (0.385, 0.52) 
+> genFreq' Rcvr_600  = choose (0.51 , 0.69) 
+> genFreq' Rcvr_800  = choose (0.68 , 0.92) 
+> genFreq' Rcvr_1070 = choose (0.91, 1.23) 
+> genFreq' Rcvr1_2   = choose ( 1.0,  2.0)
+> genFreq' Rcvr2_3   = choose ( 2.0,  3.95)
+> genFreq' Rcvr4_6   = choose ( 3.95, 5.85)
+> genFreq' Rcvr8_10  = choose ( 8.0, 10.0)
+> genFreq' Rcvr12_18 = choose (12.0, 15.4)
+> genFreq' Rcvr26_40 = choose (26.0, 40.0)
+> genFreq' Rcvr40_52 = choose (40.0, 50.0)
+> genFreq' Rcvr_PAR  = choose (80.0, 100.0)
+> genFreq' Holography = choose (11.7, 12.2)
+
+
 
 > generate' f = do
 >     g <- getStdGen

@@ -1,22 +1,22 @@
 > module Antioch.RunSimulation where
 
 > import Antioch.DSSData
-> import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
+> --import Antioch.Generators (internalConflicts, endTime, genProjects, genSessions, genPeriods, generateVec)
 > import Antioch.HardwareSchedule
 > import Antioch.Filters
 > import Antioch.Reports
 > import Antioch.Simulate
 > import Antioch.DateTime
-> import Antioch.Schedule
+> import Antioch.GenerateSchedule
 > import Antioch.Generators
+> import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester, overlie)
+> import Antioch.Utilities    
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
@@ -28,7 +28,7 @@
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
 >     w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput else dbInput dt
+>     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
 >     let rs = [] -- TBF
 >     --print . show $ rs
 >     -- print . show $ ss
@@ -36,9 +36,13 @@
 >     -- print . show $ history'
 >     --history'' <- fakeWindows dt days
 >     let history = filterHistory history' dt days 
+>     print "pre-scheduled history: "
+>     printList history
+>     let total = sum $ map sAllottedT ss
+>     print ("total session time (mins): ", total, total `div` 60)
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
->     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet [] []
+>     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet False [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
@@ -75,17 +79,29 @@ Get everything we need from the Database.
 >     let history = sort $ concatMap periods ss
 >     return $ (rs, ss, projs, history)
 
-Get everything we need from the simulated input (Generators)
+Get everything we need from the simulated input (Generators).
+WARNING: the ratio of the amount of session time requested to the
+simulation time range is important.  The generators will try to create 
+a random fixed and windowed schedule that satisfies a percentage of the
+session time requested all within the sim. time range.
+For examples:
+genSimTime 500 dt 10 : won't work, too many hours of pre-scheduled periods
+                       to cram into those 10 days.
+genSimTime 150 dt 10 : less pre-scheduled periods can fit in 10 days.
 
-> simulatedInput :: IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput = return $ (rs, ss, projs, history)
+NOTE: The old simulations ran for 365 days using 255 projects, which came 
+out to be about 10,000 hours.
+
+> simulatedInput :: DateTime -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
+> simulatedInput start days = return $ (rs, ss, projs, history)
 >   where
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
->     projs = generate 0 g $ genProjects 255
+>     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 1.5 
+>     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
->     history = []
+>     history = sort $ concatMap periods ss 
 
 
 

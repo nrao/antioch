@@ -43,6 +43,11 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 
 > type ReceiverGroup = [Receiver]
 
+Note: some of the bands specified below are simply for our own purposes,
+such as: P
+
+TBF: add band 'P' to the top of this list when ready 
+
 > data Band = L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
@@ -124,6 +129,13 @@ use a single data structure for all sessions.
 
 > hasWindows :: Session -> Bool
 > hasWindows s = (sType s) == Windowed && (windows s) /= []
+
+> inWindow :: DateTime -> Window -> Bool
+> inWindow dt w = (wStart w) <= dt && dt <= (wEnd w)
+>   where
+>     -- window ends 1 minute before midnight of the last day
+>     wEnd w = (wLength w) `addMinutes` (wStart w)
+>     wLength w = (wDuration w) + ((60 * 24) - 1)
 
 > windowsEqual :: Window -> Window -> Bool
 > windowsEqual w1 w2 = eqIds w1 w2 &&
