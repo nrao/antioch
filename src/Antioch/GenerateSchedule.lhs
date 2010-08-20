@@ -28,8 +28,8 @@ The user can specify:
    * the rough ratio between Open, Fixed, and Windowed Session hours.
    * how much extra time to give to Open sessions as 'backlog'
 
-> genSimTime :: DateTime -> Int -> Bool -> (Float, Float, Float) -> Float -> Gen [Project]
-> genSimTime start days useMaint (open, fixed, windowed) backlog = do
+> genSimTime :: DateTime -> Int -> Bool -> (Float, Float, Float) -> Int -> Gen [Project]
+> genSimTime start days useMaint (open, fixed, windowed) backlogHrs = do
 >     -- TBF: assert that open + fixed + windowed == 1.0 ?
 >     -- TBF: assert that backlog < 1.0 ?
 >     -- create the maintenance schedule first to see how much time it is
@@ -44,7 +44,6 @@ The user can specify:
 >     let fixedHrs    = round $ fixed    * hrs'
 >     let windowedHrs = round $ windowed * hrs'
 >     -- how much for open must include the backlog
->     let backlogHrs  = round $ backlog  * hrs'
 >     let openHrs'    = round $ open     * hrs'
 >     let openHrs     = openHrs' + backlogHrs
 >     oProjs <- genProjectsByHrs Open openHrs 

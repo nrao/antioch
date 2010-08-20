@@ -32,19 +32,19 @@
 >     let simMins = days*24*60
 > 
 >     -- a year with just open sessions 
->     let projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 0.0 --(0.6, 0.3, 0.1) 0.25
+>     let projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 0 --(0.6, 0.3, 0.1) 0.25
 >     let totalMins = projTime projs 
 >     assertEqual "test_genSimYear_1" True (1 < length projs)
 >     assertEqual "test_genSimYear_1" True ((totalMins > simMins) && (totalMins < (simMins + (simMins `div` 2))))
 >     assertEqual "test_genSimYear_1" True (all (==Open) (map sType $ concatMap sessions projs))
 >
 >     -- a year of just Maintenance!
->     let projs = generate 0 g $ genSimTime start days  True (0.0, 0.0, 0.0) 0.0
+>     let projs = generate 0 g $ genSimTime start days  True (0.0, 0.0, 0.0) 0
 >     assertEqual "test_genSimYear_4" 1 (length projs)
 >     assertEqual "test_genSimYear_5" "Maintenance" (pName . head $ projs)
 >
 >     -- a year with just open sessions and Maintenance
->     let projs = generate 0 g $ genSimTime start days True (1.0, 0.0, 0.0) 0.0 
+>     let projs = generate 0 g $ genSimTime start days True (1.0, 0.0, 0.0) 0 
 >     --print totalMins
 >     --assertEqual "test_genSimYear_12" True ((simHrs*60) < totalMins)
 >     let totalMins = projTime projs 
@@ -58,7 +58,7 @@
 >     assertEqual "test_genSimYear_1" True (all (==Open) (map sType $ concatMap sessions $ init projs))
 >
 >     -- a year with everyting!
->     let projs = generate 0 g $ genSimTime start days True (0.90, 0.05, 0.05) 0.25
+>     let projs = generate 0 g $ genSimTime start days True (0.90, 0.05, 0.05) 2000 
 >     let totalMins = projTime projs 
 >     assertEqual "test_genSimYear_12" True (simMins < totalMins)
 >     let schedule = concatMap periods $ concatMap sessions projs
