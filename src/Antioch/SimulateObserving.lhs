@@ -11,7 +11,7 @@
 > import Antioch.Schedule
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
+> import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
 
 By simulating observing, we refer to the process of taking a simulated schedule,

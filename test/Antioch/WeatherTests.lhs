@@ -66,7 +66,7 @@ because of dateSafe should they all not return the 2006 value?
 >       dt09  = fromGregorian 2009 2 1 0 0 0 
 
 > test_WindsArePositive = TestCase $ do
->   cnn <- connect
+>   cnn <- connectTest
 >   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed < 0.0"
 >   result <- getFloat cnn sql []
 >   assertEqual "test_WindsArePositive" True (isNothing result)
@@ -75,7 +75,7 @@ because of dateSafe should they all not return the 2006 value?
 >   assertEqual "test_W2WindsArePositive" True (isNothing result)
 
 > test_WindsAreReasonable = TestCase $ do
->   cnn <- connect
+>   cnn <- connectTest
 >   let sql = "SELECT wind_speed FROM forecasts WHERE wind_speed > 200.0"
 >   result <- getFloat cnn sql []
 >   assertEqual "test_WindsAreReasonable" True (isNothing result)

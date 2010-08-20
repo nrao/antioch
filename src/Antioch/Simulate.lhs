@@ -8,7 +8,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (between, showList', overlie)
 > import Antioch.Utilities    (printList, dt2semester)
-> import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Weather      (Weather(..), getWeather, getWeatherTest)
 > import Antioch.Schedule
 > import Antioch.DailySchedule
 > import Antioch.SimulateObserving
@@ -17,7 +17,6 @@
 > import Antioch.ReceiverTemperatures
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 > import Test.HUnit
 
@@ -25,12 +24,15 @@
 Here we leave the meta-strategy to do the work of scheduling, but inbetween,
 we must do all the work that usually gets done in nell.
 
-> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
-> simulateDailySchedule rs start packDays simDays history sessions quiet schedule trace
+> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
+> simulateDailySchedule rs start packDays simDays history sessions quiet test schedule trace
 >     | packDays > simDays = return (schedule, trace)
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
->         w <- getWeather $ Just start
+>         -- you MUST create the weather here, so that each iteration of 
+>         -- the simulation has a new date for the weather origin - this
+>         -- makes sure that the forecast types will be correct.
+>         w <- if test then getWeatherTest $ Just start else getWeather $ Just start
 >         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
 >         let sessions' = authorizeBySemester sessions start
@@ -72,7 +74,7 @@ we must do all the work that usually gets done in nell.
 >         --let results = all (==True) $ map (\canceled -> (elem canceled sessPeriods) == False) cs
 >         --assert results
 >         -- move on to the next day in the simulation!
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet newHistory $! (trace ++ newTrace)
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 

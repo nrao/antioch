@@ -27,7 +27,7 @@ Attempt to see if the old test_sim_pack still works:
 
 > test_simulateDailySchedule = TestCase $ do
 >     w <- getWeatherTest $ Just dt
->     (result, t) <- simulateDailySchedule rs dt packDays simDays history ss True [] []
+>     (result, t) <- simulateDailySchedule rs dt packDays simDays history ss True True [] []
 >     --print $ take 4 $ map duration result
 >     --print $ take 4 $ map (toSqlString . startTime) result
 >     --print $ take 4 $ map (sName . session) result
@@ -64,12 +64,12 @@ of pre-scheduled periods (history)
 > test_exhaustive_history = TestCase $ do
 >     w <- getWeatherTest $ Just dt
 >     -- first, a test where the history uses up all the time
->     (result, t) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True [] []
+>     (result, t) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True True [] []
 >     assertEqual "test_sim_schd_pack_ex_hist_1" True (scheduleHonorsFixed h1 result)
 >     assertEqual "test_sim_schd_pack_ex_hist_2" h1 result
 >     -- now, if history only takes some of the time, make sure 
 >     -- that the session's time still gets used up
->     (result, t) <- simulateDailySchedule rs dt packDays simDays h2 ss2 True [] []
+>     (result, t) <- simulateDailySchedule rs dt packDays simDays h2 ss2 True True [] []
 >     assertEqual "test_sim_schd_pack_ex_hist_3" True (scheduleHonorsFixed h2 result)
 >     let observedTime = sum $ map duration result
 >     -- This will fail until we use 'updateSession' in simulate
@@ -98,7 +98,7 @@ Here we see if a long simulation honors pre-scheduled periods
 
 > test_honor_history = TestCase $ do
 >     -- first, a test where the history uses up all the time
->     (result, t) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True [] []
+>     (result, t) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True True [] []
 >     assertEqual "test_honor_history_1" True (scheduleHonorsFixed h1 result)
 >     assertEqual "test_honor_history_2" False (internalConflicts result)
 >   where
@@ -119,7 +119,7 @@ Here we attempt to schedule only a single high-frequency session - if it does
 get on, it has a high chance of being canceled.
 
 > test_cancelations = TestCase $ do
->     (result, tr) <- simulateDailySchedule [] start 2 15 [] ss True [] []
+>     (result, tr) <- simulateDailySchedule [] start 2 15 [] ss True True [] []
 >     let cs = getCanceledPeriods $ tr
 >     assertEqual "test_cancelations_1" exp result
 >     assertEqual "test_cancelations_2" 15 (length cs)

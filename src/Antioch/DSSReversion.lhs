@@ -9,7 +9,6 @@
 > import Control.Monad.Trans             (liftIO)
 > import Data.List                       (sort, nub, find)
 > import Data.Char                       (toUpper)
-> import Maybe                           (fromJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 

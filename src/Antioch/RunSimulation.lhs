@@ -17,7 +17,6 @@
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
 > import System.CPUTime
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
@@ -43,7 +42,7 @@
 >     print ("total session time (mins): ", total, total `div` 60)
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
->     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet [] []
+>     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet False [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
