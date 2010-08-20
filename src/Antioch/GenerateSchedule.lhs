@@ -196,6 +196,7 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 From an evenly spaced list of periods, create the list of windows
 
 > genWindows :: [Period] -> Gen [Window]
+> genWindows [] = return $ []
 > genWindows (p1:ps) = do
 >     let minWidth = 0
 >     -- a window can't be more then one day less then the separation between
@@ -208,7 +209,8 @@ From an evenly spaced list of periods, create the list of windows
 >     let dts = [ addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
 >     return $ map (mkWindow dur) dts
 >   where
->     pDiff = diffMinutes' (startTime . head $ ps) (startTime p1)
+>     --pDiff = if length ps < 1 then (3*24*60)  else diffMinutes' (startTime . head $ ps) (startTime p1)
+>     pDiff = if length ps < 1 then (3*24*60)  else diffMinutes' (startTime . head $ ps) (startTime p1)
 >     numPs = length (p1:ps)
 >     mkWindow dur dt = defaultWindow { wStart = dt
 >                                     , wDuration = dur }

@@ -295,6 +295,10 @@
 >     -- make sure each period is only in one window
 >     let allInOne = all (==True) $ map (inJustOneWindow wins) ps
 >     assertEqual "test_genWindows_2" True allInOne
+>     let wins2 = generate 0 g $ genWindows []
+>     assertEqual "test_genWindows_3" [] wins2 
+>     let wins3 = generate 0 g $ genWindows [head ps] 
+>     assertEqual "test_genWindows_4" 1 (length wins3) 
 >   where
 >     start = fromGregorian 2006 2 10 5 30 0
 >     psWidth = 30*24*60 -- days in minutes
