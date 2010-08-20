@@ -35,29 +35,10 @@ Lowest Frequency having Forecasts
 > efficiency   dt = fmap (fmap fst) . calcEfficiency dt
 > efficiencyHA dt = fmap (fmap snd) . calcEfficiency dt
 
-This top level function makes sure that frequencies below 2 GHz are handled
-properly: they do not retrieve weather at 2 GHz, but, rather, use the
-2 GHz results to approximate the below 2 GHz result
+Equation 3
 
 > calcEfficiency :: DateTime -> Session -> Scoring (Maybe (Float, Float))
 > calcEfficiency dt s = do
->     calcEfficiency' dt s
->   where
->     freq = frequency s
-
-> correctAtmEffs :: Frequency -> Maybe (Float, Float) -> Scoring (Maybe (Float, Float))
-> correctAtmEffs freq effs = do
->   case effs of
->       Nothing -> return Nothing
->       Just (eff, effHA) -> return $ Just (correctAtmEff freq eff, correctAtmEff freq effHA) 
-
-> correctAtmEff :: Float -> Float -> Float
-> correctAtmEff freq eff = (1 + ((freq/lff)^2 * ((1/(sqrt eff)) - 1.0)))^^(-2)
-
-Equation 3
-
-> calcEfficiency' :: DateTime -> Session -> Scoring (Maybe (Float, Float))
-> calcEfficiency' dt s = do
 >     rt <- receiverTemperatures
 >     trx <- liftIO $ getRcvrTemperature rt s
 >     tk  <- kineticTemperature dt s 
@@ -558,7 +539,7 @@ Equation 15
 > calculateAtmStabilityLimit di ot f = do
 >   di' <- di
 >   return $ if ot == Continuum &&
->               f > lff &&
+>               f > 2.0 &&
 >               di' >= 330 then False
 >                          else True
 
