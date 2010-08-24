@@ -34,6 +34,8 @@ Here we are trying to reproduce subcompenents of the pressure calculations
 > plotRemainingTimeByBand              :: StatsPlot
 > plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
 
+TBF this is SO broken, Mike fix it
+
 > plotRemainingTimeByBand'              :: StatsPlot
 > plotRemainingTimeByBand' fn n ss' ps _ = do
 >   let bandFracs = map (\ss -> remainingTimeByDays ss start days) ssBands
@@ -45,7 +47,7 @@ Here we are trying to reproduce subcompenents of the pressure calculations
 >   yl = "Remaining Time Used In Pressures"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps []
+>   ss = updateSessions ss' ps [] []
 >   ssBands = sessionsByBand ss
 >   titles = map (\b -> (Just (show b))) bandRange
 
@@ -66,7 +68,7 @@ simPastSemesterTime
 >   yl = "Past Semester Time Used In Pressures"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps []
+>   ss = updateSessions ss' ps [] []
 >   ssBands = sessionsByBand ss
 >   titles = map (\b -> (Just (show b))) bandRange 
 
