@@ -47,7 +47,6 @@ can calculate stringencies over a year in just 5.5 hours (an improvement over
 >   fillTsysTable cnn
 >   print "truncating table stringency"
 >   truncateTable cnn "stringency"
->   print "filling table stringency"
 >   disconnect cnn
 >   runFillStringencyOpt start end numCores
 >   print $ "Historical weather update complete."
@@ -86,7 +85,7 @@ making a system call.
 
 > runHistWeatherProcess :: (DateTime, DateTime) -> IO ()
 > runHistWeatherProcess (start, end) = do
->     let cmd = "genhist \"" ++ (toSqlString start) ++ "\" \"" ++  (toSqlString end)  ++ "\" &"
+>     let cmd = "genstring \"" ++ (toSqlString start) ++ "\" \"" ++  (toSqlString end)  ++ "\" &"
 >     print cmd
 >     system cmd
 >     print "fired off cmd"
@@ -173,6 +172,7 @@ Combination of results is simple: take the average of the stringencies
 >     commit cnn
 >     return ()
 >   where
->     -- TBF: change this to an INSERT if the table was truncated.
->     query = "UPDATE stringency SET total = ? where frequency = ? AND receiver_id = ? AND elevation = ? AND observing_type_id = ?"
+>     -- NOTE: use the INSERT sql if the table was truncated.
+>     query = "INSERT INTO stringency (total, frequency, receiver_id, elevation, observing_type_id) VALUES (?, ?, ?, ?, ?)"
+>     --query = "UPDATE stringency SET total = ? where frequency = ? AND receiver_id = ? AND elevation = ? AND observing_type_id = ?"
 >     xs rcvrId obsTypeId str = [toSql str, toSql freq, toSql rcvrId, toSql elev, toSql obsTypeId] 
