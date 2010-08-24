@@ -1,4 +1,4 @@
-all:simulate serve genhist 
+all:simulate serve genhist genhists genstring 
 
 simulate: FORCE
 	#ghc -o simulate --make src/Simulate.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -prof -auto-all
@@ -9,6 +9,12 @@ serve: FORCE
 
 genhist: FORCE
 	ghc -o genhist --make src/GenHistory.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+
+genhists: FORCE
+	ghc -o genhists --make src/GenHistorys.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+
+genstring: FORCE
+	ghc -o genstring --make src/GenStringency.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
 FORCE:
 
@@ -30,3 +36,5 @@ clobber: clean
 	$(RM) serve
 	$(RM) simulate
 	$(RM) genhist
+	$(RM) genhists
+	$(RM) genstring
