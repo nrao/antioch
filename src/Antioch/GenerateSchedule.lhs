@@ -2,22 +2,10 @@
 
 > import Antioch.Generators
 > import Antioch.Types
-> --import Antioch.TimeAccounting
-> --import Antioch.SLALib  (slaGaleq)
-> --import Antioch.Utilities
 > import Antioch.DateTime
 > import Antioch.Filters (filterHistory)
-> --import Data.Char
 > import Data.List 
-> --import Data.Maybe      (isJust, maybeToList)
-> --import System.Random   (getStdGen, setStdGen, mkStdGen)
-> --import System.Random
 > import Test.QuickCheck hiding (frequency)
-> --import qualified Test.QuickCheck as T
-> --import Control.Monad.RWS.Strict
-> --import System.IO.Unsafe  (unsafePerformIO)
-
-
 
 This is a top level function for not just producing a set of Projects (w/
 their related child Sessions), but also pre-scheduled periods of different
@@ -189,7 +177,7 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >                , dec = 1.5 -- TBF: this is just always up
 >                }
 >   ws <- genWindows wp
->   let s = makeSession s' ws wp
+>   let s = makeSession s' ws wp 
 >   return $ makeProject proj' total total [s]
 
 From an evenly spaced list of periods, create the list of windows
@@ -197,22 +185,31 @@ From an evenly spaced list of periods, create the list of windows
 > genWindows :: [Period] -> Gen [Window]
 > genWindows [] = return $ []
 > genWindows (p1:ps) = do
->     let minWidth = 0
->     -- a window can't be more then one day less then the separation between
->     -- the periods.
->     let maxWidth = pDiff - (24*60) 
 >     -- TBF 
->     dur <- choose (maxWidth `div` 2, maxWidth)
+>     dur <- choose (maxWidth, maxWidth)
 >     let (p1Year, p1Month, p1Day, _, _, _) = toGregorian . startTime $ p1
 >     let dayStart = fromGregorian p1Year p1Month p1Day 0 0 0
 >     let dts = [ addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
 >     return $ map (mkWindow dur) dts
 >   where
->     --pDiff = if length ps < 1 then (3*24*60)  else diffMinutes' (startTime . head $ ps) (startTime p1)
 >     pDiff = if length ps < 1 then (3*24*60)  else diffMinutes' (startTime . head $ ps) (startTime p1)
+>     -- a window can't be more then one day less then the separation between
+>     maxWidth = pDiff - (2*24*60) 
 >     numPs = length (p1:ps)
 >     mkWindow dur dt = defaultWindow { wStart = dt
->                                     , wDuration = dur }
+>                                     , wDuration = dur + (2*24*60) }
+
+Self-test to be called in unit tests and simulations
+
+> validSimulatedWindows :: Session -> Bool
+> validSimulatedWindows s = onePeriodEach && (not . windowConflicts $ windows s)
+>   where
+>     onePeriodEach = all (==True) $ map (windowHasOnePeriod ps) ws   
+>     ps = periods s
+>     ws = windows s
+
+> windowHasOnePeriod :: [Period] -> Window -> Bool
+> windowHasOnePeriod ps w = 1 == (length $ filter (==True) $ map (flip periodInWindow w) ps)
 
 Creates a maintenance project with a year's worth of pre-scheduled periods
 reflecting a realistic maintenance schedule.
