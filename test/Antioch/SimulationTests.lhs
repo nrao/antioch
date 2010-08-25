@@ -162,26 +162,36 @@ get on, it has a high chance of being canceled.
 >     -- test initial conditions
 >     let psIds = getPeriodIds ss 
 >     assertEqual "test_updateSessions_1" [1] psIds
->     -- now test an update w/ out canceled periods
+>     -- test an update w/ out canceled periods
 >     let updatedSess = updateSessions ss new_ps [] []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_2" [1,2,3] newPsIds
->     -- now test an update *with* canceled periods
+>     -- test an update *with* canceled periods
 >     let updatedSess = updateSessions ss new_ps canceled [] 
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_3" [2,3] newPsIds
->     -- now test an update *with* canceled periods, but no new periods
+>     -- test an update *with* canceled periods, but no new periods
 >     let updatedSess = updateSessions ss [] canceled []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_4" [] newPsIds
->     -- TBF: some more tests with windows
+>     -- try a non-empty windows argument
 >     let updatedSess = updateSessions (tw1:ss) [chosen] [condemned] [w1]
 >     -- get the windowed session from the results
 >     let tw1' = head $ filter (==tw1) updatedSess
+>     --    session's first period has changed
 >     assertEqual "test_updateSessions_5" tw1_newPs (periods tw1')
+>     --    session's first chosen flag has changed
 >     assertEqual "test_updateSessions_6" [True, False] (map wHasChosen $ windows tw1')
+>     --    session's windows have not changed
 >     assertEqual "test_updateSessions_7" (windows tw1) (windows tw1')
->     -- TBF test all the knots among session, periods, and windows
+>     --    session's default periods have not changed
+>     assertEqual "test_updateSessions_8" [100, 101] (map wPeriodId $ windows tw1')
+>     --    session's first period's is defaulted
+>     assertEqual "test_updateSessions_9" [0, 101] (map peId $ periods tw1')
+>     --    session's periods are referencing the session
+>     assertEqual "test_updateSessions_10" [tw1', tw1'] (map session $ periods tw1')
+>     --    session's windows are referencing the session
+>     assertEqual "test_updateSessions_11" [tw1', tw1'] (map wSession $ windows tw1')
 >   where
 >     lp_ps = [defaultPeriod { peId = 1, session = lp }]
 >     canceled = lp_ps
@@ -208,24 +218,29 @@ get on, it has a high chance of being canceled.
 > 
 > test_findScheduledWindowPeriods = TestCase $ do
 >     -- no periods
->     let r1 = findScheduledWindowPeriods []
->     assertEqual "test_findScheduledWindowPeriods_1" ([],[]) r1
+>     let result = findScheduledWindowPeriods []
+>     assertEqual "test_findScheduledWindowPeriods_1" ([],[]) result
 >     -- open session period
->     let r2 = findScheduledWindowPeriods ps_lp
->     assertEqual "test_findScheduledWindowPeriods_2" ([],[]) r2
+>     let result = findScheduledWindowPeriods ps_lp
+>     assertEqual "test_findScheduledWindowPeriods_2" ([],[]) result
 >     -- new period for window
->     let r3 = findScheduledWindowPeriods [newPs1] 
->     assertEqual "test_findScheduledWindowPeriods_3" ([head ps_tw1],[head ws_tw1]) r3
+>     let result = findScheduledWindowPeriods [newPs1] 
+>     assertEqual "test_findScheduledWindowPeriods_3" ([head ps_tw1],[head ws_tw1]) result
 >     -- new periods for windows
->     let r4 = findScheduledWindowPeriods [newPs1, newPs2] 
->     assertEqual "test_findScheduledWindowPeriods_4" ([head ps_tw1, last ps_tw2],[head ws_tw1, last ws_tw2]) r4
+>     let result = findScheduledWindowPeriods [newPs1, newPs2] 
+>     assertEqual "test_findScheduledWindowPeriods_4" ([head ps_tw1, last ps_tw2],[head ws_tw1, last ws_tw2]) result
 >
 >     -- Testing for detection of illegal pre-conditions
->     -- old period from old window
->     --let r4 = findScheduledWindowPeriods ps_tw1
->     --assertEqual "test_findScheduledWindowPeriods_3" ([],[]) r4
->     -- new period with no window
->     -- new period with no window
+>     -- TBF need to catch AssertionFailed to integrate these tests
+>     -- no default period
+>     --let result = findScheduledWindowPeriods [lonePs1]
+>     --assertEqual "test_findScheduledWindowPeriods_7" ([],[]) result
+>     --   old period from old window
+>     --let result = findScheduledWindowPeriods ps_tw1
+>     --assertEqual "test_findScheduledWindowPeriods_5" ([],[]) result
+>     -- new period after default period
+>     --let result = findScheduledWindowPeriods [badPs1]
+>     --assertEqual "test_findScheduledWindowPeriods_6" ([],[]) result
 >   where
 >     ps_lp = periods lp
 >     ps_tw1 = periods tw1
@@ -234,21 +249,32 @@ get on, it has a high chance of being canceled.
 >     ws_tw2 = windows tw2
 >     newPs1 = defaultPeriod {
 >                 session = tw1
->               --, peId = 200
 >               , startTime = fromGregorian 2006 10 3 17 15 0
 >               , duration = 4*60
 >               , pDuration = 4*60
 >                }
 >     newPs2 = defaultPeriod {
 >                 session = tw2
->               --, peId = 200
 >               , startTime = fromGregorian 2006 10 16 10 0 0
 >               , duration = 3*60
 >               , pDuration = 3*60
 >                }
+>     -- later than default
+>     badPs1 = defaultPeriod {
+>                 session = tw1
+>               , startTime = fromGregorian 2006 10 5 10 45 0
+>               , duration = 4*60
+>               , pDuration = 4*60
+>                }
+>     -- missing default period
+>     bad_tw = tw1 { periods = tail . periods $ tw1 }
+>     lonePs1 = defaultPeriod {
+>                 session = bad_tw
+>               , startTime = fromGregorian 2006 10 3 17 15 0
+>               , duration = 4*60
+>               , pDuration = 4*60
+>                }
 
-
-> 
 
 Test Utilities:
 

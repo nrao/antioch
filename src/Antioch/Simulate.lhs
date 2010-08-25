@@ -16,6 +16,7 @@
 > import Antioch.Debug
 > import Antioch.ReceiverTemperatures
 > import Control.Monad.Writer
+> import Control.Exception as Ex    (assert)
 > import Data.List
 > import Data.Maybe
 > import System.CPUTime
@@ -113,20 +114,27 @@ if period is from a windowed session
 >     ws' = map (\w -> w {wHasChosen = True}) $ map fromJust ws
 
 > findScheduledWindowPeriods :: [Period] -> ([Period], [Window])
-> findScheduledWindowPeriods ps = rps . p_ps . p_ws . wps $ ps
-> {-
+> --findScheduledWindowPeriods ps = rps . p_ps . p_ws . wps $ ps
+> findScheduledWindowPeriods ps = rps . isLegal . p_ps . p_ws . wps $ ps
 >   where
 >     -- periods from a windowed session:
 >     -- wps ::[Period] -> [Period]
 >     wps = filter (\p -> Windowed == (sType . session $ p))
+>
 >     -- periods with their associated window:
 >     -- p_ws :: [Period] -> [(Period, Maybe Window)]
 >     p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
+>
 >     -- periods with all periods in their window:
 >     --    [(Period, Maybe Window)] -> [(Period, [Period], Maybe Window)]
->     p_ps = map (\(p, w) -> (p, maybe [] (filter (periodInWindow p)) w))
+>     p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
+>
 >     -- asserts to find pathologial cases
->     --  TBF ??
+>     isLegal = p_ps''' . p_ps'' . p_ps'
+>     p_ps' =   (\x -> Ex.assert (oneDefault x) x)
+>     p_ps''  = (\x -> Ex.assert (defaultNeqChosen x) x)
+>     p_ps''' = (\x -> Ex.assert (chosenLtDefault x) x)
+>
 >     -- replaced periods and all windows
 >     -- rps :: [(Period, [Period], Maybe Window)] -> ([Period], [Window])
 >     rps ppws = (ps', ws')
@@ -136,7 +144,14 @@ if period is from a windowed session
 >         --    TBF wHasChose protects against rescheduling, but does not
 >         --        denote that the default period was replaced
 >         ws' = map (\w -> w {wHasChosen = True}) $ map fromJust ws
-> -}
+
+> --   period list length == 1
+> oneDefault, defaultNeqChosen, chosenLtDefault :: [(Period, [Period], Maybe Window)] -> Bool
+> oneDefault = all (\(p, ps, _) -> length ps == 1)
+> --   chosen period not in period list
+> defaultNeqChosen = all (\(p, ps, _) -> not . elem p $ ps)
+> --   chosen period before period in list
+> chosenLtDefault = all (\(p, ps, _) -> head ps > p)
 
 > periodInWindow :: Period -> Window -> Bool
 > periodInWindow p w = ws <= ps && pe <= we
