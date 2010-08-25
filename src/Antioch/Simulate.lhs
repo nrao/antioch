@@ -60,14 +60,11 @@ we must do all the work that usually gets done in nell.
 >         -- ex: [1,2,3,4,5] \\ [1,2,3,5] -> [4]
 >         let newlyScheduledPeriods = newSched \\ history
 >         -- now get the canceled periods so we can make sure they aren't 
->         liftIO $ print "windowed periods"
->         liftIO $ printList $ filter (\p -> Windowed == (sType . session $ p)) newlyScheduledPeriods
 >         -- still in their sessions
 >         let cs = getCanceledPeriods $ trace ++ newTrace 
 >         -- find which default periods need to be delted and
 >         -- which windows got scheduled
 >         let (wps, ws) = findScheduledWindowPeriods newlyScheduledPeriods
->         liftIO $ print ("wpd, ws", wps, ws)
 >         -- here we need to take the periods that were created by pack
 >         -- and add them to the list of periods for each session
 >         -- this is necessary so that a session that has used up all it's

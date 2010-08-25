@@ -17,6 +17,7 @@
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Control.Monad.Writer
 > import Data.List
+> import Data.Maybe
 > import System.CPUTime
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
@@ -40,6 +41,11 @@
 >     printList history
 >     let total = sum $ map sAllottedT ss
 >     print ("total session time (mins): ", total, total `div` 60)
+>     let wss = filter (\s -> (sType s) == Windowed) ss
+>     let badWinSessions = filter (not . validSimulatedWindows) wss
+>     if (length badWinSessions == 0) then print "Simulated Windows OK" else do
+>       print "Invalid Windows Detected; exiting simulation."
+>       return ()
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
 >     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet False [] []
