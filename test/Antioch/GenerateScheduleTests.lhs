@@ -25,6 +25,7 @@
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
 >                 , test_genWindows
+>                 , test_validSimulatedWindows
 >                 , test_genWeeklyMaintPeriods]
 
 > test_genSimTime = TestCase $ do
@@ -59,6 +60,8 @@
 >
 >     -- a year with everyting!
 >     let projs = generate 0 g $ genSimTime start days True (0.90, 0.05, 0.05) 2000 
+>     ---print "windows: "
+>     ---printList $ map windows $ filter (\s-> (sType s) == Windowed) $ concatMap sessions projs
 >     let totalMins = projTime projs 
 >     assertEqual "test_genSimYear_12" True (simMins < totalMins)
 >     let schedule = concatMap periods $ concatMap sessions projs
@@ -83,6 +86,7 @@
 >     assertEqual "test_genSimYear_10" True (expFixedMinsLower < fixedMins' && fixedMins' < expFixedMinsUpper) 
 >     -- all this is to make sure that the number of hours of windowed is okay
 >     let winPs = filter (\p -> (sType . session $ p) == Windowed) $ concatMap periods $ concatMap sessions $ projs 
+>     let winSs = filter (\s -> (sType $ s) == Windowed) $ concatMap sessions $ projs 
 >     let winMins = sum $ map duration winPs
 >     let winMins' = fromIntegral winMins
 >     --let nonMaintMins = totalMins - maintMins
@@ -93,6 +97,9 @@
 >     --print ("winMins", winMins)
 >     --print ("expMins", expMinsLower, expMinsUpper)
 >     assertEqual "test_genSimYear_10" True (expMinsLower < winMins' && winMins' < expMinsUpper) 
+>     let allValidWinSess = all (==True) $ map validSimulatedWindows $ winSs
+>     assertEqual "test_genSimYear_10b" True allValidWinSess  
+      
 >     -- all this is to make sure that the number of hours of open is okay
 >     let openSs = filter (\s -> (sType s) == Open) $ concatMap sessions $ projs 
 >     let openMins = sum $ map sAllottedT openSs
@@ -290,6 +297,9 @@
 >     let g = mkStdGen 1
 >     let ps = map mkPeriod dts
 >     let wins = generate 0 g $ genWindows ps
+>     --printList wins
+>     --print $ filter (not . validWindow) wins
+>     --assertEqual "test_genWindows_0" True (all validWindow wins)
 >     let allPsInAWin = all (\(w, p) -> inWindow (startTime p) w) $ zip wins ps
 >     assertEqual "test_genWindows_1" True allPsInAWin
 >     -- make sure each period is only in one window
@@ -298,11 +308,53 @@
 >     let wins2 = generate 0 g $ genWindows []
 >     assertEqual "test_genWindows_3" [] wins2 
 >     let wins3 = generate 0 g $ genWindows [head ps] 
+>     --print wins3
 >     assertEqual "test_genWindows_4" 1 (length wins3) 
+>     -- see how it fares with randomly generated periods
+>     let wps  = generate 0 g $ genWindowedSchedule start days [] (10*24)
+>     let wins4 = generate 0 g $ genWindows (head wps)
+>     let s = makeSession defaultSession wins4 (head wps)
+>     assertEqual "test_genWindows_5" True (validSimulatedWindows s) 
+>     let wins5 = generate 0 g $ genWindows (last wps)
+>     let s = makeSession defaultSession wins5 (last wps)
+>     assertEqual "test_genWindows_6" True (validSimulatedWindows s) 
+>     --let wins4 = mapM (generate 0 g $ genWindows) wps
+>     --let ss = map (makeSession defaultSession) $ zip wins4 wps
+>     --assertEqual "test_genWindows_5" 1 (all (==True) $ map validSimulatedWindows ss) 
 >   where
 >     start = fromGregorian 2006 2 10 5 30 0
+>     days = 30
 >     psWidth = 30*24*60 -- days in minutes
 >     numPs = 5
 >     dts = [ addMinutes' (i*psWidth) start | i <- [0..numPs]]
 >     mkPeriod dt = defaultPeriod { startTime = dt, pDuration = 60 }
 >     inJustOneWindow ws p = 1 == (length $ filter (==True) $ map (inWindow $ startTime p) ws)
+
+> test_validSimulatedWindows = TestCase $ do
+>     assertEqual "test_validSimulatedWindows_1" True (validSimulatedWindows validSess) 
+>     assertEqual "test_validSimulatedWindows_2" False (validSimulatedWindows invalidSess) 
+>     assertEqual "test_validSimulatedWindows_3" True (validSimulatedWindows validSess2) 
+>     assertEqual "test_validSimulatedWindows_4" False (validSimulatedWindows invalidSess2) 
+>   where
+>     start  = fromGregorian 2006 2 10 5 30 0
+>     start2 = fromGregorian 2006 2 14 5 30 0
+>     s = defaultSession
+>     p  = defaultPeriod { session = s, startTime = start,  duration = 4*60 }
+>     p2 = defaultPeriod { session = s, startTime = start2, duration = 4*60 }
+>     validW = defaultWindow { wSession = s
+>                            , wStart = fromGregorian 2006 2 8 0 0 0
+>                            , wDuration = (3*24*60) } 
+>     invalidW = defaultWindow { wSession = s
+>                            , wStart = fromGregorian 2006 2 8 0 0 0
+>                            , wDuration = (1*24*60) } 
+>     w2 = defaultWindow { wSession = s
+>                        , wStart = fromGregorian 2006 2 13 0 0 0
+>                        , wDuration = (3*24*60) } 
+>     w3 = defaultWindow { wSession = s
+>                        , wStart = fromGregorian 2006 2 10 0 0 0
+>                        , wDuration = (7*24*60) } 
+>     validSess    = makeSession s [validW] [p]
+>     invalidSess  = makeSession s [invalidW] [p]
+>     validSess2   = makeSession s [validW, w2] [p, p2]
+>     invalidSess2 = makeSession s [validW, w3] [p, p2] -- overlapping windows
+> 
