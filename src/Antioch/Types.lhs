@@ -158,6 +158,8 @@ Get all the session periods that start within the given window
 >     pe = addMinutes (duration p) ps
 >     ws = wStart w
 >     we = addMinutes (wDuration w) ws
+>     -- window ends till midnight the next day
+>     --we = (addMinutes (wDuration w) ws) + ((60*24) -1)
 
 
 > windowsEqual :: Window -> Window -> Bool

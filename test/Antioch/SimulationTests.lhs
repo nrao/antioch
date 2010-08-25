@@ -6,12 +6,12 @@
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Simulate
-> import Antioch.Filters       -- debug
 > import Antioch.Debug
 > import Antioch.Statistics (scheduleHonorsFixed)
 > import Antioch.Generators (internalConflicts)
 > import Data.List (sort, find)
 > import Data.Maybe
+> import Control.OldException
 > import Test.HUnit
 > import System.Random
 
@@ -211,6 +211,11 @@ get on, it has a high chance of being canceled.
 >                }
 >     tw1_newPs = [chosen, last . periods $ tw1]
 
+> --catchIt :: Exception -> Maybe ()
+> --catchIt (AssertionFailed "Bad windowed session") = Just ()
+> --catchIt _                                        = Nothing
+
+> --handler _ = putStrLn = "assertion failed"
 
 > --test_updateSession' = TestCase $ do
 >  --  updateSession' s 
@@ -231,16 +236,24 @@ get on, it has a high chance of being canceled.
 >     assertEqual "test_findScheduledWindowPeriods_4" ([head ps_tw1, last ps_tw2],[head ws_tw1, last ws_tw2]) result
 >
 >     -- Testing for detection of illegal pre-conditions
->     -- TBF need to catch AssertionFailed to integrate these tests
+>     {-
+>     let performCall newPeriods testN = do
+>         evaluate (findScheduledWindowPeriods newPeriods)
+>         assertFailure ("test_findScheduledWindowPeriods_" ++ (show 5))
 >     -- no default period
 >     --let result = findScheduledWindowPeriods [lonePs1]
->     --assertEqual "test_findScheduledWindowPeriods_7" ([],[]) result
+>     --assertEqual "test_findScheduledWindowPeriods_5" ([],[]) result
+>     handleJust assertions (\_ -> return ()) (performCall [lonePs1] 5)
 >     --   old period from old window
 >     --let result = findScheduledWindowPeriods ps_tw1
->     --assertEqual "test_findScheduledWindowPeriods_5" ([],[]) result
+>     --assertEqual "test_findScheduledWindowPeriods_6" ([],[]) result
+>     handleJust assertions (\_ -> return ()) (performCall ps_tw1 6)
 >     -- new period after default period
 >     --let result = findScheduledWindowPeriods [badPs1]
->     --assertEqual "test_findScheduledWindowPeriods_6" ([],[]) result
+>     --assertEqual "test_findScheduledWindowPeriods_7" ([],[]) result
+>     handleJust assertions (\_ -> return ()) (performCall [badPs1] 7)
+>     assertEqual "" True True
+>     -}
 >   where
 >     ps_lp = periods lp
 >     ps_tw1 = periods tw1

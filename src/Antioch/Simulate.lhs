@@ -150,14 +150,6 @@ if period is from a windowed session
 > --   chosen period before period in list
 > chosenLtDefault = all (\(p, ps, _) -> head ps > p)
 
-> periodInWindow :: Period -> Window -> Bool
-> periodInWindow p w = ws <= ps && pe <= we
->   where
->     ps = startTime p
->     pe = addMinutes (duration p) ps
->     ws = wStart w
->     we = addMinutes (wDuration w) ws
-
 This is vital for calculating pressures correctly.
 TBF: once windows are introduced, here we will need to reconcile them.
 
