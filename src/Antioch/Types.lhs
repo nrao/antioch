@@ -2,6 +2,7 @@
 
 > import Antioch.DateTime
 > import Data.Function (on)
+> import Data.Maybe    (isJust, fromJust)
 > import Data.List     (find)
 > import Data.Ix
 
@@ -108,7 +109,7 @@ use a single data structure for all sessions.
 >    }
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (flip div (24*60) . wDuration $ w) ++ " days " ++ show (wHasChosen w) ++ "; Period: " ++ show (wPeriod w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " to " ++ toSqlString (wEnd w) ++ " (for " ++ show (flip div (24*60) . wDuration $ w) ++ " days) " ++ show (wHasChosen w) ++ "; wPeriods: " ++ show (wPeriods (wSession w) w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -122,6 +123,11 @@ use a single data structure for all sessions.
 > instance Eq Window where
 >     (==) = windowsEqual
 
+> wEnd w = addMinutes' (wDuration w) (wStart w)
+
+Relies on wPeriodId, and therefore only works for real data (simulated
+data does not have periods with unique ids).
+
 > wPeriod :: Window -> Maybe Period
 > wPeriod w = find (\p -> (wPeriodId w) == (peId p)) (periods . wSession $ w)
 
@@ -134,6 +140,25 @@ use a single data structure for all sessions.
 >     -- window ends 1 minute before midnight of the last day
 >     wEnd w = (wLength w) `addMinutes` (wStart w)
 >     wLength w = (wDuration w) + ((60 * 24) - 1)
+
+Self-test: only works for real-data (see wPeriod)
+
+> validWindow :: Window -> Bool
+> validWindow w = (isJust . wPeriod $ w)  && (inWindow (startTime . fromJust . wPeriod $ w) w)
+
+Get all the session periods that start within the given window
+
+> wPeriods :: Session -> Window -> [Period]
+> wPeriods s w = filter (\p -> inWindow (startTime p) w) $ periods s
+
+> periodInWindow :: Period -> Window -> Bool
+> periodInWindow p w = ws <= ps && pe <= we
+>   where
+>     ps = startTime p
+>     pe = addMinutes (duration p) ps
+>     ws = wStart w
+>     we = addMinutes (wDuration w) ws
+
 
 > windowsEqual :: Window -> Window -> Bool
 > windowsEqual w1 w2 = eqIds w1 w2 &&
