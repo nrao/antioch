@@ -19,7 +19,7 @@
 > --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate, sort, (\\), nub)
+> import Data.List (intercalate, sort, sortBy, (\\), nub)
 > import Data.Maybe (catMaybes)
 > import Text.Printf
 > import System.Random
@@ -1017,8 +1017,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores simInput rs history quiet = do
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores scoreDetails simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
@@ -1038,11 +1038,24 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r10 = reportPreScheduled history
 >     r11 = reportFinalSchedule ps
 >     r12 = reportCanceled canceled
+>     r15 = reportScoreDetails scoreDetails
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r13, r14] 
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r15, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
+
+> reportScoreDetails :: [(String, [(Period, Float)])] -> String
+> reportScoreDetails scores = concat [obseff, atmeff, srfeff, trkeff]
+>   where
+>     obseff = reportScoreDetails' "obsEff" $ getScores "obsEff" scores
+>     atmeff = reportScoreDetails' "atmEff" $ getScores "atmEff" scores
+>     srfeff = reportScoreDetails' "srfEff" $ getScores "srfEff" scores
+>     trkeff = reportScoreDetails' "trkEff" $ getScores "trkEff" scores
+>     getScores name s = snd . head $ filter (\x -> fst x == name) s
+
+> reportScoreDetails' :: String -> [(Period, Float)] -> String
+> reportScoreDetails' scoreType scores = "Score (" ++ scoreType ++ ") Details: \n"  ++ (concatMap (\(p, score) -> (show p ++ " freq: " ++ (show . frequency . session $ p) ++ " : " ++ scoreType ++ " = " ++ (show score ++ "\n") )) scores)
 
 > removeMaintenanceS = filter (\s -> (sName s) /= "Maintenance") 
 
@@ -1251,6 +1264,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     let gaps = findScheduleGaps dt dur schedule
 >     let canceled = getCanceledPeriods trace
 >     let os = getOriginalSchedule' schedule canceled
+>     -- check efficiency scores for normalicy
 >     schdObsEffs <- historicalSchdObsEffs schedule
 >     schdAtmEffs <- historicalSchdAtmEffs schedule
 >     schdTrkEffs <- historicalSchdTrkEffs schedule
@@ -1259,9 +1273,24 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                 , ("atmEff", schdAtmEffs)
 >                 , ("trkEff", schdTrkEffs)
 >                 , ("srfEff", schdSrfEffs)]
+>     -- map efficiencies to periods for debugging
+>     let schedule' = sortBy sortByFreq schedule
+>     obsSchdMeanEffs <- historicalSchdMeanObsEffs schedule'
+>     let obsEffDetails = zip schedule' obsSchdMeanEffs 
+>     atmSchdMeanEffs <- historicalSchdMeanAtmEffs schedule'
+>     let atmEffDetails = zip schedule' atmSchdMeanEffs 
+>     srfSchdMeanEffs <- historicalSchdMeanSrfEffs schedule'
+>     let srfEffDetails = zip schedule' srfSchdMeanEffs 
+>     trkSchdMeanEffs <- historicalSchdMeanTrkEffs schedule'
+>     let trkEffDetails = zip schedule' trkSchdMeanEffs 
+>     let scoreDetails = [("obsEff", obsEffDetails)
+>                       , ("atmEff", atmEffDetails)
+>                       , ("srfEff", srfEffDetails)
+>                       , ("trkEff", trkEffDetails)
+>                        ]
 >     -- text reports 
 >     --now <- getCurrentTime
->     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss' schedule' trace) sps
 >   where
@@ -1269,3 +1298,11 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     ss' = removeMaintenanceS ss
 >     schedule' = removeMaintenanceP schedule
 
+> sortByFreq :: Period -> Period -> Ordering
+> sortByFreq p1 p2
+>    | f1 <  f2     = LT
+>    | f1 == f2     = EQ
+>    | f1 >  f2     = GT
+>   where
+>     f1 = frequency . session $ p1
+>     f2 = frequency . session $ p2
