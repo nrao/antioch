@@ -32,6 +32,7 @@
 >   , test_systemNoiseTemperature'
 >   , test_minTsys'
 >   , test_minimumObservingConditions
+>   , test_getRealOrForecastedWind
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
 >   , test_observingEfficiencyLimit
@@ -267,6 +268,22 @@ Equation 5
 >     -- sessBug2
 >     Just result <- minTsys' w dt sessBug2
 >     assertEqual "test_minTsys' 4" 27.511566 result 
+
+> test_getRealOrForecastedWind = TestCase $ do
+>     w <- getWeatherTest . Just $ fromGregorian 2006 10 13 1 0 0
+>     rt <- getReceiverTemperatures
+>     -- forecast because in future
+>     let dt1 = fromGregorian 2006 10 13 16 0 0
+>     r1 <- runScoring w [] rt (getRealOrForecastedWind dt1)
+>     assertEqual "test_getRealOrForecastedWind 1" (Just 4.6638403) r1
+>     -- measured because in past
+>     let dt2 = fromGregorian 2006 9 13 0 0 0
+>     r2 <- runScoring w [] rt (getRealOrForecastedWind dt2)
+>     assertEqual "test_getRealOrForecastedWind 2" (Just 4.073865) r2
+>     -- forecast because measured is unavailable
+>     let dt3 = fromGregorian 2006 6 22 12 0 0
+>     r3 <- runScoring w [] rt (getRealOrForecastedWind dt3)
+>     assertEqual "test_getRealOrForecastedWind 3" (Just 3.5221467) r3
 
 > test_minimumObservingConditions = TestCase $ do
 >     let dt = fromGregorian 2006 10 13 16 0 0

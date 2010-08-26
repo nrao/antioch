@@ -1189,6 +1189,8 @@ Convenience function for translating go/no-go into a factor.
 
 Uses the datetime used to construct the weather object to determine whether
 to return forecasted wind values, or wind values from weather station 2.
+If weather station 2 values are not available, the function falls back
+to using forecasted values.
 
 > getRealOrForecastedWind :: DateTime -> Scoring (Maybe Float)
 > getRealOrForecastedWind dt = do
@@ -1196,8 +1198,13 @@ to return forecasted wind values, or wind values from weather station 2.
 >   let wDt = forecast w
 >   let dt' = roundToHour dt
 >   wind' <- if dt' <= wDt
->            then liftIO $ gbt_wind w dt
->            else liftIO $ wind w dt 
+>            then do
+>                mw <- liftIO $ gbt_wind w dt
+>                uw <- if mw == Nothing
+>                      then liftIO $ wind w dt
+>                      else return mw
+>                return uw
+>            else liftIO $ wind w dt
 >   return wind'
 
 Convenience function for factoring a Session over it's Period's duration
