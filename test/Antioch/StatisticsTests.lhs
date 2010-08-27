@@ -3,6 +3,8 @@
 > import Antioch.DateTime
 > import Antioch.Statistics
 > import Antioch.Types
+> import Antioch.Weather
+> import Antioch.Score
 > import Antioch.Utilities
 > import Antioch.Generators (generateTestData)
 > import Antioch.PProjects
@@ -50,7 +52,22 @@
 >   , test_fracObservedTimeByDays
 >   , test_remainingTimeByDays
 >   , test_pastSemesterTimeByDays
+>   , test_periodSchdFactors
 >    ]
+
+> test_periodSchdFactors = TestCase $ do
+>   -- TBF: score the session
+>   -- now socre the period, and make sure results match
+>   w <- getWeather Nothing
+>   fcs <- periodSchdFactors p trackingEfficiency w
+>   assertEqual "test_periodSchdFactors_1" 0.9992234 (head fcs)
+>   assertEqual "test_periodSchdFactors_2" 0.9968952 (last fcs)
+>     where
+>   s' = defaultSession { frequency=2.0, ra=3.7, dec=(-2.8), receivers=[[Rcvr1_2]], band=L, grade=4.0 }
+>   start = fromGregorian 2006 6 20 12 15 0
+>   scheduled = fromGregorian 2006 6 20 0 0 0
+>   p = defaultPeriod { session = s', startTime = start, duration = 285, pForecast = scheduled}
+>   s = makeSession s' [] [p]
 
 > test_fracObservedTimeByDays = TestCase $ do
 >     let result = fracObservedTimeByDays ss ps
