@@ -5,7 +5,7 @@
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester, overlie)
+> import Antioch.Utilities    (between, showList', dt2semester)
 > import Antioch.Weather      (Weather(..), getWeather)
 > import Antioch.Filters
 > import Antioch.Schedule

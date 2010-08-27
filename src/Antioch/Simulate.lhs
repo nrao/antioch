@@ -6,8 +6,7 @@
 > import Antioch.Types
 > import Antioch.Statistics
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', overlie)
-> import Antioch.Utilities    (printList, dt2semester)
+> import Antioch.Utilities    (showList', printList, dt2semester, periodInWindow)
 > import Antioch.Weather      (Weather(..), getWeather, getWeatherTest)
 > import Antioch.Schedule
 > import Antioch.DailySchedule
@@ -62,7 +61,7 @@ we must do all the work that usually gets done in nell.
 >         -- now get the canceled periods so we can make sure they aren't 
 >         -- still in their sessions
 >         let cs = getCanceledPeriods $ trace ++ newTrace 
->         -- find which default periods need to be delted and
+>         -- find which default periods need to be deleted and
 >         -- which windows got scheduled
 >         let (wps, ws) = findScheduledWindowPeriods newlyScheduledPeriods
 >         -- here we need to take the periods that were created by pack
@@ -83,32 +82,9 @@ we must do all the work that usually gets done in nell.
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
-if period is from a windowed session
-     find the window the period is in
-     find the session's period (default) that is in the window
-     if new period is not the default period
-          save default and new periods to Trace
-          delete default period from schedule and session's periods 
-
->     -- periods from a windowed session:
-> wps ::[Period] -> [Period]
-> wps = filter (\p -> Windowed == (sType . session $ p))
-
->     -- periods with their associated window:
-> p_ws :: [Period] -> [(Period, Maybe Window)]
-> p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
-
->     -- periods with all periods in their window:
-> p_ps :: [(Period, Maybe Window)] -> [(Period, [Period], Maybe Window)]
-> p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
-
->     -- replaced periods and all windows
-> rps :: [(Period, [Period], Maybe Window)] -> ([Period], [Window])
-> rps ppws = (ps', ws')
->   where
->     (_, ps, ws) = unzip3 ppws
->     ps' = map head ps
->     ws' = map (\w -> w {wHasChosen = True}) $ map fromJust ws
+Given a list newly scheduled periods, find which -- if any -- belong
+to windowed sessions and return lists of resulting replaced periods
+and satisfied windows.
 
 > findScheduledWindowPeriods :: [Period] -> ([Period], [Window])
 > --findScheduledWindowPeriods ps = rps . p_ps . p_ws . wps $ ps

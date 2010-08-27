@@ -104,7 +104,8 @@ out to be about 10,000 hours.
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
 >     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
->     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     --projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     projs = generate 0 g $ genSimTime start days True (0.0, 0.0, 0.3) 0 
 >     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]

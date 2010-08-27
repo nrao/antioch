@@ -3,7 +3,8 @@
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.DateTime
-> import Antioch.Filters (filterHistory)
+> import Antioch.Filters        (filterHistory)
+> import Antioch.Utilities      (periodInWindow)
 > import Data.List 
 > import Test.QuickCheck hiding (frequency)
 
@@ -189,7 +190,7 @@ From an evenly spaced list of periods, create the list of windows
 >     dur <- choose (maxWidth, maxWidth)
 >     let (p1Year, p1Month, p1Day, _, _, _) = toGregorian . startTime $ p1
 >     let dayStart = fromGregorian p1Year p1Month p1Day 0 0 0
->     let dts = [ addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
+>     let dts = [addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
 >     return $ map (mkWindow dur) dts
 >   where
 >     pDiff = if length ps < 1 then (3*24*60)  else diffMinutes' (startTime . head $ ps) (startTime p1)

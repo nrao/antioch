@@ -603,8 +603,10 @@ up, all the time.
 > inWindows :: DateTime -> (Session -> [Window]) -> Session -> Score
 > inWindows dt f s
 >       | sType s == Open           = 1.0
->       | any (inWindow dt) $ f s      = 1.0
+>       | any (inWindow dt) $ f s   = 1.0
 >       | otherwise                 = 0.0
+>   where
+>     inWindow dt w = inTimeRange dt (wStart w) (wDuration w)
 
 > availWindows :: Session -> [Window]
 > availWindows = filter (not . wHasChosen) . windows

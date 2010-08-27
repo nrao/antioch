@@ -587,8 +587,8 @@ fetchPeriod is used in unit tests only.
 >   return ()
 
 Here we add a new period to the database.  
-Initialize the Period in the Pending state (state_id = 1)
-Since Antioch is creating it
+Initialize the Period in the Pending state (state_id = 1).
+Since Antioch is creating it,
 we will set the Period_Accounting.scheduled field
 and the associated receviers using the session's receivers.
 
@@ -659,7 +659,7 @@ You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
 >   result <- quickQuery' cnn pquery pxs 
 >   let periodId = fromSqlInt . head . head $ result
 >   -- search session's windows for first intersecting window
->   let window = find (\w -> overlie (wStart w) (wDuration w) p) (windows . session $ p)
+>   let window = find (periodInWindow p) (windows . session $ p)
 >   if window == Nothing then return ()
 >                        -- update window with the period_id
 >                        else updateWindow' cnn periodId (wId . fromJust $ window)

@@ -4,7 +4,7 @@
 > import Antioch.Generators
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Utilities (printList)
+> import Antioch.Utilities    (printList, periodInWindow)
 > {-
 > import Antioch.Score
 > import Antioch.Weather
@@ -14,7 +14,7 @@
 > -}
 > import Test.HUnit
 > import System.Random   
-> import Test.QuickCheck    (generate)
+> import Test.QuickCheck      (generate)
 > import Data.List
 > import System.CPUTime
 
@@ -300,7 +300,7 @@
 >     --printList wins
 >     --print $ filter (not . validWindow) wins
 >     --assertEqual "test_genWindows_0" True (all validWindow wins)
->     let allPsInAWin = all (\(w, p) -> inWindow (startTime p) w) $ zip wins ps
+>     let allPsInAWin = all (\(w, p) -> periodInWindow p w) $ zip wins ps
 >     assertEqual "test_genWindows_1" True allPsInAWin
 >     -- make sure each period is only in one window
 >     let allInOne = all (==True) $ map (inJustOneWindow wins) ps
@@ -328,7 +328,7 @@
 >     numPs = 5
 >     dts = [ addMinutes' (i*psWidth) start | i <- [0..numPs]]
 >     mkPeriod dt = defaultPeriod { startTime = dt, pDuration = 60 }
->     inJustOneWindow ws p = 1 == (length $ filter (==True) $ map (inWindow $ startTime p) ws)
+>     inJustOneWindow ws p = 1 == (length $ filter (==True) $ map (periodInWindow p) ws)
 
 > test_validSimulatedWindows = TestCase $ do
 >     assertEqual "test_validSimulatedWindows_1" True (validSimulatedWindows validSess) 
