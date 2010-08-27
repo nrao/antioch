@@ -3,7 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', dt2semester, overlie)
+> import Antioch.Utilities    (showList', dt2semester, overlie)
 
 Pass on to the simulation only the history of pre-scheduled periods that 
 we care about: those that fall in between the dates we are simulating for.
@@ -11,18 +11,9 @@ We do this, because otherwise the reports at the end of the simulations will
 be confused and raise false alarams.
 
 > filterHistory :: [Period] -> DateTime -> Int -> [Period]
-> filterHistory ps start dur = filter inWindow ps
+> filterHistory ps start daysDur = filter overlie' ps
 >   where
->     end = (dur*24*60) `addMinutes'` start
->     endTime p = (duration p) `addMinutes'` (startTime p)
->     inWindow p = endTime p >= start && startTime p <= end 
-
-> filterHistory' :: [Period] -> DateTime -> Minutes -> [Period]
-> filterHistory' ps start dur = filter inWindow ps
->   where
->     end = dur `addMinutes'` start
->     endTime p = (duration p) `addMinutes'` (startTime p)
->     inWindow p = endTime p >= start && startTime p <= end 
+>     overlie' p = overlie start (daysDur*24*60) p
 
 Not all sessions should be considered for scheduling.  We may not one to pass
 Sessions that:
@@ -88,7 +79,7 @@ Filter candidate sessions dependent on its type.
 >   -- Open
 >   | isTypeOpen dt s     = True
 >   | sType s == Windowed = activeWindows (windows s)
->   | otherwise           = False -- must be Fixed.  
+>   | otherwise           = False -- must be Fixed.
 >     where
 >       activeWindows ws
 >         -- Windowed with no windows overlapping the scheduling range
@@ -97,11 +88,12 @@ Filter candidate sessions dependent on its type.
 >         | filter schedulableWindow ws == [] = False
 >         | otherwise                         = True
 >
->       schedulableWindow w = and $ map ($ w) [intersect, withNoDefault, needsPeriod]
+>       schedulableWindow w = all ($ w) [intersect, withNoDefault, needsPeriod]
+>       --schedulableWindow w = and $ map ($ w) [intersect, withNoDefault, needsPeriod]
 >       intersect w = wStart w < dtEnd && dt < wEnd w
 >       withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
 >       needsPeriod w = not . wHasChosen $ w
->       wEnd w = (wDuration w) `addMinutes` (wStart w)
+>       --wEnd w = (wDuration w) `addMinutes` (wStart w)
 >       dtEnd = dur `addMinutes` dt
 
 We are explicitly ignoring grade here: it has been decided that a human
@@ -127,8 +119,7 @@ scheduled.
 
 > schedulableCriteria :: [SelectionCriteria]
 > schedulableCriteria = [
->         isTypeOpen -- TBF: in simulations only!
->       , hasTimeSchedulable
+>         hasTimeSchedulable
 >       , isNotComplete
 >       , isApproved
 >       , hasObservers

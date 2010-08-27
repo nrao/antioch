@@ -19,7 +19,10 @@
 >           , test_LST2
 >           , test_LST3
 >           , test_LST3'
+>           , test_inTimeRange
 >           , test_overlie
+>           , test_within
+>           , test_periodInWindow
 >           , test_freq2ForecastIndex
 >           , test_freq2HistoryIndex
 >           , test_approximate
@@ -118,16 +121,33 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >       ((09, 35, 37), (2006, 5, 6, 00, 00, 07))
 >       ]
 
+> test_inTimeRange = TestCase $ do
+>   assertEqual "test_inTimeRange_1"  False (inTimeRange dt1 start dur)
+>   assertEqual "test_inTimeRange_2"  True  (inTimeRange dt2 start dur)
+>   assertEqual "test_inTimeRange_3"  True  (inTimeRange dt3 start dur)
+>   assertEqual "test_inTimeRange_4"  False (inTimeRange dt4 start dur)
+>   assertEqual "test_inTimeRange_5"  False (inTimeRange dt5 start dur)
+>     where
+>   start = fromGregorian 2006 6 1 12 0 0
+>   dur = 4*60
+>   dt1 = (-15) `addMinutes` start
+>   dt2 = start
+>   dt3 = (2*60) `addMinutes` start
+>   dt4 = dur `addMinutes` start
+>   dt5 = (dur+15) `addMinutes` start
+
 > test_overlie = TestCase $ do
->   assertEqual "test_overlie_1" True  (overlie dt1 dur1 p1)
->   assertEqual "test_overlie_2" True  (overlie dt1 dur2 p1)
->   assertEqual "test_overlie_3" True  (overlie dt1 dur1 p2)
->   assertEqual "test_overlie_4" False (overlie dt2 dur1 p1)
->   assertEqual "test_overlie_5" False (overlie dt3 dur1 p1)
->   assertEqual "test_overlie_6" True  (overlie dt3 dur2 p1)
->   assertEqual "test_overlie_7" True  (overlie dt4 dur1 p2)
->   assertEqual "test_overlie_8" True  (overlie dt4 dur2 p2)
->   assertEqual "test_overlie_9" False (overlie dt2 dur2 p1)
+>   assertEqual "test_overlie_1"  True  (overlie dt1 dur1 p1)
+>   assertEqual "test_overlie_2"  True  (overlie dt1 dur2 p1)
+>   assertEqual "test_overlie_3"  True  (overlie dt1 dur1 p2)
+>   assertEqual "test_overlie_4"  False (overlie dt2 dur1 p1)
+>   assertEqual "test_overlie_5"  False (overlie dt3 dur1 p1)
+>   assertEqual "test_overlie_6"  True  (overlie dt3 dur2 p1)
+>   assertEqual "test_overlie_7"  True  (overlie dt4 dur1 p2)
+>   assertEqual "test_overlie_8"  True  (overlie dt4 dur2 p2)
+>   assertEqual "test_overlie_9"  False (overlie dt2 dur2 p1)
+>   assertEqual "test_overlie_10" False (overlie dt5 dur1 p1)
+>   assertEqual "test_overlie_11" True  (overlie dt5 dur1 p2)
 >     where
 >   dt1 = fromGregorian 2006 6 1 12 0 0
 >   dur1 = 4*60
@@ -137,6 +157,47 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >   dt2 = fromGregorian 2006 6 1 20 0 0
 >   dt3 = fromGregorian 2006 6 1 8 0 0
 >   dt4 = fromGregorian 2006 6 1 13 0 0
+>   dt5 = fromGregorian 2006 6 1 16 0 0
+
+> test_within = TestCase $ do
+>   assertEqual "test_within_1"  True  (within dt1 dur1 p1)
+>   assertEqual "test_within_2"  True  (within dt1 dur2 p1)
+>   assertEqual "test_within_3"  False (within dt1 dur1 p2)
+>   assertEqual "test_within_4"  False (within dt2 dur1 p1)
+>   assertEqual "test_within_5"  False (within dt3 dur1 p1)
+>   assertEqual "test_within_6"  False (within dt3 dur2 p1)
+>   assertEqual "test_within_7"  False (within dt4 dur1 p2)
+>   assertEqual "test_within_8"  False (within dt4 dur2 p2)
+>   assertEqual "test_within_9"  False (within dt2 dur2 p1)
+>   assertEqual "test_within_10" False (within dt5 dur1 p1)
+>   assertEqual "test_within_11" False (within dt5 dur1 p2)
+>   assertEqual "test_within_12" True  (within dt3 dur3 p1)
+>   assertEqual "test_within_13" True  (within dt3 dur3 p2)
+>     where
+>   dt1 = fromGregorian 2006 6 1 12 0 0
+>   dur1 = 4*60
+>   p1 = defaultPeriod {startTime = dt1, duration = dur1}
+>   dur2 = 6*60
+>   dur3 = 10*60
+>   p2 = defaultPeriod {startTime = dt1, duration = dur2}
+>   dt2 = fromGregorian 2006 6 1 20 0 0
+>   dt3 = fromGregorian 2006 6 1 8 0 0
+>   dt4 = fromGregorian 2006 6 1 13 0 0
+>   dt5 = fromGregorian 2006 6 1 16 0 0
+
+> test_periodInWindow = TestCase $ do
+>   assertEqual "test_periodInWindow_1"  True  (periodInWindow p1 w)
+>   assertEqual "test_periodInWindow_2"  True  (periodInWindow p2 w)
+>   assertEqual "test_periodInWindow_3"  False (periodInWindow p3 w)
+>   assertEqual "test_periodInWindow_4"  False (periodInWindow p4 w)
+>   assertEqual "test_periodInWindow_5"  True  (periodInWindow p5 w)
+>     where
+>   w = defaultWindow { wDuration = 6*60 }
+>   p1 = defaultPeriod {duration = 6*60-1}
+>   p2 = defaultPeriod {duration = 6*60}
+>   p3 = defaultPeriod {duration = 6*60+1}
+>   p4 = defaultPeriod {startTime = (-1) `addMinutes` defaultStartTime, duration = 6*60+1}
+>   p5 = defaultPeriod {startTime = (1) `addMinutes` defaultStartTime, duration = 6*60-1}
 
 > test_LST3 = TestCase $ do
 >   mapM_ (runUtc2LstTest "test_LST3") times

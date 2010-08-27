@@ -481,6 +481,20 @@ instance Ord t => Span (Interval t) where
 
 > internalConflicts' xs = [x | x <- xs, x `overlaps` (xs \\ [x])]
 
+TBF: is there a better way to generalize internalConflicts to work w/ Windows?
+
+> windowConflicts xs = or [x `winOverlaps` (xs \\ [x]) | x <- xs]
+
+> windowConflicts' xs = [x | x <- xs, x `winOverlaps` (xs \\ [x])]
+
+> winOverlap w1 w2 = s1 < e2 && s2 < e1
+>   where
+>     [s1, s2] = map wStart [w1, w2]
+>     [e1, e2] = map wEnd   [w1, w2]
+
+> winOverlaps y = isJust . find (winOverlap y)
+
+
 > conflicts :: [Period] -> [Period] -> Bool
 > conflicts [] ys = False
 > conflicts (x:xs) ys | overlaps x (delete x ys) = True
