@@ -7,6 +7,7 @@
 > import qualified Antioch.SLALib as SLA
 > import Test.QuickCheck hiding (frequency)
 > import Data.Convertible
+> import Data.Maybe             (isJust, fromJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
@@ -175,13 +176,49 @@ The elevation range of the weather DB is from 5 - 90 degrees.
 > between :: Ord a => a -> a -> a -> Bool
 > between v min max = min <= v && v <= max
 
-> overlie :: DateTime -> Minutes -> Period -> Bool
-> overlie start dur p = s1 < e2 && s2 < e1
+Is the datetime with a datetime/range?
+
+> inTimeRange :: DateTime -> DateTime -> Minutes -> Bool
+> inTimeRange dt start dur = start <= dt && dt < end
 >   where
->     s1 = startTime p
->     e1 = periodEndTime p
->     s2 = start
->     e2 = dur `addMinutes` start  
+>     end = dur `addMinutes` start  
+
+Does a period intersect a datetime/range?
+
+> overlie :: DateTime -> Minutes -> Period -> Bool
+> overlie start dur p = ps < e && s < pe
+>   where
+>     ps = startTime p
+>     pe = periodEndTime p
+>     s = start
+>     e = dur `addMinutes` start  
+
+Does a period lie within a datetime/range?
+
+> within :: DateTime -> Minutes -> Period -> Bool
+> within s d p = s <= ps && pe <= e
+>   where
+>     ps = startTime p
+>     pe = addMinutes (duration p) ps
+>     e = d `addMinutes` s  
+
+Does a period lie within a window?
+
+> periodInWindow :: Period -> Window -> Bool
+> periodInWindow p w = within ws wd p
+>   where
+>     ws = wStart w
+>     wd = wDuration w
+
+Self-test: only works for real-data (see wPeriod)
+
+> validWindow :: Window -> Bool
+> validWindow w = (isJust . wPeriod $ w) && (periodInWindow (fromJust . wPeriod $ w) w)
+
+Get all the session periods that are within the given window
+
+> wPeriods :: Session -> Window -> [Period]
+> wPeriods s w = filter (flip periodInWindow w) $ periods s
 
 > printList :: Show a => [a] -> IO ()
 > printList = putStrLn . showList'

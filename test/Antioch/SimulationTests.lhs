@@ -6,12 +6,12 @@
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Simulate
-> import Antioch.Filters       -- debug
 > import Antioch.Debug
 > import Antioch.Statistics (scheduleHonorsFixed)
 > import Antioch.Generators (internalConflicts)
 > import Data.List (sort, find)
 > import Data.Maybe
+> import Control.OldException
 > import Test.HUnit
 > import System.Random
 
@@ -21,6 +21,7 @@
 >   , test_honor_history
 >   , test_updateHistory
 >   , test_updateSessions
+>   , test_findScheduledWindowPeriods
 >                  ]
 
 Attempt to see if the old test_sim_pack still works:
@@ -161,18 +162,36 @@ get on, it has a high chance of being canceled.
 >     -- test initial conditions
 >     let psIds = getPeriodIds ss 
 >     assertEqual "test_updateSessions_1" [1] psIds
->     -- now test an update w/ out canceled periods
->     let updatedSess = updateSessions ss new_ps []
+>     -- test an update w/ out canceled periods
+>     let updatedSess = updateSessions ss new_ps [] []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_2" [1,2,3] newPsIds
->     -- now test an update *with* canceled periods
->     let updatedSess = updateSessions ss new_ps canceled 
+>     -- test an update *with* canceled periods
+>     let updatedSess = updateSessions ss new_ps canceled [] 
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_3" [2,3] newPsIds
->     -- now test an update *with* canceled periods, but no new periods
->     let updatedSess = updateSessions ss [] canceled 
+>     -- test an update *with* canceled periods, but no new periods
+>     let updatedSess = updateSessions ss [] canceled []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_4" [] newPsIds
+>     -- try a non-empty windows argument
+>     let updatedSess = updateSessions (tw1:ss) [chosen] [condemned] [w1]
+>     -- get the windowed session from the results
+>     let tw1' = head $ filter (==tw1) updatedSess
+>     --    session's first period has changed
+>     assertEqual "test_updateSessions_5" tw1_newPs (periods tw1')
+>     --    session's first chosen flag has changed
+>     assertEqual "test_updateSessions_6" [True, False] (map wHasChosen $ windows tw1')
+>     --    session's windows have not changed
+>     assertEqual "test_updateSessions_7" (windows tw1) (windows tw1')
+>     --    session's default periods have not changed
+>     assertEqual "test_updateSessions_8" [100, 101] (map wPeriodId $ windows tw1')
+>     --    session's first period's is defaulted
+>     assertEqual "test_updateSessions_9" [0, 101] (map peId $ periods tw1')
+>     --    session's periods are referencing the session
+>     assertEqual "test_updateSessions_10" [tw1', tw1'] (map session $ periods tw1')
+>     --    session's windows are referencing the session
+>     assertEqual "test_updateSessions_11" [tw1', tw1'] (map wSession $ windows tw1')
 >   where
 >     lp_ps = [defaultPeriod { peId = 1, session = lp }]
 >     canceled = lp_ps
@@ -182,6 +201,93 @@ get on, it has a high chance of being canceled.
 >     new_cv_period = defaultPeriod { peId = 3, session = cv }
 >     new_ps = [new_lp_period, new_cv_period]
 >     getPeriodIds sess = sort $ map peId $ concatMap periods sess
+>     w1 = (head . windows $ tw1) {wHasChosen = True}
+>     condemned = head . periods $ tw1
+>     chosen = defaultPeriod {
+>                 session = tw1
+>               , startTime = fromGregorian 2006 10 2 12 15 0
+>               , duration = 4*60
+>               , pDuration = 4*60
+>                }
+>     tw1_newPs = [chosen, last . periods $ tw1]
+
+> --catchIt :: Exception -> Maybe ()
+> --catchIt (AssertionFailed "Bad windowed session") = Just ()
+> --catchIt _                                        = Nothing
+
+> --handler _ = putStrLn = "assertion failed"
+
+> --test_updateSession' = TestCase $ do
+>  --  updateSession' s 
+>   --  assertEqual "test_updateSessions_5" tw1_newPs (periods tw1')
+> 
+> test_findScheduledWindowPeriods = TestCase $ do
+>     -- no periods
+>     let result = findScheduledWindowPeriods []
+>     assertEqual "test_findScheduledWindowPeriods_1" ([],[]) result
+>     -- open session period
+>     let result = findScheduledWindowPeriods ps_lp
+>     assertEqual "test_findScheduledWindowPeriods_2" ([],[]) result
+>     -- new period for window
+>     let result = findScheduledWindowPeriods [newPs1] 
+>     assertEqual "test_findScheduledWindowPeriods_3" ([head ps_tw1],[head ws_tw1]) result
+>     -- new periods for windows
+>     let result = findScheduledWindowPeriods [newPs1, newPs2] 
+>     assertEqual "test_findScheduledWindowPeriods_4" ([head ps_tw1, last ps_tw2],[head ws_tw1, last ws_tw2]) result
+>
+>     -- Testing for detection of illegal pre-conditions
+>     {-
+>     let performCall newPeriods testN = do
+>         evaluate (findScheduledWindowPeriods newPeriods)
+>         assertFailure ("test_findScheduledWindowPeriods_" ++ (show 5))
+>     -- no default period
+>     --let result = findScheduledWindowPeriods [lonePs1]
+>     --assertEqual "test_findScheduledWindowPeriods_5" ([],[]) result
+>     handleJust assertions (\_ -> return ()) (performCall [lonePs1] 5)
+>     --   old period from old window
+>     --let result = findScheduledWindowPeriods ps_tw1
+>     --assertEqual "test_findScheduledWindowPeriods_6" ([],[]) result
+>     handleJust assertions (\_ -> return ()) (performCall ps_tw1 6)
+>     -- new period after default period
+>     --let result = findScheduledWindowPeriods [badPs1]
+>     --assertEqual "test_findScheduledWindowPeriods_7" ([],[]) result
+>     handleJust assertions (\_ -> return ()) (performCall [badPs1] 7)
+>     assertEqual "" True True
+>     -}
+>   where
+>     ps_lp = periods lp
+>     ps_tw1 = periods tw1
+>     ws_tw1 = windows tw1
+>     ps_tw2 = periods tw2
+>     ws_tw2 = windows tw2
+>     newPs1 = defaultPeriod {
+>                 session = tw1
+>               , startTime = fromGregorian 2006 10 3 17 15 0
+>               , duration = 4*60
+>               , pDuration = 4*60
+>                }
+>     newPs2 = defaultPeriod {
+>                 session = tw2
+>               , startTime = fromGregorian 2006 10 16 10 0 0
+>               , duration = 3*60
+>               , pDuration = 3*60
+>                }
+>     -- later than default
+>     badPs1 = defaultPeriod {
+>                 session = tw1
+>               , startTime = fromGregorian 2006 10 5 10 45 0
+>               , duration = 4*60
+>               , pDuration = 4*60
+>                }
+>     -- missing default period
+>     bad_tw = tw1 { periods = tail . periods $ tw1 }
+>     lonePs1 = defaultPeriod {
+>                 session = bad_tw
+>               , startTime = fromGregorian 2006 10 3 17 15 0
+>               , duration = 4*60
+>               , pDuration = 4*60
+>                }
+
 
 Test Utilities:
 

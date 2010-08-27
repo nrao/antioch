@@ -6,8 +6,7 @@
 > import Antioch.Types
 > import Antioch.Statistics
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (between, showList', overlie)
-> import Antioch.Utilities    (printList, dt2semester)
+> import Antioch.Utilities    (showList', printList, dt2semester, periodInWindow)
 > import Antioch.Weather      (Weather(..), getWeather, getWeatherTest)
 > import Antioch.Schedule
 > import Antioch.DailySchedule
@@ -16,7 +15,9 @@
 > import Antioch.Debug
 > import Antioch.ReceiverTemperatures
 > import Control.Monad.Writer
+> import Control.Exception as Ex    (assert)
 > import Data.List
+> import Data.Maybe
 > import System.CPUTime
 > import Test.HUnit
 
@@ -60,14 +61,17 @@ we must do all the work that usually gets done in nell.
 >         -- now get the canceled periods so we can make sure they aren't 
 >         -- still in their sessions
 >         let cs = getCanceledPeriods $ trace ++ newTrace 
+>         -- find which default periods need to be deleted and
+>         -- which windows got scheduled
+>         let (wps, ws) = findScheduledWindowPeriods newlyScheduledPeriods
 >         -- here we need to take the periods that were created by pack
 >         -- and add them to the list of periods for each session
 >         -- this is necessary so that a session that has used up all it's
 >         -- time is not scheduled in the next call to simulate.
->         let sessions'' = updateSessions sessions' newlyScheduledPeriods cs
+>         let sessions'' = updateSessions sessions' newlyScheduledPeriods (cs ++ wps) ws
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
->         let newHistory = updateHistory history newSched cs 
+>         let newHistory = updateHistory history newSched (cs ++ wps) 
 >         -- run the below assert if you have doubts about bookeeping
 >         -- make sure canceled periods have been removed from sessons
 >         --let sessPeriods = concatMap periods sessions''
@@ -77,6 +81,50 @@ we must do all the work that usually gets done in nell.
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
+
+Given a list newly scheduled periods, find which -- if any -- belong
+to windowed sessions and return lists of resulting replaced periods
+and satisfied windows.
+
+> findScheduledWindowPeriods :: [Period] -> ([Period], [Window])
+> --findScheduledWindowPeriods ps = rps . p_ps . p_ws . wps $ ps
+> findScheduledWindowPeriods ps = rps . isLegal . p_ps . p_ws . wps $ ps
+>   where
+>     -- periods from a windowed session:
+>     -- wps ::[Period] -> [Period]
+>     wps = filter (\p -> Windowed == (sType . session $ p))
+>
+>     -- periods with their associated window:
+>     -- p_ws :: [Period] -> [(Period, Maybe Window)]
+>     p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
+>
+>     -- periods with all periods in their window:
+>     --    [(Period, Maybe Window)] -> [(Period, [Period], Maybe Window)]
+>     p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
+>
+>     -- asserts to find pathologial cases
+>     isLegal = p_ps''' . p_ps'' . p_ps'
+>     p_ps' =   (\x -> Ex.assert (oneDefault x) x)
+>     p_ps''  = (\x -> Ex.assert (defaultNeqChosen x) x)
+>     p_ps''' = (\x -> Ex.assert (chosenLtDefault x) x)
+>
+>     -- replaced periods and all windows
+>     -- rps :: [(Period, [Period], Maybe Window)] -> ([Period], [Window])
+>     rps ppws = (ps', ws')
+>       where
+>         (_, ps, ws) = unzip3 ppws
+>         ps' = map head ps
+>         --    TBF wHasChose protects against rescheduling, but does not
+>         --        denote that the default period was replaced
+>         ws' = map (\w -> w {wHasChosen = True}) $ map fromJust ws
+
+> --   period list length == 1
+> oneDefault, defaultNeqChosen, chosenLtDefault :: [(Period, [Period], Maybe Window)] -> Bool
+> oneDefault = all (\(p, ps, _) -> length ps == 1)
+> --   chosen period not in period list
+> defaultNeqChosen = all (\(p, ps, _) -> not . elem p $ ps)
+> --   chosen period before period in list
+> chosenLtDefault = all (\(p, ps, _) -> head ps > p)
 
 This is vital for calculating pressures correctly.
 TBF: once windows are introduced, here we will need to reconcile them.
@@ -110,9 +158,9 @@ remove any redundancies (periods that were in both lists), then remove any
 periods that we know just got canceled.
 
 > updateHistory :: [Period] -> [Period] -> [Period] -> [Period]
-> updateHistory history newSched canceled = filter notCanceled $ nub . sort $ history ++ newSched 
+> updateHistory history newSched condemned = filter notCondemned $ nub . sort $ history ++ newSched 
 >   where
->     notCanceled p = not $ any (==p) canceled
+>     notCondemned p = not $ any (==p) condemned
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
@@ -136,14 +184,14 @@ sessions =
    * Session A [(Period for Session A)]
    * Session B [(Period for Session B), (Period for Session B)]
 
-> updateSessions :: [Session] -> [Period] -> [Period] -> [Session]
-> updateSessions sessions periods canceled = map update sessions
+> updateSessions :: [Session] -> [Period] -> [Period] -> [Window] -> [Session]
+> updateSessions sessions periods condemned windows = map update sessions
 >   where
 >     pss      = partitionWith session periods
 >     update s =
 >         case find (\(p:_) -> session p == s) pss of
->           Nothing -> updateSession' s [] canceled -- canceleds go anyways
->           Just ps -> updateSession' s ps canceled
+>           Nothing -> updateSession' s [] condemned windows -- condemned go anyways
+>           Just ps -> updateSession' s ps condemned windows
 
 > partitionWith            :: Eq b => (a -> b) -> [a] -> [[a]]
 > partitionWith _ []       = []
@@ -151,8 +199,19 @@ sessions =
 >   where
 >     (as, bs) = partition (\t -> f t == f x) xs
 
-> updateSession' :: Session -> [Period] -> [Period] -> Session
-> updateSession' s ps canceled = makeSession s (windows s) $ (removeCanceled s canceled) ++ ps
+Ties the knots between a session and it's periods & windows. 
+But it also:
+   * removes condemend periods
+   * updates any scheduled windows
+
+> updateSession' :: Session -> [Period] -> [Period] -> [Window] -> Session
+> updateSession' s ps canceled ws = makeSession s ws' $ sort $ (removeCanceled s canceled) ++ ps
+>   where
+>     -- any windows that belong to this session need to be marked as 
+>     -- scheduled
+>     sessSchedWins = filter (\w -> (wSession w) == s) ws
+>     sessNonSchedWins = filter (\w -> not . elem w $ sessSchedWins) $ windows s
+>     ws' = sort $ sessSchedWins ++ sessNonSchedWins
 
 > removeCanceled :: Session -> [Period] -> [Period]
 > removeCanceled s canceled =  (periods s) \\ canceled
