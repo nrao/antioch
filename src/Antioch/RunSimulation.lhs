@@ -15,6 +15,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    
 > import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Debug
 > import Control.Monad.Writer
 > import Data.List
 > import Data.Maybe
@@ -52,6 +53,8 @@
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
+>     print "trace?"
+>     printList $ getWindowPeriodsFromTrace trace
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
 >     createPlotsAndReports sps name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet 
@@ -104,7 +107,8 @@ out to be about 10,000 hours.
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
 >     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
->     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     --projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     projs = generate 0 g $ genSimTime start days True (0.0, 0.0, 0.3) 0 
 >     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]

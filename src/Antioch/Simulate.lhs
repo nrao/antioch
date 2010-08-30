@@ -37,6 +37,7 @@ we must do all the work that usually gets done in nell.
 >         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
 >         let sessions' = authorizeBySemester sessions start
+>
 >         -- now we pack, and look for backups
 >         (newSchedPending, newTrace) <- runScoring' w rs rt $ do
 >             -- it's important that we generate the score only once per
@@ -47,9 +48,17 @@ we must do all the work that usually gets done in nell.
 >             newSched' <- dailySchedule sf Pack start packDays history sessions' quiet
 >             -- simulate observing
 >             newSched'' <- scheduleBackups sf Pack sessions newSched' start (24 * 60 * 1)
->             
+>             let newSched''' = map publishPeriod newSched''
+>             let newlyScheduledPeriods = newSched''' \\ history
+>             let www = p_ps_2_trace . p_ps . p_ws . wps $ newlyScheduledPeriods
+>             --let www' = map (\(p, mw) -> (fromJust mw, Nothing, p)) www
+>             liftIO $ print $ "tell me!"
+>             liftIO $ print $ www
+>             mapM (\w -> tell [WindowPeriods w]) www
 >             return $ newSched''
->         -- This writeFile is a necessary hack to force evaluation of the pressure histories.
+>
+>         -- This writeFile is a necessary hack to force evaluation
+>         -- of the pressure histories.
 >         liftIO $ writeFile "/dev/null" (show newTrace)
 >         -- publishing the periods is important for pressures, etc.
 >         let newSched = map publishPeriod newSchedPending
@@ -64,6 +73,8 @@ we must do all the work that usually gets done in nell.
 >         -- find which default periods need to be deleted and
 >         -- which windows got scheduled
 >         let (wps, ws) = findScheduledWindowPeriods newlyScheduledPeriods
+>         liftIO $ print $ "Scheduling windows: "
+>         liftIO $ print (wps, ws)
 >         -- here we need to take the periods that were created by pack
 >         -- and add them to the list of periods for each session
 >         -- this is necessary so that a session that has used up all it's
@@ -81,10 +92,20 @@ we must do all the work that usually gets done in nell.
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
+>     wps = filter (\p -> Windowed == (sType . session $ p))
+>     p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
+>     p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
 
 Given a list newly scheduled periods, find which -- if any -- belong
 to windowed sessions and return lists of resulting replaced periods
 and satisfied windows.
+
+> p_ps_2_trace :: [(Period, [Period], Maybe Window)] -> [(Window, Maybe Period, Period)]
+> p_ps_2_trace xs = map p_ps_2_trace' xs
+
+> p_ps_2_trace' :: (Period, [Period], Maybe Window) -> (Window, Maybe Period, Period)
+> p_ps_2_trace' (p1 , (p2:[]), mw) | p1 == p2 = (fromJust mw, Nothing, p1)
+>                                  | otherwise = (fromJust mw, Just p1, p2)
 
 > findScheduledWindowPeriods :: [Period] -> ([Period], [Window])
 > --findScheduledWindowPeriods ps = rps . p_ps . p_ws . wps $ ps
