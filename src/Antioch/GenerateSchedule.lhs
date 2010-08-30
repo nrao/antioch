@@ -185,20 +185,20 @@ From an evenly spaced list of periods, create the list of windows
 
 > genWindows :: [Period] -> Gen [Window]
 > genWindows [] = return $ []
-> genWindows (p1:ps) = do
->     -- TBF 
->     dur <- choose (maxWidth, maxWidth)
->     let (p1Year, p1Month, p1Day, _, _, _) = toGregorian . startTime $ p1
->     let dayStart = fromGregorian p1Year p1Month p1Day 0 0 0
+> genWindows ps@(ph:pt) = do
+>     dur <- choose (div maxWidth 2, maxWidth)
+>     let (phYear, phMonth, phDay, _, _, _) = toGregorian . startTime $ ph
+>     let dayStart = fromGregorian phYear phMonth phDay 0 0 0
 >     let dts = [addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
 >     return $ map (mkWindow dur) dts
 >   where
->     pDiff = if length ps < 1 then (3*24*60)  else diffMinutes' (startTime . head $ ps) (startTime p1)
+>     days = (*(24*60))
+>     pDiff = if pt == [] then days 3 else diffMinutes' (startTime . head $ pt) (startTime ph)
 >     -- a window can't be more then one day less then the separation between
->     maxWidth = pDiff - (2*24*60) 
->     numPs = length (p1:ps)
+>     maxWidth = pDiff - days 2
+>     numPs = length ps
 >     mkWindow dur dt = defaultWindow { wStart = dt
->                                     , wDuration = dur + (2*24*60) }
+>                                     , wDuration = dur + days 2 }
 
 Self-test to be called in unit tests and simulations
 

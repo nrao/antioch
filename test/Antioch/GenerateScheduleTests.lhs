@@ -4,7 +4,7 @@
 > import Antioch.Generators
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Utilities    (printList, periodInWindow)
+> import Antioch.Utilities    (printList, periodInWindow, validWindow)
 > {-
 > import Antioch.Score
 > import Antioch.Weather
@@ -56,7 +56,7 @@
 >     assertEqual "test_genSimYear_1" 51840 maintMins
 >     assertEqual "test_genSimYear_1" True (1 < length projs)
 >     assertEqual "test_genSimYear_1" True ((totalMins > simMins) && (totalMins < (simMins + (simMins `div` 2))))
->     assertEqual "test_genSimYear_1" True (all (==Open) (map sType $ concatMap sessions $ init projs))
+>     --assertEqual "test_genSimYear_1" True (all (==Open) (map sType $ concatMap sessions $ init projs))
 >
 >     -- a year with everyting!
 >     let projs = generate 0 g $ genSimTime start days True (0.90, 0.05, 0.05) 2000 
@@ -297,9 +297,6 @@
 >     let g = mkStdGen 1
 >     let ps = map mkPeriod dts
 >     let wins = generate 0 g $ genWindows ps
->     --printList wins
->     --print $ filter (not . validWindow) wins
->     --assertEqual "test_genWindows_0" True (all validWindow wins)
 >     let allPsInAWin = all (\(w, p) -> periodInWindow p w) $ zip wins ps
 >     assertEqual "test_genWindows_1" True allPsInAWin
 >     -- make sure each period is only in one window
@@ -318,16 +315,13 @@
 >     let wins5 = generate 0 g $ genWindows (last wps)
 >     let s = makeSession defaultSession wins5 (last wps)
 >     assertEqual "test_genWindows_6" True (validSimulatedWindows s) 
->     --let wins4 = mapM (generate 0 g $ genWindows) wps
->     --let ss = map (makeSession defaultSession) $ zip wins4 wps
->     --assertEqual "test_genWindows_5" 1 (all (==True) $ map validSimulatedWindows ss) 
 >   where
 >     start = fromGregorian 2006 2 10 5 30 0
 >     days = 30
 >     psWidth = 30*24*60 -- days in minutes
 >     numPs = 5
 >     dts = [ addMinutes' (i*psWidth) start | i <- [0..numPs]]
->     mkPeriod dt = defaultPeriod { startTime = dt, pDuration = 60 }
+>     mkPeriod dt = defaultPeriod { startTime = dt, duration = 60 }
 >     inJustOneWindow ws p = 1 == (length $ filter (==True) $ map (periodInWindow p) ws)
 
 > test_validSimulatedWindows = TestCase $ do
