@@ -26,8 +26,8 @@ If it doesn't blow up, it passes
 >   assertEqual "test_runSim" True True
 
 > test_textReports = TestCase $ do
->     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores simInput rs history quiet 
->     textReports name outdir now execTime dt days strategyName ss2 schedule2 canceled gaps scores simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss2 schedule2 canceled gaps scores scoreDetails simInput rs history quiet 
 >   where
 >     name = "unit_test"
 >     outdir = "."
@@ -41,6 +41,10 @@ If it doesn't blow up, it passes
 >     canceled = []
 >     gaps = []
 >     scores = [("obsEff", [])
+>             , ("atmEff", [])
+>             , ("trkEff", [])
+>             , ("srfEff", [])]
+>     scoreDetails = [("obsEff", [])
 >             , ("atmEff", [])
 >             , ("trkEff", [])
 >             , ("srfEff", [])]
