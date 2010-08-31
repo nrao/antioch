@@ -19,8 +19,8 @@
 > --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate, sort, sortBy, (\\), nub)
-> import Data.Maybe (catMaybes)
+> import Data.List (intercalate, sort, sortBy, (\\), nub, find)
+> import Data.Maybe (catMaybes, fromJust, isJust)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -1019,8 +1019,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled gaps scores scoreDetails simInput rs history quiet = do
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled winfo gaps scores scoreDetails simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
@@ -1038,12 +1038,14 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r8 = reportSessionTypes ss ps
 >     r9 = reportRcvrSchedule rs
 >     r10 = reportPreScheduled history
+>     r16 = reportWindows history
 >     r11 = reportFinalSchedule ps
 >     r12 = reportCanceled canceled
+>     r17 = reportFinalWindows winfo
 >     r15 = reportScoreDetails scoreDetails
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r10, r11, r12, r15, r13, r14] 
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
 
@@ -1226,6 +1228,32 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     hdr = "Pre-Schedule Periods:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
+> reportWindows :: [Period] -> String
+> reportWindows ps = hdr ++ (concatMap reportPeriodWindow wps)
+>   where
+>     hdr = "Original Window Schedule:\n"
+>     wps = filter (\p -> (sType . session $ p) == Windowed) $ sort ps
+
+> reportPeriodWindow :: Period -> String
+> reportPeriodWindow p = reportWindow win Nothing p 
+>   where
+>     win = fromJust $ find (periodInWindow p) . windows . session $ p
+
+> reportWindow :: Window -> Maybe Period -> Period -> String
+> reportWindow w cp dp = wStartStr ++ cpStr ++ (pStr dp) ++ " " ++ wEndStr ++ "\n"
+>   where
+>     pStr p = "[" ++ (toSqlString . startTime $ p) ++ " for " ++ (show . duration $ p) ++ " mins.]" 
+>     cpStr = if isJust cp then (pStr . fromJust $ cp) else choosenSpace
+>     choosenSpace = concat $ take 35 $ repeat " "
+>     wStartStr = toSqlString . wStart $ w
+>     wEndStr = toSqlString . wEnd $ w
+
+> reportFinalWindows :: [(Window, Maybe Period, Period)] -> String
+> reportFinalWindows winfo = hdr ++ (concatMap reportWindow' winfo)
+>   where
+>     hdr = "Final Window Schedule:\n"
+>     reportWindow' (w, cp, dp) = reportWindow w cp dp
+
 > reportFinalSchedule :: [Period] -> String
 > reportFinalSchedule ps = hdr ++ (printPeriods ps)
 >   where
@@ -1265,6 +1293,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 > createPlotsAndReports sps name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet = do
 >     let gaps = findScheduleGaps dt dur schedule
 >     let canceled = getCanceledPeriods trace
+>     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
 >     -- check efficiency scores for normalicy
 >     schdObsEffs <- historicalSchdObsEffs schedule
@@ -1292,7 +1321,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                        ]
 >     -- text reports 
 >     --now <- getCurrentTime
->     textReports name outdir now execTime dt days strategyName ss schedule canceled gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss' schedule' trace) sps
 >   where
