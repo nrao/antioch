@@ -15,6 +15,11 @@ be confused and raise false alarams.
 >   where
 >     overlie' p = overlie start (daysDur*24*60) p
 
+> typeOpen , typeWindowed , typeFixed :: Session -> Bool
+> typeOpen s = sType s == Open
+> typeWindowed s = sType s == Windowed
+> typeFixed s = sType s == Fixed
+
 Not all sessions should be considered for scheduling.  We may not one to pass
 Sessions that:
    * are disabled/unauthorized
