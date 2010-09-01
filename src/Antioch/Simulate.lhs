@@ -98,7 +98,6 @@ we must do all the work that usually gets done in nell.
 >     --p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
 >     --p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
 
-
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
 >   where
