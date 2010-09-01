@@ -177,6 +177,9 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >                , sId   = id
 >                , sAllottedS = total
 >                , sAllottedT = total
+>                -- TBF: check that they have fixed durs
+>                , minDuration = duration . head $ wp
+>                , maxDuration = duration . head $ wp
 >                , ra = 0.0
 >                , dec = 1.5 -- TBF: this is just always up
 >                }
@@ -215,6 +218,9 @@ Self-test to be called in unit tests and simulations
 
 > windowHasOnePeriod :: [Period] -> Window -> Bool
 > windowHasOnePeriod ps w = 1 == (length $ filter (==True) $ map (flip periodInWindow w) ps)
+
+> allValidSimWindows :: [Session] -> Bool
+> allValidSimWindows wss = all (==True) $ map (validSimulatedWindows) wss
 
 Creates a maintenance project with a year's worth of pre-scheduled periods
 reflecting a realistic maintenance schedule.
