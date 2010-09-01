@@ -83,7 +83,7 @@ Filter candidate sessions dependent on its type.
 > isSchedulableType dt dur s
 >   -- Open
 >   | isTypeOpen dt s     = True
->   | sType s == Windowed = activeWindows (windows s)
+>   | typeWindowed s      = activeWindows (windows s)
 >   | otherwise           = False -- must be Fixed.
 >     where
 >       activeWindows ws
@@ -94,11 +94,9 @@ Filter candidate sessions dependent on its type.
 >         | otherwise                         = True
 >
 >       schedulableWindow w = all ($ w) [intersect, withNoDefault, needsPeriod]
->       --schedulableWindow w = and $ map ($ w) [intersect, withNoDefault, needsPeriod]
 >       intersect w = wStart w < dtEnd && dt < wEnd w
 >       withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
 >       needsPeriod w = not . wHasChosen $ w
->       --wEnd w = (wDuration w) `addMinutes` (wStart w)
 >       dtEnd = dur `addMinutes` dt
 
 We are explicitly ignoring grade here: it has been decided that a human

@@ -84,10 +84,11 @@ we must do all the work that usually gets done in nell.
 >         --liftIO $ printList $ getDefaultPeriods sessions ws
 >         let dps = getDefaultPeriods sessions ws
 >         let defaultsToDelete = dps \\ wps
->         let sessions'' = updateSessions sessions' newlyScheduledPeriods (cs ++ defaultsToDelete) (ws)
+>         let condemned = cs ++ defaultsToDelete
+>         let sessions'' = updateSessions sessions' newlyScheduledPeriods condemned (ws)
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
->         let newHistory = updateHistory history newSched (cs ++ defaultsToDelete) 
+>         let newHistory = updateHistory history newSched condemned 
 
 >         -- move on to the next day in the simulation!
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
@@ -96,7 +97,6 @@ we must do all the work that usually gets done in nell.
 >     --wps = filter (\p -> Windowed == (sType . session $ p))
 >     --p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
 >     --p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
-
 
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
@@ -143,7 +143,7 @@ and satisfied windows.
 >   where
 >     -- periods from a windowed session:
 >     -- wps ::[Period] -> [Period]
->     wps = filter (\p -> Windowed == (sType . session $ p))
+>     wps = filter (\p -> typeWindowed . session $ p)
 >
 >     -- periods with their associated window:
 >     -- p_ws :: [Period] -> [(Period, Maybe Window)]

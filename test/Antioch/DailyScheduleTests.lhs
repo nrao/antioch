@@ -22,7 +22,8 @@
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     , test_runDailySchedule_3
->     ]
+>     , test_crop_session
+>      ]
 
 > test_removeBuffer = TestCase $ do
 >   -- simplest case
@@ -146,6 +147,13 @@ adjusting max duration and time between.
 >       days = 1
 >       minutes = (24*60*days)::Minutes
 >       p = (periods . findPSessionByName $ "TestWindowed2") !! 1
+
+> test_crop_session = TestCase $ do
+>     assertEqual "test_crop_session 1" (sAllottedT o) (sAllottedT . crop_session $ o)
+>     assertEqual "test_crop_session 2" (maxDuration w) (sAllottedT . crop_session $ w)
+>         where
+>             o = head  getOpenPSessions
+>             w = head getWindowedPSessions
 
 Utilities:
 

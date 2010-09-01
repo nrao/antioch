@@ -156,7 +156,7 @@ overlaps until we run out of time.
 >   getStart day hour = addMinutes' ((day*24*60)+(hour*60)) start
 >   mkPeriod dur dt = defaultPeriod { startTime = dt
 >                                   , duration  = dur*60
->                                   , pState    = Scheduled }
+>                                   , pState    = Pending }
 
 TBF: for now keep it real simple - a single proj & sess for each set of periods
 
@@ -177,7 +177,7 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >                , sId   = id
 >                , sAllottedS = total
 >                , sAllottedT = total
->                -- TBF: check that they have fixed durs
+>                -- TBF: does Dana agree to fixed durations?
 >                , minDuration = duration . head $ wp
 >                , maxDuration = duration . head $ wp
 >                , ra = 0.0
@@ -302,11 +302,11 @@ as we have:
 >     mkMaintWeek start = map (mkMaintPeriod s (10*60)) $ dayDts start
 
 > mkMaintPeriod :: Session -> Minutes -> DateTime -> Period
-> mkMaintPeriod s dur date = defaultPeriod { startTime = start
->                                     , session = s
->                                     , duration = dur
->                                     , pState = Scheduled 
->                                     }
+> mkMaintPeriod s dur date = defaultPeriod {startTime = start
+>                                         , session = s
+>                                         , duration = dur
+>                                         , pState = Scheduled 
+>                                          }
 >   where
 >     -- all maintenance periods start at 8 AM ET
 >     (year, month, day, _, _, _) = toGregorian date
