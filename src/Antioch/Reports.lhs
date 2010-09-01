@@ -14,13 +14,15 @@
 > import Antioch.TimeAccounting
 > import Antioch.ReceiverTemperatures
 > import Antioch.HistoricalWeather
+> import Antioch.Filters
+> import Antioch.GenerateSchedule
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, sortBy, (\\), nub, find)
-> import Data.Maybe (catMaybes, fromJust, isJust)
+> import Data.Maybe (catMaybes, fromJust, isJust, maybeToList)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -1036,6 +1038,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r6 = reportBandTimes ss' ps' 
 >     r7 = reportScheduleScores scores
 >     r8 = reportSessionTypes ss ps
+>     r18 = reportWindowedTimes winfo
 >     r9 = reportRcvrSchedule rs
 >     r10 = reportPreScheduled history
 >     r16 = reportWindows history
@@ -1045,7 +1048,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r15 = reportScoreDetails scoreDetails
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
 
@@ -1086,12 +1089,14 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> [Period] -> String
 > reportScheduleChecks ss ps gaps history =
->     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, sTime, pTime, tb, scores, gs, ras, decs, elevs, rfiFlag, lstEx, trans]
+>     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, sTime, pTime, tb, scores, gs, ras, decs, elevs, rfiFlag, lstEx, trans, wins]
 >   where
 >     heading = "Schedule Checks: \n"
 >     error = "WARNING: "
 >     overlaps = if internalConflicts ps then error ++ "Overlaps in Schedule!\n" else "No Overlaps in Schedule\n"
->     fixed = if (not $ scheduleHonorsFixed history ps) then error ++ "Schedule does not honor pre-scheduled Periods!\n" else "Pre-scheduled Periods Honored\n"
+>     fixed = if (not $ scheduleHonorsFixed fhistory fps) then error ++ "Schedule does not honor pre-scheduled Periods!\n" else "Pre-scheduled Periods Honored\n"
+>     fhistory = filter (typeFixed . session) history
+>     fps = filter (typeFixed . session) ps
 >     durs = if (not . obeyDurations $ psOpen) then error ++ "Min/Max Durations NOT Honored!\n" else "Min/Max Durations Honored\n"
 >     sTime = if (disobeySessionAlloted psOpen /= []) then error ++ "Session Alloted Time NOT Honored: " ++ (show . disobeySessionAlloted $ psOpen) ++ "\n" else "Session Alloted Time Honored\n"
 >     pTime = if (disobeyProjectAlloted psOpen /= []) then error ++ "Project Alloted Time NOT Honored: " ++ (show . disobeyProjectAlloted $ psOpen) ++ "\n" else "Project Alloted Time Honored\n"
@@ -1105,6 +1110,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     lstEx = if (disobeyLSTExclusion psOpen) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
 >     trans = if (disobeyTransit psOpen) == [] then "Transit Flags Honored\n" else error ++ "Transit Flags NOT Honored: " ++ (show . disobeyTransit $ psOpen) ++ "\n"
 >     psOpen = filter (\p -> (sType . session $ p) == Open) ps
+>     wins = if (allValidSimWindows $ filter typeWindowed ss) then "Simulated Windows Valid\n" else "Simulated Windows NOT Valid!!!\n"
 
 > reportSimulationTimes :: [Session] -> DateTime -> Minutes -> [Period] -> [Period] -> String 
 > reportSimulationTimes ss dt dur observed canceled = 
@@ -1117,6 +1123,19 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     l4 = printf "%-9.2f %-9.2f %-9.2f %-9.2f %-9.2f\n" t8 t9 t10 t11 t12
 >     l5 = crossCheckSimulationBreakdown t1 t6 t7 t8 t9 t10 t11 t12 
 >     (t1, t2, t3, t4, t5, t6, t7, t8, t9, t10, t11, t12) = breakdownSimulationTimes ss dt dur observed canceled
+
+> reportWindowedTimes :: [(Window, Maybe Period, Period)] -> String
+> reportWindowedTimes wi = do
+>     heading ++ "    " ++ intercalate "    " ([hdr] ++ lines)
+>   where
+>     heading = "Window Times:\n"
+>     hdr = printf "          %-9s %-9s\n" "Periods" "Hours"
+>     all_dps = map (\(w, cp, dp) -> dp) wi
+>     dps = concatMap (\(w, cp, dp) -> if isJust cp then [] else [dp]) wi
+>     cps = concat $ map (\(w, cp, dp) -> maybeToList cp) wi
+>     lines = map ps2line [("default", dps), ("chosen", cps), ("total", all_dps)]
+>     ps2line (title, ps) = printf "%-9s %-9s %-9.2f\n" title (show . length $ ps) (((/60) . fromIntegral $ sum $ map duration ps)::Float) 
+
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
