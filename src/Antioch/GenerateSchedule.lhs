@@ -42,11 +42,12 @@ The user can specify:
 >     -- First, the windowed periods
 >     -- TBF: for now, we can treat windowed like fixed
 >     winPeriods <- genWindowedSchedule start days schedule windowedHrs
->     wProjs <- genWindowedProjects  winPeriods --genWindowedProjects winPeriods
+>     wProjs <- genWindowedProjects  winPeriods 1 --genWindowedProjects winPeriods
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
 >     -- Now, the fixed periods
 >     fixedPeriods <- genFixedSchedule start days schedule' fixedHrs
->     fProjs <- genFixedProjects fixedPeriods
+>     let maxId = maximum $ map sId $ concatMap sessions wProjs
+>     fProjs <- genFixedProjects fixedPeriods (maxId+1)
 >     -- Finally, put all the projects togethor
 >     return $ oProjs ++ wProjs ++ fProjs ++ if useMaint then [maint] else []
 
@@ -68,21 +69,22 @@ TBF: we don't really need this anymore
 
 TBF: for now keep it real simple - a single proj & sess for each period
 
-> genFixedProjects :: [Period] -> Gen [Project]
-> genFixedProjects [] = return []
-> genFixedProjects (p:ps) = do
->   proj <- genFixedProject  p
->   projs <- genFixedProjects ps
+> genFixedProjects :: [Period] -> Int -> Gen [Project]
+> genFixedProjects [] _ = return []
+> genFixedProjects (p:ps) id = do
+>   proj <- genFixedProject p id
+>   projs <- genFixedProjects ps (id+1)
 >   return $ proj : projs --genFixedProjects ps
 
-> genFixedProject :: Period -> Gen Project
-> genFixedProject p = do
+> genFixedProject :: Period -> Int -> Gen Project
+> genFixedProject p id = do
 >   proj' <- genProject
 >   let total = duration p
 >   -- TBF: genSessionFixed will figure things like sAllottedT, but we
 >   -- really want these based off the periods that are pre-generated
 >   s'' <- genSessionFixed
 >   let s' = s'' { sName = "FixedS"
+>                , sId = id
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                , ra = 0.0
@@ -158,20 +160,21 @@ overlaps until we run out of time.
 
 TBF: for now keep it real simple - a single proj & sess for each set of periods
 
-> genWindowedProjects :: [[Period]] -> Gen [Project]
-> genWindowedProjects [] = return []
-> genWindowedProjects (wp:wps) = do
->   proj <- genWindowedProject  wp
->   projs <- genWindowedProjects wps
+> genWindowedProjects :: [[Period]] -> Int -> Gen [Project]
+> genWindowedProjects [] _ = return []
+> genWindowedProjects (wp:wps) id = do
+>   proj <- genWindowedProject wp id
+>   projs <- genWindowedProjects wps (id+1)
 >   return $ proj : projs --genFixedProjects ps
 
-> genWindowedProject :: [Period] -> Gen Project
-> genWindowedProject wp = do
+> genWindowedProject :: [Period] -> Int -> Gen Project
+> genWindowedProject wp id = do
 >   proj'' <- genProject
 >   let proj' = proj'' { pName = "WinP" }
 >   let total = sum $ map duration wp
 >   s'' <- genSessionWindowed
 >   let s' = s'' { sName = "WinS"
+>                , sId   = id
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                , minDuration = duration . head $ wp
@@ -196,7 +199,7 @@ From an evenly spaced list of periods, create the list of windows
 >     return $ map (mkWindow dur) dts
 >   where
 >     days = (*(24*60))
->     pDiff = if pt == [] then days 3 else diffMinutes' (startTime . head $ pt) (startTime ph)
+>     pDiff = if pt == [] then days 10 else diffMinutes' (startTime . head $ pt) (startTime ph)
 >     -- a window can't be more then one day less then the separation between
 >     maxWidthDays = (pDiff - days 2) `div` (24*60)
 >     numPs = length ps
@@ -260,6 +263,7 @@ reflecting a realistic maintenance schedule.
 
 > mkMaintSession :: Session
 > mkMaintSession = defaultSession { sName = "Maintenance"
+>                                 , sId = 0 
 >                                 , frequency = 2.0
 >                                 , band = L
 >                                 , ra = 0.0

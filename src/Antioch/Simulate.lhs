@@ -36,7 +36,16 @@ we must do all the work that usually gets done in nell.
 >         w <- if test then getWeatherTest $ Just start else getWeather $ Just start
 >         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
->         let sessions' = authorizeBySemester sessions start
+>         -- TBF: how does this affect windowed sessions?
+>         let sessions'' = authorizeBySemester sessions start
+
+>         -- make sure default periods that are in this scheduling range
+>         -- get scheduled; cast a large net: any windowed periods in this
+>         -- schedule range mean those windows won't get scheduled here.
+>         let h = filterHistory history start (packDays+1) 
+>         let ws' = getWindows sessions'' h 
+>         let ws = map (\w -> w {wHasChosen = True}) ws'
+>         let sessions' = updateSessions sessions'' [] [] ws
 >
 >         -- now we pack, and look for backups
 >         (newSchedPending, newTrace) <- runScoring' w rs rt $ do
@@ -48,13 +57,10 @@ we must do all the work that usually gets done in nell.
 >             newSched' <- dailySchedule sf Pack start packDays history sessions' quiet
 >             -- simulate observing
 >             newSched'' <- scheduleBackups sf Pack sessions newSched' start (24 * 60 * 1)
->             let newSched''' = map publishPeriod newSched''
->             let newlyScheduledPeriods = newSched''' \\ history
->             let www = p_ps_2_trace . p_ps . p_ws . wps $ newlyScheduledPeriods
->             --let www' = map (\(p, mw) -> (fromJust mw, Nothing, p)) www
->             liftIO $ print $ "tell me!"
->             liftIO $ print $ www
->             mapM (\w -> tell [WindowPeriods w]) www
+>             -- write any scheduled windows to the trace
+>             let newWinInfo= getWindowInfo sessions newSched''
+>             let oldWinInfo = getWindowPeriodsFromTrace trace
+>             mapM (\w -> tell [WindowPeriods w]) (newWinInfo\\oldWinInfo)
 >             return $ newSched''
 >
 >         -- This writeFile is a necessary hack to force evaluation
@@ -70,31 +76,53 @@ we must do all the work that usually gets done in nell.
 >         -- now get the canceled periods so we can make sure they aren't 
 >         -- still in their sessions
 >         let cs = getCanceledPeriods $ trace ++ newTrace 
->         -- find which default periods need to be deleted and
->         -- which windows got scheduled
->         let (wps, ws) = findScheduledWindowPeriods newlyScheduledPeriods
->         liftIO $ print $ "Scheduling windows: "
->         liftIO $ print (wps, ws)
->         -- here we need to take the periods that were created by pack
->         -- and add them to the list of periods for each session
->         -- this is necessary so that a session that has used up all it's
->         -- time is not scheduled in the next call to simulate.
->         let sessions'' = updateSessions sessions' newlyScheduledPeriods (cs ++ wps) ws
+>         -- find all windows that got scheduled this time around
+>         let wps = filter (typeWindowed . session) newSched
+>         let ws' = getWindows sessions wps 
+>         let ws = map (\w -> w { wHasChosen = True }) ws'
+>         --liftIO $ print $ "Compare periods to default periods: "
+>         --liftIO $ printList $ getDefaultPeriods sessions ws
+>         let dps = getDefaultPeriods sessions ws
+>         let defaultsToDelete = dps \\ wps
+>         let condemned = cs ++ defaultsToDelete
+>         let sessions'' = updateSessions sessions' newlyScheduledPeriods condemned (ws)
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
->         let newHistory = updateHistory history newSched (cs ++ wps) 
->         -- run the below assert if you have doubts about bookeeping
->         -- make sure canceled periods have been removed from sessons
->         --let sessPeriods = concatMap periods sessions''
->         --let results = all (==True) $ map (\canceled -> (elem canceled sessPeriods) == False) cs
->         --assert results
+>         let newHistory = updateHistory history newSched condemned 
+
 >         -- move on to the next day in the simulation!
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
->     wps = filter (\p -> Windowed == (sType . session $ p))
->     p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
->     p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
+>     --wps = filter (\p -> Windowed == (sType . session $ p))
+>     --p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
+>     --p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
+
+
+> getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
+> getWindowInfo ss ps = zip3 wins chosen dps 
+>   where
+>     wps = filter (typeWindowed . session) ps
+>     wins = getWindows ss wps
+>     dps = getDefaultPeriods ss wins
+>     chosen = zipWith (\d p -> if (d == p) then Nothing else Just p) dps wps
+
+> getWindows :: [Session] -> [Period] -> [Window]
+> getWindows ss ps = map (getWindow ss) ps
+
+> getWindow :: [Session] -> Period -> Window
+> getWindow ss p = fromJust $ find (periodInWindow p) (windows s)
+>   where
+>     s = fromJust $ find (\s -> (sId s) == (sId . session $ p)) ss 
+
+> getDefaultPeriods ss ws = map (getDefaultPeriod ss) ws
+
+> getDefaultPeriod :: [Session] -> Window -> Period
+> getDefaultPeriod ss w = fromJust $ find (flip periodInWindow w) $ periods s 
+>   where
+>     s = fromJust $ find (\s -> (sId s) == (sId . wSession $ w)) ss 
+
+TBF: the following code, down to findScheduledWindows is not being used 
 
 Given a list newly scheduled periods, find which -- if any -- belong
 to windowed sessions and return lists of resulting replaced periods
@@ -155,12 +183,16 @@ TBF: once windows are introduced, here we will need to reconcile them.
 >   where
 >     dur = duration p
 
+ 
+
 During simulations, we want to be realistic about sessions from projects
 from future trimesters.  So, we will simply unauthorize any sessions beloning
 to future trimesters.
 
 > authorizeBySemester :: [Session] -> DateTime -> [Session]
 > authorizeBySemester ss dt = map (authorizeBySemester' dt) ss
+>   --where
+>   --  ss' = filter (\s -> (sType s) == Open) ss
 
 > authorizeBySemester' dt s = s { authorized = a }
 >   where
