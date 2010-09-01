@@ -22,7 +22,6 @@
 >   , test_honor_history
 >   , test_updateHistory
 >   , test_updateSessions
->   , test_findScheduledWindowPeriods
 >                  ]
 
 Attempt to see if the old test_sim_pack still works:
@@ -295,84 +294,6 @@ get on, it has a high chance of being canceled.
 >               , pDuration = 4*60
 >                }
 >     tw1_newPs = [chosen, last . periods $ tw1]
-
-> --catchIt :: Exception -> Maybe ()
-> --catchIt (AssertionFailed "Bad windowed session") = Just ()
-> --catchIt _                                        = Nothing
-
-> --handler _ = putStrLn = "assertion failed"
-
-> --test_updateSession' = TestCase $ do
->  --  updateSession' s 
->   --  assertEqual "test_updateSessions_5" tw1_newPs (periods tw1')
-> 
-> test_findScheduledWindowPeriods = TestCase $ do
->     -- no periods
->     let result = findScheduledWindowPeriods []
->     assertEqual "test_findScheduledWindowPeriods_1" ([],[]) result
->     -- open session period
->     let result = findScheduledWindowPeriods ps_lp
->     assertEqual "test_findScheduledWindowPeriods_2" ([],[]) result
->     -- new period for window
->     let result = findScheduledWindowPeriods [newPs1] 
->     assertEqual "test_findScheduledWindowPeriods_3" ([head ps_tw1],[head ws_tw1]) result
->     -- new periods for windows
->     let result = findScheduledWindowPeriods [newPs1, newPs2] 
->     assertEqual "test_findScheduledWindowPeriods_4" ([head ps_tw1, last ps_tw2],[head ws_tw1, last ws_tw2]) result
->
->     -- Testing for detection of illegal pre-conditions
->     {-
->     let performCall newPeriods testN = do
->         evaluate (findScheduledWindowPeriods newPeriods)
->         assertFailure ("test_findScheduledWindowPeriods_" ++ (show 5))
->     -- no default period
->     --let result = findScheduledWindowPeriods [lonePs1]
->     --assertEqual "test_findScheduledWindowPeriods_5" ([],[]) result
->     handleJust assertions (\_ -> return ()) (performCall [lonePs1] 5)
->     --   old period from old window
->     --let result = findScheduledWindowPeriods ps_tw1
->     --assertEqual "test_findScheduledWindowPeriods_6" ([],[]) result
->     handleJust assertions (\_ -> return ()) (performCall ps_tw1 6)
->     -- new period after default period
->     --let result = findScheduledWindowPeriods [badPs1]
->     --assertEqual "test_findScheduledWindowPeriods_7" ([],[]) result
->     handleJust assertions (\_ -> return ()) (performCall [badPs1] 7)
->     assertEqual "" True True
->     -}
->   where
->     ps_lp = periods lp
->     ps_tw1 = periods tw1
->     ws_tw1 = windows tw1
->     ps_tw2 = periods tw2
->     ws_tw2 = windows tw2
->     newPs1 = defaultPeriod {
->                 session = tw1
->               , startTime = fromGregorian 2006 10 3 17 15 0
->               , duration = 4*60
->               , pDuration = 4*60
->                }
->     newPs2 = defaultPeriod {
->                 session = tw2
->               , startTime = fromGregorian 2006 10 16 10 0 0
->               , duration = 3*60
->               , pDuration = 3*60
->                }
->     -- later than default
->     badPs1 = defaultPeriod {
->                 session = tw1
->               , startTime = fromGregorian 2006 10 5 10 45 0
->               , duration = 4*60
->               , pDuration = 4*60
->                }
->     -- missing default period
->     bad_tw = tw1 { periods = tail . periods $ tw1 }
->     lonePs1 = defaultPeriod {
->                 session = bad_tw
->               , startTime = fromGregorian 2006 10 3 17 15 0
->               , duration = 4*60
->               , pDuration = 4*60
->                }
-
 
 Test Utilities:
 

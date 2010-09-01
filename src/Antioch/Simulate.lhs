@@ -94,9 +94,6 @@ we must do all the work that usually gets done in nell.
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
->     --wps = filter (\p -> Windowed == (sType . session $ p))
->     --p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
->     --p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
 
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
@@ -123,51 +120,6 @@ we must do all the work that usually gets done in nell.
 > getDefaultPeriod ss w = fromJust $ find (flip periodInWindow w) $ periods s 
 >   where
 >     s = fromJust $ find (\s -> (sId s) == (sId . wSession $ w)) ss 
-
-TBF: the following code, down to findScheduledWindows is not being used 
-
-Given a list newly scheduled periods, find which -- if any -- belong
-to windowed sessions and return lists of resulting replaced periods
-and satisfied windows.
-
-> p_ps_2_trace :: [(Period, [Period], Maybe Window)] -> [(Window, Maybe Period, Period)]
-> p_ps_2_trace xs = map p_ps_2_trace' xs
-
-> p_ps_2_trace' :: (Period, [Period], Maybe Window) -> (Window, Maybe Period, Period)
-> p_ps_2_trace' (p1 , (p2:[]), mw) | p1 == p2 = (fromJust mw, Nothing, p1)
->                                  | otherwise = (fromJust mw, Just p1, p2)
-
-> findScheduledWindowPeriods :: [Period] -> ([Period], [Window])
-> --findScheduledWindowPeriods ps = rps . p_ps . p_ws . wps $ ps
-> findScheduledWindowPeriods ps = rps . isLegal . p_ps . p_ws . wps $ ps
->   where
->     -- periods from a windowed session:
->     -- wps ::[Period] -> [Period]
->     wps = filter (\p -> typeWindowed . session $ p)
->
->     -- periods with their associated window:
->     -- p_ws :: [Period] -> [(Period, Maybe Window)]
->     p_ws = map (\p -> (p, find (periodInWindow p) . windows . session $ p))
->
->     -- periods with all periods in their window:
->     --    [(Period, Maybe Window)] -> [(Period, [Period], Maybe Window)]
->     p_ps = map (\(p, w) -> (p, filter (flip periodInWindow (fromJust w)) (periods . session $ p), w))
->
->     -- asserts to find pathologial cases
->     isLegal = p_ps''' . p_ps'' . p_ps'
->     p_ps' =   (\x -> Ex.assert (oneDefault x) x)
->     p_ps''  = (\x -> Ex.assert (defaultNeqChosen x) x)
->     p_ps''' = (\x -> Ex.assert (chosenLtDefault x) x)
->
->     -- replaced periods and all windows
->     -- rps :: [(Period, [Period], Maybe Window)] -> ([Period], [Window])
->     rps ppws = (ps', ws')
->       where
->         (_, ps, ws) = unzip3 ppws
->         ps' = map head ps
->         --    TBF wHasChose protects against rescheduling, but does not
->         --        denote that the default period was replaced
->         ws' = map (\w -> w {wHasChosen = True}) $ map fromJust ws
 
 > --   period list length == 1
 > oneDefault, defaultNeqChosen, chosenLtDefault :: [(Period, [Period], Maybe Window)] -> Bool
