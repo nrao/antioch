@@ -63,10 +63,6 @@ Attempt to see if the old test_sim_pack still works:
 >     -- default windowed periods
 >     let dwps = sort . concat . map periods $ ss
 >     (result, t) <- simulateDailySchedule rs dt1 packDays simDays history ss True False [] []
->     print "result 1:"
->     printList result
->     print "t:"
->     printList t
 >     --  ***    No competition, expect an earlier period to be scheduled
 >     -- Four scheduled periods, first is new on first day of window and
 >     -- rest are defaults
@@ -75,21 +71,15 @@ Attempt to see if the old test_sim_pack still works:
 >     assertEqual "test_simulateDailyScheduleWithWindows 3" (tail dwps) (tail result)
 >     let (win, chosen, def) = head . getWindowPeriodsFromTrace $ t
 >     -- New period causes the chosen flag in the window to become true
->     --assertEqual ??
 >     -- Same new period in the result and in the trace
 >     assertEqual "test_simulateDailyScheduleWithWindows 4" (Just . head $ result) chosen
 >     -- The returned default period should be the same one as attached
 >     -- to the session
->     assertEqual "test_simulateDailyScheduleWithWindows 5" def (head . periods . head . tail $ ss)
+>     assertEqual "test_simulateDailyScheduleWithWindows 5" def (head dwps)
 >     --  ***    No competition, but better weather, opportunity to
->     -- schedule multiple chosen periods.
+>     -- schedule multiple chosen periods, but still get just one.
 >     (result, t) <- simulateDailySchedule rs dt2 packDays simDays history ss True False [] []
->     print "result 2:"
->     printList result
->     print "t:"
->     printList t
 >     -- Four scheduled periods, all the default periods
->     -- TBF double scheduling of a window
 >     assertEqual "test_simulateDailyScheduleWithWindows 6" 4 (length result)
 >     -- The first one being the first period in session TestWindowed2
 >     assertEqual "test_simulateDailyScheduleWithWindows 7" (fromGregorian 2006 9 22 4 0 0) (startTime . head $ result)
@@ -99,18 +89,13 @@ Attempt to see if the old test_sim_pack still works:
 >     assertEqual "test_simulateDailyScheduleWithWindows 9" (Just . head $ result) chosen
 >     -- The returned default period should be the same one as attached
 >     -- to the session
->     assertEqual "test_simulateDailyScheduleWithWindows 10" def (head . periods . head . tail $ ss)
+>     assertEqual "test_simulateDailyScheduleWithWindows 10" def (head dwps)
 >     --  ***    No competition, but the scheduling range encompasses
->     --         a  window with a previously chosen period, so no
->     --         new periods should be scheduled.
+>     --         a  default window, so no new periods should be
+>     --         scheduled.
 >     w <- getWeatherTest $ Just dt3
 >     (result, t) <- simulateDailySchedule rs dt3 packDays simDays history ss True False [] []
->     print "result 3:"
->     printList result
->     print "t:"
->     printList t
 >     -- Four scheduled periods, all the default periods
->     -- TBF double scheduling of a window
 >     assertEqual "test_simulateDailyScheduleWithWindows 11" 4 (length result)
 >     -- Results should be all default periods
 >     assertEqual "test_simulateDailyScheduleWithWindows 12" dwps result
@@ -119,12 +104,40 @@ Attempt to see if the old test_sim_pack still works:
 >     assertEqual "test_simulateDailyScheduleWithWindows 13" Nothing chosen
 >     -- The returned default period should be the same one as attached
 >     -- to the session
->     assertEqual "test_simulateDailyScheduleWithWindows 14" def (head . periods . head . tail $ ss)
+>     assertEqual "test_simulateDailyScheduleWithWindows 14" def (head dwps)
+>     --  ***    No competition, but the scheduling range encompasses
+>     --         a  window with a previously chosen period, so no
+>     --         new periods should be scheduled.
+>     w <- getWeatherTest $ Just dt4
+>     (result, t) <- simulateDailySchedule rs dt4 packDays simDays history ss True False [] []
+>     -- Four scheduled periods, all the default periods
+>     assertEqual "test_simulateDailyScheduleWithWindows 14" 4 (length result)
+>     -- Results should be all default periods
+>     assertEqual "test_simulateDailyScheduleWithWindows 15" dwps result
+>     -- No windowed periods in trace
+>     assertEqual "test_simulateDailyScheduleWithWindows 16" [] (getWindowPeriodsFromTrace t)
+>     --  ***    No competition, scheduling across two windows
+>     --         resulting in a chosen and a default window.
+>     w <- getWeatherTest $ Just dt5
+>     (result, t) <- simulateDailySchedule rs dt5 packDays 10 history ss True False [] []
+>     -- Four scheduled periods, all the default periods
+>     assertEqual "test_simulateDailyScheduleWithWindows 17" 4 (length result)
+>     -- Results should be one chosen followed by three defaults.
+>     assertEqual "test_simulateDailyScheduleWithWindows 18" (fromGregorian 2006 9 25 3 30 0) (startTime . head $ result)
+>     assertEqual "test_simulateDailyScheduleWithWindows 19" (tail dwps) (tail result)
+>     let (win, chosen, def) = head . getWindowPeriodsFromTrace $ t
+>     -- Same new period in the result and in the trace
+>     assertEqual "test_simulateDailyScheduleWithWindows 20" (Just . head $ result) chosen
+>     -- The returned default period should be the same one as attached
+>     -- to the session
+>     assertEqual "test_simulateDailyScheduleWithWindows 21" def (head dwps)
 >   where
 >     rs  = []
->     dt1 = fromGregorian 2006 9 20 0 0 0
->     dt2 = fromGregorian 2006 9 21 0 0 0
->     dt3 = fromGregorian 2006 9 26 0 0 0
+>     dt1 = fromGregorian 2006  9 20 0 0 0
+>     dt2 = fromGregorian 2006  9 21 0 0 0
+>     dt3 = fromGregorian 2006  9 26 0 0 0
+>     dt4 = fromGregorian 2006 10 15 0 0 0
+>     dt5 = fromGregorian 2006  9 25 0 0 0
 >     simDays = 2
 >     packDays = 2
 >     history = concat . map periods $ ss
