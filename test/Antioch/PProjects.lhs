@@ -5,6 +5,7 @@
 >     , findPSessionsByName
 >     , getPSessionId
 >     , getOpenPSessions
+>     , getWindowedPSessions
 >     ) where
 
 > import Antioch.Types
@@ -241,13 +242,11 @@
 >                 peId = 100
 >               , startTime = fromGregorian 2006 10 4 17 15 0
 >               , duration = 4*60
->               , pDuration = 4*60
 >                }
 >           , defaultPeriod {
 >                 peId = 101
 >               , startTime = fromGregorian 2006 10 27 17 45 0
 >               , duration = 4*60
->               , pDuration = 4*60
 >                }
 >           ]
 >       , sAllottedT = 2*4*60
@@ -283,13 +282,11 @@
 >                 peId = 200
 >               , startTime = fromGregorian 2006 9 28 2 0 0
 >               , duration = 3*60
->               , pDuration = 3*60
 >                }
 >           , defaultPeriod {
 >                 peId = 201
 >               , startTime = fromGregorian 2006 10 20 6 30 0
 >               , duration = 3*60
->               , pDuration = 3*60
 >                }
 >           ]
 >       , sAllottedT = 2*3*60
@@ -371,4 +368,8 @@ Assumes we have unique names.
 
 > getOpenPSessions :: [Session]
 > getOpenPSessions = (take 8 ss) ++ (drop ((length ss) - 2) ss)
+>     where ss = concatMap sessions pTestProjects
+
+> getWindowedPSessions :: [Session]
+> getWindowedPSessions = take 2 . drop 8 $ ss
 >     where ss = concatMap sessions pTestProjects
