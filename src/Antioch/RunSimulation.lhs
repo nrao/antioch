@@ -42,13 +42,14 @@
 >     printList history
 >     let total = sum $ map sAllottedT ss
 >     print ("total session time (mins): ", total, total `div` 60)
->     let wss = filter (\s -> (sType s) == Windowed) ss
+>     let wss = filter typeWindowed ss
 >     let badWinSessions = filter (not . validSimulatedWindows) wss
 >     if (length badWinSessions == 0) then print "Simulated Windows OK" else do
 >       print "Invalid Windows Detected; exiting simulation."
 >       return ()
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
+>     let quiet = True
 >     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet False [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
@@ -107,11 +108,12 @@ out to be about 10,000 hours.
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
 >     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
->     --projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
->     projs = generate 0 g $ genSimTime start days True (0.0, 0.0, 0.3) 0 
+>     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
 >     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
->     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     -- assign Id's to the open sessions
+>     maxId = maximum $ map sId ss'
+>     ss  = (filter (not . typeOpen) ss') ++ (zipWith (\s n -> s {sId = n}) (filter typeOpen ss') [(maxId+1)..])
 >     history = sort $ concatMap periods ss 
 
 
