@@ -107,7 +107,10 @@ we must do all the work that usually gets done in nell.
 >     chosen = zipWith (\d p -> if (d == p) then Nothing else Just p) dps wps
 
 > getWindows :: [Session] -> [Period] -> [Window]
-> getWindows ss ps = map (getWindow ss) ps
+> getWindows ss ps = map (getWindow wss) wps
+>   where
+>     wss = filter typeWindowed ss
+>     wps = filter (typeWindowed . session) ps
 
 > getWindow :: [Session] -> Period -> Window
 > getWindow ss p = fromJust $ find (periodInWindow p) (windows s)
