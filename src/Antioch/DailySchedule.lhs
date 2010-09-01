@@ -60,7 +60,7 @@ hour scheduling period.
 >     liftIO $ pr quiet $ "scheduling around periods: "
 >     liftIO $ prl quiet $ history'
 >     -- schedule with a buffer
->     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' ss
+>     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' . map crop_session $ ss
 >     liftIO $ pr quiet $ "scheduled w/ buffer: "
 >     liftIO $ pr quiet $ show . length $ schdWithBuffer
 >     liftIO $ prl quiet $ schdWithBuffer
@@ -71,6 +71,14 @@ hour scheduling period.
 >     liftIO $ prl quiet $ results
 >     tell [Timestamp dt] -- for trace plots
 >     return results
+
+Make a windowed session's allotted time equal to one period to prevent
+scheduling of multiple periods
+
+> crop_session :: Session -> Session
+> crop_session s
+>     | Windowed == sType s  = s {sAllottedT = min (sAllottedT s) (maxDuration s)}
+>     | otherwise            = s
 
 > pr :: Bool -> String -> IO ()
 > pr quiet str = do

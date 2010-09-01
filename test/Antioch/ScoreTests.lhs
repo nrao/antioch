@@ -610,7 +610,7 @@ Equation 23
 >                                 , projectCompletion]
 >     fs <- runScoring w [] rt (politicalFactors dt s)
 >     let result = eval fs
->     assertEqual "test_politicalFactors" 1.0052 result
+>     assertEqual "test_politicalFactors" 1.0024 result
 
 Equation 14
 
@@ -849,7 +849,7 @@ Equation 9
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV" 3.3615506 result  
+>     assertEqual "test_scoreCV" 3.3521867 result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -863,7 +863,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV2" 4.1680546 result  
+>     assertEqual "test_scoreCV2" 4.156445 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -993,7 +993,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = [2.307341,2.3044784,2.3010778,2.2990549,2.294277] ++ (replicate 92 0.0)
+>     expected = [2.3009138,2.2980595,2.2946684,2.292651,2.2878866] ++ (replicate 92 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
@@ -1007,19 +1007,19 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 3.9256723, 4*60 + 30)
+>     let expected = (s, 3.9147372, 4*60 + 30)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- best period length overriding min/max
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 3.9015152, 4*60)
+>     let expected = (s, 3.8906476, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >     -- best period length using session's min/max, but only 4 hours left
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing exht
->     let expected = (exht, 3.9015152, 4*60)
+>     let expected = (exht, 3.8906476, 4*60)
 >     assertEqual "test_bestDuration 3" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -1048,11 +1048,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertEqual "test_bestDurations 2 v" 3.9871795 v
+>     assertEqual "test_bestDurations 2 v" 3.9760742 v
 >     assertEqual "test_bestDurations 2 d" 360 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertEqual "test_bestDurations 3 v" 3.3257782 v
+>     assertEqual "test_bestDurations 3 v" 3.316514 v
 >     assertEqual "test_bestDurations 3 d" 450 d
 >   where
 >     starttime = fromGregorian 2006 10 1 17 0 0
