@@ -1039,6 +1039,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r7 = reportScheduleScores scores
 >     r8 = reportSessionTypes ss ps
 >     r18 = reportWindowedTimes winfo
+>     r19 = reportWindowedTimesByBand winfo
 >     r9 = reportRcvrSchedule rs
 >     r10 = reportPreScheduled history
 >     r16 = reportWindows history
@@ -1048,7 +1049,7 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r15 = reportScoreDetails scoreDetails
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r19, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
 
@@ -1136,6 +1137,21 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     lines = map ps2line [("default", dps), ("chosen", cps), ("total", all_dps)]
 >     ps2line (title, ps) = printf "%-9s %-9s %-9.2f\n" title (show . length $ ps) (((/60) . fromIntegral $ sum $ map duration ps)::Float) 
 
+> reportWindowedTimesByBand :: [(Window, Maybe Period, Period)] -> String 
+> reportWindowedTimesByBand wi = do
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2]
+>   where
+>     heading = "Window Times By Band: \n"
+>     bands = concatMap (flip (++) "         ") $ map show bandRange
+>     hdr = printf "%s     %s\n" "Type" bands
+>     dps = concatMap (\(w, cp, dp) -> if isJust cp then [] else [dp]) wi
+>     cps = concat $ map (\(w, cp, dp) -> maybeToList cp) wi
+>     --sessBandTimes = sessionBand ss
+>     defaultBandTimes = periodBand dps
+>     chosenBandTimes = periodBand cps
+>     l1 = "Default: " ++ toStr defaultBandTimes
+>     l2 = "Chosen : " ++ toStr chosenBandTimes
+>     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do

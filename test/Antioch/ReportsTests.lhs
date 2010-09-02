@@ -19,7 +19,8 @@ If it doesn't blow up, it passes
 > tests = TestList [ test_runSim
 >                  , test_textReports
 >                  , test_reportPeriodWindow
->                  --, test_reportWindowTimes
+>                  , test_reportWindowedTimes
+>                  , test_reportWindowedTimesByBand
 >                  ]
 
 > test_runSim = TestCase $ do
@@ -109,6 +110,14 @@ If it doesn't blow up, it passes
 >     exp2 = "Window Times:\n              Periods   Hours    \n    default   0         0.00     \n    chosen    1         2.00     \n    total     1         2.00     \n"
 >     exp3 = "Window Times:\n              Periods   Hours    \n    default   1         2.00     \n    chosen    1         2.00     \n    total     2         4.00     \n"
 
+> test_reportWindowedTimesByBand = TestCase $ do
+>     assertEqual "test_reportWindowedTimesByBand_1" True (validSimulatedWindows s)
+>     assertEqual "test_reportWindowedTimesByBand_2" exp (reportWindowedTimesByBand wInfo)
+>   where
+>     s = getTestWindowSession
+>     wInfo = [(head . windows $ s, Nothing, head . periods $ s)]
+>     exp = "Window Times By Band: \n    Type     P         L         S         C         X         U         K         A         Q         W         \n    Default: 0.00      2.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      \n    Chosen : 0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      \n"
+
 Utilities:
 
 > getTestWindowSession :: Session
@@ -138,3 +147,5 @@ Utilities:
 >     w' = defaultWindow { wSession = s' 
 >                        , wStart = winStart
 >                        , wDuration = winDur }
+
+
