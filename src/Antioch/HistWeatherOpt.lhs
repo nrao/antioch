@@ -28,7 +28,7 @@ dates for we which we want to fill, and the final results are put
 in a temporary file.
 
 > calcStringencyByDate startDt endDt = do
->     print $ "Updating Stringency table in " ++ (show weatherDB)
+>     print $ "Updating Stringency table for DB " ++ (show weatherDB)
 >     print $ "For dates: " ++ (toSqlString startDt)
 >     print $ "To: " ++ (toSqlString endDt)
 >     let filename = getFileName startDt 
@@ -46,27 +46,28 @@ in a temporary file.
 >           getStringency stringencies rcvr freq elev Continuum dt
 >           getStringency stringencies rcvr freq elev SpectralLine dt
 >     -- it's faster to put all the results in one giant string
->     lns <- getStringencyLines stringencies
+>     lns <- getStringencyLines stringencies hrs
 >     -- then write it to file
 >     writeFile filename $ concat . concat . concat . concat $ lns 
 >     print $ "Update of Stringency table complete."
+>   where
+>     hrs = (endDt `diffMinutes'` startDt) `div` 60
 
-
-> getStringencyLines stringencies = do
+> getStringencyLines stringencies hrs = do
 >     strs <- readIORef stringencies
 >     forM allRcvrs' $ \rcvr -> do
 >     forM (getRcvrFreqIndices rcvr) $ \freq -> do
 >     forM allElevs' $ \elev -> do
 >     forM obsTypes' $ \obsType -> do 
->     getStringencyLine strs rcvr freq elev obsType
+>     getStringencyLine strs rcvr freq elev obsType hrs
 
 Given the map of our results, and all the elements of the key to that map,
 returns the string representation of the tuple of keys & value.  This form
 is taken so that it can be easily parsed by another program.  Ex:
 '(8,2000,45,1,1.22)\n'
 
-> getStringencyLine stringencies rcvr freq elev obstype = do
->     let str = maybe (0.0 :: Float) (\c -> fromIntegral hours / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
+> getStringencyLine stringencies rcvr freq elev obstype hrs = do
+>     let str = maybe (0.0 :: Float) (\c -> fromIntegral hrs / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
 >     return $ (show (rcvrId, freq, elev, obsTypeId, str)) ++  "\n"
 >   where
 >     rcvrId = getRcvrId' rcvr
