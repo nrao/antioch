@@ -21,6 +21,7 @@ If it doesn't blow up, it passes
 >                  , test_reportPeriodWindow
 >                  , test_reportWindowedTimes
 >                  , test_reportWindowedTimesByBand
+>                  , test_reportWindowEfficiencies
 >                  ]
 
 > test_runSim = TestCase $ do
@@ -32,8 +33,8 @@ If it doesn't blow up, it passes
 >   assertEqual "test_runSim" True True
 
 > test_textReports = TestCase $ do
->     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo gaps scores scoreDetails simInput rs history quiet 
->     textReports name outdir now execTime dt days strategyName ss2 schedule2 canceled winfo gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo we gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss2 schedule2 canceled winfo we gaps scores scoreDetails simInput rs history quiet 
 >   where
 >     name = "unit_test"
 >     outdir = "."
@@ -57,6 +58,7 @@ If it doesn't blow up, it passes
 >     simInput = True
 >     rs = []
 >     winfo = []
+>     we = []
 >     history = []
 >     quiet = True
 >     -- for the second report, use the test sessions
@@ -118,6 +120,21 @@ If it doesn't blow up, it passes
 >     wInfo = [(head . windows $ s, Nothing, head . periods $ s)]
 >     exp = "Window Times By Band: \n    Type     P         L         S         C         X         U         K         A         Q         W         \n    Default: 0.00      2.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      \n    Chosen : 0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      0.00      \n"
 
+> test_reportWindowEfficiencies = TestCase $ do
+>     let r = reportWindowEfficiencies winEffs
+>     assertEqual "test_reportWindowEfficiencies_1" exp r
+>   where
+>     dt1 = fromGregorian 2006 2 1 0 0 0
+>     dt2 = fromGregorian 2006 2 7 0 0 0
+>     d1 = defaultPeriod { startTime = dt2, duration = 4*60 }
+>     c1 = defaultPeriod { startTime = dt1, duration = 4*60 }
+>     dt3 = fromGregorian 2006 3 1 0 0 0
+>     dt4 = fromGregorian 2006 3 7 0 0 0
+>     d2 = defaultPeriod { startTime = dt4, duration = 2*60 }
+>     c2 = defaultPeriod { startTime = dt3, duration = 2*60 }
+>     winEffs = [((c1,1.0),(d1,0.5)), ((c2,0.6),(d2,0.3))]
+>     exp = "Window Period Efficiencies (Chosen vs. Default): \n    Chosen Mean Eff:  0.87     \n    Default Mean Eff: 0.43     \n    Period for     0 2006-02-01 00:00:00 for   240  mins. : 1.00      Period for     0 2006-02-07 00:00:00 for   240  mins. : 0.50     \n    Period for     0 2006-03-01 00:00:00 for   120  mins. : 0.60      Period for     0 2006-03-07 00:00:00 for   120  mins. : 0.30     \n"
+
 Utilities:
 
 > getTestWindowSession :: Session
@@ -126,10 +143,12 @@ Utilities:
 >     winStart = fromGregorian 2006 2 1 0 0 0
 >     winDur   = 10*24*60
 >     pStart   = fromGregorian 2006 2 8 5 30 0
->     s' = defaultSession { sType = Windowed }
+>     scheduled = fromGregorian 2006 2 8 0 0 0
+>     s' = defaultSession { sType = Windowed , receivers = [[Rcvr1_2]], frequency = 2.0, band=L, grade=4.0, ra=3.7, dec=(-2.8)}
 >     p' = defaultPeriod { startTime = pStart
 >                        , duration = 60*2 
->                        , session = s' }
+>                        , session = s'
+>                        , pForecast = scheduled}
 >     w' = defaultWindow { wSession = s' 
 >                        , wStart = winStart
 >                        , wDuration = winDur }
@@ -140,12 +159,11 @@ Utilities:
 >     winStart = fromGregorian 2006 3 1 0 0 0
 >     winDur   = 10*24*60
 >     pStart   = fromGregorian 2006 3 8 5 30 0
->     s' = defaultSession { sType = Windowed }
+>     s' = defaultSession { sType = Windowed, receivers = [[Rcvr1_2]], frequency = 2.0, band=L, grade=4.0, ra=3.7, dec=(-2.8) }
 >     p' = defaultPeriod { startTime = pStart
 >                        , duration = 60*2 
 >                        , session = s' }
 >     w' = defaultWindow { wSession = s' 
 >                        , wStart = winStart
 >                        , wDuration = winDur }
-
 

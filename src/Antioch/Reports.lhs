@@ -1021,8 +1021,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled winfo gaps scores scoreDetails simInput rs history quiet = do
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [((Period, Float),(Period, Float))] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled winfo winEffs gaps scores scoreDetails simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
@@ -1046,10 +1046,11 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r11 = reportFinalSchedule ps
 >     r12 = reportCanceled canceled
 >     r17 = reportFinalWindows winfo
+>     r20 = reportWindowEfficiencies winEffs
 >     r15 = reportScoreDetails scoreDetails
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r19, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r19, r9, r16, r10, r11, r12, r17, r20, r15, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
 
@@ -1152,6 +1153,16 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     l1 = "Default: " ++ toStr defaultBandTimes
 >     l2 = "Chosen : " ++ toStr chosenBandTimes
 >     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
+
+> reportWindowEfficiencies :: [((Period, Float),(Period, Float))] -> String
+> reportWindowEfficiencies winEffs = heading ++ "    " ++ intercalate "    " lines 
+>   where
+>     heading = "Window Period Efficiencies (Chosen vs. Default): \n"
+>     lines = [summary1] ++ [summary2] ++ (map eff2line winEffs)
+>     summary1 = printf "Chosen Mean Eff:  %-9.2f\n" (fst . calcMeanWindowEfficiencies $ winEffs)
+>     summary2 = printf "Default Mean Eff: %-9.2f\n" (snd . calcMeanWindowEfficiencies $ winEffs)
+>     eff2line ((p1, eff1), (p2, eff2)) = printf "%s %-9.2f %s %-9.2f\n" (pStr p1) eff1 (pStr p2) eff2
+>     pStr p = (printf "%s %4d" "Period for " (sId . session $ p)) ++ (" " ++ (toSqlString . startTime $ p) ++ " for ") ++ (printf "%5d %s" (duration $ p) " mins. :") 
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
@@ -1354,9 +1365,11 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                       , ("srfEff", srfEffDetails)
 >                       , ("trkEff", trkEffDetails)
 >                        ]
+>     -- compare window efficinces: chosen vs. default periods
+>     windowEffs <- compareWindowPeriodEfficiencies winfo
 >     -- text reports 
 >     --now <- getCurrentTime
->     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss' schedule' trace) sps
 >   where

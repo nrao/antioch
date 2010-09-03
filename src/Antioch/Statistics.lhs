@@ -17,7 +17,7 @@
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
-> import Data.Maybe         (fromMaybe, isJust)
+> import Data.Maybe         (fromMaybe, isJust, fromJust)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
@@ -45,7 +45,23 @@ To Do List (port from Statistics.py):
    * true historical observing scores
    * historical pressure vs lst
       Need historical pressures
-  
+
+> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> IO [((Period, Float), (Period, Float))]
+> compareWindowPeriodEfficiencies winfo = do
+>     dpsEffs <- historicalSchdObsEffs dps
+>     cpsEffs <- historicalSchdObsEffs cps
+>     return $ zip (zip cps cpsEffs) (zip dps dpsEffs)
+>   where
+>     dps = concat $ map (\(w, mc, d) -> if isJust mc then [d] else []) winfo 
+>     cps = concat $ map (\(w, mc, d) -> if isJust mc then [fromJust mc] else []) winfo 
+ 
+> calcMeanWindowEfficiencies :: [((Period, Float), (Period, Float))] -> (Float, Float)
+> calcMeanWindowEfficiencies wps = (meanEff cpsEffs, meanEff dpsEffs)
+>   where
+>     cpsEffs = fst . unzip $ wps 
+>     dpsEffs = snd . unzip $ wps 
+>     meanEff psEffs = (sum $ map (\(p, e) -> (fromIntegral . duration $ p) * e) psEffs) / (sum $ map (fromIntegral . duration . fst) psEffs)
+
 > fracObservedTimeByDays :: [Session] -> [Period] -> [(Float, Float)]
 > fracObservedTimeByDays _  [] = []
 > fracObservedTimeByDays [] _  = []
