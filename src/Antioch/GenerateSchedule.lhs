@@ -83,7 +83,7 @@ TBF: for now keep it real simple - a single proj & sess for each period
 >   -- TBF: genSessionFixed will figure things like sAllottedT, but we
 >   -- really want these based off the periods that are pre-generated
 >   s'' <- genSessionFixed
->   let s' = s'' { sName = "FixedS"
+>   let s' = s'' { sName = "FixedS(" ++ (show id) ++ ")"
 >                , sId = id
 >                , sAllottedS = total
 >                , sAllottedT = total
@@ -173,7 +173,7 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >   let proj' = proj'' { pName = "WinP" }
 >   let total = sum $ map duration wp
 >   s'' <- genSessionWindowed
->   let s' = s'' { sName = "WinS"
+>   let s' = s'' { sName = "WinS(" ++ (show id) ++ ")"
 >                , sId   = id
 >                , sAllottedS = total
 >                , sAllottedT = total
