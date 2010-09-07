@@ -29,9 +29,14 @@
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
+
 simRemainingTime
 
-Here we are trying to reproduce subcompenents of the pressure calculations
+Here we are trying to reproduce subcompenents of the pressure calculations.
+However, it is possible that this plot and its companion, simPastSemesterTime
+have been deprecated and replaced by simBandPBinPastTime & simBandPBinRemainingTime.  For some reason, now long forgotten, these plots cannot be treated like
+n & d and used to recreate the pressure plots (1 + log (n/d)).  Perhaps they
+should be removed?
 
 > plotRemainingTimeByBand              :: StatsPlot
 > plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
@@ -55,6 +60,7 @@ TBF this is SO broken, Mike fix it
 
 
 simPastSemesterTime
+See notes for simRemainingTime.
 
 > plotPastSemesterTimeByBand              :: StatsPlot
 > plotPastSemesterTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotPastSemesterTimeByBand" else plotPastSemesterTimeByBand' fn n ss ps tr
@@ -695,7 +701,16 @@ simBandPFTime
 > 
 
 simBandPBinPastTime
-
+This plot, and it's companion, simBandPBinReminingTime are used for debugging
+the pressures that written to the trace.  The pressures are calculated from
+(Ex: Equation 21) p = 1 + log (n/d).  In Score.lhs, initBins', n and d are
+referred to as 'remaining' and 'past' time:
+writeArray arr bin $! (t + rho x + sPastS dt x, c + sPastS dt x)
+where sPastS is from the time accounting, and rho is some complicated shit.
+Then (n, d) are written to the trace, so that they can then be plotted by
+the following two plots.
+Thus, for any given time, n from this plot, and d from the next plot should
+yield 1 + log (n/d) in the pressure plots.
 
 > plotBandPressureBinPastTime              :: StatsPlot
 > plotBandPressureBinPastTime fn n _ _ trace = do 
@@ -708,6 +723,9 @@ simBandPBinPastTime
 >     y = "Band Pressure Past Bin"
 >     titles = map (Just . show) bandRange 
 
+simBandPBinRemainingTime
+See simBandPBinPastTime for notes.
+
 > plotBandPressureBinRemainingTime              :: StatsPlot
 > plotBandPressureBinRemainingTime fn n _ _ trace = do 
 >     let bins = bandPressureBinsByTime trace
@@ -718,6 +736,9 @@ simBandPBinPastTime
 >     x = "Time [days]"
 >     y = "Band Pressure Remainging Bin"
 >     titles = map (Just . show) bandRange 
+
+Converts data retrieved by bandPressureBinsByTime to a format (and units) 
+applicable to our plotting functions.
 
 > binsToPlotData :: [[(Float, (Int, Int))]] -> ((Int,Int) -> Int) -> [[(Float, Float)]]
 > binsToPlotData bins f = map (g f) bins

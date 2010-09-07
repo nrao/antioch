@@ -309,6 +309,7 @@ Generate a scoring function having the pressure factors.
 > genFrequencyPressure' :: (MonadWriter [Trace] m) => Array Band Float -> Array Band (Int, Int) -> m ScoreFunc
 > genFrequencyPressure' factors bins = do
 >     tell [FreqPressureHistory factors]
+>     -- we also write the components of the pressures (n, d) for debugging.
 >     tell [FreqPressureBinHistory bins]
 >     return $ frequencyPressure factors band
 
@@ -382,6 +383,7 @@ without ignoring  successful observation time.
 >     for xs $ \x -> do
 >         let bin = f x
 >         (t, c) <- readArray arr bin
+>         -- the following tuple is (n, d) in the equation 1 + log (n/d)
 >         writeArray arr bin $! (t + rho x + sPastS dt x, c + sPastS dt x)
 >     return arr
 >   where
