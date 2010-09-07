@@ -373,6 +373,15 @@ Note:
       periods are limited to the semester.
     - Sessions used for computing r are limited to authorized and
       not completed, and their periods are limited to the semester.
+    - Note that used time is computed twice:
+        * for d which uses *all* past periods from the current semester
+        * for use in the residue which excludes unauthorized and completed
+          sessions from the current or all-past semesters depending on
+          whether time available is a function of total or semester
+          allotment
+    - Unlike the computation for determining if time-allotted has been
+      fully consumed, time computations for pressure ignore project time
+      because it is not specific to RA or band.
 
 The result is that the computing of pressures become somewhat dynamic
 without ignoring  successful observation time.
@@ -395,13 +404,10 @@ without ignoring  successful observation time.
 >     sComplete' s = (sTerminated s) || ((residue dt s) < quarter)
 
 > residue :: DateTime -> Session -> Minutes
-> residue dt s
->   | allot_min == allot_sem = allot_sem - (sPastS dt s)
->   | otherwise              = allot_tot - (sPastT dt s)
+> residue dt s = min allot_sem allot_tot
 >     where
->       allot_sem = sAllottedS s
->       allot_tot = sAllottedT s
->       allot_min = min allot_tot allot_sem
+>       allot_sem = (sAllottedS s) - (sPastS dt s)
+>       allot_tot = (sAllottedT s) - (sPastT dt s)
 
 Translates the total/used times pairs into pressure factors.
 

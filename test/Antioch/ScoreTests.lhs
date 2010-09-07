@@ -21,6 +21,7 @@
 >   , test_rightAscensionPressure
 >   , test_initBins1
 >   , test_initBins2
+>   , test_residue
 >   , test_receiver
 >   , test_getReceivers
 >   , test_zenithAngle'
@@ -156,6 +157,78 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >                 ,(0,0),(0,0),(0,0)]
 >     result    = elems $ initBins startTime (minBound, maxBound) band pSessions
 >     startTime = fromGregorian' 2008 1 15
+
+> test_residue = TestCase $ do
+>   -- determined by all periods and total allocation
+>   assertEqual "test_residue 0" (60*60) (residue tenA1 sess1)
+>   assertEqual "test_residue 1" (60*60) (residue tenB1 sess1)
+>   assertEqual "test_residue 2" (35*60) (residue tenB2 sess1)
+>   assertEqual "test_residue 3" (10*60) (residue tenB4 sess1)
+>   -- determined by this semester's periods and semester allocation
+>   assertEqual "test_residue 0" (10*60) (residue tenA1 sess2)
+>   assertEqual "test_residue 1" (50*60) (residue tenB1 sess2)
+>   assertEqual "test_residue 2" (25*60) (residue tenB2 sess2)
+>   assertEqual "test_residue 3" ( 0*60) (residue tenB4 sess2)
+>     where
+>       -- 40-hour period at
+>       tenA0 = fromGregorian 2006 5  5 0 0 0
+>       tenA1 = fromGregorian 2006 5 15 0 0 0
+>       -- semesters 10A/10B boundary
+>       tenB0 = fromGregorian 2006 6  3 0 0 0
+>       -- 25-hour period at
+>       tenB1 = fromGregorian 2006 6  5 0 0 0
+>       tenB2 = fromGregorian 2006 6 15 0 0 0
+>       -- 25-hour period at
+>       tenB3 = fromGregorian 2006 7  5 0 0 0
+>       tenB4 = fromGregorian 2006 7 15 0 0 0
+>       sess1 = defaultSession {
+>           periods = [
+>               defaultPeriod {
+>                   startTime = tenA0
+>                 , pState = Scheduled
+>                 , duration = 40*60
+>                 , pDuration = 40*60
+>                  }
+>             , defaultPeriod {
+>                   startTime = tenB1
+>                 , pState = Scheduled
+>                   , duration = 25*60
+>                 , pDuration = 25*60
+>                  }
+>             , defaultPeriod {
+>                   startTime = tenB3
+>                 , pState = Scheduled
+>                 , duration = 25*60
+>                 , pDuration = 25*60
+>                  }
+>             ]
+>         , sAllottedT = 100*60
+>         , sAllottedS = 100*60
+>                              }
+>       sess2 = defaultSession {
+>           periods = [
+>               defaultPeriod {
+>                   startTime = tenA0
+>                 , pState = Scheduled
+>                 , duration = 40*60
+>                 , pDuration = 40*60
+>                  }
+>             , defaultPeriod {
+>                   startTime = tenB1
+>                 , pState = Scheduled
+>                   , duration = 25*60
+>                 , pDuration = 25*60
+>                  }
+>             , defaultPeriod {
+>                   startTime = tenB3
+>                 , pState = Scheduled
+>                 , duration = 25*60
+>                 , pDuration = 25*60
+>                  }
+>             ]
+>         , sAllottedT = 100*60
+>         , sAllottedS = 50*60
+>                              }
 
 > test_receiver = TestCase $ do
 >     let dt = fromGregorian 2006 6 15 12 0 0
