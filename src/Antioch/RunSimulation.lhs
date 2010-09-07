@@ -54,8 +54,6 @@
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
->     print "trace?"
->     printList $ getWindowPeriodsFromTrace trace
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
 >     createPlotsAndReports sps name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet 

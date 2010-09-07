@@ -29,9 +29,14 @@
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
+
 simRemainingTime
 
-Here we are trying to reproduce subcompenents of the pressure calculations
+Here we are trying to reproduce subcompenents of the pressure calculations.
+However, it is possible that this plot and its companion, simPastSemesterTime
+have been deprecated and replaced by simBandPBinPastTime & simBandPBinRemainingTime.  For some reason, now long forgotten, these plots cannot be treated like
+n & d and used to recreate the pressure plots (1 + log (n/d)).  Perhaps they
+should be removed?
 
 > plotRemainingTimeByBand              :: StatsPlot
 > plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
@@ -55,6 +60,7 @@ TBF this is SO broken, Mike fix it
 
 
 simPastSemesterTime
+See notes for simRemainingTime.
 
 > plotPastSemesterTimeByBand              :: StatsPlot
 > plotPastSemesterTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotPastSemesterTimeByBand" else plotPastSemesterTimeByBand' fn n ss ps tr
@@ -695,7 +701,16 @@ simBandPFTime
 > 
 
 simBandPBinPastTime
-
+This plot, and it's companion, simBandPBinReminingTime are used for debugging
+the pressures that written to the trace.  The pressures are calculated from
+(Ex: Equation 21) p = 1 + log (n/d).  In Score.lhs, initBins', n and d are
+referred to as 'remaining' and 'past' time:
+writeArray arr bin $! (t + rho x + sPastS dt x, c + sPastS dt x)
+where sPastS is from the time accounting, and rho is some complicated shit.
+Then (n, d) are written to the trace, so that they can then be plotted by
+the following two plots.
+Thus, for any given time, n from this plot, and d from the next plot should
+yield 1 + log (n/d) in the pressure plots.
 
 > plotBandPressureBinPastTime              :: StatsPlot
 > plotBandPressureBinPastTime fn n _ _ trace = do 
@@ -708,6 +723,9 @@ simBandPBinPastTime
 >     y = "Band Pressure Past Bin"
 >     titles = map (Just . show) bandRange 
 
+simBandPBinRemainingTime
+See simBandPBinPastTime for notes.
+
 > plotBandPressureBinRemainingTime              :: StatsPlot
 > plotBandPressureBinRemainingTime fn n _ _ trace = do 
 >     let bins = bandPressureBinsByTime trace
@@ -718,6 +736,9 @@ simBandPBinPastTime
 >     x = "Time [days]"
 >     y = "Band Pressure Remainging Bin"
 >     titles = map (Just . show) bandRange 
+
+Converts data retrieved by bandPressureBinsByTime to a format (and units) 
+applicable to our plotting functions.
 
 > binsToPlotData :: [[(Float, (Int, Int))]] -> ((Int,Int) -> Int) -> [[(Float, Float)]]
 > binsToPlotData bins f = map (g f) bins
@@ -1021,8 +1042,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled winfo gaps scores scoreDetails simInput rs history quiet = do
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [((Period, Float),(Period, Float))] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled winfo winEffs gaps scores scoreDetails simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
@@ -1039,16 +1060,18 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     r7 = reportScheduleScores scores
 >     r8 = reportSessionTypes ss ps
 >     r18 = reportWindowedTimes winfo
+>     r19 = reportWindowedTimesByBand winfo
 >     r9 = reportRcvrSchedule rs
 >     r10 = reportPreScheduled history
 >     r16 = reportWindows history
 >     r11 = reportFinalSchedule ps
 >     r12 = reportCanceled canceled
 >     r17 = reportFinalWindows winfo
+>     r20 = reportWindowEfficiencies winEffs
 >     r15 = reportScoreDetails scoreDetails
 >     r13 = reportSessionDetails ss
 >     r14 = reportObserverDetails ss
->     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r9, r16, r10, r11, r12, r17, r15, r13, r14] 
+>     report = concat [r1, r2, r6, r3, r4, r5, r7, r8, r18, r19, r9, r16, r10, r11, r12, r17, r20, r15, r13, r14] 
 >     ss' = removeMaintenanceS ss
 >     ps' = removeMaintenanceP ps
 
@@ -1136,6 +1159,31 @@ TBF: combine this list with the statsPlotsToFile fnc
 >     lines = map ps2line [("default", dps), ("chosen", cps), ("total", all_dps)]
 >     ps2line (title, ps) = printf "%-9s %-9s %-9.2f\n" title (show . length $ ps) (((/60) . fromIntegral $ sum $ map duration ps)::Float) 
 
+> reportWindowedTimesByBand :: [(Window, Maybe Period, Period)] -> String 
+> reportWindowedTimesByBand wi = do
+>     heading ++ "    " ++ intercalate "    " [hdr, l1, l2]
+>   where
+>     heading = "Window Times By Band: \n"
+>     bands = concatMap (flip (++) "         ") $ map show bandRange
+>     hdr = printf "%s     %s\n" "Type" bands
+>     dps = concatMap (\(w, cp, dp) -> if isJust cp then [] else [dp]) wi
+>     cps = concat $ map (\(w, cp, dp) -> maybeToList cp) wi
+>     --sessBandTimes = sessionBand ss
+>     defaultBandTimes = periodBand dps
+>     chosenBandTimes = periodBand cps
+>     l1 = "Default: " ++ toStr defaultBandTimes
+>     l2 = "Chosen : " ++ toStr chosenBandTimes
+>     toStr times = (concatMap (printf "%-9.2f " . snd) times) ++ "\n"
+
+> reportWindowEfficiencies :: [((Period, Float),(Period, Float))] -> String
+> reportWindowEfficiencies winEffs = heading ++ "    " ++ intercalate "    " lines 
+>   where
+>     heading = "Window Period Efficiencies (Chosen vs. Default): \n"
+>     lines = [summary1] ++ [summary2] ++ (map eff2line winEffs)
+>     summary1 = printf "Chosen Mean Eff:  %-9.2f\n" (fst . calcMeanWindowEfficiencies $ winEffs)
+>     summary2 = printf "Default Mean Eff: %-9.2f\n" (snd . calcMeanWindowEfficiencies $ winEffs)
+>     eff2line ((p1, eff1), (p2, eff2)) = printf "%s %-9.2f %s %-9.2f\n" (pStr p1) eff1 (pStr p2) eff2
+>     pStr p = (printf "%s %4d" "Period for " (sId . session $ p)) ++ (" " ++ (toSqlString . startTime $ p) ++ " for ") ++ (printf "%5d %s" (duration $ p) " mins. :") 
 
 > reportSemesterTimes :: [Session] -> [Period] -> String 
 > reportSemesterTimes ss ps = do
@@ -1338,9 +1386,11 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                       , ("srfEff", srfEffDetails)
 >                       , ("trkEff", trkEffDetails)
 >                        ]
+>     -- compare window efficinces: chosen vs. default periods
+>     windowEffs <- compareWindowPeriodEfficiencies winfo
 >     -- text reports 
 >     --now <- getCurrentTime
->     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
 >     mapM_ (\f -> f ss' schedule' trace) sps
 >   where

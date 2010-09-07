@@ -17,7 +17,7 @@
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock
-> import Data.Maybe         (fromMaybe, isJust)
+> import Data.Maybe         (fromMaybe, isJust, fromJust)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
@@ -45,7 +45,23 @@ To Do List (port from Statistics.py):
    * true historical observing scores
    * historical pressure vs lst
       Need historical pressures
-  
+
+> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> IO [((Period, Float), (Period, Float))]
+> compareWindowPeriodEfficiencies winfo = do
+>     dpsEffs <- historicalSchdObsEffs dps
+>     cpsEffs <- historicalSchdObsEffs cps
+>     return $ zip (zip cps cpsEffs) (zip dps dpsEffs)
+>   where
+>     dps = concat $ map (\(w, mc, d) -> if isJust mc then [d] else []) winfo 
+>     cps = concat $ map (\(w, mc, d) -> if isJust mc then [fromJust mc] else []) winfo 
+ 
+> calcMeanWindowEfficiencies :: [((Period, Float), (Period, Float))] -> (Float, Float)
+> calcMeanWindowEfficiencies wps = (meanEff cpsEffs, meanEff dpsEffs)
+>   where
+>     cpsEffs = fst . unzip $ wps 
+>     dpsEffs = snd . unzip $ wps 
+>     meanEff psEffs = (sum $ map (\(p, e) -> (fromIntegral . duration $ p) * e) psEffs) / (sum $ map (fromIntegral . duration . fst) psEffs)
+
 > fracObservedTimeByDays :: [Session] -> [Period] -> [(Float, Float)]
 > fracObservedTimeByDays _  [] = []
 > fracObservedTimeByDays [] _  = []
@@ -87,6 +103,11 @@ To Do List (port from Statistics.py):
 
 Remaining Time here refers to the remaining time used in the pressure
 factor calculation.  See Score.initBins'.
+Given a pool of sessions, a start time, and a number of days, produces:
+[(day #, sum of 'remaining time' for that day #)]; 
+TBF: this was created in an attempt to reproduce the components of the 
+preassure plots, but I believe that they were deprecated because we really
+need to use the trace to do this correctly.
 
 > remainingTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
 > remainingTimeByDays [] _ _ = []
@@ -105,6 +126,13 @@ factor calculation.  See Score.initBins'.
 >     -- here, Scomplete -> sTerminated to avoid looking at sAvailT (==0)
 >     isActive s dt = (isAuthorized s dt) && (not . sTerminated $ s)
 >     isAuthorized s dt = (semester . project $ s) <= (dt2semester dt)
+
+Given a pool of sessions, a start time, and a number of days, produces:
+[(day #, sum of SPastS for that day #)]; 
+TBF: this was created in an attempt to reproduce the components of the 
+preassure plots, but I believe that they were deprecated because we really
+need to use the trace to do this correctly.
+See Also Score.initBins'.
 
 > pastSemesterTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
 > pastSemesterTimeByDays [] _ _ = []
@@ -410,6 +438,9 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > isPeriodFromSemester :: Period -> String -> Bool
 > isPeriodFromSemester p sem = (semester . project . session $ p) == sem
 
+This function retrieves the history of pressures written in the trace, 
+and returns them, for each band as [(day #, pressure)].
+
 > bandPressuresByTime :: [Trace] -> [[(Float, Float)]]
 > bandPressuresByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]
 >     map bandData bandRange 
@@ -425,6 +456,11 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 > getBandPressures band bp = map (getBandPressure band) bp 
 >   where
 >     getBandPressure band t = getFreqPressure t ! band
+
+This function retrieves the history of pressure bins written in the trace, 
+and returns them, for each band as [(day #, (n, d))].
+Here n and d are used for calculating the pressure: 1 + log (n/d)
+We sometimes refer to n as 'remaining' and d as 'past'.
 
 > bandPressureBinsByTime :: [Trace] -> [[(Float, (Int, Int))]]
 > bandPressureBinsByTime trace = --[zip (replicate 3 1.0) (replicate 3 2.0)]

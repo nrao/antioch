@@ -7,6 +7,7 @@
 > import Antioch.Score
 > import Antioch.Utilities
 > import Antioch.Generators (generateTestData)
+> import Antioch.GenerateSchedule (validSimulatedWindows)
 > import Antioch.PProjects
 > import Antioch.TimeAccounting
 > import Antioch.Simulate (updateSessions)
@@ -53,7 +54,47 @@
 >   , test_remainingTimeByDays
 >   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
+>   , test_historicalSchdMeanFactors
+>   , test_compareWindowPeriodEfficiencies
+>   , test_calcMeanWindowEfficiencies
 >    ]
+
+> test_calcMeanWindowEfficiencies = TestCase $ do
+>     -- equal weights
+>     let r1 = calcMeanWindowEfficiencies ps 
+>     assertEqual "test_calcMeanWindowEfficiencies_1" (0.75, 0.375) r1 
+>     -- nonequal weights
+>     let r2 = calcMeanWindowEfficiencies ps2 
+>     assertEqual "test_calcMeanWindowEfficiencies_1" (0.6666667, 0.33333334) r2 
+>   where
+>     p1 = defaultPeriod {duration = 4*60}
+>     p2 = defaultPeriod {duration = 8*60}
+>     ps  = [((p1, 1.0), (p1, 0.5)), ((p1, 0.5),(p1, 0.25))] 
+>     ps2 = [((p1, 1.0), (p1, 0.5)), ((p2, 0.5),(p2, 0.25))] 
+
+> test_compareWindowPeriodEfficiencies = TestCase $ do
+>     assertEqual "test_reportWindowedTimesByBand_1" True (validSimulatedWindows $ wSession . (\(w,c,p) -> w) . head $ wInfo2)
+>     effs <- compareWindowPeriodEfficiencies wInfo2 
+>     assertEqual "test_compareWindowPeriodEfficiencies_1" exp effs
+>     effs <- compareWindowPeriodEfficiencies wInfo 
+>     assertEqual "test_compareWindowPeriodEfficiencies_2" [] effs
+>   where
+>     s = getTestWindowSession
+>     wInfo = [(head . windows $ s, Nothing, head . periods $ s)]
+>     s2' = getTestWindowSession2
+>     cp = defaultPeriod { session = s2
+>                        , startTime = fromGregorian 2006 3 2 12 0 0
+>                        , duration = 60*2 }
+>     dp = head . periods $ s2'
+>     s2 = makeSession s2' (windows s2') [cp]
+>     wInfo2 = [(head . windows $ s2, Just cp, dp)]
+>     exp = [((cp,0.62727827),(dp,0.67695916))]
+
+> test_historicalSchdMeanFactors = TestCase $ do
+>   r <- historicalSchdMeanFactors [p] trackingEfficiency
+>   assertEqual "test_historicalSchdMeanFactors_1" [0.99842864] r
+>     where
+>   p = getTestPeriod
 
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session
@@ -63,11 +104,7 @@
 >   assertEqual "test_periodSchdFactors_1" 0.9992234 (head fcs)
 >   assertEqual "test_periodSchdFactors_2" 0.9968952 (last fcs)
 >     where
->   s' = defaultSession { frequency=2.0, ra=3.7, dec=(-2.8), receivers=[[Rcvr1_2]], band=L, grade=4.0 }
->   start = fromGregorian 2006 6 20 12 15 0
->   scheduled = fromGregorian 2006 6 20 0 0 0
->   p = defaultPeriod { session = s', startTime = start, duration = 285, pForecast = scheduled}
->   s = makeSession s' [] [p]
+>   p = getTestPeriod
 
 > test_fracObservedTimeByDays = TestCase $ do
 >     let result = fracObservedTimeByDays ss ps
@@ -413,6 +450,15 @@ Test utilities
 >   canceled = sort $ failedBackups ++ canceled'
 >   
 
+> getTestPeriod :: Period
+> getTestPeriod = head . periods $ s
+>     where
+>   s' = defaultSession { frequency=2.0, ra=3.7, dec=(-2.8), receivers=[[Rcvr1_2]], band=L, grade=4.0 }
+>   start = fromGregorian 2006 6 20 12 15 0
+>   scheduled = fromGregorian 2006 6 20 0 0 0
+>   p = defaultPeriod { session = s', startTime = start, duration = 285, pForecast = scheduled}
+>   s = makeSession s' [] [p]
+
 > getEfficiencies    :: Int -> [Float]
 > getEfficiencies n =
 >     [fst $ randomR (0.0, 1.0) $ mkStdGen i | i <- [0 .. n]]
@@ -449,4 +495,34 @@ Test utilities
 >     ps = zipWith3 mkPeriod ss' dts durs 
 >     ss = updateSessions ss' ps [] []
 >     mkPeriod s start dur = Period 0 s start dur 0.0 Scheduled start False dur
+
+> getTestWindowSession :: Session
+> getTestWindowSession = makeSession s' [w'] [p']
+>   where
+>     winStart = fromGregorian 2006 2 1 0 0 0
+>     winDur   = 10*24*60
+>     pStart   = fromGregorian 2006 2 8 5 30 0
+>     scheduled = fromGregorian 2006 2 8 0 0 0
+>     s' = defaultSession { sType = Windowed , receivers = [[Rcvr1_2]], frequency = 2.0, band=L, grade=4.0, ra=3.7, dec=(-2.8)}
+>     p' = defaultPeriod { startTime = pStart
+>                        , duration = 60*2 
+>                        , session = s'
+>                        , pForecast = scheduled}
+>     w' = defaultWindow { wSession = s' 
+>                        , wStart = winStart
+>                        , wDuration = winDur }
+
+> getTestWindowSession2 :: Session
+> getTestWindowSession2 = makeSession s' [w'] [p']
+>   where
+>     winStart = fromGregorian 2006 3 1 0 0 0
+>     winDur   = 10*24*60
+>     pStart   = fromGregorian 2006 3 8 5 30 0
+>     s' = defaultSession { sType = Windowed, receivers = [[Rcvr1_2]], frequency = 2.0, band=L, grade=4.0, ra=3.7, dec=(-2.8) }
+>     p' = defaultPeriod { startTime = pStart
+>                        , duration = 60*2 
+>                        , session = s' }
+>     w' = defaultWindow { wSession = s' 
+>                        , wStart = winStart
+>                        , wDuration = winDur }
 
