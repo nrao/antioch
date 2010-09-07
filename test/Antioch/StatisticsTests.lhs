@@ -73,11 +73,13 @@
 >     ps2 = [((p1, 1.0), (p1, 0.5)), ((p2, 0.5),(p2, 0.25))] 
 
 > test_compareWindowPeriodEfficiencies = TestCase $ do
->     assertEqual "test_reportWindowedTimesByBand_1" True (validSimulatedWindows $ wSession . (\(w,c,p) -> w) . head $ wInfo2)
->     effs <- compareWindowPeriodEfficiencies wInfo2 
->     assertEqual "test_compareWindowPeriodEfficiencies_1" exp effs
+>     assertEqual "test_compareWindowPeriodEfficiencies_0" True (validSimulatedWindows $ wSession . (\(w,c,p) -> w) . head $ wInfo2)
 >     effs <- compareWindowPeriodEfficiencies wInfo 
->     assertEqual "test_compareWindowPeriodEfficiencies_2" [] effs
+>     assertEqual "test_compareWindowPeriodEfficiencies_1" [] effs
+>     effs <- compareWindowPeriodEfficiencies wInfo2 
+>     assertEqual "test_compareWindowPeriodEfficiencies_2" exp effs
+>     effs <- compareWindowPeriodEfficiencies (wInfo2 ++ wInfo3)
+>     assertEqual "test_compareWindowPeriodEfficiencies_3" exp2 effs
 >   where
 >     s = getTestWindowSession
 >     wInfo = [(head . windows $ s, Nothing, head . periods $ s)]
@@ -88,7 +90,13 @@
 >     dp = head . periods $ s2'
 >     s2 = makeSession s2' (windows s2') [cp]
 >     wInfo2 = [(head . windows $ s2, Just cp, dp)]
->     exp = [((cp,0.62727827),(dp,0.67695916))]
+>     exp = [((cp,0.6317847),(dp,0.68081766))]
+>     cp2 = cp { startTime = fromGregorian 2006 4 5 12 0 0 }
+>     dp2 = dp { startTime = fromGregorian 2006 4 1 12 0 0 }
+>     -- the windows info doesn't really matter
+>     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
+>     exp2 = [((cp, 0.6317847),(dp, 0.68081766))
+>            ,((cp2,0.6789325),(dp2,0.66352063))]
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   r <- historicalSchdMeanFactors [p] trackingEfficiency

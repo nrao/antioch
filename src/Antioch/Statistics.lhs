@@ -48,8 +48,8 @@ To Do List (port from Statistics.py):
 
 > compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> IO [((Period, Float), (Period, Float))]
 > compareWindowPeriodEfficiencies winfo = do
->     dpsEffs <- historicalSchdObsEffs dps
->     cpsEffs <- historicalSchdObsEffs cps
+>     dpsEffs <- historicalSchdMeanObsEffs dps
+>     cpsEffs <- historicalSchdMeanObsEffs cps
 >     return $ zip (zip cps cpsEffs) (zip dps dpsEffs)
 >   where
 >     dps = concat $ map (\(w, mc, d) -> if isJust mc then [d] else []) winfo 
