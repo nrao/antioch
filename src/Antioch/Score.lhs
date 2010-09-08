@@ -347,7 +347,8 @@ For a specific RA or band we need:
   r = remaining hours
 i.e., n = d + r, where pressure = 1 + ln( n / d).
 
-All of this applies to a given semester and grade B or higher sessions.
+All of this applies to a given semester and grade B or higher 
+non-maintenance sessions.
 
 The value d is easy, simply add up all the time billed for every period
 completed for the current semester across ALL sessions.

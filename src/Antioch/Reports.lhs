@@ -705,8 +705,9 @@ This plot, and it's companion, simBandPBinReminingTime are used for debugging
 the pressures that written to the trace.  The pressures are calculated from
 (Ex: Equation 21) p = 1 + log (n/d).  In Score.lhs, initBins', n and d are
 referred to as 'remaining' and 'past' time:
-writeArray arr bin $! (t + rho x + sPastS dt x, c + sPastS dt x)
-where sPastS is from the time accounting, and rho is some complicated shit.
+writeArray arr bin (t + rho x + sPastS dt x, c + sPastS dt x)
+where sPastS is from the time accounting, and rho (r) is the current
+remaining available time, i.e., n = r + d.
 Then (n, d) are written to the trace, so that they can then be plotted by
 the following two plots.
 Thus, for any given time, n from this plot, and d from the next plot should

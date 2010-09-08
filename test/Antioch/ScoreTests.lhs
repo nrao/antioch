@@ -18,6 +18,8 @@
 >     test_hourAngleLimit
 >   , test_frequencyPressure
 >   , test_frequencyPressureComparison
+>   , test_xBandPressure
+>   , test_kaBandPressure
 >   , test_rightAscensionPressure
 >   , test_initBins1
 >   , test_initBins2
@@ -134,6 +136,265 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >   where
 >     ss = concatMap sessions pTestProjects
 
+tests for frequency pressure from
+https://safe.nrao.edu/wiki/bin/view/Main/DSSUseCases
+
+> test_xBandPressure = TestCase $ do
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt1 ss0
+>   assertScoringResult' "test_xBandPressure 1" Nothing (sqrt 4.6888795) (freqPressure undefined . head $ ss0)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt2 ss0
+>   assertScoringResult' "test_xBandPressure 2" Nothing (sqrt 3.0794415) (freqPressure undefined . head $ ss0)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt3 ss0
+>   assertScoringResult' "test_xBandPressure 3" Nothing (sqrt 1.8556662) (freqPressure undefined . head $ ss0)
+>
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt4 ss1
+>   assertScoringResult' "test_xBandPressure 4" Nothing (sqrt 4.970292) (freqPressure undefined . head $ ss1)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt5 ss1
+>   assertScoringResult' "test_xBandPressure 5" Nothing (sqrt 3.5839977) (freqPressure undefined . head $ ss1)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt6 ss1
+>   assertScoringResult' "test_xBandPressure 6" Nothing (sqrt 2.0799203) (freqPressure undefined . head $ ss1)
+>
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt7 ss2
+>   assertScoringResult' "test_xBandPressure 7" Nothing (sqrt 5.1743875) (freqPressure undefined . head $ ss2)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt8 ss2
+>   assertScoringResult' "test_xBandPressure 8" Nothing (sqrt 1.916291) (freqPressure undefined . head $ ss2)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt9 ss2
+>   assertScoringResult' "test_xBandPressure 9" Nothing (sqrt 1.6778798) (freqPressure undefined . head $ ss2)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt10 ss2
+>   assertScoringResult' "test_xBandPressure 10" Nothing (sqrt 1.3677249) (freqPressure undefined . head $ ss2)
+>     where   
+>       dt1  = fromGregorian 2006  2  1 0 0 0
+>       dt2  = fromGregorian 2006  3 25 0 0 0
+>       dt3  = fromGregorian 2006  4 11 0 0 0
+>       dt4  = fromGregorian 2006  6  1 0 0 0
+>       dt5  = fromGregorian 2006  6 13 0 0 0
+>       dt6  = fromGregorian 2006  7 15 0 0 0
+>       dt7  = fromGregorian 2006 10  1 0 0 0
+>       dt8  = fromGregorian 2006 11 12 0 0 0
+>       dt9  = fromGregorian 2006 12 11 0 0 0
+>       dt10 = fromGregorian 2006 12 26 0 0 0
+>       ss0 = [tom {authorized = True}
+>            , dick {authorized = False}
+>            , harry {authorized = False}
+>             ]
+>       ss1 = [tom {authorized = True}
+>            , dick {authorized = True}
+>            , harry {authorized = False}
+>             ]
+>       ss2 = [tom {authorized = True}
+>            , dick {authorized = True}
+>            , harry {authorized = True}
+>             ]
+>       tom = defaultSession {
+>               sName = "Tom"
+>             , periods = [
+>                   defaultPeriod {
+>                       startTime = fromGregorian 2006 3 24 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 5*60
+>                     , pDuration = 5*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 4 10 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 12*60
+>                     , pDuration = 12*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 6 12 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 4*60
+>                     , pDuration = 4*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 11 11 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 1*60
+>                     , pDuration = 1*60
+>                      }
+>                         ]
+>             , sAllottedT = 40*60
+>             , sAllottedS = 40*60
+>             , frequency = 9.0
+>             , band = X
+>                          }
+>       dick = defaultSession {
+>               sName = "Dick"
+>             , periods = [
+>                   defaultPeriod {
+>                       startTime = fromGregorian 2006 7 14 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 14*60
+>                     , pDuration = 14*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 11 11 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 15*60
+>                     , pDuration = 15*60
+>                      }
+>                         ]
+>             , sAllottedT = 30*60
+>             , sAllottedS = 30*60
+>             , frequency = 9.0
+>             , band = X
+>                          }
+>       harry = defaultSession {
+>               sName = "Harry"
+>             , periods = [
+>                   defaultPeriod {
+>                       startTime = fromGregorian 2006 11 11 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 10*60
+>                     , pDuration = 10*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 12 10 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 7*60
+>                     , pDuration = 7*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 12 25 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 12*60
+>                     , pDuration = 12*60
+>                      }
+>                         ]
+>             , sAllottedT = 30*60
+>             , sAllottedS = 30*60
+>             , frequency = 9.0
+>             , band = X
+>                          }
+
+> test_kaBandPressure = TestCase $ do
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt1 ss0
+>   assertScoringResult' "test_kaBandPressure 1" Nothing (sqrt 5.3820267) (freqPressure undefined . head $ ss0)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt2 ss0
+>   assertScoringResult' "test_kaBandPressure 2" Nothing (sqrt 3.7725887) (freqPressure undefined . head $ ss0)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt3 ss0
+>   assertScoringResult' "test_kaBandPressure 3" Nothing (sqrt 2.5488133) (freqPressure undefined . head $ ss0)
+>
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt4 ss1
+>   assertScoringResult' "test_kaBandPressure 4" Nothing (sqrt 5.8121843) (freqPressure undefined . head $ ss1)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt5 ss1
+>   assertScoringResult' "test_kaBandPressure 5" Nothing (sqrt 4.42589) (freqPressure undefined . head $ ss1)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt6 ss1
+>   assertScoringResult' "test_kaBandPressure 6" Nothing (sqrt 2.9218125) (freqPressure undefined . head $ ss1)
+>
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt7 ss2
+>   assertScoringResult' "test_kaBandPressure 7" Nothing (sqrt 6.1059456) (freqPressure undefined . head $ ss2)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt8 ss2
+>   assertScoringResult' "test_kaBandPressure 8" Nothing (sqrt 2.8478491) (freqPressure undefined . head $ ss2)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt9 ss2
+>   assertScoringResult' "test_kaBandPressure 9" Nothing (sqrt 2.609438) (freqPressure undefined . head $ ss2)
+>   freqPressure <- runScoring undefined [] undefined $ genFrequencyPressure dt10 ss2
+>   assertScoringResult' "test_kaBandPressure 10" Nothing (sqrt 2.299283) (freqPressure undefined . head $ ss2)
+>     where   
+>       dt1  = fromGregorian 2006  2  1 0 0 0
+>       dt2  = fromGregorian 2006  3 25 0 0 0
+>       dt3  = fromGregorian 2006  4 11 0 0 0
+>       dt4  = fromGregorian 2006  6  1 0 0 0
+>       dt5  = fromGregorian 2006  6 13 0 0 0
+>       dt6  = fromGregorian 2006  7 15 0 0 0
+>       dt7  = fromGregorian 2006 10  1 0 0 0
+>       dt8  = fromGregorian 2006 11 12 0 0 0
+>       dt9  = fromGregorian 2006 12 11 0 0 0
+>       dt10 = fromGregorian 2006 12 26 0 0 0
+>       ss0 = [tom {authorized = True}
+>            , dick {authorized = False}
+>            , harry {authorized = False}
+>             ]
+>       ss1 = [tom {authorized = True}
+>            , dick {authorized = True}
+>            , harry {authorized = False}
+>             ]
+>       ss2 = [tom {authorized = True}
+>            , dick {authorized = True}
+>            , harry {authorized = True}
+>             ]
+>       tom = defaultSession {
+>               sName = "Tom"
+>             , periods = [
+>                   defaultPeriod {
+>                       startTime = fromGregorian 2006 3 24 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 5*60
+>                     , pDuration = 5*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 4 10 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 12*60
+>                     , pDuration = 12*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 6 12 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 4*60
+>                     , pDuration = 4*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 11 11 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 1*60
+>                     , pDuration = 1*60
+>                      }
+>                         ]
+>             , sAllottedT = 80*60
+>             , sAllottedS = 80*60
+>             , frequency = 30.0
+>             , band = A
+>                          }
+>       dick = defaultSession {
+>               sName = "Dick"
+>             , periods = [
+>                   defaultPeriod {
+>                       startTime = fromGregorian 2006 7 14 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 14*60
+>                     , pDuration = 14*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 11 11 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 15*60
+>                     , pDuration = 15*60
+>                      }
+>                         ]
+>             , sAllottedT = 60*60
+>             , sAllottedS = 60*60
+>             , frequency = 30.0
+>             , band = A
+>                          }
+>       harry = defaultSession {
+>               sName = "Harry"
+>             , periods = [
+>                   defaultPeriod {
+>                       startTime = fromGregorian 2006 11 11 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 10*60
+>                     , pDuration = 10*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 12 10 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 7*60
+>                     , pDuration = 7*60
+>                      }
+>                 , defaultPeriod {
+>                       startTime = fromGregorian 2006 12 25 0 0 0
+>                     , pState = Scheduled
+>                     , duration = 12*60
+>                     , pDuration = 12*60
+>                      }
+>                         ]
+>             , sAllottedT = 60*60
+>             , sAllottedS = 60*60
+>             , frequency = 30.0
+>             , band = A
+>                          }
+
 > test_rightAscensionPressure = TestCase $ do
 >     raPressure <- runScoring undefined [] undefined $ genRightAscensionPressure defaultStartTime pSessions
 >     assertScoringResult' "test_rightAscensionPressure" Nothing 1.5259848 (raPressure undefined . head $ pSessions)
@@ -192,7 +453,7 @@ Test that a frequency NOT in the initial bins gives a pressure of 1.0
 >             , defaultPeriod {
 >                   startTime = tenB1
 >                 , pState = Scheduled
->                   , duration = 25*60
+>                 , duration = 25*60
 >                 , pDuration = 25*60
 >                  }
 >             , defaultPeriod {
