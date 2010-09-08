@@ -4,7 +4,6 @@
 > import Antioch.DateTime   (toGregorian')
 > import Antioch.Generators
 > import Antioch.Types
-> -- import Antioch.Score      (Trace, zenithAngle, minObservingEff, elevationFromZenith)
 > import Antioch.Score
 > import Antioch.Utilities  (rad2hrs, rad2deg, utc2lstHours, dt2semester) 
 > import Antioch.Weather
