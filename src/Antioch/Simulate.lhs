@@ -22,8 +22,35 @@
 > import Test.HUnit
 
 
-Here we leave the meta-strategy to do the work of scheduling, but inbetween,
-we must do all the work that usually gets done in nell.
+Here we leave the meta-strategy (dailySchedule, which is also used for the daily, production scheduling)
+to do the work of scheduling, but inbetween, we must do all the work that usually gets done in nell.
+
+What makes this function so complicated is that it is iterative, and between each iteration, we must 
+update the parameters.  At first, this just involved the newly scheduled periods, but now we must also
+keep track of canceled periods and reconciled windows.  Here's a brief outline:
+
+   * prepare for scheduling:
+      * get weather and receiver temparture resources
+      * make sure sessions from future semesters are un-authorized
+      * make sure windows in the range of this iteration get scheduled
+   * schedule 
+      * this is the same call to dailySchedule that we do in daily production scheduling.   
+      * here we are scheduling a 2.5 day time range 
+   * backups 
+      * look for periods that have failing MOC's in the next day 
+      * we only cover a day because we our step size in the iterations is one day - we want to make sure we check each periods' MOC only once.
+      * if MOC fails, replace it with a backup if necessary
+   * prepare for next iteration:
+      * publish all newly scheduled periods
+      * mark reconcile windows - find which default periods need to get deleted
+         * ws that were scheduled with a chosen period must make sure their default periods are deleted
+      * update parameters
+         * update sessions
+            * each sessions' list of periods must get the newly scheduled ones added, and the canceled ones removed
+            * each sessions' list of windows must be marked as scheduled (when appropriate)
+         * udpate history (the schedule)
+            * all newly scheduled periods added, and canceled ones removed
+   * call next iteration with updated parameters - go back to the top!
 
 > simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
 > simulateDailySchedule rs start packDays simDays history sessions quiet test schedule trace
@@ -95,6 +122,7 @@ we must do all the work that usually gets done in nell.
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
+For the given list of sessions and periods
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
 >   where
@@ -103,11 +131,17 @@ we must do all the work that usually gets done in nell.
 >     dps = getDefaultPeriods ss wins
 >     chosen = zipWith (\d p -> if (d == p) then Nothing else Just p) dps wps
 
+Retrieve all the windows belonging to the given periods' session.
+
 > getWindows :: [Session] -> [Period] -> [Window]
 > getWindows ss ps = map (getWindow wss) wps
 >   where
 >     wss = filter typeWindowed ss
 >     wps = filter (typeWindowed . session) ps
+
+Retrieve the window belonging to the given period's session.
+Note we pass along all sessions so that we don't have to rely on the session tied to
+the given period being up to date - this is the knot tying problem.
 
 > getWindow :: [Session] -> Period -> Window
 > getWindow ss p = fromJust $ find (periodInWindow p) (windows s)
@@ -115,6 +149,10 @@ we must do all the work that usually gets done in nell.
 >     s = fromJust $ find (\s -> (sId s) == (sId . session $ p)) ss 
 
 > getDefaultPeriods ss ws = map (getDefaultPeriod ss) ws
+
+Retrieves the default period for a given window given the full pool of sessoins.
+Note that the session is identified using the sId and retrieved from the pool of sessions,
+since the session from wSession may not be up to date - this is the knot typing problem.
 
 > getDefaultPeriod :: [Session] -> Window -> Period
 > getDefaultPeriod ss w = fromJust $ find (flip periodInWindow w) $ periods s 
@@ -130,14 +168,12 @@ we must do all the work that usually gets done in nell.
 > chosenLtDefault = all (\(p, ps, _) -> head ps > p)
 
 This is vital for calculating pressures correctly.
-TBF: once windows are introduced, here we will need to reconcile them.
+Note: window reconciliation does NOT happen here.
 
 > publishPeriod :: Period -> Period
 > publishPeriod p = p { pState = Scheduled, pDuration = dur }
 >   where
 >     dur = duration p
-
- 
 
 During simulations, we want to be realistic about sessions from projects
 from future trimesters.  So, we will simply unauthorize any sessions beloning
@@ -162,7 +198,8 @@ before the algorithm was called, but there's two complications:
 So, we need to intelligently combine the previous history and the algo. output.
 What we do is we simply combine the history and the newly scheduled periods, 
 remove any redundancies (periods that were in both lists), then remove any 
-periods that we know just got canceled.
+periods that we know just got condemned.  Condemned periods include both canceled 
+periods, and default periods whose windows got scheduled earlier.
 
 > updateHistory :: [Period] -> [Period] -> [Period] -> [Period]
 > updateHistory history newSched condemned = filter notCondemned $ nub . sort $ history ++ newSched 
@@ -177,7 +214,7 @@ periods that we know just got canceled.
 >     backups = [p | p <- obsPs, pBackup p]
 >     bcks = if length backups == 0 then "" else  "Backups: \n" ++ (showList' backups) ++ "\n"
 
-Assign the new periods to the appropriate Session.
+Assign the new periods to the appropriate Session, and update windows.
 For example, if the inputs looked like this:
 sessions = 
    * Session A [(no periods)]
@@ -190,6 +227,9 @@ Then the result would be:
 sessions =
    * Session A [(Period for Session A)]
    * Session B [(Period for Session B), (Period for Session B)]
+
+Note that in this function, we appropriately group together periods that all belong
+to the same session.  But this does not happen to the windows.
 
 > updateSessions :: [Session] -> [Period] -> [Period] -> [Window] -> [Session]
 > updateSessions sessions periods condemned windows = map update sessions
@@ -210,6 +250,8 @@ Ties the knots between a session and it's periods & windows.
 But it also:
    * removes condemend periods
    * updates any scheduled windows
+Note that the windows passed in may not all belong to this given session,
+so must get filtered properly.
 
 > updateSession' :: Session -> [Period] -> [Period] -> [Window] -> Session
 > updateSession' s ps canceled ws = makeSession s ws' $ sort $ (removeCanceled s canceled) ++ ps
