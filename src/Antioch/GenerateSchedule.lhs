@@ -67,6 +67,8 @@ TBF: we don't really need this anymore
 > genProjectByType :: SessionType -> Gen Project
 > genProjectByType Open     = genProject
 
+For a given list of periods, create appropriate projects & sessions for them.
+The id is passed along so that each session can have a unique id.
 TBF: for now keep it real simple - a single proj & sess for each period
 
 > genFixedProjects :: [Period] -> Int -> Gen [Project]
@@ -75,6 +77,9 @@ TBF: for now keep it real simple - a single proj & sess for each period
 >   proj <- genFixedProject p id
 >   projs <- genFixedProjects ps (id+1)
 >   return $ proj : projs --genFixedProjects ps
+
+For a given period, create a project & fixed session for it.
+The id is passed along to give the session a unique id.
 
 > genFixedProject :: Period -> Int -> Gen Project
 > genFixedProject p id = do
@@ -113,6 +118,8 @@ overlaps until we run out of time.
 >   where
 >     hrs' p = hrs - ((`div` 60) . duration $ p)
 
+Generate a period that starts with the given time range.
+
 > genFixedPeriod :: DateTime -> Int -> Gen Period
 > genFixedPeriod start days = do
 >   day <- choose (1, days)
@@ -124,6 +131,12 @@ overlaps until we run out of time.
 >                          }
 >     where
 >   start' day hour = addMinutes' ((day*24*60)+(hour*60)) start
+
+Very much like genFixedSchedule, here we create a list of list of periods: that is, 
+each sub-list of periods should belong to a single windowed session, and should be
+regularly spaced.  Just like in genFixedSchedule, we randomly try to insert 
+a periodic list of periods into the schedule until we can do this without causing
+overlaps, then repeat the process until we've run out of time.
 
 > genWindowedSchedule :: DateTime -> Int -> [Period] -> Int -> Gen [[Period]]
 > genWindowedSchedule _ _ _ 0 = return []
@@ -138,6 +151,9 @@ overlaps until we run out of time.
 >       True -> genWindowedSchedule start days ps hrs
 >   where
 >     hrs' wp = hrs - ((`div` 60) . sum $ map duration wp)
+
+Randomly generate a list of periods that are separated by a regular interval, that
+fit into the given time range.
 
 > genWindowedPeriods :: DateTime -> Int -> Gen [Period]
 > genWindowedPeriods start days = do
@@ -158,6 +174,8 @@ overlaps until we run out of time.
 >                                   , duration  = dur*60
 >                                   , pState    = Pending }
 
+Each sub-list of periods needs to get assigned a windowed session & project.
+In addition, each single period needs to be within a newly created window.
 TBF: for now keep it real simple - a single proj & sess for each set of periods
 
 > genWindowedProjects :: [[Period]] -> Int -> Gen [Project]
@@ -235,6 +253,10 @@ reflecting a realistic maintenance schedule.
 >   let session = makeSession session' [] mntPeriods
 >   return $ makeProject project' totalTime totalTime [session]
 
+Creates the appropriate periods for maintenance within the given time range.
+Note that this is done by simply generating all the periods for each year
+that falls in the time range, and filtering out what's not needed.
+
 > genMaintenancePeriods :: DateTime -> Int -> Session -> Gen [Period]
 > genMaintenancePeriods start days s = do
 >   let end = addMinutes' (days*24*60) start
@@ -244,6 +266,9 @@ reflecting a realistic maintenance schedule.
 >   return $ filterHistory (concat ps) start days
 >     where
 >       
+
+Generate all the periods for maintenance in a given year.
+
 > genMaintenancePeriodsByYear :: Session -> Int -> Gen [Period]
 > genMaintenancePeriodsByYear s year = do
 >   let summerMaint = createSummerMaintenance year s
@@ -275,6 +300,7 @@ reflecting a realistic maintenance schedule.
 >                                 , receivers = [[Rcvr1_2]]
 >                                 , sType = Fixed }
 
+For non-summer months, generate weekly maintenance periods.
 TBF: this will make an 8 hour maintenance day every 7 days - but we want it 
 to be randomly placed in the middle 5 days of each week.
 
