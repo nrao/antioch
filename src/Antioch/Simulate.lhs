@@ -123,6 +123,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
 For the given list of sessions and periods
+
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
 >   where
