@@ -23,7 +23,12 @@
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
 
+Shortcut to runSimulation:
+
 > runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days "" False True
+
+This high-level function sets up all the input (sessions, periods, etc.), 
+passes it to simulateDailySchedule, and processes the output (ex: reports and plots are generated). 
 
 > runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
 > runSimulation strategyName outdir sps dt days name simInput quiet = do
@@ -88,14 +93,10 @@ Get everything we need from the Database.
 >     return $ (rs, ss, projs, history)
 
 Get everything we need from the simulated input (Generators).
-WARNING: the ratio of the amount of session time requested to the
-simulation time range is important.  The generators will try to create 
-a random fixed and windowed schedule that satisfies a percentage of the
-session time requested all within the sim. time range.
-For examples:
-genSimTime 500 dt 10 : won't work, too many hours of pre-scheduled periods
-                       to cram into those 10 days.
-genSimTime 150 dt 10 : less pre-scheduled periods can fit in 10 days.
+Note how genSimTime works: here you specify lots of things about the input.
+
+NOTE: the last parameter to genSimTime is the hours of backlog, which you may want
+to change depending on how long the simulation is running.
 
 NOTE: The old simulations ran for 365 days using 255 projects, which came 
 out to be about 10,000 hours.
