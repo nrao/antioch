@@ -1373,15 +1373,15 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                 , ("trkEff", schdTrkEffs)
 >                 , ("srfEff", schdSrfEffs)]
 >     -- map efficiencies to periods for debugging
->     let schedule' = sortBy sortByFreq schedule
->     obsSchdMeanEffs <- historicalSchdMeanObsEffs schedule'
->     let obsEffDetails = zip schedule' obsSchdMeanEffs 
->     atmSchdMeanEffs <- historicalSchdMeanAtmEffs schedule'
->     let atmEffDetails = zip schedule' atmSchdMeanEffs 
->     srfSchdMeanEffs <- historicalSchdMeanSrfEffs schedule'
->     let srfEffDetails = zip schedule' srfSchdMeanEffs 
->     trkSchdMeanEffs <- historicalSchdMeanTrkEffs schedule'
->     let trkEffDetails = zip schedule' trkSchdMeanEffs 
+>     let scheduleByFreq = sortBy sortByFreq schedule
+>     obsSchdMeanEffs <- historicalSchdMeanObsEffs scheduleByFreq
+>     let obsEffDetails = zip scheduleByFreq obsSchdMeanEffs 
+>     atmSchdMeanEffs <- historicalSchdMeanAtmEffs scheduleByFreq
+>     let atmEffDetails = zip scheduleByFreq atmSchdMeanEffs 
+>     srfSchdMeanEffs <- historicalSchdMeanSrfEffs scheduleByFreq
+>     let srfEffDetails = zip scheduleByFreq srfSchdMeanEffs 
+>     trkSchdMeanEffs <- historicalSchdMeanTrkEffs scheduleByFreq
+>     let trkEffDetails = zip scheduleByFreq trkSchdMeanEffs 
 >     let scoreDetails = [("obsEff", obsEffDetails)
 >                       , ("atmEff", atmEffDetails)
 >                       , ("srfEff", srfEffDetails)
@@ -1393,11 +1393,11 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     --now <- getCurrentTime
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
->     mapM_ (\f -> f ss' schedule' trace) sps
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) sps
 >   where
 >     dur = days * 60 * 24
 >     ss' = removeMaintenanceS ss
->     schedule' = removeMaintenanceP schedule
+>     scheduleNoMaint = removeMaintenanceP schedule
 
 > sortByFreq :: Period -> Period -> Ordering
 > sortByFreq p1 p2
