@@ -396,6 +396,9 @@ Separate plots for the mean scheduled observing efficiency, by plot:
 >     ss' = filter (isType stype) ss
 >     ps' = filter (isTypePeriod stype) ps
 
+
+Scheduled Efficiency Plots:
+
 simSchdMeanEffFreq
 error bars done separately in simMeanObsEff
 
@@ -433,6 +436,48 @@ simSchdMeanSrfFreq
 >   let t = "Scheduled Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Mean Surface Obs. Efficiency"
 >   plotEffVsFreq fn effs ps t y
+
+
+Observed Efficiency Plots:
+
+simObsMeanEffFreq
+error bars done separately in simMeanObsEff
+
+> plotObsMeanObsEffVsFreq  :: StatsPlot
+> plotObsMeanObsEffVsFreq fn n _ ps _ = do
+>   effs <- historicalObsMeanObsEffs ps
+>   let t = "Observed Mean Observing Efficiency vs Frequency" ++ n
+>   let y = "Observed Mean Observing Efficiency"
+>   plotEffVsFreq fn effs ps t y
+
+simObsMeanAtmFreq
+Break down the above plot into the three factors that make up observing eff.
+
+> plotObsMeanAtmEffVsFreq  :: StatsPlot
+> plotObsMeanAtmEffVsFreq fn n _ ps _ = do
+>   effs <- historicalObsMeanAtmEffs ps
+>   let t = "Observed Mean Atmospheric Efficiency vs Frequency" ++ n
+>   let y = "Observed Mean Atmospheric Efficiency"
+>   plotEffVsFreq fn effs ps t y
+
+simObsMeanTrkFreq
+
+> plotObsMeanTrkEffVsFreq  :: StatsPlot
+> plotObsMeanTrkEffVsFreq fn n _ ps _ = do
+>   effs <- historicalObsMeanTrkEffs ps
+>   let t = "Observed Mean Tracking Efficiency vs Frequency" ++ n
+>   let y = "Observed Mean Tracking Efficiency"
+>   plotEffVsFreq fn effs ps t y
+
+simObsMeanSrfFreq
+
+> plotObsMeanSrfEffVsFreq  :: StatsPlot
+> plotObsMeanSrfEffVsFreq fn n _ ps _ = do
+>   effs <- historicalObsMeanSrfEffs ps
+>   let t = "Observed Mean Surface Obs. Efficiency vs Frequency" ++ n
+>   let y = "Observed Mean Surface Obs. Efficiency"
+>   plotEffVsFreq fn effs ps t y
+
 
 General purpose function for scatter plots of some kind of efficiency vs. freq
 All plots that use this function will have the Min. Observing Eff. curve as well.
@@ -1007,6 +1052,10 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
 >  , plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
 >  , plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
+>  , plotObsMeanObsEffVsFreq $ rootPath ++ "/simObsMeanEffFreq.png"
+>  , plotObsMeanAtmEffVsFreq $ rootPath ++ "/simObsMeanAtmFreq.png"
+>  , plotObsMeanTrkEffVsFreq $ rootPath ++ "/simObsMeanTrkFreq.png"
+>  , plotObsMeanSrfEffVsFreq $ rootPath ++ "/simObsMeanSrfFreq.png"
 >  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
 >  , plotFreqVsTimeOpen     $ rootPath ++ "/simFreqTimeOpen.png"
 >  , plotFreqVsTimeFixed     $ rootPath ++ "/simFreqTimeFixed.png"

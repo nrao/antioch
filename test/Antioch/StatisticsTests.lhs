@@ -107,12 +107,19 @@
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session
 >   -- now socre the period, and make sure results match
->   w <- getWeather Nothing
->   fcs <- periodSchdFactors p trackingEfficiency w
+>   w <- getWeatherTest Nothing
+>   fcs <- periodSchdFactors getTestPeriod trackingEfficiency w
 >   assertEqual "test_periodSchdFactors_1" 0.9992234 (head fcs)
 >   assertEqual "test_periodSchdFactors_2" 0.9968952 (last fcs)
->     where
->   p = getTestPeriod
+>   fcs <- periodSchdFactors getTestPeriod2 trackingEfficiency w
+>   assertEqual "test_periodSchdFactors_3" 0.9771694  (head fcs)
+>   assertEqual "test_periodSchdFactors_4" 0.96175045 (last fcs)
+
+> test_periodObsFactors = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   fcs <- periodObsFactors getTestPeriod2 trackingEfficiency w
+>   assertEqual "test_periodObsFactors_1" 0.97644264 (head fcs)
+>   assertEqual "test_periodObsFactors_2" 0.97598696 (last fcs)
 
 > test_fracObservedTimeByDays = TestCase $ do
 >     let result = fracObservedTimeByDays ss ps
@@ -465,6 +472,18 @@ Test utilities
 >   start = fromGregorian 2006 6 20 12 15 0
 >   scheduled = fromGregorian 2006 6 20 0 0 0
 >   p = defaultPeriod { session = s', startTime = start, duration = 285, pForecast = scheduled}
+>   s = makeSession s' [] [p]
+
+Can you believe it?  The dates I chose above fall right into one of 
+the gaps in the gbt_weather data.  So, another period that avoids these.
+
+> getTestPeriod2 :: Period
+> getTestPeriod2 = head . periods $ s
+>     where
+>   s' = defaultSession { frequency=27.5, ra=3.7, dec=(-2.8), receivers=[[Rcvr26_40]], band=A, grade=4.0 }
+>   start = fromGregorian 2006 7 20 12 15 0
+>   scheduled = fromGregorian 2006 7 20 0 0 0
+>   p = defaultPeriod { session = s', startTime = start, duration = 120, pForecast = scheduled}
 >   s = makeSession s' [] [p]
 
 > getEfficiencies    :: Int -> [Float]

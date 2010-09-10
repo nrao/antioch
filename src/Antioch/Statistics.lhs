@@ -152,6 +152,11 @@ See Also Score.initBins'.
 > historicalSchdMeanTrkEffs ps = historicalSchdMeanFactors ps trackingEfficiency
 > historicalSchdMeanSrfEffs ps = historicalSchdMeanFactors ps surfaceObservingEfficiency
 
+> historicalObsMeanObsEffs ps = historicalObsMeanFactors ps observingEfficiency
+> historicalObsMeanAtmEffs ps = historicalObsMeanFactors ps atmosphericEfficiency
+> historicalObsMeanTrkEffs ps = historicalObsMeanFactors ps trackingEfficiency
+> historicalObsMeanSrfEffs ps = historicalObsMeanFactors ps surfaceObservingEfficiency
+
 For the given list of periods, return the concatanated list of results
 for the given scoring factor that the periods' sessions had when they
 were scheduled.  Currently this is used to check all the schedules scores
@@ -191,6 +196,17 @@ the first quarter.  We should be using the weighted average found in Score.
 >     where
 >       periodSchdFactors' w p = periodSchdFactors p sf w
 
+Same as historicalSchdMeanFactors, except calculates the efficiencies
+that the period would have observed at.
+
+> historicalObsMeanFactors :: [Period] -> ScoreFunc -> IO [Float]
+> historicalObsMeanFactors ps sf = do
+>   w <- getWeather Nothing
+>   fs <- mapM (periodObsFactors' w) ps
+>   return $ map mean' fs
+>     where
+>       periodObsFactors' w p = periodObsFactors p sf w
+
 For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it was scheduled*.
 In other words, recreates the conditions for which this period was scheduled.
@@ -202,6 +218,25 @@ In other words, recreates the conditions for which this period was scheduled.
 >   w' <- newWeather w $ Just $ pForecast p
 >   fs <- runScoring w' rs rt $ factorPeriod p sf  
 >   return $ map eval fs
+>     where
+>   rs = [] -- TBF: how to pass this down?
+
+For the given period and scoring factor, returns the value of that scoring
+factor at each quarter of the period *for the time it observed*.
+
+> periodObsFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
+> periodObsFactors p sf w = do
+>   rt <- getReceiverTemperatures
+>   fs <- mapM (periodObsFactors' p sf w rt) dts 
+>   return $ map eval fs
+>     where
+>   dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
+
+> periodObsFactors' :: Period -> ScoreFunc -> Weather -> ReceiverTemperatures -> DateTime -> IO Factors
+> periodObsFactors' p sf w rt dt = do
+>   -- this ensures we'll use the best forecasts and gbt_weather
+>   w' <- newWeather w $ Just dt   
+>   runScoring w' rs rt $ sf dt (session p) 
 >     where
 >   rs = [] -- TBF: how to pass this down?
 
