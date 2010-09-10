@@ -152,6 +152,11 @@ See Also Score.initBins'.
 > historicalSchdMeanTrkEffs ps = historicalSchdMeanFactors ps trackingEfficiency
 > historicalSchdMeanSrfEffs ps = historicalSchdMeanFactors ps surfaceObservingEfficiency
 
+For the given list of periods, return the concatanated list of results
+for the given scoring factor that the periods' sessions had when they
+were scheduled.  Currently this is used to check all the schedules scores
+for normalicy (0 < score < 1).
+
 > historicalSchdFactors :: [Period] -> ScoreFunc -> IO [Float]
 > historicalSchdFactors ps sf = do
 >   w <- getWeather Nothing
@@ -171,6 +176,10 @@ offending period/session/project needs to be revealed.
 >     where
 >       periodSchdFactors' w p = periodSchdFactors p sf w
 
+For the given list of periods, returns the mean of the scoring factor given
+at the time that the periods' session was scheduled.  In other words, this
+*almost* represents the exact scoring result for the periods' session at the
+time the periods were scheduled (see TBF).
 TBF: the use of mean' might cause misunderstandings, since pack zero's out
 the first quarter.  We should be using the weighted average found in Score.
 
@@ -182,9 +191,14 @@ the first quarter.  We should be using the weighted average found in Score.
 >     where
 >       periodSchdFactors' w p = periodSchdFactors p sf w
 
+For the given period and scoring factor, returns the value of that scoring
+factor at each quarter of the period *for the time it was scheduled*.
+In other words, recreates the conditions for which this period was scheduled.
+
 > periodSchdFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
 > periodSchdFactors p sf w = do
 >   rt <- getReceiverTemperatures
+>   -- this step is key to ensure we use the right forecasts
 >   w' <- newWeather w $ Just $ pForecast p
 >   fs <- runScoring w' rs rt $ factorPeriod p sf  
 >   return $ map eval fs
