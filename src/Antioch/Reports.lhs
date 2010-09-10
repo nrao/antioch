@@ -435,10 +435,13 @@ simSchdMeanSrfFreq
 >   plotEffVsFreq fn effs ps t y
 
 General purpose function for scatter plots of some kind of efficiency vs. freq
+All plots that use this function will have the Min. Observing Eff. curve as well.
 
 > plotEffVsFreq fn effs ps t y =
->     scatterPlot attrs $ zip (historicalFreq ps) effs
+>     scatterPlots attrs $ [(Just "Efficiency", effPlot), (Just "Min Obs Eff", moePlot)]
 >   where
+>     effPlot = zip (historicalFreq ps) effs
+>     moePlot =  zip freqRange (map minObservingEff freqRange)
 >     x     = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
