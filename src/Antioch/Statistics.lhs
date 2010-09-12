@@ -1,11 +1,13 @@
 > module Antioch.Statistics where
 
-> import Antioch.DateTime   (fromGregorian, DateTime, addMinutes', diffMinutes')
-> import Antioch.DateTime   (toGregorian')
+> import Antioch.DateTime   (fromGregorian, toGregorian, DateTime
+>                          , addMinutes, addMinutes'
+>                          , diffMinutes, diffMinutes')
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Utilities  (rad2hrs, rad2deg, utc2lstHours, dt2semester) 
+> import Antioch.Utilities  (hrs2rad, rad2hrs, rad2deg
+>                          , utc2lstHours, dt2semester) 
 > import Antioch.Weather
 > import Antioch.TimeAccounting
 > import Antioch.Debug
@@ -485,6 +487,42 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 
 > isPeriodFromSemester :: Period -> String -> Bool
 > isPeriodFromSemester p sem = (semester . project . session $ p) == sem
+
+Daily averages of the efficiencies (as defined by sf) across all sessions
+in band b and across all hours of the day where a session is
+within 1 hour of zenith.
+
+> bandEfficiencyByTime :: Weather -> ScoreFunc -> [Session] -> DateTime -> Int -> Band -> IO [Score]
+> bandEfficiencyByTime w sf ss day dur b =
+>   sequence $ map (bandEfficiencyByTime' w sf ss b) days
+>     where
+>       days = [                               day
+>             ,  ((1*24*60)       `addMinutes` day)
+>             .. (((dur-1)*24*60) `addMinutes` day)
+>              ]
+
+Average of the efficiencies (as defined by sf) across all sessions
+in band b and across all hours of the day where a session is
+within 1 hour of zenith.
+
+> bandEfficiencyByTime' :: Weather -> ScoreFunc -> [Session] -> Band -> DateTime -> IO Score
+> bandEfficiencyByTime' w sf ss b day = do
+>   w' <- newWeather w $ Just (60 `diffMinutes` day)
+>   rt <- getReceiverTemperatures
+>   scs <- mapM (\(dt, s) -> getEfficiency w' rt [] sf dt s) . filter ratify $ dsts
+>   return $ mean' scs
+>     where
+>       ratify (dt, s) = (hourAngle dt s < oneHr) && (band s == b)
+>       dsts = [(d, s) | d <- [                      day
+>                            ,  (1*60)  `addMinutes` day
+>                            .. (23*60) `addMinutes` day]
+>                      , s <- ss]
+>       oneHr = hrs2rad 1.0
+
+> getEfficiency :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> ScoreFunc -> DateTime -> Session -> IO Score
+> getEfficiency w rt rs sf dt s = do 
+>     result <- runScoring w rs rt (sf dt s)
+>     return $ eval result
 
 This function retrieves the history of pressures written in the trace, 
 and returns them, for each band as [(day #, pressure)].

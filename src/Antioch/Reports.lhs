@@ -238,6 +238,33 @@ and both obs types.
 >       xl = "Freq. (MHz)"
 >       yl = "Stringency"
 
+
+Plot daily average efficiencies across all sessions
+across all hours of the day where a session is
+within 1 hour of zenith for each band.
+
+> plotEfficienciesByTime :: Weather -> [Session] -> DateTime -> Int -> IO [()]
+> plotEfficienciesByTime w ss day days = do
+>     mapM (\(et, sf) -> plotEfficiencyByTime et sf w ss day days) [
+>         ("Atmospheric", atmosphericEfficiency)
+>       , ("Tracking",    trackingEfficiency)
+>       , ("Surface",     surfaceObservingEfficiency)
+>       , ("Observing",   observingEfficiency)
+>        ]
+
+> plotEfficiencyByTime :: String -> ScoreFunc -> Weather -> [Session] -> DateTime -> Int -> IO ()
+> plotEfficiencyByTime et sf w ss day days = do
+>     effs <- mapM (bandEfficiencyByTime w sf ss day days) bandRange
+>     let pds = map (zip xs) effs
+>     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
+>   where
+>     t = "Sessions' Mean " ++ et ++ " Efficiency @ ~transit vs Time"
+>     x = "Time [days]"
+>     y = "Mean Efficiency"
+>     titles = map (Just . show) bandRange 
+>     fn = "daily" ++ et ++ "EffTime.png"
+>     xs = map fromIntegral [1..]
+
 tracking efficiency vs frequency
 
 > plotTrackObsEff :: IO [()]
@@ -944,6 +971,7 @@ Utilities
 
 > minMax xs = (realToFrac $ minimum xs, realToFrac $ maximum xs)
 
+> getObservingEfficiency :: Weather -> Period -> IO Score
 > getObservingEfficiency w p = do 
 >     let now' = pForecast p
 >     w'     <- newWeather w $ Just now'
