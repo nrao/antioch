@@ -37,6 +37,8 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     w <- getWeather Nothing
 >     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
 >     let rs = [] -- TBF
+>     print "plotting daily mean efficiencies:"
+>     plotEfficienciesByTime w ss dt days
 >     --print . show $ rs
 >     -- print . show $ ss
 >     -- print . show $ projs

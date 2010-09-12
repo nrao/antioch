@@ -993,7 +993,6 @@ us to easily return a list.
 > factor name val = return [(name, val)]
 
 Sub-class of scoring actions that return a list of factors
-as listed in Memo 5.2.
 
 > type ScoreFunc = DateTime -> Session -> Scoring Factors 
 
