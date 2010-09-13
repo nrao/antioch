@@ -103,11 +103,11 @@ simFracTime
 >   let gradeA = fracObservedTimeByDays ssA psA
 >   let gradeB = fracObservedTimeByDays ssB psB
 >   let bandK = fracObservedTimeByDays ssK psK
->   linePlots (tail $ scatterAttrs title xl yl fn) [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB), (Just "K Band", bandK)]
+>   linePlots attrs [(Just "Total", total), (Just "Grade A", gradeA), (Just "Grade B", gradeB), (Just "K Band", bandK)]
 >     where
 >   title = "Fractional Observed Time " ++ n
 >   xl = "Time [Days]"
->   yl = "Time Observed / Time Allocated"
+>   yl = "1 - Time Observed / Time Allocated"
 >   ssA = filter isGradeA ss -- grade A sessions
 >   psA = filter (isGradeA . session) ps -- grade A periods
 >   ssB = filter isGradeB ss -- grade B sessions
@@ -116,6 +116,7 @@ simFracTime
 >   psK = filter (\p -> (band . session $ p) == K) ps -- K Band periods
 >   isGradeA s = grade s >= 4
 >   isGradeB s = grade s < 4 && grade s >= 3
+>   attrs = (tail $ scatterAttrs title xl yl fn) ++ [YRange (0, 1.0)]
 
 simFracBandTime
 
@@ -127,16 +128,17 @@ simFracBandTime
 >   --let total = fracObservedTimeByDays ss ps 
 >   let bandFracs = map (\d -> fracObservedTimeByDays' (fst d) (snd d) start days) $ zip ssBands psBands
 >   let plots = zip titles bandFracs 
->   linePlots (tail $ scatterAttrs title xl yl fn) $ plots 
+>   linePlots attrs $ plots 
 >     where
 >   title = "Fractional Observed Time By Band" ++ n
 >   xl = "Time [Days]"
->   yl = "Time Observed / Time Allocated"
+>   yl = "1 - Time Observed / Time Allocated"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
 >   ssBands = sessionsByBand ss 
 >   psBands = periodsByBand ps 
 >   titles = map (\b -> (Just (show b))) bandRange 
+>   attrs = (tail $ scatterAttrs title xl yl fn) ++ [YRange (0, 1.0)]
 
 simFracSemesterTime
 
@@ -148,11 +150,11 @@ simFracSemesterTime
 >   let total = fracObservedTimeByDays ss ps 
 >   let bandFracs = map (\d -> fracObservedTimeByDays' (fst d) (snd d) start days) $ zip ssSemesters psSemesters
 >   let plots = zip titles bandFracs 
->   linePlots (tail $ scatterAttrs title xl yl fn) $ [(Just "Total", total)] ++ plots 
+>   linePlots attrs $ [(Just "Total", total)] ++ plots 
 >     where
 >   title = "Fractional Observed Time By Semester" ++ n
 >   xl = "Time [Days]"
->   yl = "Time Observed / Time Allocated"
+>   yl = "1 - Time Observed / Time Allocated"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
 >   semesters = nub . sort $ map (semester . project) ss--["05C","06A", "06B", "06C"]
@@ -163,6 +165,7 @@ simFracSemesterTime
 >   psSemester ps sem = filter (isPSemester sem) ps 
 >   psSemesters = map (psSemester ps) semesters
 >   titles = map (\b -> (Just (show b))) semesters
+>   attrs = (tail $ scatterAttrs title xl yl fn) ++ [YRange (0, 1.0)]
 
 We want to visualize the DSS receiver temps. because they will originally 
 be averages of what we can see in rcvrCalView, but then also we can
@@ -759,7 +762,7 @@ simScoreFreq
 >     t = "Score vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Score"
->     attrs = (scatterAttrs t x y fn) ++ [XRange $ minMax freqRange]
+>     attrs = (scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (0.01, 100.0)]
 
 
 
