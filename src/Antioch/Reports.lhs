@@ -258,7 +258,7 @@ within 1 hour of zenith for each band.
 >     let pds = map (zip xs) effs
 >     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
 >   where
->     t = "Sessions' Mean " ++ et ++ " Efficiency @ ~transit vs Time"
+>     t = "Sessions' Mean " ++ et ++ " Efficiency vs Time"
 >     x = "Time [days]"
 >     y = "Mean Efficiency"
 >     titles = map (Just . show) bandRange 

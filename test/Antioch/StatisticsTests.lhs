@@ -365,13 +365,13 @@ what bin it shows up in.
 > test_bandEfficiencyByTime = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   result <- bandEfficiencyByTime' w atmosphericEfficiency ss L dt
->   assertEqual "test_bandEfficiencyByTime' 1" 0.84943485 result
+>   assertEqual "test_bandEfficiencyByTime' 1" 0.9874918 result
 >   result <- bandEfficiencyByTime' w atmosphericEfficiency ss A dt
->   assertEqual "test_bandEfficiencyByTime' 2" 0.77248573 result
+>   assertEqual "test_bandEfficiencyByTime' 2" 0.85934204 result
 >   result <- bandEfficiencyByTime' w trackingEfficiency ss L dt
->   assertEqual "test_bandEfficiencyByTime' 3" 0.99997175 result
+>   assertEqual "test_bandEfficiencyByTime' 3" 0.99997765 result
 >   result <- bandEfficiencyByTime' w surfaceObservingEfficiency ss A dt
->   assertEqual "test_bandEfficiencyByTime' 4" 0.94941044 result
+>   assertEqual "test_bandEfficiencyByTime' 4" 0.9578599 result
 >     where
 >       ss = getOpenPSessions
 >       dt = fromGregorian 2006 2 15 0 0 0
