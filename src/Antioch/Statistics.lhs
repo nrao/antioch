@@ -13,6 +13,7 @@
 > import Antioch.Debug
 > import Antioch.ReceiverTemperatures
 > import Control.Arrow      ((&&&), second)
+> import Control.Monad      (filterM)
 > import Data.Array
 > import Data.Fixed         (div')
 > import Data.Function      (on)
@@ -509,13 +510,14 @@ within 1 hour of zenith.
 > bandEfficiencyByTime' w sf ss b day = do
 >   w' <- newWeather w $ Just (60 `diffMinutes` day)
 >   rt <- getReceiverTemperatures
->   scs <- mapM (\(dt, s) -> getEfficiency w' rt [] sf dt s) . filter ratify $ dsts
+>   dtss' <- filterM (\(dt, s) -> inHourAngleLimit w rt [] dt s) . filter ratify $ dtss
+>   scs <- mapM (\(dt, s) -> getEfficiency w' rt [] sf dt s) $ dtss'
 >   return $ mean' scs
 >     where
->       ratify (dt, s) = (hourAngle dt s < oneHr) && (band s == b)
->       dsts = [(d, s) | d <- [                      day
->                            ,  (1*60)  `addMinutes` day
->                            .. (23*60) `addMinutes` day]
+>       ratify (dt, s) = (band s == b)
+>       dtss = [(dt, s) | dt <- [                      day
+>                              ,  (1*60)  `addMinutes` day
+>                              .. (23*60) `addMinutes` day]
 >                      , s <- ss]
 >       oneHr = hrs2rad 1.0
 
@@ -523,6 +525,11 @@ within 1 hour of zenith.
 > getEfficiency w rt rs sf dt s = do 
 >     result <- runScoring w rs rt (sf dt s)
 >     return $ eval result
+
+> inHourAngleLimit :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> DateTime -> Session -> IO Bool
+> inHourAngleLimit w rt rs dt s = do 
+>     result <- runScoring w rs rt (hourAngleLimit dt s)
+>     return $ 1.0 == eval result
 
 This function retrieves the history of pressures written in the trace, 
 and returns them, for each band as [(day #, pressure)].
