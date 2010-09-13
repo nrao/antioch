@@ -142,8 +142,8 @@ Only 20 percent of the low freq. sessions are backups
 >            else T.frequency [(25, return True), (75, return False)]
 
 > genMinTP freq = 
->   if freq > 18.0 then choose (2*60, 2*60)
->            else choose (2*60, 6*60)
+>   if freq > 18.0 then choose (3*60, 3*60)
+>            else choose (3*60, 6*60)
 
 > genMaxTP freq = 
 >   if freq > 18.0 then choose (12*60, 12*60)
@@ -152,22 +152,22 @@ Only 20 percent of the low freq. sessions are backups
 Backup sessions should not use a time between
 
 > genTimeBetween :: Bool -> Gen Minutes
-> genTimeBetween backup = if backup then return 0 else T.frequency [(50, return 0)
->                             , (25, return (8 *60))
->                             , (25, return (12*60))]
+> genTimeBetween backup = if backup then return 0 else T.frequency [(100, return 0)
+>                             , (0, return (8 *60))
+>                             , (0, return (12*60))]
 
 > genLowRFIFlag :: Gen Bool
-> genLowRFIFlag = T.frequency [(85, return False), (15, return True)]
+> genLowRFIFlag = T.frequency [(100, return False), (0, return True)]
 
 Backup sessions should not use a transit flag 
 
 > genTransitFlag :: Bool -> Gen TransitType
-> genTransitFlag backup = if backup then return Optional else T.frequency [(70, return Optional)
->                             , (15, return Partial)
->                             , (15, return Center)]
+> genTransitFlag backup = if backup then return Optional else T.frequency [(100, return Optional)
+>                             , (0, return Partial)
+>                             , (0, return Center)]
 
 > genLSTExclusion :: Gen [(Float, Float)]
-> genLSTExclusion = T.frequency [(80, return []), (20, lsts)]
+> genLSTExclusion = T.frequency [(100, return []), (0, lsts)]
 >   where
 >     lsts = do 
 >       low  <- choose (0.0, 5.0)
@@ -610,10 +610,10 @@ all frequencies for demo purposes only.  Dana needs to specify this.
 > genRcvr :: Int -> Gen Receiver
 > genRcvr sem = fmap (code2Receiver . str) . elements $ bands !! sem 
 >   where
->     bands = [ "R34681WKKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
->             , "R34681WKKKQQAAXUCCSSLLLLLLL"  -- 1
->             , "R34681WKQQAXUCSLLLLLLLLLLLL"  -- 2
->             , "R34681WKKQQAAAXXUCCSLLLLLLL"  -- 3
+>     bands = [ "338WKKQQAAXUCCSLLLLL"  -- 0 => backup
+>             , "338WKKKQQAAXUCCSSLLL"  -- 1
+>             , "338WKQQAXUCSLLLLLLLL"  -- 2
+>             , "338WKKQQAAAXXUCCSLLL"  -- 3
 >             ]
 
 Generate frequency by Band.
@@ -635,7 +635,7 @@ Generate frequency by Receiver.
 
 > genFreq' :: Receiver -> Gen Float
 > genFreq' Rcvr18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
-> genFreq' RcvrArray18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq' RcvrArray18_26 = choose (18.0 , 26.0) 
 > genFreq' Rcvr_RRI  = choose (0.1 , 1.6) 
 > genFreq' Rcvr_342  = choose (0.29 ,0.395) 
 > genFreq' Rcvr_450  = choose (0.385, 0.52) 
@@ -649,7 +649,7 @@ Generate frequency by Receiver.
 > genFreq' Rcvr12_18 = choose (12.0, 15.4)
 > genFreq' Rcvr26_40 = choose (26.0, 40.0)
 > genFreq' Rcvr40_52 = choose (40.0, 50.0)
-> genFreq' Rcvr_PAR  = choose (80.0, 100.0)
+> genFreq' Rcvr_PAR  = choose (90.0, 90.0)
 > genFreq' Holography = choose (11.7, 12.2)
 
 
