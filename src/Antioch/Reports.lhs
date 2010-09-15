@@ -21,7 +21,8 @@
 > --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
-> import Data.List (intercalate, sort, sortBy, (\\), nub, find)
+> import Data.List (intercalate, sort, sortBy, (\\), nub
+>                 , find, unzip4, transpose)
 > import Data.Maybe (catMaybes, fromJust, isJust, maybeToList)
 > import Text.Printf
 > import System.Random
@@ -248,16 +249,34 @@ within 1 hour of zenith for each band.
 
 > plotEfficienciesByTime :: Weather -> [Session] -> DateTime -> Int -> IO [()]
 > plotEfficienciesByTime w ss day days = do
->     mapM (\(et, sf) -> plotEfficiencyByTime et sf w ss day days) [
->         ("Atmospheric", atmosphericEfficiency)
->       , ("Tracking",    trackingEfficiency)
->       , ("Surface",     surfaceObservingEfficiency)
->       , ("Observing",   observingEfficiency)
->        ]
+>     print $ "plotEfficienciesByTime " ++ (toSqlString day)
+>     -- effs :: [[(at, tr, sur, obs)]] days x bands
+>     effs <- mapM (bandEfficiencyByTime w ss day days) bandRange
+>     --print "effs"
+>     --print effs
+>     -- effs' :: [([at],[tr],[sur],[obs])] effTypes x bands
+>     let effs' = map unzip4 effs
+>     --print "effs'"
+>     --print effs'
+>     -- effs'' :: [[[at],[tr],[sur],[obs]]] effTypes x bands
+>     let effs'' = map (\(at,tr,sur,obs) -> [at,tr,sur,obs]) effs'
+>     --print "effs''"
+>     --print effs''
+>     -- effs''' :: [([at],[tr],[sur],[obs])] bands x effTypes
+>     let effs''' = transpose effs''
+>     --print "effs'''"
+>     --print effs'''
+>     -- effs' <-
+>     -- [([at],[tr],[sur],[obs])] bands x effTypes <-
+>     --   [[[at],[tr],[sur],[obs]]] effTypes x bands <-
+>     --     [([at],[tr],[sur],[obs])] effTypes x bands <-
+>     --       [[(at, tr, sur, obs)]] days x bands == effs
+>     --let effs' = transpose . map (\(at,tr,sur,obs) -> [at,tr,sur,obs]) . map unzip4 $ effs
+>     mapM (\(et, evs) -> plotEfficiencyByTime et evs) $ zip ["Atmospheric", "Tracking", "Surface", "Observing"] effs'''
 
-> plotEfficiencyByTime :: String -> ScoreFunc -> Weather -> [Session] -> DateTime -> Int -> IO ()
-> plotEfficiencyByTime et sf w ss day days = do
->     effs <- mapM (bandEfficiencyByTime w sf ss day days) bandRange
+> plotEfficiencyByTime :: String -> [[Score]] -> IO ()
+> plotEfficiencyByTime et effs = do
+>     print $ "plotEfficiencyByTime " ++ et
 >     let pds = map (zip xs) effs
 >     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
 >   where
