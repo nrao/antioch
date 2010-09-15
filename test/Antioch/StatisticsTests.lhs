@@ -364,17 +364,21 @@ what bin it shows up in.
 
 > test_bandEfficiencyByTime = TestCase $ do
 >   w <- getWeatherTest Nothing
->   result <- bandEfficiencyByTime' w atmosphericEfficiency ss L dt
->   assertEqual "test_bandEfficiencyByTime' 1" 0.9874918 result
->   result <- bandEfficiencyByTime' w atmosphericEfficiency ss A dt
->   assertEqual "test_bandEfficiencyByTime' 2" 0.85934204 result
->   result <- bandEfficiencyByTime' w trackingEfficiency ss L dt
->   assertEqual "test_bandEfficiencyByTime' 3" 0.99997765 result
->   result <- bandEfficiencyByTime' w surfaceObservingEfficiency ss A dt
->   assertEqual "test_bandEfficiencyByTime' 4" 0.9578599 result
+>   -- result :: (atmospheric, tracking, surface, observing)
+>   let dt = fromGregorian 2006 2 15 0 0 0
+>   result <- bandEfficiencyByTime' w ss dt
+>   assertEqual "test_bandEfficiencyByTime' 1" (0.9874918,0.99997765,0.9999935,0.9874632) (result !! 1)
+>   let dt = fromGregorian 2006 5 15 0 0 0
+>   result <- bandEfficiencyByTime' w ss dt
+>   assertEqual "test_bandEfficiencyByTime' 2" (0.9551367,0.9973505,0.99886394,0.9515089) (result !! 3)
+>   let dt = fromGregorian 2006 8 15 0 0 0
+>   result <- bandEfficiencyByTime' w ss dt
+>   assertEqual "test_bandEfficiencyByTime' 3" (0.36782944,0.96360576,0.96932465,0.35007912) (result !! 6)
+>   let dt = fromGregorian 2006 11 15 0 0 0
+>   result <- bandEfficiencyByTime' w ss dt
+>   assertEqual "test_bandEfficiencyByTime' 4" (0.8043261,0.99851686,0.9996801,0.80287266) (result !! 7)
 >     where
 >       ss = getOpenPSessions
->       dt = fromGregorian 2006 2 15 0 0 0
 
 > test_historicalFreq = TestCase $ do
 >     assertEqual "test_historicalFreq" expected (historicalFreq periods)
