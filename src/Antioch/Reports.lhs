@@ -138,7 +138,8 @@ simFracBandTime
 >   ssBands = sessionsByBand ss 
 >   psBands = periodsByBand ps 
 >   titles = map (\b -> (Just (show b))) bandRange 
->   attrs = (tail $ scatterAttrs title xl yl fn) ++ [YRange (0, 1.0)]
+>   attrs = (tail $ scatterAttrs title xl yl fn) ++ [XRange (0, days'), YRange (0, 1.0)]
+>   days' = fromIntegral days + (fromIntegral days)/7.0
 
 simFracSemesterTime
 
@@ -160,12 +161,13 @@ simFracSemesterTime
 >   semesters = nub . sort $ map (semester . project) ss--["05C","06A", "06B", "06C"]
 >   isSemester sem s = (semester . project $ s) == sem
 >   ssSemester ss sem = filter (isSemester sem) ss 
->   ssSemesters = map (ssSemester ss) semesters --["05C","06A", "06B", "06C"]
+>   ssSemesters = map (ssSemester ss) semesters --["0XRange (0, days'), 5C","06A", "06B", "06C"]
 >   isPSemester sem p = (semester . project . session $ p) == sem
 >   psSemester ps sem = filter (isPSemester sem) ps 
 >   psSemesters = map (psSemester ps) semesters
 >   titles = map (\b -> (Just (show b))) semesters
->   attrs = (tail $ scatterAttrs title xl yl fn) ++ [YRange (0, 1.0)]
+>   attrs = (tail $ scatterAttrs title xl yl fn) ++ [XRange (0, days'), YRange (0, 1.0)]
+>   days' = fromIntegral days + (fromIntegral days)/7.0
 
 We want to visualize the DSS receiver temps. because they will originally 
 be averages of what we can see in rcvrCalView, but then also we can
@@ -259,7 +261,7 @@ within 1 hour of zenith for each band.
 > plotEfficiencyByTime et sf w ss day days = do
 >     effs <- mapM (bandEfficiencyByTime w sf ss day days) bandRange
 >     let pds = map (zip xs) effs
->     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
+>     linePlots attrs $ zip titles $ pds 
 >   where
 >     t = "Sessions' Mean " ++ et ++ " Efficiency vs Time"
 >     x = "Time [days]"
@@ -267,6 +269,9 @@ within 1 hour of zenith for each band.
 >     titles = map (Just . show) bandRange 
 >     fn = "daily" ++ et ++ "EffTime.png"
 >     xs = map fromIntegral [1..]
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, days'), YRange (-0.1, 1.1)] 
+>     days' = fromIntegral days + (fromIntegral days)/7.0
+
 
 tracking efficiency vs frequency
 
@@ -421,7 +426,7 @@ Separate plots for the mean scheduled observing efficiency, by plot:
 > plotMeanObsEffVsFreqFixed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Fixed
 > plotMeanObsEffVsFreqWindowed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Windowed
 
-> plotMeanObsEffVsFreqByType fn n ss ps tr stype = plotMeanObsEffVsFreq fn n ss' ps' tr
+> plotMeanObsEffVsFreqByType fn n ss ps tr stype = plotMeanObsEffVsFreq' fn n ss' ps' tr stype
 >   where
 >     ss' = filter (isType stype) ss
 >     ps' = filter (isTypePeriod stype) ps
@@ -436,6 +441,13 @@ error bars done separately in simMeanObsEff
 > plotMeanObsEffVsFreq fn n _ ps _ = do
 >   effs <- historicalSchdMeanObsEffs ps
 >   let t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
+>   let y = "Mean Observing Efficiency"
+>   plotEffVsFreq fn effs ps t y
+
+> --plotMeanObsEffVsFreq'  :: StatsPlot
+> plotMeanObsEffVsFreq' fn n _ ps _ stype = do
+>   effs <- historicalSchdMeanObsEffs ps
+>   let t = "Scheduled Mean Observing Efficiency (" ++ (show stype) ++ ") vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
 >   plotEffVsFreq fn effs ps t y
 
@@ -657,7 +669,7 @@ simFreqSchTime (circles, dt on x-axis)
 >       pl1 = zip (historicalExactTime' ps' Nothing) (historicalFreq ps')
 >       pl2 = zip (historicalExactTime' canceled (Just start)) (historicalFreq canceled)
 >       pl3 = zip (historicalExactTime' backups (Just start)) (historicalFreq backups)
->       pl4 = zip (historicalExactTime'' (map fst deadtime) (Just start)) (replicate (length deadtime) 0.0)
+>       pl4 = zip (historicalExactTime'' (map fst deadtime) (Just start)) (replicate (length deadtime) 60.0)
 
 
 simSatisfyFreq (error bars)
@@ -770,13 +782,14 @@ simBandPFTime
 
 > plotBandPressureTime              :: StatsPlot
 > plotBandPressureTime fn n _ _ trace = 
->     linePlots (scatterAttrs t x y fn) $ zip titles $ bandPressuresByTime trace 
+>     linePlots attrs $ zip titles $ bandPressuresByTime trace 
 >   where
 >     t = "Band Pressure Factor vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Factor"
 >     titles = map (Just . show) bandRange 
-> 
+>     attrs = (scatterAttrs t x y fn)
+
 
 simBandPBinPastTime
 This plot, and it's companion, simBandPBinReminingTime are used for debugging
@@ -795,12 +808,13 @@ yield 1 + log (n/d) in the pressure plots.
 > plotBandPressureBinPastTime fn n _ _ trace = do 
 >     let bins = bandPressureBinsByTime trace
 >     let past = binsToPlotData bins snd
->     linePlots (scatterAttrs t x y fn) $ zip titles $ past 
+>     linePlots attrs $ zip titles $ past 
 >   where
 >     t = "Band Pressure Past Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Past Bin"
 >     titles = map (Just . show) bandRange 
+>     attrs = (scatterAttrs t x y fn)
 
 simBandPBinRemainingTime
 See simBandPBinPastTime for notes.
@@ -809,12 +823,13 @@ See simBandPBinPastTime for notes.
 > plotBandPressureBinRemainingTime fn n _ _ trace = do 
 >     let bins = bandPressureBinsByTime trace
 >     let past = binsToPlotData bins fst
->     linePlots (scatterAttrs t x y fn) $ zip titles $ past 
+>     linePlots attrs $ zip titles $ past 
 >   where
 >     t = "Band Pressure Remainging Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Remainging Bin"
 >     titles = map (Just . show) bandRange 
+>     attrs = (scatterAttrs t x y fn)
 
 Converts data retrieved by bandPressureBinsByTime to a format (and units) 
 applicable to our plotting functions.
@@ -974,6 +989,8 @@ Utilities
 
 > minMax xs = (realToFrac $ minimum xs, realToFrac $ maximum xs)
 
+> minMax' xs = (realToFrac $ minimum xs, realToFrac $ (maximum xs) + ((maximum xs) - (minimum xs))/7.0)
+
 > getObservingEfficiency :: Weather -> Period -> IO Score
 > getObservingEfficiency w p = do 
 >     let now' = pForecast p
@@ -1117,8 +1134,8 @@ TBF: combine this list with the statsPlotsToFile fnc
 >  , plotFracBandTime   $ rootPath ++ "/simFracBandTime.png"
 >  , plotFracSemesterTime $ rootPath ++ "/simFracSemesterTime.png"
 >  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
->  , plotRemainingTimeByBand $ rootPath ++ "/simRemainingTime.png"
->  , plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
+>  --, plotRemainingTimeByBand $ rootPath ++ "/simRemainingTime.png"
+>  --, plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
 >  -- , plotMinEffSysTemp $ rootPath ++ "/minEffSysTemp.png"
