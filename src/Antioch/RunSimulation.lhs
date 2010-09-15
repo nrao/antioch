@@ -118,6 +118,10 @@ out to be about 10,000 hours.
 > runDailyEfficiencies :: DateTime -> Int -> Bool -> IO [()]
 > runDailyEfficiencies dt days simInput = do
 >     w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
+>     let g = mkStdGen 1
+>     -- make number of projects independent of number of days
+>     let projs = generate 0 g $ genProjects 255
+>     let ss = concatMap sessions projs
+>     print $ "Session Hours: " ++ (show $ sum (map sAllottedS ss))
 >     print "Plotting daily mean efficiencies:"
 >     plotEfficienciesByTime w ss dt days

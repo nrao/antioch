@@ -1,7 +1,7 @@
 > module Antioch.Statistics where
 
 > import Antioch.DateTime   (fromGregorian, toGregorian, DateTime
->                          , addMinutes, addMinutes', toSqlString -- dbug
+>                          , addMinutes, addMinutes'
 >                          , diffMinutes, diffMinutes')
 > import Antioch.Generators
 > import Antioch.Types
@@ -14,7 +14,6 @@
 > import Antioch.ReceiverTemperatures
 > import Control.Arrow      ((&&&), second)
 > import Control.Monad      (filterM)
-> import Control.Monad.Trans (liftIO)  -- dbug
 > import Data.Array
 > import Data.Fixed         (div')
 > import Data.Function      (on)
@@ -492,11 +491,12 @@ Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled
 
 Daily average of the atmospheric, tracking, surface, and
 observing efficiencies across all sessions
-in band b and across all hours of the day within HA limits.
+by band and across all hours of the day within HA limits.
 
-> bandEfficiencyByTime :: Weather -> [Session] -> DateTime -> Int -> Band -> IO [(Score, Score, Score, Score)]
-> bandEfficiencyByTime w ss day dur b =
->   mapM (bandEfficiencyByTime' w ss b) days
+> bandEfficiencyByTime :: Weather -> [Session] -> DateTime -> Int -> IO [[(Score, Score, Score, Score)]]
+> bandEfficiencyByTime w ss day dur = do
+>   res <- mapM (bandEfficiencyByTime' w ss) days
+>   return $ transpose res
 >     where
 >       days = [                               day
 >             ,  ((1*24*60)       `addMinutes` day)
@@ -505,26 +505,31 @@ in band b and across all hours of the day within HA limits.
 
 Average of the atmospheric, tracking, surface, and
 observing efficiencies across all sessions
-in band b and across all hours of the day within HA limits
+by band and across all hours of the day within HA limits.
 
-> bandEfficiencyByTime' :: Weather -> [Session] -> Band -> DateTime -> IO (Score, Score, Score, Score)
-> bandEfficiencyByTime' w ss b day = do
+> bandEfficiencyByTime' :: Weather -> [Session] -> DateTime -> IO [(Score, Score, Score, Score)]
+> bandEfficiencyByTime' w ss day = do
 >   w' <- newWeather w $ Just (60 `diffMinutes` day)
 >   rt <- getReceiverTemperatures
->   efs' <- mapM (\(dt, s) -> getEfficiencyFactors w' rt [] dt s) dtss
->   let efs = map extract . filter haTest $ efs'
->   let n = fromIntegral . length $ efs
->   return . means n . unzip4 $ efs
+>   efs <- mapM (bandEfficiencyByBand w' rt day ss hrs) bandRange
+>   return $! map means . map unzip4 . map (map extract . filter haTest) $ efs
+>     where
+>       hrs = [                     day
+>            , (1*60)  `addMinutes` day
+>           .. (23*60) `addMinutes` day]
+>       extract [(_, Just a), (_, Just t), (_, Just u), _] = (a, t, u, a*t*u)
+>       haTest [_, _, _, (_, jha)] = maybe False (==1.0) jha
+>       means (as, ts, us, os) = (sum as / n, sum ts / n, sum us / n, sum os / n)
+>         where
+>           n = fromIntegral . length $ as
+
+> bandEfficiencyByBand :: Weather -> ReceiverTemperatures -> DateTime -> [Session] -> [DateTime] -> Band -> IO [Factors]
+> bandEfficiencyByBand w rt dt ss hrs b = do
+>   mapM (\(dt, s) -> getEfficiencyFactors w rt [] dt s) dtss
 >     where
 >       isBand bandName s = band s == bandName
 >       ss' = filter (isBand b) ss
->       dtss = [(dt, s) | dt <- [                      day
->                              ,  (1*60)  `addMinutes` day
->                              .. (23*60) `addMinutes` day]
->                      , s <- ss']
->       extract [(_, Just a), (_, Just t), (_, Just u), _] = (a, t, u, a*t*u)
->       haTest [_, _, _, (_, jha)] = maybe False (==1.0) jha
->       means n (as, ts, us, os) = (sum as / n, sum ts / n, sum us / n, sum os / n)
+>       dtss = [(dt, s) | dt <- hrs, s <- ss']
 
 > inHourAngleLimit :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> DateTime -> Session -> IO Bool
 > inHourAngleLimit w rt rs dt s = do 
@@ -533,13 +538,11 @@ in band b and across all hours of the day within HA limits
 
 > getEfficiencyFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> DateTime -> Session -> IO Factors
 > getEfficiencyFactors w rt rs dt s  = do
->   print $ "getEfficiencyFactors " ++ (toSqlString dt) ++ " " ++ (show . sId $ s)
 >   ef <- runScoring w [] rt $ getEfficiencyScoringFactors w rt rs dt s
->   return $! ef
+>   return ef
 
 > getEfficiencyScoringFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> DateTime -> Session -> Scoring Factors
 > getEfficiencyScoringFactors w rt rs dt s = do 
->     liftIO $ print $ "getEfficiencyScoringFactors " ++ (toSqlString dt) ++ " " ++ (show . sId $ s)
 >     effs <- calcEfficiency dt s
 >     let effFactors =       [(atmosphericEfficiency' . fmap fst) effs
 >                           , trackingEfficiency

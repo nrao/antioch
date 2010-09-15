@@ -249,34 +249,16 @@ within 1 hour of zenith for each band.
 
 > plotEfficienciesByTime :: Weather -> [Session] -> DateTime -> Int -> IO [()]
 > plotEfficienciesByTime w ss day days = do
->     print $ "plotEfficienciesByTime " ++ (toSqlString day)
->     -- effs :: [[(at, tr, sur, obs)]] days x bands
->     effs <- mapM (bandEfficiencyByTime w ss day days) bandRange
->     --print "effs"
->     --print effs
->     -- effs' :: [([at],[tr],[sur],[obs])] effTypes x bands
->     let effs' = map unzip4 effs
->     --print "effs'"
->     --print effs'
->     -- effs'' :: [[[at],[tr],[sur],[obs]]] effTypes x bands
->     let effs'' = map (\(at,tr,sur,obs) -> [at,tr,sur,obs]) effs'
->     --print "effs''"
->     --print effs''
->     -- effs''' :: [([at],[tr],[sur],[obs])] bands x effTypes
->     let effs''' = transpose effs''
->     --print "effs'''"
->     --print effs'''
->     -- effs' <-
+>     effs <- bandEfficiencyByTime w ss day days
 >     -- [([at],[tr],[sur],[obs])] bands x effTypes <-
 >     --   [[[at],[tr],[sur],[obs]]] effTypes x bands <-
 >     --     [([at],[tr],[sur],[obs])] effTypes x bands <-
->     --       [[(at, tr, sur, obs)]] days x bands == effs
->     --let effs' = transpose . map (\(at,tr,sur,obs) -> [at,tr,sur,obs]) . map unzip4 $ effs
->     mapM (\(et, evs) -> plotEfficiencyByTime et evs) $ zip ["Atmospheric", "Tracking", "Surface", "Observing"] effs'''
+>     --       [[(at, tr, sur, obs)]] days x bands
+>     let effs' = transpose . map (\(at,tr,sur,obs) -> [at,tr,sur,obs]) . map unzip4 $ effs
+>     mapM (\(et, evs) -> plotEfficiencyByTime et evs) $ zip ["Atmospheric", "Tracking", "Surface", "Observing"] effs'
 
 > plotEfficiencyByTime :: String -> [[Score]] -> IO ()
 > plotEfficiencyByTime et effs = do
->     print $ "plotEfficiencyByTime " ++ et
 >     let pds = map (zip xs) effs
 >     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
 >   where
