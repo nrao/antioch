@@ -781,14 +781,16 @@ simScoreFreq
 simBandPFTime
 
 > plotBandPressureTime              :: StatsPlot
-> plotBandPressureTime fn n _ _ trace = 
->     linePlots attrs $ zip titles $ bandPressuresByTime trace 
+> plotBandPressureTime fn n _ _ trace = do
+>     let plotData = bandPressuresByTime trace
+>     let time = map fst $ head plotData
+>     let attrs = (scatterAttrs t x y fn) ++ [XRange (dayRangeBuffer time)]
+>     linePlots attrs $ zip titles plotData 
 >   where
 >     t = "Band Pressure Factor vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Factor"
 >     titles = map (Just . show) bandRange 
->     attrs = (scatterAttrs t x y fn)
 
 
 simBandPBinPastTime
@@ -808,13 +810,14 @@ yield 1 + log (n/d) in the pressure plots.
 > plotBandPressureBinPastTime fn n _ _ trace = do 
 >     let bins = bandPressureBinsByTime trace
 >     let past = binsToPlotData bins snd
+>     let time = map fst $ head past
+>     let attrs = (scatterAttrs t x y fn) ++ [XRange (dayRangeBuffer time)]
 >     linePlots attrs $ zip titles $ past 
 >   where
 >     t = "Band Pressure Past Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Past Bin"
 >     titles = map (Just . show) bandRange 
->     attrs = (scatterAttrs t x y fn)
 
 simBandPBinRemainingTime
 See simBandPBinPastTime for notes.
@@ -823,13 +826,24 @@ See simBandPBinPastTime for notes.
 > plotBandPressureBinRemainingTime fn n _ _ trace = do 
 >     let bins = bandPressureBinsByTime trace
 >     let past = binsToPlotData bins fst
+>     let time = map fst $ head past
+>     let attrs = (scatterAttrs t x y fn) ++ [XRange (dayRangeBuffer time)]
 >     linePlots attrs $ zip titles $ past 
 >   where
 >     t = "Band Pressure Remainging Bin vs Time" ++ n
 >     x = "Time [days]"
 >     y = "Band Pressure Remainging Bin"
 >     titles = map (Just . show) bandRange 
->     attrs = (scatterAttrs t x y fn)
+
+Adds a buffer to any time series graph: feed this result to
+the XRange function.
+
+> dayRangeBuffer :: [Float] -> (Double, Double)
+> dayRangeBuffer days = (dmin, dmax)
+>   where
+>     dmin = realToFrac . minimum $ days
+>     lastDay = maximum days
+>     dmax = realToFrac $ lastDay + (lastDay / 7.0)
 
 Converts data retrieved by bandPressureBinsByTime to a format (and units) 
 applicable to our plotting functions.
