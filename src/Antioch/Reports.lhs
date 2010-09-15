@@ -262,7 +262,7 @@ within 1 hour of zenith for each band.
 > plotEfficiencyByTime :: String -> [[Score]] -> IO ()
 > plotEfficiencyByTime et effs = do
 >     let pds = map (zip xs) effs
->     linePlots attrs $ zip titles $ pds 
+>     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
 >   where
 >     t = "Sessions' Mean " ++ et ++ " Efficiency vs Time"
 >     x = "Time [days]"
@@ -270,9 +270,6 @@ within 1 hour of zenith for each band.
 >     titles = map (Just . show) bandRange 
 >     fn = "daily" ++ et ++ "EffTime.png"
 >     xs = map fromIntegral [1..]
->     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, days'), YRange (-0.1, 1.1)] 
->     days' = fromIntegral days + (fromIntegral days)/7.0
-
 
 tracking efficiency vs frequency
 
