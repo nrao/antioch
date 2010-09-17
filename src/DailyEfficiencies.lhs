@@ -10,15 +10,15 @@
 
 > import System.Environment
 > import Text.Printf
+> import Maybe
 
 ./dailyEfficiencies 3
 
 > main = do 
 >   args <- getArgs
->   let numDaysStr = head args
->   putStrLn $ printf "Running daily efficiencies for %s days, plots to current directory\n" numDaysStr 
+>   let start = fromJust . fromSqlString . head $ args
+>   let numDaysStr = last args
+>   putStrLn $ printf "Running daily efficiencies from %s for %s days, plots to current directory\n" (toSqlString start) numDaysStr 
 >   -- TBF: error checking on these values
 >   let numDays = read numDaysStr::Int
->   -- TBF: get this to be an option
->   let start = fromGregorian 2006 2 1 0 0 0
 >   runDailyEfficiencies start numDays True -- start days simInput
