@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime   (fromGregorian, toGregorian, DateTime
 >                          , addMinutes, addMinutes'
->                          , diffMinutes, diffMinutes')
+>                          , diffMinutes, diffMinutes', toSqlString, getCurrentTime)
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.Score
@@ -18,11 +18,12 @@
 > import Data.Fixed         (div')
 > import Data.Function      (on)
 > import Data.List
-> import Data.Time.Clock
+> import Data.Time.Clock hiding (getCurrentTime)
 > import Data.Maybe         (fromMaybe, isJust, fromJust)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
+> --import System.CPUTime
 
 > freqRange :: [Float]
 > freqRange = [0.0..120.0] 
@@ -509,10 +510,18 @@ by band and across all hours of the day within HA limits.
 
 > bandEfficiencyByTime' :: Weather -> [Session] -> DateTime -> IO [(Score, Score, Score, Score)]
 > bandEfficiencyByTime' w ss day = do
+>   print $ (toSqlString day)
+>   begin <- getCurrentTime
 >   w' <- newWeather w $ Just (60 `diffMinutes` day)
 >   rt <- getReceiverTemperatures
 >   efs <- mapM (bandEfficiencyByBand w' rt day ss hrs) bandRange
->   return $! map means . map unzip4 . map (map extract . filter haTest) $ efs
+>   --return $! map means . map unzip4 . map (map extract . filter haTest) $ efs
+>   let result = map means . map unzip4 . map (map extract . filter haTest) $ efs
+>   print result
+>   end <- getCurrentTime
+>   let execTime = end - begin
+>   print $ "execution time: " ++ (show execTime)
+>   return $! result
 >     where
 >       hrs = [                     day
 >            , (1*60)  `addMinutes` day
