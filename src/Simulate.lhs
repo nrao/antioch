@@ -23,7 +23,7 @@
 >   let numDays = read numDaysStr::Int
 >   let stg = read stgStr::StrategyName
 >   -- TBF: get this to be an option
->   let start = fromGregorian 2006 2 1 0 0 0
+>   let start = fromGregorian 2008 2 1 0 0 0
 >   --generatePlots stg dir (statsPlotsToFile dir name) start numDays name True True
 >   --generatePlots2db stg dir (statsPlotsToFile dir name) start numDays name False True
 >   -- runSimulation strategyName outdir sps dt days name simInput quiet

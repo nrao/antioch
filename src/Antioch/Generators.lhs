@@ -34,12 +34,20 @@ Generate a random project name: 'A' .. 'Z'
 
 TBF: Currently, the idea of semester is very limited.
 
-> genSemesterName :: Gen String
-> genSemesterName = elements ["05C"
->                           , "06A", "06A", "06A", "06A"
->                           , "06B", "06B", "06B", "06B"
->                           , "06C", "06C", "06C"
->                            ]
+> genSemesterName :: Int -> Gen String
+> {-
+> genSemesterName year = elements [ "05C"
+>             , "06A", "06A", "06A", "06A"
+>             , "06B", "06B", "06B", "06B"
+>             , "06C", "06C", "06C"
+>            ]
+> -}
+> genSemesterName year = elements $ [ s (year-1) "C"] ++ sA ++ sB ++ sC
+>   where
+>     s y a = (drop 2 $ show y) ++ a
+>     sA = take 4 $ repeat (s year "A") --"06A", "06A", "06A", "06A"
+>     sB = take 4 $ repeat (s year "B") --"06B", "06B", "06B", "06B"
+>     sC = take 3 $ repeat (s year "C") --"06C", "06C", "06C"
 
 trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3] 
 
@@ -49,11 +57,12 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 > genMaxSemesterTime :: Minutes -> Gen Minutes
 > genMaxSemesterTime time = T.frequency [(20, return $ div time 2), (80, return time)]
 
+Generation of arbitrary project
 
 > genProject :: Gen Project
 > genProject = do
 >     name     <- genProjectName
->     semester <- genSemesterName
+>     semester <- genSemesterName 2006
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
 >     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
@@ -66,12 +75,40 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >         }
 >     return $ makeProject project pAllottedT pAllottedT sessions
 
+Generation of not so arbitrary project: specify the year to 
+determine semester distrubition.
+TBF: how to avoid cut & pasted code from above?
+
+> genProjectForYear :: Int -> Gen Project
+> genProjectForYear year = do
+>   -- TBF: this isn't good enough because it leaves the project's
+>   -- sessions' periods pointing to the wrong project, so cut & past
+>   -- from above
+>   -- p' <- genProject
+>   -- semester <- genSemesterName year
+>   -- let p = p' { semester = semester }
+>   -- return $ makeProject p (pAllottedT p) (pAllottedT p) (sessions p)
+>     name     <- genProjectName
+>     semester <- genSemesterName year
+>     thesis   <- genThesis
+>     sessions <- genProjectSessions
+>     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
+>     maxST    <- genMaxSemesterTime pAllottedT
+>     let project = defaultProject {
+>           pName = str name
+>         , semester = semester
+>         , thesis = thesis
+>         , pAllottedS = maxST
+>         }
+>     return $ makeProject project pAllottedT pAllottedT sessions
+
+
 Generate n projects.
 
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []
 > genProjects (n + 1) = do
->     p  <- genProject
+>     p  <- genProject 
 >     pp <- genProjects n
 >     return $ p : pp
 
@@ -218,6 +255,8 @@ Method for producing a generic Open Session.
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
+>                -- default Open Session should have no periods
+>                , periods        = []
 >                }
 
 Method for producing a generic Fixed Session.
