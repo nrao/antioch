@@ -146,21 +146,16 @@
 > test_genSimTime2 = TestCase $ do
 >     let g = mkStdGen 1
 >     let simMins = days*24*60
->     --let projs = generate 0 g $ genSimTime start days True (6.0, 0.1, 0.3) 0 --(0.6, 0.3, 0.1) 0.25
->     let projs = generate 0 g $ genSimTime start days True (0.5, 0.5, 0.0) 0 --(0.6, 0.3, 0.1) 0.25
+>     let projs = generate 0 g $ genSimTime start days True (6.0, 0.1, 0.3) 0 
+>     -- projects from appropriate semesters?
 >     let sems = nub . sort $ map semester projs
 >     assertEqual "test_genSimYear2_0" ["07C", "08A", "08B", "08C"] sems
->     let isFrom08A = nub . sort $ map (flip isPeriodFromSemester "08A")  $ concatMap periods $ concatMap sessions projs
->     print isFrom08A
->     let sems = map (semester . project . session) $ concatMap periods $ concatMap sessions projs
->     print sems
->     -- TBF: we haven't fixed this yet! sems should be in 08!!!
+>     -- periods' sessions' projects from appropriate semesters?
+>     let sems = nub . sort $ map (semester . project . session) $ concatMap periods $ concatMap sessions projs
+>     assertEqual "test_genSimYear2_1" ["07C", "08A", "08B", "08C"] sems
 >   where
 >     start = fromGregorian 2008 2 2 0 0 0
 >     days  = 35
-
-
-
 
 > test_genMaintenanceProject = TestCase $ do
 >     let g = mkStdGen 1

@@ -63,11 +63,6 @@ our greater then the specified amount.
 >   pp <- genProjectsByHrs year $ hrs - ((`div` 60) . pAllottedS $ p)
 >   return $ p : pp
 
-TBF: we don't really need this anymore
-
-> --genProjectByType :: SessionType -> Gen Project
-> --genProjectByType Open     = genProject
-
 For a given list of periods, create appropriate projects & sessions for them.
 The id is passed along so that each session can have a unique id.
 TBF: for now keep it real simple - a single proj & sess for each period
@@ -93,6 +88,7 @@ The id is passed along to give the session a unique id.
 >   s'' <- genSessionFixed
 >   let s' = s'' { sName = "FixedS(" ++ (show id) ++ ")"
 >                , sId = id
+>                , project = proj'
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                , ra = 0.0
@@ -208,6 +204,7 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >   s'' <- genSessionWindowed
 >   let s' = s'' { sName = "WinS(" ++ (show id) ++ ")"
 >                , sId   = id
+>                , project = proj'
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                -- TBF: does Dana agree to fixed durations?
