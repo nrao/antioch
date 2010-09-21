@@ -56,6 +56,7 @@
 >   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
 >   , test_historicalSchdMeanFactors
+>   , test_historicalSchdObsEffs
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
 >    ]
@@ -99,11 +100,19 @@
 >     exp2 = [((cp, 0.6317847),(dp, 0.68081766))
 >            ,((cp2,0.6789325),(dp2,0.66352063))]
 
+
 > test_historicalSchdMeanFactors = TestCase $ do
 >   r <- historicalSchdMeanFactors [p] trackingEfficiency
 >   assertEqual "test_historicalSchdMeanFactors_1" [0.99842864] r
 >     where
 >   p = getTestPeriod
+
+TBF: refactor so that historical*Factors methods can take a test weather.
+
+> test_historicalSchdObsEffs = TestCase $ do
+>   r <- historicalSchdObsEffs [getTestPeriod] 
+>   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
+>   assertEqual "test_historicalSchdObsEffs_1" [0.9802974,0.97683257] (take 2 r)
 
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session
