@@ -25,16 +25,26 @@
 
 Shortcut to runSimulation:
 
-> runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days "" False True
+> runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days "" False True False
 
 This high-level function sets up all the input (sessions, periods, etc.), 
 passes it to simulateDailySchedule, and processes the output (ex: reports and plots are generated). 
 
-> runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
-> runSimulation strategyName outdir sps dt days name simInput quiet = do
+   * strategyName: one of Pack, MinimumDuration ... 
+   * outdir: where the plots and text report go
+   * sps: plot functions
+   * dt: starting datetime
+   * days: num days of simulation
+   * name: name of simulation (a label in report and plots)
+   * simInput: use real projs from DB, or simulated?
+   * quiet: sssh!
+   * test: if this is a test, use weatherTestDB
+
+> runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> Bool -> IO ()
+> runSimulation strategyName outdir sps dt days name simInput quiet test = do
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
->     w <- getWeather Nothing
+>     --w <- getWeather Nothing
 >     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
 >     let rs = [] -- TBF
 >     -- print . show $ rs
@@ -55,13 +65,13 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
 >     let quiet = True
->     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet False [] []
+>     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet test [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
->     createPlotsAndReports sps name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet 
+>     createPlotsAndReports sps name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet test 
 >     -- new schedule to DB; only write the new periods
 >     --putPeriods $ results \\ history
 
@@ -108,6 +118,7 @@ out to be about 10,000 hours.
 >     g = mkStdGen 1
 >     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
 >     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     --projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 2000 
 >     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
 >     -- assign Id's to the open sessions
