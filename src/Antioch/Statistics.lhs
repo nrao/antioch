@@ -49,10 +49,11 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
 
-> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> IO [((Period, Float), (Period, Float))]
-> compareWindowPeriodEfficiencies winfo = do
->     dpsEffs <- historicalSchdMeanObsEffs dps
->     cpsEffs <- historicalSchdMeanObsEffs cps
+> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> Weather -> IO [((Period, Float), (Period, Float))]
+> compareWindowPeriodEfficiencies winfo w = do
+>     --w <- getWeather Nothing
+>     dpsEffs <- historicalSchdMeanObsEffs dps w
+>     cpsEffs <- historicalSchdMeanObsEffs cps w
 >     return $ zip (zip cps cpsEffs) (zip dps dpsEffs)
 >   where
 >     dps = concat $ map (\(w, mc, d) -> if isJust mc then [d] else []) winfo 
@@ -166,9 +167,9 @@ for the given scoring factor that the periods' sessions had when they
 were scheduled.  Currently this is used to check all the schedules scores
 for normalicy (0 < score < 1).
 
-> historicalSchdFactors :: [Period] -> ScoreFunc -> IO [Float]
-> historicalSchdFactors ps sf = do
->   w <- getWeather Nothing
+> historicalSchdFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
+> historicalSchdFactors ps sf w = do
+>   --w <- getWeather Nothing
 >   fs <- mapM (periodSchdFactors' w) ps
 >   return $ concat fs
 >     where
@@ -192,9 +193,9 @@ time the periods were scheduled (see TBF).
 TBF: the use of mean' might cause misunderstandings, since pack zero's out
 the first quarter.  We should be using the weighted average found in Score.
 
-> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> IO [Float]
-> historicalSchdMeanFactors ps sf = do
->   w <- getWeather Nothing
+> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
+> historicalSchdMeanFactors ps sf w = do
+>   --w <- getWeather Nothing
 >   fs <- mapM (periodSchdFactors' w) ps
 >   return $ map mean' fs
 >     where
@@ -203,9 +204,9 @@ the first quarter.  We should be using the weighted average found in Score.
 Same as historicalSchdMeanFactors, except calculates the efficiencies
 that the period would have observed at.
 
-> historicalObsMeanFactors :: [Period] -> ScoreFunc -> IO [Float]
-> historicalObsMeanFactors ps sf = do
->   w <- getWeather Nothing
+> historicalObsMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
+> historicalObsMeanFactors ps sf w = do
+>   --w <- getWeather Nothing
 >   fs <- mapM (periodObsFactors' w) ps
 >   return $ map mean' fs
 >     where
@@ -512,7 +513,9 @@ by band and across all hours of the day within HA limits.
 > bandEfficiencyByTime' w ss day = do
 >   print $ (toSqlString day)
 >   begin <- getCurrentTime
->   w' <- newWeather w $ Just (60 `diffMinutes` day)
+>   -- avoid getting real gbt_weather by setting forecast behind time
+>   let wdt = ((-60) `addMinutes` day)
+>   w' <- newWeather w $ Just wdt 
 >   rt <- getReceiverTemperatures
 >   efs <- mapM (bandEfficiencyByBand w' rt day ss hrs) bandRange
 >   --return $! map means . map unzip4 . map (map extract . filter haTest) $ efs
