@@ -4,6 +4,7 @@
 > import Antioch.Generators
 > import Antioch.DateTime
 > import Antioch.Types
+> import Antioch.Statistics
 > import Antioch.Utilities    (printList, periodInWindow, validWindow)
 > {-
 > import Antioch.Score
@@ -22,6 +23,7 @@
 >                 , test_genMaintenancePeriodsByYear
 >                 , test_genMaintenancePeriods
 >                 , test_genSimTime
+>                 , test_genSimTime2
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
 >                 , test_genWindows
@@ -34,6 +36,8 @@
 > 
 >     -- a year with just open sessions 
 >     let projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 0 --(0.6, 0.3, 0.1) 0.25
+>     let sems = nub . sort $ map semester projs
+>     assertEqual "test_genSimYear_0" ["05C", "06A", "06B", "06C"] sems
 >     let totalMins = projTime projs 
 >     assertEqual "test_genSimYear_1" True (1 < length projs)
 >     assertEqual "test_genSimYear_1" True ((totalMins > simMins) && (totalMins < (simMins + (simMins `div` 2))))
@@ -139,6 +143,22 @@
 >     projTime projs = sum $ map sAllottedT $ concatMap sessions projs
 
 
+> test_genSimTime2 = TestCase $ do
+>     let g = mkStdGen 1
+>     let simMins = days*24*60
+>     --let projs = generate 0 g $ genSimTime start days True (6.0, 0.1, 0.3) 0 --(0.6, 0.3, 0.1) 0.25
+>     let projs = generate 0 g $ genSimTime start days True (0.5, 0.5, 0.0) 0 --(0.6, 0.3, 0.1) 0.25
+>     let sems = nub . sort $ map semester projs
+>     assertEqual "test_genSimYear2_0" ["07C", "08A", "08B", "08C"] sems
+>     let isFrom08A = nub . sort $ map (flip isPeriodFromSemester "08A")  $ concatMap periods $ concatMap sessions projs
+>     print isFrom08A
+>     let sems = map (semester . project . session) $ concatMap periods $ concatMap sessions projs
+>     print sems
+>     -- TBF: we haven't fixed this yet! sems should be in 08!!!
+>   where
+>     start = fromGregorian 2008 2 2 0 0 0
+>     days  = 35
+
 
 
 
@@ -170,6 +190,12 @@
 >     let totalTime = sum $ map duration ps
 >     assertEqual "test_genMaintProj_1" False (internalConflicts ps)
 >     assertEqual "test_genMaintProj_1" 2400 totalTime
+>     -- try a different year
+>     let dt = fromGregorian 2009 2 1 0 0 0
+>     let proj = generate 0 g $ genMaintenanceProj dt 7 
+>     assertEqual "test_genMaintProj_10" "09A" (semester proj)
+>     let sems = nub . sort $ map (semester . project . session) $ concatMap periods $ sessions proj
+>     assertEqual "test_genMaintProj_10" ["09A"] sems
 
 > test_genMaintenancePeriodsByYear = TestCase $ do
 >     let g = mkStdGen 1

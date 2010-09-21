@@ -257,12 +257,12 @@ within 1 hour of zenith for each band.
 >     --     [([at],[tr],[sur],[obs])] effTypes x bands <-
 >     --       [[(at, tr, sur, obs)]] days x bands
 >     let effs' = transpose . map (\(at,tr,sur,obs) -> [at,tr,sur,obs]) . map unzip4 $ effs
->     mapM (\(et, evs) -> plotEfficiencyByTime et evs) $ zip ["Atmospheric", "Tracking", "Surface", "Observing"] effs'
+>     mapM (\(et, evs) -> plotEfficiencyByTime et evs days) $ zip ["Atmospheric", "Tracking", "Surface", "Observing"] effs'
 
-> plotEfficiencyByTime :: String -> [[Score]] -> IO ()
-> plotEfficiencyByTime et effs = do
+> plotEfficiencyByTime :: String -> [[Score]] -> Int -> IO ()
+> plotEfficiencyByTime et effs days = do
 >     let pds = map (zip xs) effs
->     linePlots (tail $ scatterAttrs t x y fn) $ zip titles $ pds 
+>     linePlots attrs $ zip titles $ pds 
 >   where
 >     t = "Sessions' Mean " ++ et ++ " Efficiency vs Time"
 >     x = "Time [days]"
@@ -270,6 +270,9 @@ within 1 hour of zenith for each band.
 >     titles = map (Just . show) bandRange 
 >     fn = "daily" ++ et ++ "EffTime.png"
 >     xs = map fromIntegral [1..]
+>     -- make sure there is a buffer on the x-axis so we can read the legend
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (0, days'), YRange (-0.1, 1.1)]
+>     days' = fromIntegral days + (fromIntegral days)/7.0
 
 tracking efficiency vs frequency
 
