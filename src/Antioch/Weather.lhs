@@ -251,7 +251,7 @@ Note: only applicable for columns in the Forecasts table
 
 > fetchAnyForecastValue :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
 > fetchAnyForecastValue cnn dt ftype column = handleSqlError $ do
->   print $ "Value " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
+>   --print $ "Value " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
 >   result <- quickQuery' cnn query xs
 >   case result of 
 >     [wind]:_ -> return $ fromSql' wind

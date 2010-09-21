@@ -91,13 +91,13 @@
 >     dp = head . periods $ s2'
 >     s2 = makeSession s2' (windows s2') [cp]
 >     wInfo2 = [(head . windows $ s2, Just cp, dp)]
->     exp = [((cp,0.6317847),(dp,0.68081766))]
+>     exp = [((cp,0.63283867),(dp,0.6808202))]
 >     cp2 = cp { startTime = fromGregorian 2006 4 5 12 0 0 }
 >     dp2 = dp { startTime = fromGregorian 2006 4 1 12 0 0 }
 >     -- the windows info doesn't really matter
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
->     exp2 = [((cp, 0.6317847),(dp, 0.68081766))
->            ,((cp2,0.6789325),(dp2,0.66352063))]
+>     exp2 = [((cp, 0.63283867),(dp, 0.6808202))
+>            ,((cp2,0.67720616),(dp2,0.6639635))]
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   r <- historicalSchdMeanFactors [p] trackingEfficiency
