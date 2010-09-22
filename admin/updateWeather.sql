@@ -131,8 +131,15 @@ ALTER TABLE ONLY observing_types
 
 -- init data: just two of them
 
-INSERT INTO observing_types VALUES (DEFAULT, 'spectral line');
+INSERT INTO observing_types VALUES (DEFAULT, 'radar');
+INSERT INTO observing_types VALUES (DEFAULT, 'vlbi');
+INSERT INTO observing_types VALUES (DEFAULT, 'pulsar');
 INSERT INTO observing_types VALUES (DEFAULT, 'continuum');
+INSERT INTO observing_types VALUES (DEFAULT, 'spectral line');
+INSERT INTO observing_types VALUES (DEFAULT, 'maintenance');
+INSERT INTO observing_types VALUES (DEFAULT, 'calibration');
+INSERT INTO observing_types VALUES (DEFAULT, 'testing');
+INSERT INTO observing_types VALUES (DEFAULT, 'commissioning');
 
 
 -- now create the necessary foriegn keys

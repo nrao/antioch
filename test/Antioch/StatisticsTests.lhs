@@ -101,7 +101,6 @@
 >     exp2 = [((cp, 0.632838677),(dp, 0.6808202))
 >            ,((cp2,0.67720616), (dp2,0.6639635))]
 
-
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   r <- historicalSchdMeanFactors [p] trackingEfficiency w

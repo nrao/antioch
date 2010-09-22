@@ -73,13 +73,6 @@
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
 >     factors <- liftIO $ scoreElements s w rt sss dt dur rs
 >     let scoresNfactors = zipWith (++) scores factors
->     --liftIO $ print scoresNfactors
->     liftIO $ print ("Debug hasTimeSchedulable for " ++
->                     (sName s) ++ " " ++
->                     (show . pAvailT . project $ s) ++ " " ++
->                     (show . sAvailT $ s) ++ " " ++
->                     (show . minDuration $ s)
->                    )
 >     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)
