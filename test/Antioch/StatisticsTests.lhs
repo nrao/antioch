@@ -10,6 +10,7 @@
 > import Antioch.GenerateSchedule (validSimulatedWindows)
 > import Antioch.PProjects
 > import Antioch.TimeAccounting
+> import Antioch.ReceiverTemperatures
 > import Antioch.Simulate (updateSessions)
 > import Data.List
 > import Test.HUnit
@@ -57,6 +58,7 @@
 >   , test_periodSchdFactors
 >   , test_historicalSchdMeanFactors
 >   , test_historicalSchdObsEffs
+>   , test_historicalSchdMeanObsEffs_getPeriodsSchdEffs
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
 >    ]
@@ -115,6 +117,19 @@ TBF: refactor so that historical*Factors methods can take a test weather.
 >   r <- historicalSchdObsEffs [getTestPeriod] w 
 >   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
 >   assertEqual "test_historicalSchdObsEffs_1" [0.9802974,0.97683257] (take 2 r)
+
+Test that two ways to get the same result yield the same answer.
+
+> test_historicalSchdMeanObsEffs_getPeriodsSchdEffs = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
+>   -- method 1
+>   r1 <- historicalSchdMeanObsEffs [getTestPeriod, getTestPeriod2] w
+>   -- method 2
+>   r2' <- getPeriodsSchdEffs w rt [] [getTestPeriod, getTestPeriod2]
+>   let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
+>   assertEqual "test_hsmo_gps_1" r1 r2  
+
 
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session

@@ -563,7 +563,12 @@ by band and across all hours of the day within HA limits.
 >                            ]
 >     score effFactors dt s
 
--- for observing efficiency plots
+The next few methods are for calculating the efficiencies (both
+observed & scheduled) of periods.
+
+> type PeriodEfficiencies = [(Period,[(Score, Score, Score, Score)])]
+
+Same as original method, but we don't need the hourAnlgeLimit.
 
 > getEfficiencyScoringFactors' :: DateTime -> Session -> Scoring Factors
 > getEfficiencyScoringFactors' dt s = do 
@@ -573,9 +578,12 @@ by band and across all hours of the day within HA limits.
 >                       ]
 >     score effFactors dt s
 
+What are the various efficiencies for the given session at the given
+time while observing at the given time.
 
 > getObsEffScoringFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Session -> DateTime -> IO Factors
 > getObsEffScoringFactors w rt rs s dt = do
+>   -- we must set this time here so we can get efficiency during observing
 >   w' <- newWeather w $ Just dt
 >   runScoring w' rs rt $ getEfficiencyScoringFactors' dt s
 > 
@@ -592,11 +600,28 @@ each quarter so that we pick up gbt_weather and latest forecast.
 >         .. (addMinutes' (duration p) (startTime p))]
 > 
 
-> type PeriodEfficiencies = [(Period,[(Score, Score, Score, Score)])]
+> getPeriodSchdEffFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO [Factors]
+> getPeriodSchdEffFactors w rt rs p = do
+>   -- here's how we get the efficiencies at the time this period was sched
+>   w' <- newWeather w $ Just (pForecast p)
+>   runScoring w' rs rt $ mapM (flip getEfficiencyScoringFactors' (session p)) dts
+>   where
+>     dts = [(startTime p)
+>         ,  (addMinutes' 15 (startTime p))
+>         .. (addMinutes' (duration p) (startTime p))]
 
-> getPeriodsObsEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) --([(Period,[(Score, Score, Score, Score)])])
+> getPeriodsObsEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) 
 > getPeriodsObsEffs w rt rs ps = do
 >   effs <- mapM (getPeriodObsEffFactors w rt rs) ps
+>   return $ zip ps (map fs2ss effs)
+>     where
+>       fs2ss ss = map f2s ss
+
+Same as above, but here we want the periods effs at the time of scheduling.
+
+> getPeriodsSchdEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) 
+> getPeriodsSchdEffs w rt rs ps = do
+>   effs <- mapM (getPeriodSchdEffFactors w rt rs) ps
 >   return $ zip ps (map fs2ss effs)
 >     where
 >       fs2ss ss = map f2s ss
@@ -604,7 +629,6 @@ each quarter so that we pick up gbt_weather and latest forecast.
 For a single period's [Factors], convert them to scores for each timestamp.
 Take the three efficiency factors, extract the scores, and calculate
 the observing efficiency.
-
 [("AtmosphericEfficiency", Just 1.0) , ("TrackingEfficiency", Just 1.0, ..]
   -> (1.0, 1.0, 1.0, 1.0)
 
@@ -616,29 +640,15 @@ the observing efficiency.
 >     sf = eval [fs!!2] 
 >     ef = eval fs
 
-> --fs2ss :: (String, Maybe Score)] -> [(Score, Score, Score, Score)]
-> --fs2ss fs = map f2s fs 
+Convert the period efficiencies that are given, into the data we 
+want to plot.
 
-> {-
-> getPeriodEfficiencies :: Period -> Scoring [Factors]
-> getPeriodEfficiencies p = mapM (flip getEfficiencyScoringFactors'' (session p)) dts
+> extractPeriodMeanEffs :: PeriodEfficiencies -> ((Score, Score, Score, Score) -> Score) -> [Score]
+> extractPeriodMeanEffs peffs fn = map (avg . snd) peffs
 >   where
->     dts = [(startTime p)
->         ,  (addMinutes' 15 (startTime p))
->         .. (addMinutes' (duration p) (startTime p))]
+>     avg xs = avg' $ map fn xs
+>     avg' xs = (sum xs)/(fromIntegral . length $ xs)
 
-
-> getPeriodObsEffs' :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO ([(Score,Score,Score)])
-> getPeriodObsEffs' w rt rs p = do
->     -- this is 'ObsEff', so we need to  
->     w' <- newWeather $ Just wdt
->     runScoring' w' rt rs $ getPeriodEfficiencies p
-
-> getPeriodObsEffs :: [Period] -> Weather -> ReceiverTemperatures -> ReceiverSchedule -> IO ([(Period, [(Score,Score,Score)])])
-> getPeriodObsEffs ps w rt rs = do
->   effs <- mapM (getPeriodObsEffs' w rt rs) ps 
->   return zip ps effs
-> -}
 
 This function retrieves the history of pressures written in the trace, 
 and returns them, for each band as [(day #, pressure)].

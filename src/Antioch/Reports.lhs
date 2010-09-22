@@ -423,33 +423,31 @@ simSchdMeanObsEffError - this plot shows the error bars for simSchdMeanEffFreq
 
 Separate plots for the mean scheduled observing efficiency, by plot:
 
-> plotMeanObsEffVsFreqOpen fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Open
-> plotMeanObsEffVsFreqFixed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Fixed
-> plotMeanObsEffVsFreqWindowed fn n ss ps tr = plotMeanObsEffVsFreqByType fn n ss ps tr Windowed
+> plotMeanObsEffVsFreqOpen peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Open
+> plotMeanObsEffVsFreqFixed peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Fixed
+> plotMeanObsEffVsFreqWindowed peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Windowed
 
-> plotMeanObsEffVsFreqByType fn n ss ps tr stype = plotMeanObsEffVsFreq' fn n ss' ps' tr stype
+> plotMeanObsEffVsFreqByType peffs fn n ss ps tr stype = plotMeanObsEffVsFreq' peffs' fn n ss' ps' tr stype
 >   where
 >     ss' = filter (isType stype) ss
 >     ps' = filter (isTypePeriod stype) ps
-
+>     peffs' = filter (\(p,sf) -> (isTypePeriod stype p)) peffs
 
 Scheduled Efficiency Plots:
 
 simSchdMeanEffFreq
 error bars done separately in simMeanObsEff
 
-> plotMeanObsEffVsFreq  :: StatsPlot
-> plotMeanObsEffVsFreq fn n _ ps _ = do
->   w <- getWeather Nothing
->   effs <- historicalSchdMeanObsEffs ps w
+> plotMeanObsEffVsFreq  :: PeriodEffStatsPlot
+> plotMeanObsEffVsFreq peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
 >   plotEffVsFreq fn effs ps t y
 
 > --plotMeanObsEffVsFreq'  :: StatsPlot
-> plotMeanObsEffVsFreq' fn n _ ps _ stype = do
->   w <- getWeather Nothing
->   effs <- historicalSchdMeanObsEffs ps w
+> plotMeanObsEffVsFreq' peffs fn n _ ps _ stype = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Scheduled Mean Observing Efficiency (" ++ (show stype) ++ ") vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
 >   plotEffVsFreq fn effs ps t y
@@ -457,45 +455,32 @@ error bars done separately in simMeanObsEff
 simSchdMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
 
-> plotMeanAtmEffVsFreq  :: StatsPlot
-> plotMeanAtmEffVsFreq fn n _ ps _ = do
->   w <- getWeather Nothing
->   effs <- historicalSchdMeanAtmEffs ps w
+> plotMeanAtmEffVsFreq  :: PeriodEffStatsPlot
+> plotMeanAtmEffVsFreq peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> a)
 >   let t = "Scheduled Mean Atmospheric Efficiency vs Frequency" ++ n
 >   let y = "Mean Atmospheric Efficiency"
 >   plotEffVsFreq fn effs ps t y
 
 simSchdMeanTrkFreq
 
-> plotMeanTrkEffVsFreq  :: StatsPlot
-> plotMeanTrkEffVsFreq fn n _ ps _ = do
->   w <- getWeather Nothing
->   effs <- historicalSchdMeanTrkEffs ps w
+> plotMeanTrkEffVsFreq  :: PeriodEffStatsPlot
+> plotMeanTrkEffVsFreq peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> t)
 >   let t = "Scheduled Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Mean Tracking Efficiency"
 >   plotEffVsFreq fn effs ps t y
 
 simSchdMeanSrfFreq
 
-> plotMeanSrfEffVsFreq  :: StatsPlot
-> plotMeanSrfEffVsFreq fn n _ ps _ = do
->   w <- getWeather Nothing
->   effs <- historicalSchdMeanSrfEffs ps w
+> plotMeanSrfEffVsFreq  :: PeriodEffStatsPlot
+> plotMeanSrfEffVsFreq peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> s)
 >   let t = "Scheduled Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Mean Surface Obs. Efficiency"
 >   plotEffVsFreq fn effs ps t y
 
-
 Observed Efficiency Plots:
-
-Convert the period efficiencies that are given, into the data we 
-want to plot.
-
-> extractPeriodMeanEffs :: PeriodEfficiencies -> ((Score, Score, Score, Score) -> Score) -> [Score]
-> extractPeriodMeanEffs peffs fn = map (avg . snd) peffs
->   where
->     avg xs = avg' $ map fn xs
->     avg' xs = (sum xs)/(fromIntegral . length $ xs)
 
 simObsMeanEffFreq
 error bars done separately in simMeanObsEff
@@ -567,6 +552,7 @@ This plot is observing efficiency vs. frequency, where the obs. eff. is:
 >   plotEffVsFreq fn effs ps t y
 
 simSchdMeanObsEffError - errorbar plot of efficiencies (stand alone plot for now)
+TBF: remove historicalSchdMeanObsEffs
 
 > plotSchdMeanEffError  :: StatsPlot
 > plotSchdMeanEffError fn n _ ps _ = do
@@ -704,6 +690,7 @@ simSatisfyFreq (error bars)
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 simEffElev
+TBF: remove historicalObsEffs
 
 > plotEffElev'          :: StatsPlot
 > plotEffElev' fn n _ ps _ = do
@@ -721,6 +708,7 @@ simEffElev
 
 
 simEffLST
+TBF: remove historicalObsEffs
 
 > plotEffLst'           :: StatsPlot
 > plotEffLst' fn n _ ps _ = do
@@ -922,6 +910,7 @@ simHistRA
 >     attrs = (histAttrs t x y fn) ++ [XRange (-1, 25)]
 
 simHistEffHr
+TBF: remove historicalObsEff
 
 > histEffHrBand'           :: StatsPlot
 > histEffHrBand' fn n _ ps _ = do
@@ -1130,6 +1119,19 @@ TBF: combine this list with the statsPlotsToFile fnc
 
 These are the plots that need efficiencies as well.
 
+> periodSchdEffStatsPlotsToFile :: PeriodEfficiencies -> String -> String -> [[Session]->[Period]->[Trace]-> IO ()]
+> periodSchdEffStatsPlotsToFile peffs rootPath name = map (\f-> f n) [
+>    plotMeanObsEffVsFreq peffs (rootPath ++ "/simSchdMeanEffFreq.png")
+>  , plotMeanObsEffVsFreqOpen peffs (rootPath ++ "/simSchdMeanEffFreqOpen.png")
+>  , plotMeanObsEffVsFreqFixed peffs (rootPath ++ "/simSchdMeanEffFreqFixed.png")
+>  , plotMeanObsEffVsFreqWindowed peffs (rootPath ++ "/simSchdMeanEffFreqWindowed.png")
+>  , plotMeanAtmEffVsFreq peffs (rootPath ++ "/simSchdMeanAtmFreq.png")
+>  , plotMeanTrkEffVsFreq peffs (rootPath ++ "/simSchdMeanTrkFreq.png")
+>  , plotMeanSrfEffVsFreq peffs (rootPath ++ "/simSchdMeanSrfFreq.png")
+>   ]
+>   where
+>     n = if name == "" then "" else " (" ++ name ++ ")"
+
 > periodEffStatsPlotsToFile :: PeriodEfficiencies -> String -> String -> [[Session]->[Period]->[Trace]-> IO ()]
 > periodEffStatsPlotsToFile peffs rootPath name = map (\f-> f n) [
 >    plotObsMeanObsEffVsFreq peffs (rootPath ++ "/simObsMeanEffFreq.png")
@@ -1147,13 +1149,13 @@ The standard list of plots (that need no extra input).
 >    plotDecFreq        $ rootPath ++ "/simDecFreq.png"
 >  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
 >  , plotEffVsFreqWrong $ rootPath ++ "/simEffStartFreq.png"
->  , plotMeanObsEffVsFreq $ rootPath ++ "/simSchdMeanEffFreq.png"
->  , plotMeanObsEffVsFreqOpen $ rootPath ++ "/simSchdMeanEffFreqOpen.png"
->  , plotMeanObsEffVsFreqFixed $ rootPath ++ "/simSchdMeanEffFreqFixed.png"
->  , plotMeanObsEffVsFreqWindowed $ rootPath ++ "/simSchdMeanEffFreqWindowed.png"
->  , plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
->  , plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
->  , plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
+>  --, plotMeanObsEffVsFreq $ rootPath ++ "/simSchdMeanEffFreq.png"
+>  --, plotMeanObsEffVsFreqOpen $ rootPath ++ "/simSchdMeanEffFreqOpen.png"
+>  --, plotMeanObsEffVsFreqFixed $ rootPath ++ "/simSchdMeanEffFreqFixed.png"
+>  --, plotMeanObsEffVsFreqWindowed $ rootPath ++ "/simSchdMeanEffFreqWindowed.png"
+>  --, plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
+>  --, plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
+>  --, plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
 >  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
 >  , plotFreqVsTimeOpen     $ rootPath ++ "/simFreqTimeOpen.png"
 >  , plotFreqVsTimeFixed     $ rootPath ++ "/simFreqTimeFixed.png"
@@ -1551,8 +1553,11 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     begin <- getCurrentTime
 >     rt <- getReceiverTemperatures
 >     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
+>     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
 >     --print peffs
+>     -- TBF: pass on the filepath and sim name!!!
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs "plots" "")
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs "plots" "")
 >     end <- getCurrentTime
 >     print $ "Eff Plotting Time: " ++ (show $ end - begin)
 >   where
