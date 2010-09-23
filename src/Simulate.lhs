@@ -30,7 +30,4 @@
 >   let maint = read maintStr :: Bool
 >   let [open, fixed, windowed] = map read . splitRegex (mkRegex "/") $ typesStr :: [Int]
 >   let backlog = read backlogStr :: Int
->   --generatePlots stg dir (statsPlotsToFile dir name) start numDays name True True
->   --generatePlots2db stg dir (statsPlotsToFile dir name) start numDays name False True
->   print (start, numDays, maint, open, fixed, windowed, backlog, name)
->   runSimulation stg dir (statsPlotsToFile dir name) start numDays maint open fixed windowed backlog name True True False
+>   runSimulation stg start numDays maint open fixed windowed backlog dir name True True False
