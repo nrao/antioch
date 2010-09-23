@@ -25,14 +25,13 @@
 
 Shortcut to runSimulation:
 
-> runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days "" False True False
+> runSim start days filepath = runSimulation Pack start days filepath "" False True False
 
 This high-level function sets up all the input (sessions, periods, etc.), 
 passes it to simulateDailySchedule, and processes the output (ex: reports and plots are generated). 
 
    * strategyName: one of Pack, MinimumDuration ... 
    * outdir: where the plots and text report go
-   * sps: plot functions
    * dt: starting datetime
    * days: num days of simulation
    * name: name of simulation (a label in report and plots)
@@ -40,8 +39,8 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
    * quiet: sssh!
    * test: if this is a test, use weatherTestDB
 
-> runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> Bool -> IO ()
-> runSimulation strategyName outdir sps dt days name simInput quiet test = do
+> runSimulation :: StrategyName -> DateTime -> Int -> String -> String -> Bool -> Bool -> Bool -> IO ()
+> runSimulation strategyName dt days outdir name simInput quiet test = do
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
 >     --w <- getWeather Nothing
@@ -71,7 +70,7 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
->     createPlotsAndReports sps name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet test 
+>     createPlotsAndReports name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet test 
 >     -- new schedule to DB; only write the new periods
 >     --putPeriods $ results \\ history
 

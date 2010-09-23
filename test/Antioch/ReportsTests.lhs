@@ -28,7 +28,7 @@ If it doesn't blow up, it passes
 >   -- TBF: remove old plots
 >   let start = fromGregorian 2006 2 2 0 0 0
 >   --runSim start 3 "."
->   runSimulation Pack "." (statsPlotsToFile "." "") start 3 "" True True True
+>   runSimulation Pack start 3 "." "" True True True
 >   -- TBF: make sure new plots and text report are there
 >   assertEqual "test_runSim" True True
 

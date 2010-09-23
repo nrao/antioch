@@ -27,4 +27,5 @@
 >   --generatePlots stg dir (statsPlotsToFile dir name) start numDays name True True
 >   --generatePlots2db stg dir (statsPlotsToFile dir name) start numDays name False True
 >   -- runSimulation strategyName outdir sps dt days name simInput quiet test
->   runSimulation stg dir (statsPlotsToFile dir name) start numDays name True True False
+>   runSimulation stg start numDays dir name True True False
+

@@ -1509,8 +1509,8 @@ Trying to emulate the Beta Test's Scoring Tab:
 >   scoringInfo s ss dt dur rs
 > -}
 
-> createPlotsAndReports :: [[Session] -> [Period] -> [Trace] -> IO ()] -> String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> Bool -> IO ()
-> createPlotsAndReports sps name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet test = do
+> createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> Bool -> IO ()
+> createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet test = do
 >     let gaps = findScheduleGaps dt dur schedule
 >     let canceled = getCanceledPeriods trace
 >     let winfo    = getWindowPeriodsFromTrace trace
@@ -1547,7 +1547,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
 >     begin <- getCurrentTime
->     mapM_ (\f -> f ss' scheduleNoMaint trace) sps
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (statsPlotsToFile outdir name) 
 >     end <- getCurrentTime
 >     print $ "Plotting Time: " ++ (show $ end - begin)
 >     begin <- getCurrentTime
@@ -1556,8 +1556,8 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
 >     --print peffs
 >     -- TBF: pass on the filepath and sim name!!!
->     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs "plots" "")
->     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs "plots" "")
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs outdir name)
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs outdir name)
 >     end <- getCurrentTime
 >     print $ "Eff Plotting Time: " ++ (show $ end - begin)
 >   where
