@@ -8,23 +8,29 @@
 > import Antioch.RunSimulation
 > import SimulateOpts
 
+> import Data.Maybe             (fromJust)
 > import System.Environment
 > import Text.Printf
+> import Text.Regex
 
 ./simulate --help
 
-./simulate -s=Pack -o=simulations -d=3 -n=test5_3
+./simulate -s=Pack -o=simulations -b=2008-02-01 -d=3 -n=test5_3
+
+./simulate -s=Pack -o=simulations -b=2007-02-01 -d=x -n=test5_3 -t=50/25/25 -m=True -l=100
 
 > main = do 
 >   args <- getArgs
->   (stgStr, dir, numDaysStr, name) <- simulateOpts args
+>   (stgStr, dir, beginStr, numDaysStr, name, maintStr, typesStr, backlogStr) <- simulateOpts args
 >   putStrLn $ printf "Running simulation '%s' using strategy %s for %s days, output to directory %s\n" name stgStr numDaysStr dir
 >   -- TBF: error checking on these values
->   let numDays = read numDaysStr::Int
->   let stg = read stgStr::StrategyName
->   -- TBF: get this to be an option
->   let start = fromGregorian 2006 2 1 0 0 0
+>   let start = fromJust . fromSqlString $ (beginStr ++ " 00:00:00")
+>   let numDays = read numDaysStr :: Int
+>   let stg = read stgStr :: StrategyName
+>   let maint = read maintStr :: Bool
+>   let [open, fixed, windowed] = map read . splitRegex (mkRegex "/") $ typesStr :: [Int]
+>   let backlog = read backlogStr :: Int
 >   --generatePlots stg dir (statsPlotsToFile dir name) start numDays name True True
 >   --generatePlots2db stg dir (statsPlotsToFile dir name) start numDays name False True
->   -- runSimulation strategyName outdir sps dt days name simInput quiet test
->   runSimulation stg dir (statsPlotsToFile dir name) start numDays name True True False
+>   print (start, numDays, maint, open, fixed, windowed, backlog, name)
+>   runSimulation stg dir (statsPlotsToFile dir name) start numDays maint open fixed windowed backlog name True True False

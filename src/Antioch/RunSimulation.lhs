@@ -25,7 +25,7 @@
 
 Shortcut to runSimulation:
 
-> runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days "" False True False
+> runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days False 100 0 0 2000 "" False True False
 
 This high-level function sets up all the input (sessions, periods, etc.), 
 passes it to simulateDailySchedule, and processes the output (ex: reports and plots are generated). 
@@ -35,17 +35,21 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
    * sps: plot functions
    * dt: starting datetime
    * days: num days of simulation
+   * maint: generate maintenance sessions
+   * open: per cent open sessions
+   * fixed: per cent fixed sessions
+   * windowed: per cent windowed sessions
+   * backlog: hours of backlog sessions
    * name: name of simulation (a label in report and plots)
    * simInput: use real projs from DB, or simulated?
    * quiet: sssh!
    * test: if this is a test, use weatherTestDB
 
-> runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> Bool -> IO ()
-> runSimulation strategyName outdir sps dt days name simInput quiet test = do
+> runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> Bool -> Int -> Int -> Int -> Int -> String -> Bool -> Bool -> Bool -> IO ()
+> runSimulation strategyName outdir sps dt days maint open fixed windowed backlog name simInput quiet test = do
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
->     --w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
+>     (rs, ss, projs, history') <- if simInput then simulatedInput dt days maint open fixed windowed backlog else dbInput dt
 >     let rs = [] -- TBF
 >     -- print . show $ rs
 >     -- print . show $ ss
@@ -111,13 +115,15 @@ to change depending on how long the simulation is running.
 NOTE: The old simulations ran for 365 days using 255 projects, which came 
 out to be about 10,000 hours.
 
-> simulatedInput :: DateTime -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput start days = return $ (rs, ss, projs, history)
+> simulatedInput :: DateTime -> Int -> Bool -> Int -> Int -> Int -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
+> simulatedInput start days maint open fixed windowed backlog = return $ (rs, ss, projs, history)
 >   where
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
 >     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
->     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     pc2frac i = (fromIntegral i) / 100.0
+>     projs = generate 0 g $ genSimTime start days maint (pc2frac open, pc2frac fixed, pc2frac windowed) backlog 
+>     --projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
 >     --projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 2000 
 >     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
