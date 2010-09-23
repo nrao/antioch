@@ -29,8 +29,7 @@ TBF this test depends on weatherDB instead of weatherUnitTestDB!
 > test_runSim = TestCase $ do
 >   -- TBF: remove old plots
 >   let start = fromGregorian 2006 2 2 0 0 0
->   --runSim start 3 "."
->   runSimulation Pack start 3 "." "" True True True
+>   runSimulation Pack start 3 False 100 0 0 2000 "." "" True True True
 >   -- TBF: make sure new plots and text report are there
 >   assertEqual "test_runSim" True True
 
