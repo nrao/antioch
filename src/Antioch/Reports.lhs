@@ -13,7 +13,7 @@
 > import Antioch.Debug
 > import Antioch.TimeAccounting
 > import Antioch.ReceiverTemperatures
-> import Antioch.HistoricalWeather
+> --import Antioch.HistoricalWeather (allRcvrs)
 > import Antioch.Filters
 > import Antioch.GenerateSchedule
 > --import Antioch.HardwareSchedule
@@ -223,6 +223,10 @@ hours offset vs. raw wind speed
 >     plotAvgObservingEff
 >     plotRcvrTemps -- not really historical weather, but what the hey!
 
+TBF: declared also in HistoricalWeather but have cyclical refs now.
+
+> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
+
 Stringency versus frequency for elevation = 90 deg, all receivers,
 and both obs types.
 
@@ -245,7 +249,7 @@ and both obs types.
 >       yl = "Stringency"
 
 
-Plot daily average efficiencies across all sessions
+Plot daily average efficiencies across all sessions/
 across all hours of the day where a session is
 within 1 hour of zenith for each band.
 

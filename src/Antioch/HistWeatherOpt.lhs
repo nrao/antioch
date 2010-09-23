@@ -88,13 +88,14 @@ stringency2006-01-01.txt
 > allElevs' :: [Int]
 > allElevs' = [5 .. 90]
 
-> obsTypes' = [SpectralLine, Continuum]
+> obsTypes' = [Continuum, SpectralLine]
 
 > fileExpLength = (length allElevs') * (length $ concatMap getRcvrFreqIndices allRcvrs') * (2) 
 
 Deprecated: turns out, calling this for each stringency value is WAY to
 slow (IO bound)
 
+> {-
 > writeStringency filename stringencies rcvr freq elev obstype = do
 >     let str = maybe (0.0 :: Float) (\c -> fromIntegral hours / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
 >     let line = (show (rcvrId, freq, elev, obsTypeId, str)) ++  "\n"
@@ -102,6 +103,7 @@ slow (IO bound)
 >   where
 >     rcvrId = getRcvrId' rcvr
 >     obsTypeId = getObservingTypeId' obstype
+> -}
 
 TBF: temporary hack - is not dynamic
 

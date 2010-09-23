@@ -1,4 +1,4 @@
-> module Antioch.RunHistWeatherOpt (runHistWeatherOpt, runFillStringencyOpt) where
+> module Antioch.RunHistWeatherOpt (runHistWeatherOpt, runFillStringencyOpt, reduceResult') where
 
 > import Antioch.DateTime
 > import Antioch.HistoricalWeather
@@ -44,12 +44,14 @@ can calculate stringencies over a year in just 5.5 hours (an improvement over
 >   print "truncating table t_sys"
 >   truncateTable cnn "t_sys"
 >   print "filling table t_sys"
->   fillTsysTable cnn
+>   fillTsysTable cnn start end
+>   showTsysTable
 >   print "truncating table stringency"
 >   truncateTable cnn "stringency"
 >   disconnect cnn
 >   runFillStringencyOpt start end numCores
 >   print $ "Historical weather update complete."
+>   showStringencyTable
 
 > runFillStringencyOpt start end numCores = do
 >   startTime <- getCurrentTime
@@ -68,10 +70,12 @@ can calculate stringencies over a year in just 5.5 hours (an improvement over
 >   -- parse the files and combine results: REDUCE
 >   -- and write these results to the DB
 >   startTime2 <- getCurrentTime
->   reduceResult $ getFileNames dtRanges
+>   reduceResult (getFileNames dtRanges) hrs numCores
 >   endTime <- getCurrentTime
 >   print $ "overall execution time (secs): " ++ (show $ endTime - startTime)
 >   print $ "parsing execution time (secs): " ++ (show $ endTime - startTime2)
+>     where
+>       hrs = (end `diffMinutes'` start) `div` 60
 
 Split up the given time range by n.
 
@@ -126,10 +130,10 @@ number of lines.
 
 ------------ Combine the results from the separate parrallel processess -------
 
-> reduceResult :: [String] -> IO ()
-> reduceResult files = do
+> reduceResult :: [String] -> Int -> Int -> IO ()
+> reduceResult files numHrs numCores = do
 >   separateStrs <- mapM parseFile files
->   let reducedStrs = reduceResult' separateStrs
+>   let reducedStrs = reduceResult' numHrs numCores separateStrs
 >   putStringencies reducedStrs 
 >   print "All Done!"
 
@@ -143,17 +147,31 @@ TBF: is there a better way to do this: now we can only use 2 or 3 cores
 
 Combination of results is simple: take the average of the stringencies
 
-> reduceResult' :: [[(Int, Int, Int, Int, Float)]] -> [(Int, Int, Int, Int, Float)]
-> reduceResult' strs = case (length strs) of 
->                          2 -> zipWith  averageStrs  (strs!!0) (strs!!1)
->                          3 -> zipWith3 averageStrs3 (strs!!0) (strs!!1) (strs!!2)
+> reduceResult' :: Int -> Int -> [[(Int, Int, Int, Int, Float)]] -> [(Int, Int, Int, Int, Float)]
+> reduceResult' hrs cores strs = case (length strs) of 
+>                          2 -> zipWith  (recombineStrs hrs cores)  (strs!!0) (strs!!1)
+>                          3 -> zipWith3 (recombineStrs3 hrs cores) (strs!!0) (strs!!1) (strs!!2)
 >                          --otherwise -> zipWith averageStrs (strs!!0) (strs!!1)
 
-> averageStrs :: (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float)
-> averageStrs (r1,f1,e1,o1, s1) (r2,f2,e2,o2,s2) = (r1,f1,e1,o1, (s1 + s2) / 2)
+> recombineStrs :: Int -> Int -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float)
+> recombineStrs numHrs numCores (r1,f1,e1,o1, s1) (r2,f2,e2,o2,s2) = (r1,f1,e1,o1, stringency)
+>   where
+>     stringency = (fromIntegral numHrs) / (sum ss')
+>     ss' = map computeNumTrueLimits [s1, s2]
+>     computeNumTrueLimits s = ((fromIntegral numHrs)/(fromIntegral numCores)) / s
+     
 
-> averageStrs3 :: (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float)
-> averageStrs3 (r1,f1,e1,o1, s1) (r2,f2,e2,o2,s2) (r3,f3,e3,o3,s3) = (r1,f1,e1,o1, (s1 + s2 + s3) / 3)
+> recombineStrs3 :: Int -> Int -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float) -> (Int, Int, Int, Int, Float)
+> recombineStrs3 numHrs numCores (r1,f1,e1,o1, s1) (r2,f2,e2,o2,s2) (r3,f3,e3,o3,s3) = (r1,f1,e1,o1, (s1 + s2 + s3) / 3)
+>   where
+>     stringency = (fromIntegral numHrs) / (sum ss')
+>     ss' = map computeNumTrueLimits [s1, s2, s3]
+>     computeNumTrueLimits s = ((fromIntegral numHrs)/(fromIntegral numCores)) / s
+
+partialStr = numHrsInPartition / numTrueInPartition
+
+> --computeNumTrueLimits :: Float -> Int -> Int -> Float
+> --computeNumTrueLimits partialStr numHrs numCores = numHrsInPartition / partialStr
 
 ------- DB Stuff ----------------
 
