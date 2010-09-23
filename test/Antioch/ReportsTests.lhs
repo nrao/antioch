@@ -24,6 +24,8 @@ If it doesn't blow up, it passes
 >                  , test_reportWindowEfficiencies
 >                  ]
 
+TBF this test depends on weatherDB instead of weatherUnitTestDB!
+
 > test_runSim = TestCase $ do
 >   -- TBF: remove old plots
 >   let start = fromGregorian 2006 2 2 0 0 0
