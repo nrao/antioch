@@ -58,6 +58,8 @@ Attempt to see if the old test_sim_pack still works:
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
 
+TBF this test is weatherDB instead of weatherUnitTestDB!
+
 > test_simulateDailyScheduleWithWindows = TestCase $ do
 >     -- default windowed periods
 >     let dwps = sort . concat . map periods $ ss

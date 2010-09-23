@@ -83,6 +83,7 @@
 >   , test_avgScoreForTime2
 >   , test_weightedMeanScore
 >   , test_score
+>   , test_score_maintenance
 >   , test_score_window
 >   , test_bestDuration
 >   , test_bestDurations
@@ -1314,6 +1315,26 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >                           }
 >     expected = (replicate 40 0.0) ++ defaultScores ++ (replicate 23 0.0)
 
+> test_score_maintenance = TestCase $ do
+>     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
+>     rt <- getReceiverTemperatures
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt sess
+>     let result = eval fs
+>     assertEqual "test_score_maintenance" 0.0 result  
+>   where
+>     sess = defaultSession { sName = "Shutdown"
+>                           , sAllottedT = 24*60
+>                           , minDuration = 2*60
+>                           , maxDuration = 6*60
+>                           , frequency = 0.0
+>                           , ra = 1.3962634016
+>                           , dec = 7.2722052166400002e-06
+>                           , receivers = [[]]
+>                           , oType = Maintenance
+>                           }
+
 > test_score_window = TestCase $ do
 >     w <- getWeatherTest . Just $ (-60) `addMinutes` starttime 
 >     rt <- getReceiverTemperatures
@@ -1859,7 +1880,6 @@ These are sessions that exposed bugs from the QuickCheck properties.
 >         ras    = [ 2.67,  0.873562]
 >         decs   = [ 0.13, -0.108025]
 >         freqs  = [39.76,       2.0]
->         --rcvrs  = [[Rcvr26_40],[Rcvr1_2]]
 >         rcvrs  = [[[Rcvr26_40]],[[Rcvr1_2]]]
 >         genBugSessions n r d f rcvr = defaultSession {
 >             sName = n, ra = r, dec = d, frequency = f, receivers = rcvr

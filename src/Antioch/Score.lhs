@@ -45,7 +45,7 @@ Equation 3
 >     w   <- weather
 >     zod <- zenithOpacity dt s 
 >     let rcvr = getPrimaryReceiver s
->     minTsysPrime' <-  liftIO $ minTSysPrime w (frequency s) elevation' (fromJust rcvr)
+>     minTsysPrime' <- liftIO $ maybe (return Nothing) (minTSysPrime w (frequency s) elevation') rcvr
 >     return $ do
 >         tk' <- tk
 >         zod' <- zod
@@ -90,7 +90,7 @@ Numerator or denominator of Equation 3
 
 > minTsys' :: Weather -> DateTime -> Session -> IO (Maybe Float)
 > minTsys' w dt s = do
->     mts' <- minTSysPrime w (frequency s) (elevation dt s) (fromJust rcvr) 
+>     mts' <- liftIO $ maybe (return Nothing) (minTSysPrime w (frequency s) (elevation dt s)) rcvr 
 >     return $ do
 >         mts' >>= Just . (*xf)
 >     where

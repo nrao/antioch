@@ -517,7 +517,7 @@ by band and across all hours of the day within HA limits.
 >   efs <- mapM (bandEfficiencyByBand w' rt day ss hrs) bandRange
 >   --return $! map means . map unzip4 . map (map extract . filter haTest) $ efs
 >   let result = map means . map unzip4 . map (map extract . filter haTest) $ efs
->   print result
+>   --print result  -- makes unit tests look like they are failing
 >   end <- getCurrentTime
 >   let execTime = end - begin
 >   print $ "execution time: " ++ (show execTime)
