@@ -40,7 +40,7 @@
 >   , test_periodEfficiencyByBand
 >   , test_decVsElevation
 >   , test_efficiencyVsFrequency
->   , test_bandEfficiencyByTime
+>   --, test_bandEfficiencyByTime
 >   , test_historicalFreq
 >   , test_historicalDec
 >   , test_historicalRA
@@ -56,6 +56,7 @@
 >   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
 >   , test_historicalSchdMeanFactors
+>   , test_historicalSchdObsEffs
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
 >    ]
@@ -74,12 +75,13 @@
 >     ps2 = [((p1, 1.0), (p1, 0.5)), ((p2, 0.5),(p2, 0.25))] 
 
 > test_compareWindowPeriodEfficiencies = TestCase $ do
+>     w <- getWeatherTest Nothing
 >     assertEqual "test_compareWindowPeriodEfficiencies_0" True (validSimulatedWindows $ wSession . (\(w,c,p) -> w) . head $ wInfo2)
->     effs <- compareWindowPeriodEfficiencies wInfo 
+>     effs <- compareWindowPeriodEfficiencies wInfo w 
 >     assertEqual "test_compareWindowPeriodEfficiencies_1" [] effs
->     effs <- compareWindowPeriodEfficiencies wInfo2 
+>     effs <- compareWindowPeriodEfficiencies wInfo2 w
 >     assertEqual "test_compareWindowPeriodEfficiencies_2" exp effs
->     effs <- compareWindowPeriodEfficiencies (wInfo2 ++ wInfo3)
+>     effs <- compareWindowPeriodEfficiencies (wInfo2 ++ wInfo3) w
 >     assertEqual "test_compareWindowPeriodEfficiencies_3" exp2 effs
 >   where
 >     s = getTestWindowSession
@@ -96,14 +98,23 @@
 >     dp2 = dp { startTime = fromGregorian 2006 4 1 12 0 0 }
 >     -- the windows info doesn't really matter
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
->     exp2 = [((cp, 0.63283867),(dp, 0.6808202))
->            ,((cp2,0.67720616),(dp2,0.6639635))]
+>     exp2 = [((cp, 0.632838677),(dp, 0.6808202))
+>            ,((cp2,0.67720616), (dp2,0.6639635))]
 
 > test_historicalSchdMeanFactors = TestCase $ do
->   r <- historicalSchdMeanFactors [p] trackingEfficiency
+>   w <- getWeatherTest Nothing
+>   r <- historicalSchdMeanFactors [p] trackingEfficiency w
 >   assertEqual "test_historicalSchdMeanFactors_1" [0.99842864] r
 >     where
 >   p = getTestPeriod
+
+TBF: refactor so that historical*Factors methods can take a test weather.
+
+> test_historicalSchdObsEffs = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   r <- historicalSchdObsEffs [getTestPeriod] w 
+>   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
+>   assertEqual "test_historicalSchdObsEffs_1" [0.9802974,0.97683257] (take 2 r)
 
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session
@@ -367,16 +378,16 @@ what bin it shows up in.
 >   -- result :: (atmospheric, tracking, surface, observing)
 >   let dt = fromGregorian 2006 2 15 0 0 0
 >   result <- bandEfficiencyByTime' w ss dt
->   assertEqual "test_bandEfficiencyByTime' 1" (0.9874918,0.99997765,0.9999935,0.9874632) (result !! 1)
+>   assertEqual "test_bandEfficiencyByTime' 1" (0.98777103,0.9999681,0.9999935,0.98773295) (result !! 1)
 >   let dt = fromGregorian 2006 5 15 0 0 0
 >   result <- bandEfficiencyByTime' w ss dt
->   assertEqual "test_bandEfficiencyByTime' 2" (0.9551367,0.9973505,0.99886394,0.9515089) (result !! 3)
+>   assertEqual "test_bandEfficiencyByTime' 2" (0.97235125,0.9967924,0.99886394,0.96812457) (result !! 3)
 >   let dt = fromGregorian 2006 8 15 0 0 0
 >   result <- bandEfficiencyByTime' w ss dt
->   assertEqual "test_bandEfficiencyByTime' 3" (0.36782944,0.96360576,0.96932465,0.35007912) (result !! 6)
+>   assertEqual "test_bandEfficiencyByTime' 3" (0.3714521,0.963962,0.96827173,0.35170558) (result !! 6)
 >   let dt = fromGregorian 2006 11 15 0 0 0
 >   result <- bandEfficiencyByTime' w ss dt
->   assertEqual "test_bandEfficiencyByTime' 4" (0.8043261,0.99851686,0.9996801,0.80287266) (result !! 7)
+>   assertEqual "test_bandEfficiencyByTime' 4" (0.8120911,0.99860746,0.9996801,0.8106577) (result !! 7)
 >     where
 >       ss = getOpenPSessions
 

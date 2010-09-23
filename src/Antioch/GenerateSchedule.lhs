@@ -132,9 +132,13 @@ Generate a period that starts with the given time range.
 >                          , duration  = duration*60
 >                          , pState    = Scheduled
 >                          , session   = sess -- just to get the sem right
+>                          , pForecast = start -- ??? TBF
 >                          }
 >     where
 >   start' day hour = addMinutes' ((day*24*60)+(hour*60)) start
+
+This is *not* an all purpose utility, but simply: DateTime -> "YYA"
+TBF: this should be in utilities?
 
 > dt2semester :: DateTime -> String
 > dt2semester dt = (drop 2 $ show year) ++ "A"
@@ -181,6 +185,7 @@ fit into the given time range.
 >   getStart day hour = addMinutes' ((day*24*60)+(hour*60)) start
 >   mkPeriod dur dt = defaultPeriod { startTime = dt
 >                                   , duration  = dur*60
+>                                   , pForecast = dt -- TBF, WTF??? 
 >                                   , pState    = Pending }
 
 Each sub-list of periods needs to get assigned a windowed session & project.
@@ -346,6 +351,7 @@ as we have:
 > mkMaintPeriod s dur date = defaultPeriod {startTime = start
 >                                         , session = s
 >                                         , duration = dur
+>                                         , pForecast = start -- TBF?
 >                                         , pState = Scheduled 
 >                                          }
 >   where
