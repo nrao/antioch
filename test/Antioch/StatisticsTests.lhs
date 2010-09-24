@@ -56,6 +56,7 @@
 >   , test_remainingTimeByDays
 >   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
+>   , test_getPeriodsSchdEffs
 >   , test_historicalSchdMeanFactors
 >   , test_historicalSchdObsEffs
 >   , test_historicalSchdMeanObsEffs_getPeriodsSchdEffs
@@ -130,6 +131,16 @@ Test that two ways to get the same result yield the same answer.
 >   let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
 >   assertEqual "test_hsmo_gps_1" r1 r2  
 
+> test_getPeriodsSchdEffs = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
+>   pSchdEffs <- getPeriodsSchdEffs w rt [] [getTestPeriod]
+>   let exp = [(0.9814386,0.9992234,0.9996135,0.9802974)
+>             ,(0.977912,0.99928236,0.9996135,0.97683257) ]
+>   assertEqual "test_getPeriodsSchdEffs_1" exp (take 2 $ snd . head $ pSchdEffs)
+>   --let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
+>   pObsEffs  <- getPeriodsObsEffs w rt [] [getTestPeriod]
+>   assertEqual "test_getPeriodsSchdEffs_1" True (pSchdEffs /= pObsEffs)
 
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session
