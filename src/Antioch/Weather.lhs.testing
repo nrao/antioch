@@ -246,7 +246,7 @@ Creates a connection to the weather forecast database.
 > connect :: IO Connection
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 
 Helper function to determine the desired forecast type given two DateTimes.

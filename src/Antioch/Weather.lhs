@@ -6,10 +6,9 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
-> import Antioch.Settings  (weatherDB, weatherUnitTestDB)
+> import Antioch.Settings  (weatherDB, weatherUnitTestDB, databasePort)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
-> -- import Control.Monad.Trans (liftIO)
 > import Data.Convertible
 > import Data.IORef
 > import Data.Char         (toLower) 
@@ -478,11 +477,11 @@ Creates a connection to the weather forecast database.
 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > connectTest = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ weatherUnitTestDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ weatherUnitTestDB ++ " port=" ++ databasePort ++ " user=dss"
 
 Helper function to determine the desired forecast type given two DateTimes.
 forecastType takes both 'now' and a forecastTime since we have to be 
