@@ -13,7 +13,7 @@
 > import Antioch.Debug
 > import Antioch.TimeAccounting
 > import Antioch.ReceiverTemperatures
-> import Antioch.HistoricalWeather
+> --import Antioch.HistoricalWeather (allRcvrs)
 > import Antioch.Filters
 > import Antioch.GenerateSchedule
 > --import Antioch.HardwareSchedule
@@ -223,6 +223,10 @@ hours offset vs. raw wind speed
 >     plotAvgObservingEff
 >     plotRcvrTemps -- not really historical weather, but what the hey!
 
+TBF: declared also in HistoricalWeather but have cyclical refs now.
+
+> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
+
 Stringency versus frequency for elevation = 90 deg, all receivers,
 and both obs types.
 
@@ -245,7 +249,7 @@ and both obs types.
 >       yl = "Stringency"
 
 
-Plot daily average efficiencies across all sessions
+Plot daily average efficiencies across all sessions/
 across all hours of the day where a session is
 within 1 hour of zenith for each band.
 
@@ -409,12 +413,11 @@ Efficiency Plots:
 
 simMinObsEff - simply the min. observing curve.  Note: observing efficiencies
 that are below this line experience and exponential cutoff (i.e., not simply zero).
-simEffStartFreq - simply the observed observing efficiency at the start of the period
-TBF: what's the point of printing out this misleading plot (simEffStartFreq)?
 simSchd* - these are plots that represent the efficiency at the time the
 period was scheduled (*not*) the time it was observed.
-simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  TBF: note that this is *not* a reflection of the scoring used when
-the period was scheduled, because the Pack algorithm ignores the first quarter.
+simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  TBF: note that this is *not* an excact reflection of the scoring used when
+the period was scheduled, because the Pack algorithm ignores the first quarter,
+but it's pretty close.
    * simSchdMeanEffFreq - Observing Efficiency
    * simSchdMeanAtmFreq - Atmospheric Efficiency
    * simSchdMeanSrfFreq - Surface Efficiency
@@ -536,28 +539,11 @@ All plots that use this function will have the Min. Observing Eff. curve as well
 >     x     = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
-TBF: what's the point of printing out this misleading plot?
-simEffStartFreq (error bars, crosses, line plot) - Need stats from Dana
-This plot is observing efficiency vs. frequency, where the obs. eff. is:
-   * calculated at the time of the start of the Period
-   * just for that one inital quarter (as oppsed to averaged over duration)
-   * uses WRONG weather 
-
-> plotEffVsFreqWrong         :: StatsPlot
-> plotEffVsFreqWrong fn n _ ps _ = do
->   w    <- getWeather Nothing
->   effs <- historicalObsEff w ps
->   let t = "Observed Observing Efficiency (at start) vs Frequency" ++ n
->   let y = "Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
-
 simSchdMeanObsEffError - errorbar plot of efficiencies (stand alone plot for now)
-TBF: remove historicalSchdMeanObsEffs
 
-> plotSchdMeanEffError  :: StatsPlot
-> plotSchdMeanEffError fn n _ ps _ = do
->     w    <- getWeather Nothing
->     effs <- historicalSchdMeanObsEffs ps w
+> plotSchdMeanEffError  :: PeriodEffStatsPlot
+> plotSchdMeanEffError peffs fn n _ ps _ = do
+>     let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >     plotEffErrorVsFreq fn n effs ps
 
 > plotEffErrorVsFreq fn n effs ps = 
@@ -566,9 +552,9 @@ TBF: remove historicalSchdMeanObsEffs
 >     meanFreq = meanFreqsByBin $ (map (frequency . session) ps)
 >     meanEffFreq = meanByBin $ zip (map (frequency . session) ps) effs
 >     sdomEffFreq = sdomByBin $ zip (map (frequency . session) ps) effs
->     t = "Observing Efficiency vs Frequency" ++ n
+>     t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
 >     x = "Frequency [GHz]"
->     y = "Observing Efficiency"
+>     y = "Scheduled Mean Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
 
 simTPFreq
@@ -599,25 +585,6 @@ simMinObsEff - minimum observing efficiency (stand alone plot for now)
 >     x     = "Frequency [GHz]"
 >     y     = "Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange (minMax freqRange), YRange (-0.1, 1.1)]
-
-
-simTPVsFreq - this does not yet work
-
-
-> {-
-> plotTPVsFreq           :: StatsPlot    
-> plotTPVsFreq fn _ ps =
->     errorBarPlot attrs $ zip3 meanFreq meanTPFreq stddevTPFreq
->   where
->     meanFreq = meanFreqsByin $ (map (frequency . session) ps) 
->     meanTPFreq = meanByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
->     stddevTPFreq = stddevByBin $ zip (map (frequency . session) ps) [duration p | p <- ps]
->     t = "Telescope Period Length vs Frequency"
->     x = "Frequency [GHz]"
->     y = "Telescope Period Length [min]"
->     attrs = (tail $ scatterAttrs t x y fn)
-> -}
-
 
 simFreqTime (circles, dt on x-axis)
 
@@ -690,38 +657,34 @@ simSatisfyFreq (error bars)
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
 simEffElev
-TBF: remove historicalObsEffs
 
-> plotEffElev'          :: StatsPlot
-> plotEffElev' fn n _ ps _ = do
->   w    <- getWeather Nothing
->   effs <- historicalObsEff w ps
+> plotEffElev'          :: PeriodEffStatsPlot
+> plotEffElev' peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   plotEffElev fn n effs ps
 
 > plotEffElev fn n effs ps = scatterPlot attrs $ zip (map elevationFromZenith ps) effs
 >   where
->     t = "Observing Efficiency vs Elevation" ++ n
+>     t = "Scheduled Mean Observing Efficiency vs Elevation" ++ n
 >     x = "Elevation [deg]"
->     y = "Observing Efficiency"
+>     y = "Scheduled Mean Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-0.1, 1.1)]
 
 
 
 simEffLST
-TBF: remove historicalObsEffs
 
-> plotEffLst'           :: StatsPlot
-> plotEffLst' fn n _ ps _ = do
->   w    <- getWeather Nothing
->   effs <- historicalObsEff w ps
+> plotEffLst'           :: PeriodEffStatsPlot
+> plotEffLst' peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   plotEffLst fn n effs ps
 
 > plotEffLst fn n effs ps =
 >     scatterPlot attrs $ zip (historicalLST ps) effs
 >   where
->     t = "Observing Efficiency vs LST" ++ n
+>     t = "Scheduled Mean Observing Efficiency vs LST" ++ n
 >     x = "LST [hours]"
->     y = "Observing Efficiency"
+>     y = "Scheduled Mean Observing Efficiency"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange (-0.1, 1.1)]
 
 simElevDec
@@ -742,9 +705,6 @@ simScoreElev
 
 > plotScoreElev'           :: StatsPlot
 > plotScoreElev' fn n _ ps _ = do
->   -- TBF: historicalObsScore not working, so make this a simpler plot for now
->   --w       <- getWeather Nothing
->   --scores  <- historicalObsScore w ps
 >   let scores = map pScore ps
 >   plotScoreElev fn n scores ps
 
@@ -759,9 +719,6 @@ simScoreLST
 
 > plotLstScore'           :: StatsPlot
 > plotLstScore' fn n _ ps _ = do
->   -- TBF: historicalObsScore not working, so make this a simpler plot for now
->   --w       <- getWeather Nothing
->   --scores  <- historicalObsScore w ps
 >   let scores = map pScore ps
 >   plotLstScore fn n scores ps
 >
@@ -910,12 +867,10 @@ simHistRA
 >     attrs = (histAttrs t x y fn) ++ [XRange (-1, 25)]
 
 simHistEffHr
-TBF: remove historicalObsEff
 
-> histEffHrBand'           :: StatsPlot
-> histEffHrBand' fn n _ ps _ = do
->   w    <- getWeather Nothing
->   effs <- historicalObsEff w ps 
+> histEffHrBand'           :: PeriodEffStatsPlot
+> histEffHrBand' peffs fn n _ ps _ = do
+>   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   histEffHrBand fn n effs ps
         
 > histEffHrBand fn n effs ps =
@@ -928,7 +883,7 @@ TBF: remove historicalObsEff
 >         t = "Hours by Band Histogram" ++ n
 >         x = "Band [" ++ (intercalate "," $ map show bandRange) ++ "]" --[L, S, C, X, U, K, A, Q]"
 >         y = "Counts [Scheduled Hours]"
->         titles = [Just "Observed", Just "Obs * Eff"]
+>         titles = [Just "Observed", Just "Obs * Schd Mean Obs Eff"]
 
 simHistFreq
 
@@ -1014,33 +969,6 @@ Utilities
 
 > minMax' xs = (realToFrac $ minimum xs, realToFrac $ (maximum xs) + ((maximum xs) - (minimum xs))/7.0)
 
-> getObservingEfficiency :: Weather -> Period -> IO Score
-> getObservingEfficiency w p = do 
->     let now' = pForecast p
->     w'     <- newWeather w $ Just now'
->     rt <- getReceiverTemperatures
->     result <- runScoring w' [] rt (observingEfficiency (startTime p) (session p))
->     return $ eval result
-
-> historicalObsEff w = mapM (getObservingEfficiency w) 
-
-This function is only temporary until we get simulations integrated
-TBF: how does this give us the score at the time that a period ran?
-The weather is using (2006 1 1), so as year progresses, what forecast
-will they be using?
-
-> getScore      :: ScoreFunc -> Period -> Scoring Score
-> getScore sf p = liftM eval . sf dt . session $ p
->   where
->     dt = replaceYear 2006 . startTime $ p
-
-> historicalObsScore w ps = do
->     w' <- newWeather w . Just $ dt
->     rt <- getReceiverTemperatures
->     runScoring w' [] rt $ genScore dt (map session ps) >>= \sf -> mapM (getScore sf) ps
->       where
->         dt = fromGregorian' 2006 1 1
-
 Attributes
 
 > scatterAttrs title xlab ylab fpath =
@@ -1088,22 +1016,19 @@ StatsPlot :: filename, simname, sessions, periods, trace
 > statsPlots = map (\f -> f "" "") statsPlotsList 
 
 TBF: combine this list with the statsPlotsToFile fnc
+TBF: has this been deprecated?
 
 > statsPlotsList = [
 >    plotDecFreq 
 >  , plotDecVsRA 
->  , plotEffVsFreqWrong 
 >  , plotFreqVsTime 
 >  , plotSatRatioVsFreq 
->  , plotEffElev' 
 >  , plotMinObsEff 
->  , plotEffLst' 
 >  , plotElevDec 
 >  , plotScoreElev' 
 >  , plotScoreFreq 
 >  , plotLstScore' 
 >  , histSessRA 
->  , histEffHrBand' 
 >  , histSessFreq 
 >  , histSessDec 
 >  , histSessTP 
@@ -1128,6 +1053,10 @@ These are the plots that need efficiencies as well.
 >  , plotMeanAtmEffVsFreq peffs (rootPath ++ "/simSchdMeanAtmFreq.png")
 >  , plotMeanTrkEffVsFreq peffs (rootPath ++ "/simSchdMeanTrkFreq.png")
 >  , plotMeanSrfEffVsFreq peffs (rootPath ++ "/simSchdMeanSrfFreq.png")
+>  , plotSchdMeanEffError peffs (rootPath ++ "/simSchdMeanObsEffError.png")
+>  , plotEffElev'         peffs (rootPath ++ "/simEffElev.png")
+>  , plotEffLst'          peffs (rootPath ++ "/simEffLST.png")
+>  , histEffHrBand'       peffs (rootPath ++ "/simHistEffHr.png")
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
@@ -1146,51 +1075,33 @@ The standard list of plots (that need no extra input).
 
 > 
 > statsPlotsToFile rootPath name = map (\f-> f n) [
->    plotDecFreq        $ rootPath ++ "/simDecFreq.png"
->  , plotDecVsRA        $ rootPath ++ "/simDecRA.png"
->  , plotEffVsFreqWrong $ rootPath ++ "/simEffStartFreq.png"
->  --, plotMeanObsEffVsFreq $ rootPath ++ "/simSchdMeanEffFreq.png"
->  --, plotMeanObsEffVsFreqOpen $ rootPath ++ "/simSchdMeanEffFreqOpen.png"
->  --, plotMeanObsEffVsFreqFixed $ rootPath ++ "/simSchdMeanEffFreqFixed.png"
->  --, plotMeanObsEffVsFreqWindowed $ rootPath ++ "/simSchdMeanEffFreqWindowed.png"
->  --, plotMeanAtmEffVsFreq $ rootPath ++ "/simSchdMeanAtmFreq.png"
->  --, plotMeanTrkEffVsFreq $ rootPath ++ "/simSchdMeanTrkFreq.png"
->  --, plotMeanSrfEffVsFreq $ rootPath ++ "/simSchdMeanSrfFreq.png"
->  , plotFreqVsTime     $ rootPath ++ "/simFreqTime.png"
+>    plotDecFreq            $ rootPath ++ "/simDecFreq.png"
+>  , plotDecVsRA            $ rootPath ++ "/simDecRA.png"
+>  , plotFreqVsTime         $ rootPath ++ "/simFreqTime.png"
 >  , plotFreqVsTimeOpen     $ rootPath ++ "/simFreqTimeOpen.png"
->  , plotFreqVsTimeFixed     $ rootPath ++ "/simFreqTimeFixed.png"
->  , plotFreqVsTimeWindowed     $ rootPath ++ "/simFreqTimeWindowed.png"
->  --, plotSatRatioVsFreq $ rootPath ++ "/simSatisfyFreq.png"
->  , plotEffElev'       $ rootPath ++ "/simEffElev.png"
->  , plotEffLst'        $ rootPath ++ "/simEffLST.png"
->  , plotMinObsEff      $ rootPath ++ "/simMinObsEff.png"
->  , plotSchdMeanEffError $ rootPath ++ "/simSchdMeanObsEffError.png"
->  , plotElevDec        $ rootPath ++ "/simElevDec.png"
->  --, plotScoreElev'     $ rootPath ++ "/simScoreElev.png"
->  , plotScoreFreq      $ rootPath ++ "/simScoreFreq.png"
->  , plotLstScore'      $ rootPath ++ "/simScoreLST.png"
->  , histSessRA         $ rootPath ++ "/simHistRA.png"
->  , histEffHrBand'     $ rootPath ++ "/simHistEffHr.png"
->  , histSessFreq       $ rootPath ++ "/simHistFreq.png"
->  , histSessDec        $ rootPath ++ "/simHistDec.png"
->  --, histSessTP         $ rootPath ++ "/simHistTP.png"
->  , histSessTPQtrs     $ rootPath ++ "/simHistTPQtrs.png"
->  , histSessTPDurs     $ rootPath ++ "/simHistTPDurs.png"
->  , plotSchdFreqVsTime    $ rootPath ++ "/simFreqSchTime.png"
->  , histCanceledFreqRatio $ rootPath ++ "/simFracCanceledFreq.png"
->  , plotBandPressureTime  $ rootPath ++ "/simBandPFTime.png"
->  , plotRAPressureTime1   $ rootPath ++ "/simLSTPFTime1.png"
->  , plotRAPressureTime2   $ rootPath ++ "/simLSTPFTime2.png"
->  , plotRAPressureTime3   $ rootPath ++ "/simLSTPFTime3.png"
->  , plotFractionalTime   $ rootPath ++ "/simFracTime.png"
->  , plotFracBandTime   $ rootPath ++ "/simFracBandTime.png"
->  , plotFracSemesterTime $ rootPath ++ "/simFracSemesterTime.png"
->  , plotTPDurVsFreqBin $ rootPath ++ "/simTPFreq.png"
->  --, plotRemainingTimeByBand $ rootPath ++ "/simRemainingTime.png"
->  --, plotPastSemesterTimeByBand $ rootPath ++ "/simPastSemesterTime.png"
+>  , plotFreqVsTimeFixed    $ rootPath ++ "/simFreqTimeFixed.png"
+>  , plotFreqVsTimeWindowed $ rootPath ++ "/simFreqTimeWindowed.png"
+>  , plotMinObsEff          $ rootPath ++ "/simMinObsEff.png"
+>  , plotElevDec            $ rootPath ++ "/simElevDec.png"
+>  , plotScoreFreq          $ rootPath ++ "/simScoreFreq.png"
+>  , plotLstScore'          $ rootPath ++ "/simScoreLST.png"
+>  , histSessRA             $ rootPath ++ "/simHistRA.png"
+>  , histSessFreq           $ rootPath ++ "/simHistFreq.png"
+>  , histSessDec            $ rootPath ++ "/simHistDec.png"
+>  , histSessTPQtrs         $ rootPath ++ "/simHistTPQtrs.png"
+>  , histSessTPDurs         $ rootPath ++ "/simHistTPDurs.png"
+>  , plotSchdFreqVsTime     $ rootPath ++ "/simFreqSchTime.png"
+>  , histCanceledFreqRatio  $ rootPath ++ "/simFracCanceledFreq.png"
+>  , plotBandPressureTime   $ rootPath ++ "/simBandPFTime.png"
+>  , plotRAPressureTime1    $ rootPath ++ "/simLSTPFTime1.png"
+>  , plotRAPressureTime2    $ rootPath ++ "/simLSTPFTime2.png"
+>  , plotRAPressureTime3    $ rootPath ++ "/simLSTPFTime3.png"
+>  , plotFractionalTime     $ rootPath ++ "/simFracTime.png"
+>  , plotFracBandTime       $ rootPath ++ "/simFracBandTime.png"
+>  , plotFracSemesterTime   $ rootPath ++ "/simFracSemesterTime.png"
+>  , plotTPDurVsFreqBin     $ rootPath ++ "/simTPFreq.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
->  -- , plotMinEffSysTemp $ rootPath ++ "/minEffSysTemp.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
@@ -1547,15 +1458,15 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create plots
 >     begin <- getCurrentTime
+>     -- generic plots
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (statsPlotsToFile outdir name) 
 >     end <- getCurrentTime
 >     print $ "Plotting Time: " ++ (show $ end - begin)
 >     begin <- getCurrentTime
+>     -- period efficiency plots
 >     rt <- getReceiverTemperatures
 >     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
 >     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
->     --print peffs
->     -- TBF: pass on the filepath and sim name!!!
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs outdir name)
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs outdir name)
 >     end <- getCurrentTime

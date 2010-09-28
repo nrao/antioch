@@ -1,11 +1,15 @@
-> module Antioch.HistoricalWeather where
+ module Antioch.HistoricalWeather where
 
-> {-
 > module Antioch.HistoricalWeather
 >     (updateHistoricalWeather
 >    , allRcvrs
+>    , getStringency
+>    , truncateTable
+>    , fillTsysTable
+>    , connectDB
+>    , showTsysTable
+>    , showStringencyTable
 >    , getRcvrFreqIndices) where
-> -}
 
 > import Antioch.DateTime
 > import Antioch.Receiver
@@ -15,11 +19,15 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Weather
+> import Antioch.Reports      (plotStringencyVsFrequencySpecLine) 
+> import Antioch.Reports      (plotStringencyVsFrequencyCont) 
+> import Antioch.Reports      (plotMinEffSysTemp) 
 > import Control.Monad        (forM_)
 > import Control.Monad.Trans  (liftIO)
 > import Data.IORef           (newIORef, readIORef, writeIORef)
 > import Data.List            ((\\))
 > import Data.Maybe           (maybe)
+> import System.Cmd
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import System.IO.Unsafe     (unsafePerformIO)
@@ -73,18 +81,23 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     cnn <- handleSqlError $ connectDB
 >     print "truncating table t_sys"
 >     truncateTable cnn "t_sys"
->     print "filling table t_sys"
->     fillTsysTable cnn
+>     fillTsysTable cnn start end
+>     showTsysTable
 >     print "truncating table stringency"
 >     truncateTable cnn "stringency"
->     print "filling table stringency"
+>     print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
 >     fillStringencyTable cnn
+>     showStringencyTable
 >     disconnect cnn
 
-> fillTsysTable cnn = do
+This method takes start & end datetimes as input so that we can 
+also call it from the parrallel version ('genhists').
+
+> fillTsysTable cnn startDt endDt = do
+>     print $ "filling table t_sys " ++ (toSqlString startDt) ++ " to " ++ (toSqlString endDt)
 >     efficiencies <- newIORef Map.empty
 >     rts <- getReceiverTemperatures
->     forM_ getWeatherDates $ \dt -> do
+>     forM_ (getWeatherDates' startDt endDt) $ \dt -> do
 >       -- dt offset insures that we get forecasts & not real wind
 >       w <- getWeather . Just $ (addMinutes' (-60) dt)
 >       runScoring w [] rts $ do
@@ -119,12 +132,17 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 > getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. (hours - 1)]]
 
+> getWeatherDates' startDt endDt = [(h * 60) `addMinutes'` startDt | h <- [0 .. (hours' - 1)]]
+>   where
+>     hours' = (endDt `diffMinutes'` startDt) `div` 60
+
 > allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
 ---------------Min. Effective System Temperature---------------
 
 > -- getMinEffSysTemp :: IOBase.IORef -> Receiver -> Int -> Int -> DateTime -> IO ()
 > getMinEffSysTemp efficiencies rcvr freq elev dt = do
+>     --liftIO $ print $ "getMinEffSysTemp: " ++ (toSqlString dt)
 >     new <- tSysPrimeNow' rcvr f e dt
 >     liftIO $ alter efficiencies (updateEff new) (rcvr, freq, elev)
 >   where
@@ -170,6 +188,7 @@ table.
 
 > getStringency stringencies rcvr freq elev obstype dt = do
 >     new <- stringencyLimit rcvr f e obstype dt
+>     --liftIO $ print ("getStringency: ", (toSqlString dt), rcvr, freq, elev, obstype, new)
 >     liftIO $ alter stringencies (updateStr new) (rcvr, freq, elev, obstype)
 >   where
 >     f = fromIntegral freq
@@ -244,3 +263,20 @@ at the specified time.
 >   where
 >     query = "INSERT INTO stringency (receiver_id, observing_type_id, frequency, elevation, total) VALUES (?, ?, ?, ?, ?)"
 >     xs rcvrId obsTypeId str = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]
+
+
+------------Plots------------------------------------
+
+Force the user to check their results.
+
+> showTsysTable = do
+>   plotMinEffSysTemp
+>   system "xv minEffSysTemp.png &"
+
+
+> showStringencyTable = do
+>     plotStringencyVsFrequencySpecLine
+>     system "xv strinFreqSpecLine.png &"
+>     plotStringencyVsFrequencyCont
+>     system "xv strinFreqCont.png &"
+
