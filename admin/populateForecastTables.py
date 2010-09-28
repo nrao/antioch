@@ -9,6 +9,7 @@ import TimeAgent
 from datetime import datetime, timedelta
 import sys
 import pg
+import settings
 
 # ================================ functions ==============================
 
@@ -76,7 +77,7 @@ if len(sys.argv) != 3:
 database     = sys.argv[1]
 read_dir     = sys.argv[2]
 
-c = pg.connect(user="dss", dbname=database)
+c = pg.connect(user="dss", dbname=database, port=settings.DATABASE_PORT)
 
 for suffix in SUFFIXES:
     filename = ''.join([PREFIX, suffix, '.txt'])

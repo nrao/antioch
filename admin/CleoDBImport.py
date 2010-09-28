@@ -4,6 +4,7 @@ from datetime        import datetime, timedelta
 import sys
 import TimeAgent
 import pg
+import settings
 
 MAXFORECASTHOURS = 96
 FORECASTDELTA = 6
@@ -323,7 +324,7 @@ class CleoDBImport:
         self.reportLine("Inserting data for forecast %s\n" % self.forecast_time)
 
         #assert self.dbname != "weather"          # TBF temporary!
-        self.c = pg.connect(user = "dss", dbname = self.dbname)
+        self.c = pg.connect(user = "dss", dbname = self.dbname, port = settings.DATABASE_PORT)
 
         # for the data we are inserting, record what forecast_time
         # this is for, and when the import was run.

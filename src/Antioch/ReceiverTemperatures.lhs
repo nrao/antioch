@@ -6,7 +6,7 @@
 > import Antioch.Types
 > --import Antioch.Weather
 > --import Antioch.Reservations
-> import Antioch.Settings                (dssDataDB)
+> import Antioch.Settings                (dssDataDB, databasePort)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
 > import Data.Convertible
@@ -62,7 +62,7 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 > connect :: IO Connection 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > getRcvrTemps' ::  IORef (M.Map (String) ([(Float,Float)])) -> Connection -> Receiver -> IO ([(Float, Float)])
 > getRcvrTemps' cache cnn rcvr = withCache key cache $ fetchRcvrTemps cnn rcvr 

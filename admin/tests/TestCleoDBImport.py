@@ -29,6 +29,7 @@ from CleoDBImport import CleoDBImport
 import unittest
 import pg
 import shutil
+import settings
 
 class TestCleoDBImport(unittest.TestCase):
 
@@ -165,7 +166,7 @@ class TestCleoDBImport(unittest.TestCase):
     def truncateTables(self, cnn):
 
         # truncat tables of interest
-        #cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
+        #cnn = pg.connect(user = "dss", dbname = self.dbname, port = settings.DATABASE_PORT) #"weather_unit_tests")
         tables = ['gbt_weather'
                 , 'forecast_by_frequency'
                 , 'forecasts'
@@ -187,7 +188,7 @@ class TestCleoDBImport(unittest.TestCase):
     def testInsert(self):
         self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
-        cnn = pg.connect(user = "dss", dbname = self.dbname) #"weather_unit_tests")
+        cnn = pg.connect(user = "dss", dbname = self.dbname, port = settings.DATABASE_PORT) #"weather_unit_tests")
         self.truncateTables(cnn)
 
         # create test data
@@ -270,7 +271,7 @@ class TestCleoDBImport(unittest.TestCase):
         self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
         # setup DB
-        cnn = pg.connect(user = "dss", dbname = self.dbname) 
+        cnn = pg.connect(user = "dss", dbname = self.dbname, port = settings.DATABASE_PORT) 
         self.truncateTables(cnn)
 
         # setup object
@@ -292,7 +293,7 @@ class TestCleoDBImport(unittest.TestCase):
         self.cleo = CleoDBImport(self.forecast, self.dbname, "tests", True)
 
         # setup DB
-        cnn = pg.connect(user = "dss", dbname = self.dbname) 
+        cnn = pg.connect(user = "dss", dbname = self.dbname, port = settings.DATABASE_PORT) 
         self.truncateTables(cnn)
 
         # setup object

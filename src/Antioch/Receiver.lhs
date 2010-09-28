@@ -4,7 +4,7 @@
 > import Antioch.Types
 > --import Antioch.Score
 > --import Antioch.Reservations
-> import Antioch.Settings                (dssDataDB)
+> import Antioch.Settings                (dssDataDB, databasePort)
 > --import Antioch.DSSReversion            (putPeriodReversion)
 > import Antioch.ReceiverTemperatures
 > import Antioch.Utilities
@@ -18,7 +18,7 @@
 > connect :: IO Connection 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
 
 Using this function does not take advantage of the cache in 
 ReceiverTemperatures.  We still need to incorporate this into the

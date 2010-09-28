@@ -1,5 +1,6 @@
 import pg
 import sys
+import settings
 from datetime import *
 
 class WeatherHealth:
@@ -10,7 +11,7 @@ class WeatherHealth:
 
         self.dbname = dbname # ex: "weather"
 
-        self.cnn = pg.connect(user = "dss", dbname = dbname)
+        self.cnn = pg.connect(user = "dss", dbname = dbname, port = settings.DATABASE_PORT)
         
         self.sixHourForecastStart = datetime(2007, 10, 5)
 

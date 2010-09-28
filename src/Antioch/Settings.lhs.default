@@ -19,3 +19,5 @@ Note: should match to entries in /home/dss/conundrum/conf/nginx.conf
 > salviaListenerPort :: PortNumber
 > salviaListenerPort = 9099             --MODIFY--
 
+> databasePort = "5432"                 --5432 is the default port | the new server is running on 6432--
+
