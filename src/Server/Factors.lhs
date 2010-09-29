@@ -36,6 +36,7 @@
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes, rad2deg, rad2hrs)
 > import Antioch.Weather                       (getWeather)
+> import Antioch.ReceiverTemperatures          (getReceiverTemperatures)
 
 > getFactorsHandler :: Connection -> Handler()
 > getFactorsHandler cnn = hMethodRouter [
@@ -66,18 +67,12 @@
 >     let sss = scoringSessions dt ss
 >     let s = head $ filter (\s -> (sId s) == id) ss
 >     w <- liftIO $ getWeather Nothing
+>     rt <- liftIO $ getReceiverTemperatures
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     factors' <- liftIO $ scoreFactors s w sss dt dur rs
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
->     factors <- liftIO $ scoreElements s w sss dt dur rs
+>     factors <- liftIO $ scoreElements s w rt sss dt dur rs
 >     let scoresNfactors = zipWith (++) scores factors
->     --liftIO $ print scoresNfactors
->     liftIO $ print ("Debug hasTimeSchedulable for " ++
->                     (sName s) ++ " " ++
->                     (show . pAvailT . project $ s) ++ " " ++
->                     (show . sAvailT $ s) ++ " " ++
->                     (show . minDuration $ s)
->                    )
 >     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)

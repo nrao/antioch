@@ -32,10 +32,10 @@ Rcvr1_2 :
 >   assertEqual "test_getReceiverTemperature_3" Nothing temp 
 >     where
 >       freq1 = 1.7
->       temp1 = Just 8.8525
+>       temp1 = Just 7.555
 >       s1 = defaultSession { receivers = [[Rcvr1_2]], frequency = freq1 }
 >       freq2 = 1.7
->       temp2 = Just 8.8525
+>       temp2 = Just 7.555
 >       s2 = defaultSession { receivers = [[Rcvr8_10, Rcvr1_2]], frequency = freq2 }
 >       freq3 = 4.0
 >       s3 = defaultSession { receivers = [[Rcvr8_10, Rcvr1_2]], frequency = freq3 }
@@ -46,11 +46,11 @@ Rcvr1_2 :
 
 > test_getPrimaryReceiver = TestCase $ do
 >   let r = getPrimaryReceiver s1
->   assertEqual "test_getPrimaryReciever_1" (Just Rcvr1_2) r 
+>   assertEqual "test_getPrimaryReceiver_1" (Just Rcvr1_2) r 
 >   let r = getPrimaryReceiver s2
->   assertEqual "test_getPrimaryReciever_2" (Just Rcvr1_2) r 
+>   assertEqual "test_getPrimaryReceiver_2" (Just Rcvr1_2) r 
 >   let r = getPrimaryReceiver s3
->   assertEqual "test_getPrimaryReciever_3" Nothing r 
+>   assertEqual "test_getPrimaryReceiver_3" Nothing r 
 >     where
 >       freq1 = 1.7
 >       temp1 = 8.8525

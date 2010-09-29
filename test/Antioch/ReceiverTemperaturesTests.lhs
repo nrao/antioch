@@ -18,12 +18,15 @@
 >   ts <- temperatures rt Rcvr1_2
 >   assertEqual "test_receiverTemperatures_1" (1.1,22.125) (head ts) 
 >   t <- temperature rt Rcvr1_2 1.12 ts
->   assertEqual "test_receiverTemperatures_2" 13.775 t 
+>   assertEqual "test_receiverTemperatures_2" 22.125 t 
 >   t <- temperature rt Rcvr1_2 1.119 ts
->   assertEqual "test_receiverTemperatures_3" 13.775 t 
+>   assertEqual "test_receiverTemperatures_3" 22.125 t 
 >   t <- temperature rt Rcvr1_2 1.121 ts
->   assertEqual "test_receiverTemperatures_4" 13.775 t 
->   assertEqual "test_receiverTemperatures" True True
+>   assertEqual "test_receiverTemperatures_4" 22.125 t 
+>   ts <- temperatures rt Rcvr4_6
+>   assertEqual "test_receiverTemperatures_5" (3.9,21.07) (head ts) 
+>   t <- temperature rt Rcvr4_6 6.0 ts
+>   assertEqual "test_receiverTemperatures_6" 9.4 t
 
 > test_nearestNeighbor = TestCase $ do
 >   assertEqual "test_nearestNeighbor_1" 2.0 (nearestNeighbor 2.1 xs)

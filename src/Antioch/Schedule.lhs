@@ -9,6 +9,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Weather
 > import Antioch.Generators
+> import Antioch.ReceiverTemperatures
 > import Control.Monad     (liftM)
 > import Data.Foldable     (foldlM, foldr')
 > import Data.List         
@@ -220,9 +221,10 @@ Framework for quick checking startegies
 >     -}
 >     w <- theWeather -- TBF: is this right?
 >     w' <- newWeather w (Just starttime)
+>     rt <- getReceiverTemperatures
 >     --let sess' = concatMap sessions ps
 >     let sess = zipWith (\s n -> s { sId = n, sName = show n }) (concatMap sessions ps) [0..]
->     ps <- runScoring w' [] $ do
+>     ps <- runScoring w' [] rt $ do
 >         fs <- genScore starttime sess
 >         strategy fs starttime dur fixed' sess
 >     --print "timebetween: "

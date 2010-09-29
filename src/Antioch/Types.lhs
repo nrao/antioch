@@ -5,7 +5,7 @@
 > import Data.List     (find)
 > import Data.Ix
 
-> type Frequency = Float
+> type Frequency = Float   -- GHz
 > type Minutes   = Int
 > type Score     = Float
 > type Radians   = Float
@@ -35,7 +35,7 @@
 >               | Zpectrometer
 >               | Holography
 >               | RcvrArray18_26
->               deriving (Enum, Eq, Show, Read)
+>               deriving (Ord, Enum, Eq, Show, Read)
 
 Sessions store their desired Rcvrs in Conjugate Normal Form (CNF).
 Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
@@ -46,13 +46,12 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 Note: some of the bands specified below are simply for our own purposes,
 such as: P
 
-TBF: add band 'P' to the top of this list when ready 
-
-> data Band = L | S | C | X | U | K | A | Q | W
+> data Band = P | L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
 > data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
+> data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing deriving (Ord, Eq, Show, Read)
 
 TBF: Initially, Open, Fixed, and Windowed all share the same contents.
 Ideally, we need to evolve these as we go and add new items and remove
@@ -71,7 +70,7 @@ use a single data structure for all sessions.
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
 >   , timeBetween :: Minutes
->   , frequency   :: Float
+>   , frequency   :: Frequency
 >   , ra          :: Radians
 >   , dec         :: Radians
 >   , backup      :: Bool
@@ -83,6 +82,7 @@ use a single data structure for all sessions.
 >   , lowRFI      :: Bool
 >   , lstExclude  :: [(Float, Float)]
 >   , sType       :: SessionType
+>   , oType       :: ObservingType
 >   , transit     :: TransitType
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
@@ -94,21 +94,17 @@ use a single data structure for all sessions.
 > instance Ord Session where
 >     compare = compare `on` sId
 
-> -- TBF ??? sure looks like legacy code to me!
-> --periods' s@(Fixed { }) = [period s]
-> periods' s             = periods s
-
 > data Window  = Window {
 >     wId          :: Int
 >   , wSession     :: Session
->   , wStart       :: DateTime   -- date
+>   , wStart       :: DateTime   -- date, no time
 >   , wDuration    :: Minutes    -- from day count
 >   , wPeriodId    :: Int        -- default period id
 >   , wHasChosen   :: Bool       -- has period
 >    }
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " for " ++ show (flip div (24*60) . wDuration $ w) ++ " days " ++ show (wHasChosen w) ++ "; Period: " ++ show (wPeriod w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " to " ++ toSqlString (wEnd w) ++ " (for " ++ show (flip div (24*60) . wDuration $ w) ++ " days) " ++ show (wHasChosen w) -- ++ "; wPeriods: " ++ show (wPeriods (wSession w) w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -121,6 +117,11 @@ use a single data structure for all sessions.
 
 > instance Eq Window where
 >     (==) = windowsEqual
+
+> wEnd w = addMinutes' (wDuration w) (wStart w)
+
+Relies on wPeriodId, and therefore only works for real data (simulated
+data does not have periods with unique ids).
 
 > wPeriod :: Window -> Maybe Period
 > wPeriod w = find (\p -> (wPeriodId w) == (peId p)) (periods . wSession $ w)
@@ -149,7 +150,7 @@ Tying the knot.
 >            }
 
 > updateSession      :: Session -> [Period] -> Session
-> updateSession s ps = makeSession s (windows s) $ periods' s ++ ps
+> updateSession s ps = makeSession s (windows s) $ periods s ++ ps
 
 > data Project = Project {
 >     pId             :: !Int
@@ -262,7 +263,7 @@ Simple Functions for Periods:
 >   , ra          = 0.0
 >   , dec         = 0.0
 >   , backup      = False
->   , receivers   = [[Rcvr12_18]]
+>   , receivers   = [] -- e.g., [[Rcvr12_18]]
 >   , enabled     = True
 >   , authorized  = True
 >   , grade       = 4.0
@@ -271,6 +272,7 @@ Simple Functions for Periods:
 >   , lstExclude  = []
 >   , sClosed     = False
 >   , sType       = Open
+>   , oType       = SpectralLine
 >   , transit     = Optional
 >   , xi          = 1.0
 >   , elLimit     = Nothing

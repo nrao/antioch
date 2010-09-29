@@ -4,15 +4,12 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> --import Antioch.Weather
-> --import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB, databasePort)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
 > import Data.Convertible
 > import Data.List                       (sort, nub, find)
 > import Data.Char                       (toUpper)
-> import Maybe                           (fromJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import Data.IORef
@@ -21,14 +18,6 @@
 
 This module's only responsibility is for maintaining a cache of the each
 rcvr's temperatures.
-
-> instance Convertible Float SqlValue where
->     safeConvert x = return $ SqlDouble ((realToFrac x) :: Double)
-
-> instance Convertible SqlValue Float where
->     safeConvert x = do
->         val :: Double <- safeConvert x
->         return $ realToFrac val
 
 > data ReceiverTemperatures = ReceiverTemperatures {
 >     temperatures :: Receiver -> IO ([(Float, Float)])
@@ -43,6 +32,10 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 
 > getReceiverTemperatures :: IO ReceiverTemperatures
 > getReceiverTemperatures = readIORef globalConnection >>= \cnn -> updateReceiverTemperatures cnn
+
+I'm really getting tired of typing that long-ass name:
+
+> getRT = getReceiverTemperatures
 
 > getRcvrTemps = do
 >     cache <- newIORef M.empty
@@ -78,17 +71,18 @@ The "unsafePerformIO hack" is a way of emulating global variables in GHC.
 >     toRcvrTempList = map toRcvrTemp
 >     toRcvrTemp (freq:temp:[]) = (fromSql freq, fromSql temp)
 
-> getRcvrTemp' ::  IORef (M.Map (String, Float) (Float)) -> Connection -> Receiver -> Float -> [(Float, Float)] -> IO (Float)
+> getRcvrTemp' ::  IORef (M.Map (String, Float) (Float)) -> Connection -> Receiver -> Frequency -> [(Float, Float)] -> IO (Float)
 > getRcvrTemp' cache cnn rcvr freq temps = withCache key cache $ findRcvrTemp rcvr freq temps
 >   where 
 >     key = (show rcvr, freq) 
 
-> findRcvrTemp ::  Receiver -> Float -> [(Float, Float)] -> IO (Float)
+> findRcvrTemp ::  Receiver -> Frequency -> [(Float, Float)] -> IO (Float)
 > findRcvrTemp rcvr freq temps = do
->     return $ snd . last $ takeWhile (findFreq freq') temps
+>     return $ snd . last $ takeWhile (findFreq freq'') temps
 >   where
 >     findFreq f freqTemp = f >= (fst freqTemp)
->     freq' = nearestNeighbor freq . map fst $ temps
+>     freq' = (/1000.0) . fromIntegral . freq2HistoryIndex rcvr $ freq
+>     freq'' = nearestNeighbor freq' . map fst $ temps
 
 TBF, WTF: I can't believe I couldn't steal code from somebody else to do 
 the nearest neighbor calculation.  So here it is:

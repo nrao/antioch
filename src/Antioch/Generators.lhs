@@ -34,12 +34,20 @@ Generate a random project name: 'A' .. 'Z'
 
 TBF: Currently, the idea of semester is very limited.
 
-> genSemesterName :: Gen String
-> genSemesterName = elements ["05C"
->                           , "06A", "06A", "06A", "06A"
->                           , "06B", "06B", "06B", "06B"
->                           , "06C", "06C", "06C"
->                            ]
+> genSemesterName :: Int -> Gen String
+> {-
+> genSemesterName year = elements [ "05C"
+>             , "06A", "06A", "06A", "06A"
+>             , "06B", "06B", "06B", "06B"
+>             , "06C", "06C", "06C"
+>            ]
+> -}
+> genSemesterName year = elements $ [ s (year-1) "C"] ++ sA ++ sB ++ sC
+>   where
+>     s y a = (drop 2 $ show y) ++ a
+>     sA = take 4 $ repeat (s year "A") --"06A", "06A", "06A", "06A"
+>     sB = take 4 $ repeat (s year "B") --"06B", "06B", "06B", "06B"
+>     sC = take 3 $ repeat (s year "C") --"06C", "06C", "06C"
 
 trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3] 
 
@@ -49,11 +57,12 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 > genMaxSemesterTime :: Minutes -> Gen Minutes
 > genMaxSemesterTime time = T.frequency [(20, return $ div time 2), (80, return time)]
 
+Generation of arbitrary project
 
 > genProject :: Gen Project
 > genProject = do
 >     name     <- genProjectName
->     semester <- genSemesterName
+>     semester <- genSemesterName 2006
 >     thesis   <- genThesis
 >     sessions <- genProjectSessions
 >     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
@@ -66,12 +75,40 @@ trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3]
 >         }
 >     return $ makeProject project pAllottedT pAllottedT sessions
 
+Generation of not so arbitrary project: specify the year to 
+determine semester distrubition.
+TBF: how to avoid cut & pasted code from above?
+
+> genProjectForYear :: Int -> Gen Project
+> genProjectForYear year = do
+>   -- TBF: this isn't good enough because it leaves the project's
+>   -- sessions' periods pointing to the wrong project, so cut & past
+>   -- from above
+>   -- p' <- genProject
+>   -- semester <- genSemesterName year
+>   -- let p = p' { semester = semester }
+>   -- return $ makeProject p (pAllottedT p) (pAllottedT p) (sessions p)
+>     name     <- genProjectName
+>     semester <- genSemesterName year
+>     thesis   <- genThesis
+>     sessions <- genProjectSessions
+>     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
+>     maxST    <- genMaxSemesterTime pAllottedT
+>     let project = defaultProject {
+>           pName = str name
+>         , semester = semester
+>         , thesis = thesis
+>         , pAllottedS = maxST
+>         }
+>     return $ makeProject project pAllottedT pAllottedT sessions
+
+
 Generate n projects.
 
 > genProjects         :: Int -> Gen [Project]
 > genProjects 0       = return []
 > genProjects (n + 1) = do
->     p  <- genProject
+>     p  <- genProject 
 >     pp <- genProjects n
 >     return $ p : pp
 
@@ -142,8 +179,8 @@ Only 20 percent of the low freq. sessions are backups
 >            else T.frequency [(25, return True), (75, return False)]
 
 > genMinTP freq = 
->   if freq > 18.0 then choose (2*60, 2*60)
->            else choose (2*60, 6*60)
+>   if freq > 18.0 then choose (3*60, 3*60)
+>            else choose (3*60, 6*60)
 
 > genMaxTP freq = 
 >   if freq > 18.0 then choose (12*60, 12*60)
@@ -152,22 +189,22 @@ Only 20 percent of the low freq. sessions are backups
 Backup sessions should not use a time between
 
 > genTimeBetween :: Bool -> Gen Minutes
-> genTimeBetween backup = if backup then return 0 else T.frequency [(50, return 0)
->                             , (25, return (8 *60))
->                             , (25, return (12*60))]
+> genTimeBetween backup = if backup then return 0 else T.frequency [(100, return 0)
+>                             , (0, return (8 *60))
+>                             , (0, return (12*60))]
 
 > genLowRFIFlag :: Gen Bool
-> genLowRFIFlag = T.frequency [(85, return False), (15, return True)]
+> genLowRFIFlag = T.frequency [(100, return False), (0, return True)]
 
 Backup sessions should not use a transit flag 
 
 > genTransitFlag :: Bool -> Gen TransitType
-> genTransitFlag backup = if backup then return Optional else T.frequency [(70, return Optional)
->                             , (15, return Partial)
->                             , (15, return Center)]
+> genTransitFlag backup = if backup then return Optional else T.frequency [(100, return Optional)
+>                             , (0, return Partial)
+>                             , (0, return Center)]
 
 > genLSTExclusion :: Gen [(Float, Float)]
-> genLSTExclusion = T.frequency [(80, return []), (20, lsts)]
+> genLSTExclusion = T.frequency [(100, return []), (0, lsts)]
 >   where
 >     lsts = do 
 >       low  <- choose (0.0, 5.0)
@@ -180,14 +217,11 @@ Method for producing a generic Open Session.
 > genSession = do
 >     project    <- genProject
 >     t          <- genSemester
->     -- TBF: first generatre rcvr, then have everything else follow.
->     --r          <- genRcvr t
->     --let b      = receiver2Band r
->     --f          <- genFreq' r
->     b          <- genBand t
->     let r      = band2Receiver b
+>     -- first generatre rcvr, then have everything else follow.
+>     r          <- genRcvr t
+>     let b      = receiver2Band r
+>     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -199,10 +233,10 @@ Method for producing a generic Open Session.
 >     tb         <- genTimeBetween bk
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
+>     stype      <- genSType
 >     trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
->                , periods        = []
 >                , band           = b
 >                , frequency      = f
 >                , ra             = ra
@@ -216,10 +250,13 @@ Method for producing a generic Open Session.
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
 >                , lowRFI         = lowRFIFlag
+>                , sType          = stype
 >                , transit        = trans
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
+>                -- default Open Session should have no periods
+>                , periods        = []
 >                }
 
 Method for producing a generic Fixed Session.
@@ -230,13 +267,11 @@ differ from Open ones is TBD.
 > genSessionFixed = do
 >     project    <- genProject
 >     t          <- genSemester
->     -- TBF: first generatre rcvr, then have everything else follow.
->     --r          <- genRcvr t
->     --let b      = receiver2Band r
->     b          <- genBand t
->     let r      = band2Receiver b
+>     -- first generatre rcvr, then have everything else follow.
+>     r          <- genRcvr t
+>     let b      = receiver2Band r
+>     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -280,13 +315,11 @@ differ from Open ones is TBD.
 > genSessionWindowed = do
 >     project    <- genProject
 >     t          <- genSemester
->     -- TBF: first generatre rcvr, then have everything else follow.
->     --r          <- genRcvr t
->     --let b      = receiver2Band r
->     b          <- genBand t
->     let r      = band2Receiver b
+>     -- first generatre rcvr, then have everything else follow.
+>     r          <- genRcvr t
+>     let b      = receiver2Band r
+>     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     f          <- genFreq b
 >     bk         <- genBackupFlag f
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
@@ -487,6 +520,20 @@ instance Ord t => Span (Interval t) where
 
 > internalConflicts' xs = [x | x <- xs, x `overlaps` (xs \\ [x])]
 
+TBF: is there a better way to generalize internalConflicts to work w/ Windows?
+
+> windowConflicts xs = or [x `winOverlaps` (xs \\ [x]) | x <- xs]
+
+> windowConflicts' xs = [x | x <- xs, x `winOverlaps` (xs \\ [x])]
+
+> winOverlap w1 w2 = s1 < e2 && s2 < e1
+>   where
+>     [s1, s2] = map wStart [w1, w2]
+>     [e1, e2] = map wEnd   [w1, w2]
+
+> winOverlaps y = isJust . find (winOverlap y)
+
+
 > conflicts :: [Period] -> [Period] -> Bool
 > conflicts [] ys = False
 > conflicts (x:xs) ys | overlaps x (delete x ys) = True
@@ -528,7 +575,7 @@ Q      80     5.3%     3.2   6
 > genGrade :: [Grade] -> Gen Grade
 > genGrade = elements
 
-TBF: other bands & rcvrs
+Deprecated: now we specify the band from the receiver.
 
 > band2Receiver :: Band -> Receiver
 > band2Receiver L = Rcvr1_2
@@ -540,23 +587,23 @@ TBF: other bands & rcvrs
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
 
+> genSType :: Gen SessionType
+> genSType = return Open
+
 
 > receiver2Band :: Receiver -> Band
-> -- TBF: when it's safe to add P band
-> {-
 > receiver2Band Rcvr_RRI = P
 > receiver2Band Rcvr_342 = P
 > receiver2Band Rcvr_450 = P
 > receiver2Band Rcvr_600 = P
 > receiver2Band Rcvr_800 = P
-> -}
 > receiver2Band Rcvr_1070 = L
 > receiver2Band Rcvr1_2 = L
 > receiver2Band Rcvr2_3 = S
 > receiver2Band Rcvr4_6 = C
 > receiver2Band Rcvr8_10 = X
 > receiver2Band Rcvr12_18 = U
-> receiver2Band Rcvr18_26 = K -- Rcvr18_22 -- Need Rcvr22_26
+> receiver2Band Rcvr18_26 = K 
 > receiver2Band Rcvr26_40 = A
 > receiver2Band Rcvr40_52 = Q
 > receiver2Band Rcvr_PAR = W
@@ -578,14 +625,14 @@ need a one character code to identity each receiver
 > code2Receiver "C" = Rcvr4_6
 > code2Receiver "X" = Rcvr8_10
 > code2Receiver "U" = Rcvr12_18
-> code2Receiver "K" = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
+> code2Receiver "K" = Rcvr18_26 
 > code2Receiver "A" = Rcvr26_40
 > code2Receiver "Q" = Rcvr40_52
 > code2Receiver "W" = Rcvr_PAR
 > code2Receiver "H" = Holography
 > code2Receiver "F" = RcvrArray18_26
 
-TBF: other bands? ex: below L?
+Deprecated: now we specifiy the band from the receiver
 
 > genBand     :: Int -> Gen Band
 > genBand sem = fmap (read . str) . elements $ bands !! sem
@@ -596,46 +643,38 @@ TBF: other bands? ex: below L?
 >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]
 
-TBF: other receivers? ex: PF's, MBA, etc...
+TBF: the below distribution of receivers is arbitrary, and runs across
+all frequencies for demo purposes only.  Dana needs to specify this.
 
 > genRcvr :: Int -> Gen Receiver
 > genRcvr sem = fmap (code2Receiver . str) . elements $ bands !! sem 
 >   where
->     bands = [ "KKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
->             , "KKKQQAAXUCCSSLLLLLLL"  -- 1
->             , "KQQAXUCSLLLLLLLLLLLL"  -- 2
->             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
+>     bands = [ "338WKKQQAAXUCCSLLLLL"  -- 0 => backup
+>             , "338WKKKQQAAXUCCSSLLL"  -- 1
+>             , "338WKQQAXUCSLLLLLLLL"  -- 2
+>             , "338WKKQQAAAXXUCCSLLL"  -- 3
 >             ]
-> {-
->     bands = [ "R34681WHFKKQQAAXUCCSLLLLLLLLL"  -- 0 => backup
->             , "R34681WHFKKKQQAAXUCCSSLLLLLLL"  -- 1
->             , "R34681WHFKQQAXUCSLLLLLLLLLLLL"  -- 2
->             , "R34681WHFKKQQAAAXXUCCSLLLLLLL"  -- 3
->             ]
-> -}
 
 Generate frequency by Band.
 Assume we are observing the water line 40% of the time.
 
 > genFreq   :: Band -> Gen Float
 > genFreq K = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
-> -- TBF: when it's safe to add P band
-> --genFreq P = choose ( 0.35, 1.0) 
-> --genFreq L = choose ( 1.0,  2.0)
-> genFreq L = return 2.0
+> genFreq P = choose ( 0.35, 1.0) 
+> genFreq L = choose ( 1.0,  2.0)
 > genFreq S = choose ( 2.0,  3.95)
 > genFreq C = choose ( 3.95, 5.85)
 > genFreq X = choose ( 8.0, 10.0)
 > genFreq U = choose (12.0, 15.4)
 > genFreq A = choose (26.0, 40.0)
 > genFreq Q = choose (40.0, 50.0)
-> --genFreq W = choose (80.0, 100.0)
+> genFreq W = choose (80.0, 100.0)
 
 Generate frequency by Receiver.
 
 > genFreq' :: Receiver -> Gen Float
 > genFreq' Rcvr18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
-> genFreq' RcvrArray18_26 = T.frequency [(40, return 22.2), (60, choose (18.0, 26.0))]
+> genFreq' RcvrArray18_26 = choose (18.0 , 26.0) 
 > genFreq' Rcvr_RRI  = choose (0.1 , 1.6) 
 > genFreq' Rcvr_342  = choose (0.29 ,0.395) 
 > genFreq' Rcvr_450  = choose (0.385, 0.52) 
@@ -649,7 +688,7 @@ Generate frequency by Receiver.
 > genFreq' Rcvr12_18 = choose (12.0, 15.4)
 > genFreq' Rcvr26_40 = choose (26.0, 40.0)
 > genFreq' Rcvr40_52 = choose (40.0, 50.0)
-> genFreq' Rcvr_PAR  = choose (80.0, 100.0)
+> genFreq' Rcvr_PAR  = choose (90.0, 90.0)
 > genFreq' Holography = choose (11.7, 12.2)
 
 

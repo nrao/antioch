@@ -32,6 +32,7 @@
 > import Antioch.Filters
 > import Antioch.Types
 > import Antioch.Weather                       (getWeather, Weather)
+> import Antioch.ReceiverTemperatures
 
 > getPScore :: Connection -> StateT Context IO ()
 > getPScore cnn = do
@@ -56,9 +57,10 @@
 >
 >     -- set up invariant part of the scoring environment
 >     w <- liftIO $ getWeather Nothing
+>     rt <- liftIO $ getReceiverTemperatures
 >
 >     -- compute scores
->     scores <- sequence $ map (liftIO . scorePeriod' ss w) tsps
+>     scores <- sequence $ map (liftIO . scorePeriod' ss w rt) tsps
 >     let retvals = zip (map (peId . fst) tsps) scores
 >     liftIO $ print retvals
 >     jsonHandler $ makeObj [("scores", scoresListToJSValue retvals)]
@@ -84,9 +86,10 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     let sss = scoringSessions dt ss
 >     let s = head $ filter (\s -> (sId s) == id) ss
 >     w <- liftIO $ getWeather Nothing
+>     rt <- liftIO $ getReceiverTemperatures
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >
->     score <- liftIO $ scoreSession dt dur s sss w rs
+>     score <- liftIO $ scoreSession dt dur s sss w rs rt
 >     liftIO $ print score
 >     jsonHandler $ makeObj [("score", showJSON score)]
 
@@ -100,14 +103,14 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >         , ("score", showJSON  . snd $ pid_score)
 >       ]
 
-> scorePeriod' :: [Session] -> Weather -> (Period, Session) -> IO Score
-> scorePeriod' ss w psp = do
+> scorePeriod' :: [Session] -> Weather -> ReceiverTemperatures -> (Period, Session) -> IO Score
+> scorePeriod' ss w rt psp = do
 >     let p = fst psp
 >     let s = snd psp
 >     let dt = startTime p
 >     let sss = scoringSessions dt ss
 >     rs <- liftIO $ getReceiverSchedule . Just $ dt
->     scorePeriod p s sss w rs
+>     scorePeriod p s sss w rs rt
 
 > scoreHandler cnn = do
 >     hPrefixRouter [

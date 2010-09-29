@@ -127,6 +127,7 @@ Combine pieces and parts to produce a UTCTime.
 >     day'     = Calendar.fromGregorian (fromIntegral year) month day
 >     seconds' = 3600 * hours + 60 * minutes + seconds
 
+> roundToHour :: DateTime -> DateTime
 > roundToHour dt = 3600 * ((dt + 1800) `div` 3600)
 
 Getting closer to the machine: Not all the functionality of
@@ -274,8 +275,6 @@ http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 > (a, b, c, d, e) = (11.2178,  1.2754, -0.0915, 0.0673, 0.1573)
 > (l, m, n, o, p) = (23.3553, -1.3304,  0.3406, 0.0525, 0.1520)
 
-> hoursToSeconds hours = floor $ 86400.0 * (hours / 24.0)
-
 > sunRiseAndSet    :: DateTime -> (DateTime, DateTime)
 > sunRiseAndSet dt = (midnight + hoursToSeconds rise, midnight + hoursToSeconds set)
 >   where
@@ -288,3 +287,4 @@ http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 >     sin2g = 2.0 * cosg * sing
 >     rise  = a + (b * cosg) + (c * sing) + (d * cos2g) + (e * sin2g)
 >     set   = l + (m * cosg) + (n * sing) + (o * cos2g) + (p * sin2g)
+>     hoursToSeconds = floor . (*3600.0)
