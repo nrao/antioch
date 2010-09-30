@@ -5,12 +5,13 @@
 > import Antioch.Types
 > import Antioch.Filters
 > import Antioch.Weather
+> import Antioch.ReceiverTemperatures
 > import Antioch.Score
 > --import Antioch.Reports
-> import Antioch.Schedule
 > import Antioch.DateTime
 > import Antioch.Utilities
 > import Antioch.DSSData
+> import Antioch.Schedule
 > import Antioch.HardwareSchedule
 > import Data.List ((\\), sort)
 
@@ -26,13 +27,14 @@ and outputs:
 > runDailySchedule :: StrategyName -> DateTime -> Int -> IO ()
 > runDailySchedule strategyName dt days = do
 >     w <- getWeather Nothing
+>     rt <- getReceiverTemperatures
 >     -- now get all the input from the DB
 >     (rs, ss, projs, history') <- dbInput dt
 >     let history = filterHistory history' dt (days + 1) 
 >     print "scheduling around periods: "
 >     printList history
->     schd <- runScoring w rs $ do
->         sf <- genScore dt . scoringSessions dt $ ss
+>     schd <- runScoring w rs rt $ do
+>         sf <- genScore dt . scoringSessions dt undefined $ ss
 >         dailySchedule sf strategyName dt days history ss False
 >     print . length $ schd
 >     printList schd

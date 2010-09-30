@@ -1,6 +1,8 @@
 This module contains methods to help the user better understand how sessions
 were scored and how that scoring influenced the scheduling of the telescope.
 
+TBF, WTF: these functions are verbose and need to be consistent!
+
 > module Antioch.Debug where
 
 > import Antioch.DateTime
@@ -77,15 +79,28 @@ Reconstruct the factors that were used in scoring a given period.
 > getCancellationHistory :: [Trace] -> [Trace]
 > getCancellationHistory = filter isCancellation
 
-> getCancellation (Cancellation dt) = dt
+> getWindowPeriodsHistory :: [Trace] -> [Trace]
+> getWindowPeriodsHistory = filter isWindowPeriods
+
+> getWindowPeriodsFromTrace :: [Trace] -> [(Window, Maybe Period, Period)]
+> getWindowPeriodsFromTrace trace = whs
+>   where
+>     whs' = getWindowPeriodsHistory trace
+>     whs  = [getWindowPeriods w | w <- whs']
+
+TBF: add types sometime ...
+
+> getCancellation (Cancellation period) = period
 
 > getTimestamp (Timestamp dt) = dt
 
-> getFreqPressure (FreqPressureHistory dt) = dt
+> getFreqPressure (FreqPressureHistory fp) = fp
 
-> getFreqPressureBin (FreqPressureBinHistory dt) = dt
+> getFreqPressureBin (FreqPressureBinHistory fpb) = fpb
 
-> getRaPressure (RaPressureHistory dt) = dt
+> getRaPressure (RaPressureHistory rp) = rp
+
+> getWindowPeriods (WindowPeriods wh) = wh
 
 > isTimestamp (Timestamp _) = True
 > isTimestamp _             = False
@@ -101,6 +116,11 @@ Reconstruct the factors that were used in scoring a given period.
 
 > isCancellation (Cancellation _) = True
 > isCancellation _                = False
+
+> isWindowPeriods :: Trace -> Bool
+> isWindowPeriods (WindowPeriods _) = True
+> isWindowPeriods _                 = False
+
 
 Find the total amount of unused time in the schedule.
 

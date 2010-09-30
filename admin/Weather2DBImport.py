@@ -23,7 +23,7 @@ class Weather2DBImport:
 
     def getNeededWeatherDates(self, dt = None):
         """
-        Get's those dates that don't have any acomponying weather data.
+        Get's those dates that don't have any accompanying weather data.
         """
         if dt is None:
             dt = datetime.utcnow()        
@@ -37,10 +37,25 @@ class Weather2DBImport:
                          """ % dt)
         return [(row['id'], row['date']) for row in r.dictresult()]
 
+    def getNeededWeatherDatesInRange(self, start, end):
+        """
+        Get's those dates that don't have any accompanying weather data.
+        """
+        r = self.c.query("""
+                         SELECT id, date
+                         FROM weather_dates
+                         WHERE id NOT IN (SELECT weather_date_id
+                                          FROM gbt_weather)
+                               AND date >= '%s'
+                               AND date <  '%s'
+                         """ % (start, end))
+        return [(row['id'], row['date']) for row in r.dictresult()]
+
     def insert(self, weatherDateId, wind, irradiance):
         """
         Inserts a row of data into the weather table.
         """
+        # handle missing data - put in what you can
         windOK = wind and wind == wind
         irradianceOK = irradiance and irradiance == irradiance
         if windOK and irradianceOK:
@@ -71,7 +86,10 @@ class Weather2DBImport:
         dts = self.getNeededWeatherDates()
         for dtId, dtStr in dts:
             dt = datetime.strptime(dtStr, "%Y-%m-%d %H:%M:%S")
-            wind = self.weatherData.getHourDanaMedianSpeeds(dt)
+            try:
+                wind = self.weatherData.getHourDanaMedianSpeeds(dt)
+            except:
+                pass
             di   = self.pyrgeometerData.getHourMedianDownwardIrradiance(dt)
             results.append((dtId, wind, di))
             self.insert(dtId, wind, di)
@@ -132,10 +150,19 @@ class Weather2DBImport:
         # only backfills in 2009 - present
 
         f = open(filename, 'w')
+        # wind
+        lines = []
+        lines.append("Wind Speed\n")
+        lines.append("Start (ET): %s\n" % datetime.now())
+        results = self.backfillWind()
+        for r in results:
+            lines.append("%s,%s,%s\n" % (r[0], r[1], r[2]))
+        lines.append("End (ET): %s\n" % datetime.now())
+        f.writelines(lines)    
+        # irradiance
         lines = []
         lines.append("Irradiance\n")
         lines.append("Start (ET): %s\n" % datetime.now())
-        # TBF: just back fill irradiance right now
         results = self.backfillIrradiance()
         for r in results:
             lines.append("%s,%s,%s\n" % (r[0], r[1], r[2]))
@@ -143,6 +170,26 @@ class Weather2DBImport:
         f.writelines(lines)    
         f.close()    
         print "printed report to: ", filename
+
+    def backfillDatabase(self, starttime, endtime):
+        """
+        Acquires the needed data whose dates that don't have any
+        accompanying weather data, and inserts it into the database.
+        """
+        dts = self.getNeededWeatherDatesInRange(starttime, endtime)
+        for dtId, dtStr in dts:
+            dt = datetime.strptime(dtStr, "%Y-%m-%d %H:%M:%S")
+            # Is there wind data?
+            try:
+                wind = self.weatherData.getHourDanaMedianSpeeds(dt)
+            except:
+                continue
+            di = self.pyrgeometerData.getHourMedianDownwardIrradiance(dt)
+            # Is irradiance a NaN?
+            if di != di:
+                di = None
+            print dt, wind, di
+            self.insert(dtId, wind, di)
 
 if __name__ == "__main__":
     print "Reading gbt weather data for database", sys.argv[1]

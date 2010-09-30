@@ -2,13 +2,14 @@
 
 > import Antioch.DateTime
 > import Antioch.Score
-> import Antioch.Schedule
 > --import Antioch.Simulate
 > import Antioch.Filters
 > import Antioch.Types
 > import Antioch.Utilities (rad2deg, rad2hrs, printList, overlie)
 > import Antioch.Weather
 > import Antioch.Debug
+> import Antioch.Schedule
+> import Antioch.ReceiverTemperatures
 > --import Antioch.HardwareSchedule
 > --import Antioch.DSSData
 > import Antioch.Settings (dssDataDB)
@@ -45,7 +46,7 @@ hour scheduling period.
 
 > dailySchedulePack :: DateTime -> Int -> [Period] -> [Session] -> Scoring [Period]
 > dailySchedulePack dt days history ss = do
->   sf <- genScore dt . scoringSessions dt $ ss
+>   sf <- genScore dt . scoringSessions dt undefined $ ss
 >   dailySchedule sf Pack dt days history ss False
 
 > dailySchedule :: ScoreFunc -> StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
@@ -59,7 +60,7 @@ hour scheduling period.
 >     liftIO $ pr quiet $ "scheduling around periods: "
 >     liftIO $ prl quiet $ history'
 >     -- schedule with a buffer
->     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' ss
+>     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' . map crop_session $ ss
 >     liftIO $ pr quiet $ "scheduled w/ buffer: "
 >     liftIO $ pr quiet $ show . length $ schdWithBuffer
 >     liftIO $ prl quiet $ schdWithBuffer
@@ -70,6 +71,14 @@ hour scheduling period.
 >     liftIO $ prl quiet $ results
 >     tell [Timestamp dt] -- for trace plots
 >     return results
+
+Make a windowed session's allotted time equal to one period to prevent
+scheduling of multiple periods
+
+> crop_session :: Session -> Session
+> crop_session s
+>     | typeWindowed s = s {sAllottedT = min (sAllottedT s) (maxDuration s)}
+>     | otherwise      = s
 
 > pr :: Bool -> String -> IO ()
 > pr quiet str = do
@@ -95,8 +104,7 @@ boundary affects.
 > dailySchedule' :: ScoreFunc -> StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > dailySchedule' sf strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
->   --sf <- genScore dt . scoringSessions dt $ ss
->   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt dur $ ss
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes
@@ -168,8 +176,9 @@ to reproduce scores.
 >     let p = head $ filter (\p -> (startTime p) == dt) ps
 >     --print $ "session : " ++ (show . session $ p)
 >     w <- getWeather $ Just . pForecast $ p
+>     rt <- getReceiverTemperatures
 >     -- make sure we can reproduce the period's score
->     periodScore <- scorePeriod p s ss w []
+>     periodScore <- scorePeriod p s ss w [] rt
 >     print " "
 >     print $ "result: " ++ (show periodScore) ++ " vs. " ++ (show . pScore $ p)
 >     print " "

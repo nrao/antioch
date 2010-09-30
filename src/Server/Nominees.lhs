@@ -36,6 +36,7 @@
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes)
 > import Antioch.Weather                       (getWeather)
+> import Antioch.ReceiverTemperatures
 
 > getNomineesHandler :: Handler()
 > getNomineesHandler = hMethodRouter [
@@ -78,7 +79,7 @@
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >                                       ]
->     let schedSessions = filterSessions dt filter
+>     let schedSessions = filterSessions dt undefined filter
 >
 >     -- This is kind of awkward, the various selections the user may
 >     -- specify must be implemented by sessions selection, scoring
@@ -86,9 +87,10 @@
 >     projs <- liftIO getProjects
 >     let ss = concatMap sessions projs
 >     w <- liftIO $ getWeather Nothing
+>     rt <- liftIO $ getReceiverTemperatures
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     nominees <- liftIO $ runScoring w rs $ do
->         sf <- genPartScore dt sfs . scoringSessions dt $ ss
+>     nominees <- liftIO $ runScoring w rs rt $ do
+>         sf <- genPartScore dt sfs . scoringSessions dt undefined $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]

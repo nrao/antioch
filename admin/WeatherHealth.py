@@ -21,6 +21,7 @@ class WeatherHealth:
         self.reportLines = []
         self.missingForecastTimes = []
         self.missingWeatherDates = []
+        self.missingGbtWeatherDates = []
         self.forecastTimes = {}
         self.badValues = {}
         self.missingFreqs = []
@@ -44,11 +45,18 @@ class WeatherHealth:
         self.checkForBadValues()    
         self.checkMissingForecastTimes()
         self.checkMissingWeatherDates()
+        self.checkMissingGbtWeatherDates()
         rows = self.getAllForecastTimes()
         fts = [datetime.strptime(r['date'], self.dtFormat) for r in rows]
         for ft in fts:
             #print ft
             self.checkForecastTimeHealth(ft)
+
+    def checkGbtWeather(self):
+        "Top level for checking just the gbt_weather table"
+
+        self.checkMissingGbtWeatherDates()
+        self.checkGbtWeatherBadValues()
 
     def getAllForecastTimes(self):
         query = "SELECT * FROM forecast_times ORDER BY date;"
@@ -95,6 +103,31 @@ class WeatherHealth:
                 tdh = int(round(24*td.days + td.seconds/3600.)) - 1
                 self.missingWeatherDates.append((dt1, dt2, tdh))
 
+    def getAllGbtWeatherDates(self):
+        query = "SELECT * FROM weather_dates ORDER BY date;"
+        r = self.cnn.query(query)
+        return [d for d in r.dictresult() if self.hasGbtWeather(d['id'])]
+
+    def hasGbtWeather(self, weather_date_id):
+        query = "SELECT * FROM gbt_weather WHERE weather_date_id = %d" % \
+            weather_date_id
+        r = self.cnn.query(query)
+        return r.dictresult() != []
+
+    def checkMissingGbtWeatherDates(self):
+        rows = self.getAllGbtWeatherDates()
+        for i in range(len(rows)-1):
+            r1 = rows[i]
+            r2 = rows[i+1]
+            dt1 = datetime.strptime(r1['date'], self.dtFormat)
+            dt2 = datetime.strptime(r2['date'], self.dtFormat)
+            hours = ((dt2 - dt1).seconds) / (3600) + \
+                    ((dt2 - dt1).days * 24)
+            if hours != 1:
+                td = dt2 - dt1
+                tdh = int(round(24*td.days + td.seconds/3600.)) - 1
+                self.missingGbtWeatherDates.append((dt1, dt2, tdh))
+    
     def checkMissingForecasts(self, forecastTime):
 
         query = "SELECT wd.date FROM forecasts as f, forecast_times as ft, weather_dates as wd WHERE wd.id = f.weather_date_id AND ft.id = f.forecast_time_id AND ft.date = '%s' order by wd.date" % forecastTime
@@ -216,6 +249,21 @@ class WeatherHealth:
             r = self.cnn.query(query)
             self.badValues[col+"_past_bad_date"] = len(r.dictresult())
 
+    def checkGbtWeatherBadValues(self):
+
+        #  TBF: right now ALL irradicance values are NULL
+        q = """
+        SELECT * FROM gbt_weather 
+        WHERE
+        wind_speed = NULL 
+        OR
+        wind_speed > 20.0
+        OR 
+        wind_speed < 0.0
+        """
+        r = self.cnn.query(q)
+        self.badValues["wind_speed"] = len(r.dictresult())
+
     def report(self):
         "After the DB has been checked, anything interesting in the results?"
 
@@ -250,6 +298,8 @@ class WeatherHealth:
         for b, e, d in self.missingWeatherDates:
             self.add("%s to %s, %d hours\n" % (b, e, d))
 
+        self.reportGbtWeather()
+
         self.add("Bad Values: \n")
         for col, count in self.badValues.items():
             self.add("Column %s has %d bad values\n" % (col, count))
@@ -258,6 +308,18 @@ class WeatherHealth:
             len(self.missingFreqs))
 
         self.writeReport(self.filename)
+
+    def reportGbtWeather(self):
+        "Separate report function so we can call this alone if need be"
+
+        self.add("Missing gbt_weather dates or weather dates with no gbt_weather entries: \n")
+        for b, e, d in self.missingGbtWeatherDates:
+            self.add("%s to %s, %d hours\n" % (b, e, d))
+
+        self.add("GBT Weather Bad Values: \n")
+        for col, count in self.badValues.items():
+            if col in ["wind_speed"]: # TBF: irradiance? 
+                self.add("Column %s has %d bad values\n" % (col, count))
 
     def fillGaps(self):
         """

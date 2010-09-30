@@ -29,7 +29,7 @@ This test of this strategy should have results that are a subset of the
 similar test in SimulationTests.
 
 > test_schedMinDuration = TestCase $ do
->     w <- getWeather $ Just wdt
+>     w <- getWeatherTest $ Just wdt
 >     result <- runScoring w rs $ do
 >         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
@@ -59,7 +59,7 @@ similar test in SimulationTests.
 TBF: don't run as a test yet - it fails, but we don't know its status.
 
 > schedMinDurationWithHistory = TestCase $ do
->     w <- getWeather $ Just wdt
+>     w <- getWeatherTest $ Just wdt
 >     result <- runScoring w rs $ do
 >         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
@@ -92,7 +92,7 @@ out of stuff to schedule, and doesn't over schedule sessions.
 TBF: reveils bug.
 
 > test_schedMinDuration_starvation = TestCase $ do
->     w <- getWeather $ Just wdt
+>     w <- getWeatherTest $ Just wdt
 >     result <- runScoring w rs $ do
 >         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
@@ -109,7 +109,7 @@ TBF: reveils bug.
 >          , Period 0 s (fromGregorian 2006 2 1 18 15 0) 120 0.0 Pending dt False 120]
 
 > test_best = TestCase $ do
->       w      <- getWeather . Just $ dt
+>       w      <- getWeatherTest . Just $ dt
 >       (s, score) <- runScoring w [] $ do
 >           sf <- genScore dt sess
 >           best (averageScore sf dt2) sess 
@@ -169,7 +169,7 @@ TBF: constrain has not been fully implemented yet
 TBF: this is not passing - but was it meant to copy a python test?
 
 > test_schedule_open = TestCase $ do
->       w      <- getWeather . Just $ fromGregorian 2006 9 1 1 0 0
+>       w      <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >       result <- runScoring w rs $ do
 >           sf <- genScore dt ss
 >           pack sf dt dur history ss
@@ -194,10 +194,6 @@ TBF: this is not passing - but was it meant to copy a python test?
 >             , pDuration = 480
 >           }
 >         ]
->       -- expected = [
->       --     ('CV', datetime(2006, 9, 2, 14, 30), 225, 0)
->       --   , ('AS', datetime(2006, 9, 2, 18, 15), 480, 0)
->       --   ]
 
 
 > test_disobeyLSTExclusion = TestCase $ do
