@@ -63,6 +63,9 @@ Possible factors:
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ s = sType s == Open
 
+> isNotTypeFixed :: SelectionCriteria
+> isNotTypeFixed _ s = sType s /= Fixed
+
 > isGradeA_B :: SelectionCriteria
 > isGradeA_B _ s = grade s >= 2.8
 
@@ -131,6 +134,7 @@ scheduled.
 >       , isNotComplete
 >       , isApproved
 >       , hasObservers
+>       , isNotTypeFixed
 >                       ]
 
 > schedulableSessions :: DateTime -> [Session] -> [Session]

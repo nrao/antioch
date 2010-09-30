@@ -579,6 +579,7 @@ up, all the time.
 > inWindows :: DateTime -> (Session -> [Window]) -> Session -> Score
 > inWindows dt f s
 >       | sType s == Open           = 1.0
+>       | sType s == Fixed          = 1.0
 >       | any inWindow . f $ s      = 1.0
 >       | otherwise                 = 0.0
 >   where
