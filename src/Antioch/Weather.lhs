@@ -427,15 +427,18 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >   where
 >     freqIdx = freq2HistoryIndex rcvr frequency
 >     elevIdx = round . rad2deg $ elevation
->     obsIdx = if obsType == Continuum then 1 else 0
->     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
+>     isCont = if obsType == Continuum then 1 else 0
+>     key     = (freqIdx, elevIdx, show rcvr, isCont)
 
 > fetchTotalStringency :: Connection -> Int -> Int -> Receiver -> ObservingType -> IO (Maybe Float)
 > fetchTotalStringency conn freqIdx elevIdx rcvr obsType = do
 >   rcvrId <- getRcvrId conn rcvr
->   obsTypeId <- getObservingTypeId conn obsType
+>   obsTypeId <- getObservingTypeId conn obsType'
 >   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId]
 >     where
+>       obsType'
+>         | obsType == Continuum    = Continuum
+>         | otherwise               = SpectralLine
 >       query   = "SELECT total FROM stringency\n\
 >                 \WHERE frequency = ? AND elevation = ?\n\
 >                 \AND receiver_id = ? AND observing_type_id = ?"
