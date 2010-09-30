@@ -79,7 +79,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >             -- it's important that we generate the score only once per
 >             -- simulation step; otherwise we screw up the trace that
 >             -- the plots depend on
->             sf <- genScore start . scoringSessions start $ sessions'
+>             sf <- genScore start . scoringSessions start undefined $ sessions'
 >             -- acutally schedule!!!
 >             newSched' <- dailySchedule sf Pack start packDays history sessions' quiet
 >             -- simulate observing

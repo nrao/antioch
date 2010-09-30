@@ -83,7 +83,7 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
 >     let ss = concatMap sessions projs
->     let sss = scoringSessions dt ss
+>     let sss = scoringSessions dt undefined ss
 >     let s = head $ filter (\s -> (sId s) == id) ss
 >     w <- liftIO $ getWeather Nothing
 >     rt <- liftIO $ getReceiverTemperatures
@@ -108,7 +108,7 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     let p = fst psp
 >     let s = snd psp
 >     let dt = startTime p
->     let sss = scoringSessions dt ss
+>     let sss = scoringSessions dt undefined ss
 >     rs <- liftIO $ getReceiverSchedule . Just $ dt
 >     scorePeriod p s sss w rs rt
 

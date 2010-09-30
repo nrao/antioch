@@ -78,8 +78,8 @@
 >   assertEqual "test_sComplete_8"  True  (pComplete pr4) 
 >   assertEqual "test_sComplete_9"  False (sComplete s5) 
 >   assertEqual "test_sComplete_10" False (pComplete pr5) 
->   assertEqual "test_sComplete_11" True  (isNotComplete dt s1) 
->   assertEqual "test_sComplete_12" False (isNotComplete dt s2) 
+>   assertEqual "test_sComplete_11" True  (isNotComplete dt undefined s1) 
+>   assertEqual "test_sComplete_12" False (isNotComplete dt undefined s2) 
 >     where
 >   dt = fromGregorian 2006 2 1  7 15 0
 
@@ -88,7 +88,7 @@
 >   assertEqual "test_sComplete2_2"  False (pComplete pr6) 
 >   assertEqual "test_sComplete2_3"  True  (sComplete s7) 
 >   assertEqual "test_sComplete2_4"  True  (pComplete pr7) 
->   assertEqual "test_sComplete2_5"  False (isNotComplete dt s6) 
+>   assertEqual "test_sComplete2_5"  False (isNotComplete dt undefined s6) 
 >     where
 >       -- proj completeness doesn't depend on session completeness
 >       s6'' = sess { sClosed = True }
