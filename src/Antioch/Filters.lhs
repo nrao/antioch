@@ -35,10 +35,10 @@ Possible factors:
    - project semester time available
 
 > hasTimeSchedulable :: SelectionCriteria
-> hasTimeSchedulable dt _ s = sAvail > 0 &&
->                             sAvail >= minDur &&
->                             pAvail > 0 &&
->                             pAvail >= minDur
+> hasTimeSchedulable _ _ s = sAvail > 0 &&
+>                            sAvail >= minDur &&
+>                            pAvail > 0 &&
+>                            pAvail >= minDur
 >   where 
 >     pAvail = pAvailT . project $ s
 >     sAvail = sAvailT s

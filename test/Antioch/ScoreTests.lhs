@@ -79,6 +79,7 @@
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
+>   , test_scoreForTime
 >   , test_avgScoreForTime
 >   , test_avgScoreForTime2
 >   , test_weightedMeanScore

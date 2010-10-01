@@ -56,6 +56,7 @@
 >   , test_remainingTimeByDays
 >   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
+>   , test_periodObsFactors
 >   , test_historicalSchdMeanFactors
 >   , test_historicalSchdObsEffs
 >   , test_historicalSchdMeanObsEffs_getPeriodsSchdEffs
