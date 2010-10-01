@@ -62,7 +62,7 @@
 >
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
->     let ss = scoringSessions dt . concatMap sessions $ projs
+>     let ss = scoringSessions dt undefined . concatMap sessions $ projs
 >     let s = getSessionFromPeriod id cnn 
 >
 >     w <- liftIO $ getWeather Nothing

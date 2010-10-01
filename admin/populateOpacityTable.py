@@ -1,5 +1,6 @@
 import sys
 import pg
+import settings
 
 if len(sys.argv) != 2:
     print >>sys.stderr, "Usage: python populateOpacityTable.py <database name>"
@@ -8,7 +9,7 @@ if len(sys.argv) != 2:
 database = sys.argv[1]
 filepath = '/home/dss/data/OPACITYEFF3.OUT'
 
-c = pg.connect(user   = "dss", dbname = database)
+c = pg.connect(user   = "dss", dbname = database, port = settings.DATABASE_PORT)
 if c == None:
     raise "Failed to connect to database."
 

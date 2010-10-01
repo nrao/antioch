@@ -266,7 +266,7 @@ Accurate to about 12 min. Only works for Green Bank.
 You can also check this code against various resources, including:
 http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 
-> years = map (\y -> fromGregorian' y 1 1) [2011, 2010 .. 2006]
+> years = map (\y -> fromGregorian' y 1 1) [2011, 2010 .. 2004]
 
 > dayOfYear dt = (dt - year) `div` 86400
 >   where

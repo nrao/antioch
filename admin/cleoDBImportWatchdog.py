@@ -4,6 +4,7 @@
 # nell, or some common code sharing spot.
 
 import pg
+import settings
 from datetime import datetime
 from emailNotifier import emailNotifier
 
@@ -22,7 +23,7 @@ def hasRecentImport():
                                   , microsecond = 0)
     
     # go to the DB and find out when the most recent import was
-    c = pg.connect(user = "dss", dbname = dbname)
+    c = pg.connect(user = "dss", dbname = dbname, port = settings.DATABASE_PORT)
     r = c.query(query)
     print r.dictresult()
     last_import_str = r.dictresult()[0]["max"]

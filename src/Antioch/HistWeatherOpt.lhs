@@ -113,6 +113,6 @@ TBF: temporary hack - is not dynamic
 TBF: eventually,replace w/ a more dynamic funtion
 
 > getObservingTypeId' obsType = case obsType of 
->                                   SpectralLine -> 1
->                                   Continuum    -> 2
+>                                   SpectralLine -> 5
+>                                   Continuum    -> 4
 >                                   otherwise    -> 0 -- TBF: raise error!

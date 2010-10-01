@@ -175,7 +175,7 @@ partialStr = numHrsInPartition / numTrueInPartition
 
 ------- DB Stuff ----------------
 
-> --connectDB = connectPostgreSQL $ "dbname=" ++ weatherDB ++ " user=dss"
+> --connectDB = connectPostgreSQL $ "dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > putStringencies :: [(Int, Int, Int, Int, Float)] -> IO ()
 > putStringencies strs = do

@@ -70,7 +70,7 @@ just make sure it gets cut off properly.
 >   -- get one big period
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history [s]  
 >   results <- runScoring w [] rt $ do
->       sf <- genScore dt . scoringSessions dt $ [s]
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
 >       dailySchedule' sf Pack dt minutes history [s]
 >   assertEqual "test_runDailySchedule_1_1" exp results
 >   -- nothing should get filtered out
@@ -79,7 +79,7 @@ just make sure it gets cut off properly.
 >   -- make sure you work around pre-scheduled ones
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history2 [s]  
 >   results <- runScoring w [] rt $ do 
->       sf <- genScore dt . scoringSessions dt $ [s]
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
 >       dailySchedule' sf Pack dt minutes history2 [s]  
 >   assertEqual "test_runDailySchedule_1_3" exp2 results
 >   -- last one should get filtered out
@@ -109,10 +109,10 @@ adjusting max duration and time between.
 > test_runDailySchedule_2 = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   rt <- getRT
->   --sf <- genScore dt . scoringSessions dt $ [s]
+>   --sf <- genScore dt . scoringSessions dt undefined $ [s]
 >   -- get a number of smaller periods
 >   results <- runScoring w [] rt $ do 
->       sf <- genScore dt . scoringSessions dt $ [s]
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
 >       dailySchedule' sf Pack dt minutes history [s]  
 >   assertEqual "test_runDailySchedule_2_1" exp results
 >   -- some of these should now get removed
@@ -139,7 +139,7 @@ adjusting max duration and time between.
 >   let ss = concatMap sessions pTestProjects
 >   let ps = concatMap periods ss
 >   results <- runScoring w [] rt $ do
->       sf <- genScore dt . scoringSessions dt $ ss 
+>       sf <- genScore dt . scoringSessions dt undefined $ ss 
 >       dailySchedule' sf Pack dt minutes ps ss
 >   assertEqual "test_runDailySchedule_3" p (head $ results)
 >     where

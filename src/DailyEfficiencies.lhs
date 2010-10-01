@@ -12,7 +12,7 @@
 > import Text.Printf
 > import Maybe
 
-./dailyEfficiencies 3
+./dailyEfficiencies "2008-02-01 00:00:00" 3
 
 > main = do 
 >   args <- getArgs

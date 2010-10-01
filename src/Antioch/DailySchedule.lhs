@@ -46,7 +46,7 @@ hour scheduling period.
 
 > dailySchedulePack :: DateTime -> Int -> [Period] -> [Session] -> Scoring [Period]
 > dailySchedulePack dt days history ss = do
->   sf <- genScore dt . scoringSessions dt $ ss
+>   sf <- genScore dt . scoringSessions dt undefined $ ss
 >   dailySchedule sf Pack dt days history ss False
 
 > dailySchedule :: ScoreFunc -> StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
@@ -104,7 +104,7 @@ boundary affects.
 > dailySchedule' :: ScoreFunc -> StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > dailySchedule' sf strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
->   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt dur $ ss
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes

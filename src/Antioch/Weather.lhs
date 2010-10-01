@@ -6,10 +6,9 @@
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
-> import Antioch.Settings  (weatherDB, weatherUnitTestDB)
+> import Antioch.Settings  (weatherDB, weatherUnitTestDB, databasePort)
 > import Control.Exception (IOException, bracketOnError, catch)
 > import Control.Monad     (liftM)
-> -- import Control.Monad.Trans (liftIO)
 > import Data.Convertible
 > import Data.IORef
 > import Data.Char         (toLower) 
@@ -251,7 +250,7 @@ Note: only applicable for columns in the Forecasts table
 
 > fetchAnyForecastValue :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
 > fetchAnyForecastValue cnn dt ftype column = handleSqlError $ do
->   --print $ "Value " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
+>   print $ "Value " ++ column ++ " was not found for date: " ++ (show . toSqlString $ dt) ++ " and forecast type: " ++ (show ftype)
 >   result <- quickQuery' cnn query xs
 >   case result of 
 >     [wind]:_ -> return $ fromSql' wind
@@ -428,15 +427,18 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >   where
 >     freqIdx = freq2HistoryIndex rcvr frequency
 >     elevIdx = round . rad2deg $ elevation
->     obsIdx = if obsType == Continuum then 1 else 0
->     key     = (freqIdx, elevIdx, show rcvr, obsIdx)
+>     isCont = if obsType == Continuum then 1 else 0
+>     key     = (freqIdx, elevIdx, show rcvr, isCont)
 
 > fetchTotalStringency :: Connection -> Int -> Int -> Receiver -> ObservingType -> IO (Maybe Float)
 > fetchTotalStringency conn freqIdx elevIdx rcvr obsType = do
 >   rcvrId <- getRcvrId conn rcvr
->   obsTypeId <- getObservingTypeId conn obsType
+>   obsTypeId <- getObservingTypeId conn obsType'
 >   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId]
 >     where
+>       obsType'
+>         | obsType == Continuum    = Continuum
+>         | otherwise               = SpectralLine
 >       query   = "SELECT total FROM stringency\n\
 >                 \WHERE frequency = ? AND elevation = ?\n\
 >                 \AND receiver_id = ? AND observing_type_id = ?"
@@ -478,11 +480,11 @@ Creates a connection to the weather forecast database.
 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ weatherDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > connectTest = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ weatherUnitTestDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ weatherUnitTestDB ++ " port=" ++ databasePort ++ " user=dss"
 
 Helper function to determine the desired forecast type given two DateTimes.
 forecastType takes both 'now' and a forecastTime since we have to be 

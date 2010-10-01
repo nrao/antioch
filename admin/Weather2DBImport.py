@@ -2,6 +2,7 @@ from datetime        import datetime, timedelta
 from WeatherData     import WeatherData
 from PyrgeometerData import PyrgeometerData
 import pg
+import settings
 
 if __name__ == "__main__":
     import sys
@@ -14,7 +15,9 @@ class Weather2DBImport:
 
     def __init__(self, dbname = ""):
         self.c           = pg.connect(user = "dss"
-                                    , dbname = dbname)
+                                    , dbname = dbname
+                                    , port   = settings.DATABASE_PORT
+                                    )
         self.weatherData = WeatherData()
         self.pyrgeometerData = PyrgeometerData()
 

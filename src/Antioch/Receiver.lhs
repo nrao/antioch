@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Settings                (dssDataDB)
+> import Antioch.Settings                (dssDataDB, databasePort)
 > import Antioch.ReceiverTemperatures
 > import Antioch.Utilities               (getRcvrRange, getRcvrFreqIndices)
 > import Antioch.Utilities               (freq2HistoryIndex, printList)
@@ -16,7 +16,7 @@
 > connect :: IO Connection 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
+>     cnnStr = "dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
 
 Using this function does not take advantage of the cache in 
 ReceiverTemperatures.  We still need to incorporate this into the
