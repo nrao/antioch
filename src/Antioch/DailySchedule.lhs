@@ -96,10 +96,12 @@ boundary affects.
 > dailySchedule' sf strategyName dt dur history ss = do
 >   let strategy = getStrategy strategyName 
 >   --sf <- genScore dt . scoringSessions dt $ ss
->   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt $ ss'
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes
+>       -- TBF: in the PhaseOne branch we will do this in schedulableSess.
+>       ss' = filter (not . projectBlackedOut dt (dur + bufferHrs))  ss
 
 Given the start of the scheduling period, number of days plus the
 offset on the last day, returns the time in UTC of the end of the

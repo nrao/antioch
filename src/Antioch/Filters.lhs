@@ -160,3 +160,15 @@ scheduled.
 >       , isNotMaintenance
 >        ]
 
+If a session's project's blackout dates completly overlap the given
+time range, then this is true.
+
+> projectBlackedOut :: DateTime -> Minutes -> Session -> Bool
+> projectBlackedOut dt dur s | (length bs) == 10 = False
+>                            | otherwise = any (overlap start end) bs
+>   where
+>     bs = pBlackouts . project $ s
+>     start = dt
+>     end = addMinutes' dur dt
+>     overlap s1 e1 (s2, e2) = (s2 <= s1) && (e1 <= e2)  
+
