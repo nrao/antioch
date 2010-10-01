@@ -118,6 +118,12 @@ TBF: refactor so that historical*Factors methods can take a test weather.
 >   r <- historicalSchdObsEffs [getTestPeriod] w 
 >   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
 >   assertEqual "test_historicalSchdObsEffs_1" [0.9802974,0.97683257] (take 2 r)
+>   -- these should be equivalent
+>   rt <- getReceiverTemperatures
+>   pSchdEffs <- getPeriodsSchdEffs w rt [] [getTestPeriod]
+>   let allEffs = concatMap snd pSchdEffs 
+>   let pObsEffs = map (\(a, t, s, o) -> o) allEffs
+>   assertEqual "test_historicalSchdObsEffs_0" r pObsEffs
 
 Test that two ways to get the same result yield the same answer.
 

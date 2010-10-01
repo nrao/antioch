@@ -566,7 +566,8 @@ by band and across all hours of the day within HA limits.
 The next few methods are for calculating the efficiencies (both
 observed & scheduled) of periods.
 
-> type PeriodEfficiencies = [(Period,[(Score, Score, Score, Score)])]
+> type PeriodEfficiency   = (Period,[(Score, Score, Score, Score)])
+> type PeriodEfficiencies = [PeriodEfficiency]
 
 Same as original method, but we don't need the hourAnlgeLimit.
 
