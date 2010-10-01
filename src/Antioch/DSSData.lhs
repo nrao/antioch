@@ -56,7 +56,10 @@ separate query, to deal with multiple allotments (different grades)
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
 >     let project'' = setProjectObservers project' observers
->     return $ makeProject project'' (pAllottedT project'') (pAllottedS project'') sessions'
+>     -- project blackouts
+>     blackouts <- getProjectBlackouts cnn (pId project)
+>     let project''' = project'' { pBlackouts = blackouts }
+>     return $ makeProject project''' (pAllottedT project''') (pAllottedS project''') sessions'
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer
@@ -128,6 +131,36 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 >       toBlackoutDatesList = concatMap toBlackoutDates
 >       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
 
+For a given project Id, if that project allows blackouts, reads in these
+blackouts just like blackouts are read in for an observer.
+
+> getProjectBlackouts :: Connection -> Int -> IO [DateRange]
+> getProjectBlackouts cnn projId = do
+>   b <- usesBlackouts cnn projId
+>   if b then getProjectBlackouts' cnn projId else return $ []
+
+Reads in blackouts for a given project.
+TBF: refactor so that this method shares code with getObserverBlackouts
+
+> getProjectBlackouts' :: Connection -> Int -> IO [DateRange]
+> getProjectBlackouts' cnn projId = do
+>   result <- quickQuery' cnn query xs
+>   return $ toBlackoutDatesList result
+>     where
+>       xs = [toSql projId]
+>       query = "SELECT b.start_date, b.end_date, r.repeat, b.until FROM blackouts AS b, repeats AS r WHERE r.id = b.repeat_id AND project_id = ?"
+>       toBlackoutDatesList = concatMap toBlackoutDates
+>       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
+
+Does the given project (by Id) allow blackouts?  Check the flag.
+
+> usesBlackouts :: Connection -> Int -> IO Bool
+> usesBlackouts cnn projId = do
+>   result <- quickQuery' cnn query [toSql projId]
+>   return $ fromSql . head . head $ result
+>     where
+>       query = "SELECT blackouts FROM projects WHERE id = ?"
+
 
 When converting repeats to a list of dates, when do these dates start and end?
 
@@ -135,7 +168,8 @@ When converting repeats to a list of dates, when do these dates start and end?
 > blackoutsEnd   = fromGregorian 2010 2 1 0 0 0
 
 These two methods define the start and end of blackouts in case of NULLs in the
-DB.  TBF: this is only good for 09C.
+DB.  TBF: this is only good for 09C, but I don't think NULLs are allowed
+any more.
 
 > sqlToBlackoutStart :: SqlValue -> DateTime
 > sqlToBlackoutStart SqlNull = blackoutsStart

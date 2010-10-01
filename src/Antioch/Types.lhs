@@ -161,6 +161,7 @@ Tying the knot.
 >   , sessions        :: [Session]
 >   , thesis          :: !Bool
 >   , observers       :: [Observer]
+>   , pBlackouts      :: [DateRange]
 >   } deriving Eq
 
 > makeProject :: Project -> Minutes -> Minutes -> [Session] -> Project
@@ -296,6 +297,7 @@ Simple Functions for Periods:
 >   , pAllottedT      = 0
 >   , pAllottedS      = 0
 >   , observers       = [defaultObserver]
+>   , pBlackouts       = []
 >   , pClosed         = False
 >   }
 
