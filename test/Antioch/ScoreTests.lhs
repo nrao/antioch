@@ -80,6 +80,7 @@ codes weather server used for unit tests (TWeather).
 >   , test_obsAvailable2
 >   , test_obsAvailable3
 >   , test_observerAvailable
+>   , test_projectBlackout
 >   , test_needsLowRFI
 >   , test_lstExcepted
 >   , test_enoughTimeBetween
@@ -602,7 +603,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -639,7 +640,7 @@ BETA: TestTrackingErrorLimit.py testHaskell testcomputedScore
 >     let dur = 15::Minutes
 >     w <- getWeather . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreElements s w pSessions dt dur []
->     assertEqual "test_scoreElements 1" 29 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 30 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -1006,6 +1007,43 @@ If none is sanctioned, then there should never be an observer available
 >       s3  = defaultSession { project = p2}
 >       expTrue = 1.0
 >       expFalse = 0.0
+
+> test_projectBlackout = TestCase $ do
+>   w <- getWeather Nothing
+>   -- no blackouts
+>   fs <- runScoring w [] (projectBlackout dt s)
+>   assertEqual "test_projectBlackout_1" expTrue (eval fs)
+>   -- blackouts, dt in range
+>   fs <- runScoring w [] (projectBlackout dt s2)
+>   assertEqual "test_projectBlackout_2" expFalse (eval fs)
+>   -- blackouts, dt out of range
+>   fs <- runScoring w [] (projectBlackout dt2 s2)
+>   assertEqual "test_projectBlackout_3" expTrue (eval fs)
+>   -- more blackouts, dt in range
+>   fs <- runScoring w [] (projectBlackout dt s3)
+>   assertEqual "test_projectBlackout_4" expFalse (eval fs)
+>   -- more blackouts, dt out of range
+>   fs <- runScoring w [] (projectBlackout dt2 s3)
+>   assertEqual "test_projectBlackout_5" expTrue (eval fs)
+>   -- more blackouts, dt in range
+>   fs <- runScoring w [] (projectBlackout dt3 s3)
+>   assertEqual "test_projectBlackout_6" expFalse (eval fs)
+>     where
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       s   = defaultSession
+>       p   = defaultProject { pBlackouts = bs }
+>       s2  = defaultSession { project = p }
+>       --o   = defaultObserver { blackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       --o2  = defaultObserver { blackouts = bs ++ bs2 }
+>       p2  = defaultProject { pBlackouts = bs ++ bs2 }
+>       s3  = defaultSession { project = p2}
+>       expTrue = 1.0
+>       expFalse = 0.0
+
 
 > test_needsLowRFI = TestCase $ do
 >   w <- getWeather Nothing
