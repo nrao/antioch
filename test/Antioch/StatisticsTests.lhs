@@ -56,6 +56,7 @@
 >   , test_remainingTimeByDays
 >   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
+>   , test_getPeriodsSchdEffs
 >   , test_periodObsFactors
 >   , test_historicalSchdMeanFactors
 >   , test_historicalSchdObsEffs
@@ -118,6 +119,12 @@ TBF: refactor so that historical*Factors methods can take a test weather.
 >   r <- historicalSchdObsEffs [getTestPeriod] w 
 >   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
 >   assertEqual "test_historicalSchdObsEffs_1" [0.9802974,0.97683257] (take 2 r)
+>   -- these should be equivalent
+>   rt <- getReceiverTemperatures
+>   pSchdEffs <- getPeriodsSchdEffs w rt [] [getTestPeriod]
+>   let allEffs = concatMap snd pSchdEffs 
+>   let pObsEffs = map (\(a, t, s, o) -> o) allEffs
+>   assertEqual "test_historicalSchdObsEffs_0" r pObsEffs
 
 Test that two ways to get the same result yield the same answer.
 
@@ -131,6 +138,16 @@ Test that two ways to get the same result yield the same answer.
 >   let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
 >   assertEqual "test_hsmo_gps_1" r1 r2  
 
+> test_getPeriodsSchdEffs = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
+>   pSchdEffs <- getPeriodsSchdEffs w rt [] [getTestPeriod]
+>   let exp = [(0.9814386,0.9992234,0.9996135,0.9802974)
+>             ,(0.977912,0.99928236,0.9996135,0.97683257) ]
+>   assertEqual "test_getPeriodsSchdEffs_1" exp (take 2 $ snd . head $ pSchdEffs)
+>   --let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
+>   pObsEffs  <- getPeriodsObsEffs w rt [] [getTestPeriod]
+>   assertEqual "test_getPeriodsSchdEffs_1" True (pSchdEffs /= pObsEffs)
 
 > test_periodSchdFactors = TestCase $ do
 >   -- TBF: score the session
