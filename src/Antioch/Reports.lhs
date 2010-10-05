@@ -1102,8 +1102,8 @@ The standard list of plots (that need no extra input).
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [((Period, Float),(Period, Float))] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled winfo winEffs gaps scores scoreDetails simInput rs history quiet = do
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> CanceledPeriodDetails -> [(Window, Maybe Period, Period)] -> [((Period, Float),(Period, Float))] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled canceledDetails winfo winEffs gaps scores scoreDetails simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
@@ -1125,7 +1125,7 @@ The standard list of plots (that need no extra input).
 >     r10 = reportPreScheduled history
 >     r16 = reportWindows history
 >     r11 = reportFinalSchedule ps
->     r12 = reportCanceled canceled
+>     r12 = reportCanceled canceledDetails
 >     r17 = reportFinalWindows winfo
 >     r20 = reportWindowEfficiencies winEffs
 >     r15 = reportScoreDetails scoreDetails
@@ -1387,10 +1387,10 @@ The standard list of plots (that need no extra input).
 >     hdr = "Final Schedule:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
-> reportCanceled :: [Period] -> String
+> reportCanceled :: CanceledPeriodDetails -> String
 > reportCanceled ps = hdr ++ (printPeriods ps)
 >   where
->     hdr = "Canceled Periods:\n"
+>     hdr = "Canceled Period Details:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
 > reportTotalScore :: [Period] -> String
@@ -1428,6 +1428,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     rt <- getReceiverTemperatures
 >     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
 >     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
+>     canceledDetails <- getCanceledPeriodsDetails w rt [] canceled 
 >     end <- getCurrentTime
 >     print $ "Calc Period Efficiencies Time: " ++ (show $ end - begin)
 >     -- check efficiency scores for normalicy
@@ -1459,7 +1460,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     -- compare window efficinces: chosen vs. default periods
 >     windowEffs <- compareWindowPeriodEfficiencies winfo w
 >     -- text reports 
->     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create generic plots
 >     begin <- getCurrentTime
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (statsPlotsToFile outdir name) 

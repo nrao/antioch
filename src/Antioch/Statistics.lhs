@@ -19,7 +19,7 @@
 > import Data.Function      (on)
 > import Data.List
 > import Data.Time.Clock hiding (getCurrentTime)
-> import Data.Maybe         (fromMaybe, isJust, fromJust)
+> import Data.Maybe         -- (fromMaybe, isJust, fromJust)
 > import Graphics.Gnuplot.Simple
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
@@ -618,7 +618,17 @@ each quarter so that we pick up gbt_weather and latest forecast.
 >     where
 >       fs2ss ss = map f2s ss
 
-Same as above, but here we want the periods effs at the time of scheduling.
+Same as above, except for canceled periods, we only care about the first 
+quarters values - that's what caused them to get canceled.
+
+> getCanceledPeriodsObsEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) 
+> getCanceledPeriodsObsEffs w rt rs ps = do
+>     peffs <- getPeriodsObsEffs w rt rs ps
+>     return $ map firstQtr peffs
+>   where
+>     firstQtr (p, effs) = (p, take 1 effs)
+
+Same as getPeriodsObsEffs, but here we want the periods effs at the time of scheduling.
 
 > getPeriodsSchdEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) 
 > getPeriodsSchdEffs w rt rs ps = do
@@ -650,6 +660,39 @@ want to plot.
 >     avg xs = avg' $ map fn xs
 >     avg' xs = (sum xs)/(fromIntegral . length $ xs)
 
+For Canceled Periods, we'll want to know:
+   * the period
+   * the 4 observed efficiencies at the first quarter
+   * the tracking error limit at the first quarter
+   * the adjusted min obs value
+   * the gbt_wind at the first quarter
+
+> type CanceledPeriodDetail  = (Period,[(Score, Score, Score, Score)],Maybe Score,Float,Maybe Float)
+> type CanceledPeriodDetails = [CanceledPeriodDetail]  
+
+> getCanceledPeriodsDetails :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (CanceledPeriodDetails)
+> getCanceledPeriodsDetails w rt rs ps = do
+>   peffs <- getCanceledPeriodsObsEffs w rt rs ps
+>   otherCrap <- mapM (getCanceledPeriodCrap w rt rs) ps
+>   return $ zipWith mkDetails peffs otherCrap
+>     where
+>   mkDetails (p, effs) (trl, mo, w2) = (p, effs, trl, mo, w2)
+
+This gets the the left over crap not covered by getCanceledPeriodsObsEffs
+
+> getCanceledPeriodCrap ::  Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO (Maybe Score, Float, Maybe Float)
+> getCanceledPeriodCrap w rt rs p = do
+>   w' <- newWeather w $ Just dt
+>   -- gbt_wind
+>   w2wind <- gbt_wind w' dt
+>   -- tracking error limit
+>   [(_, trkErrLmt)] <- runScoring w' rs rt $ trackingErrorLimit dt s
+>   -- adjusted min obs
+>   let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
+>   return (trkErrLmt, minObs, w2wind)
+>     where
+>   s  = session p
+>   dt = startTime p
 
 This function retrieves the history of pressures written in the trace, 
 and returns them, for each band as [(day #, pressure)].

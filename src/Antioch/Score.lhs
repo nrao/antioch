@@ -269,10 +269,13 @@ Base of exponential Equation 12
 >      let trkErrLimit = case trkErrLimit' of 
 >                             Just x  -> x
 >                             Nothing -> 1
->      let minObs' = exp(-0.05 + 1.5*log(minObs))
+>      let minObs' = adjustedMinObservingEff minObs
 >      let obsEffOK = obsEff' >= minObs'
 >      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
+
+> adjustedMinObservingEff :: Float -> Float
+> adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
 
 3.2 Stringency
 
