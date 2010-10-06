@@ -1,6 +1,7 @@
 from DBImport        import DBImport
 from os              import listdir, system
 from datetime        import datetime, timedelta
+from emailNotifier   import emailNotifier
 import sys
 import TimeAgent
 import pg
@@ -403,6 +404,33 @@ class CleoDBImport:
         f.writelines(fileLines)
         f.close()
 
+    def notify(self):
+        "Sends email notification about import"
+
+        to_list = ['pmargani@nrao.edu'
+                 , 'ashelton@nrao.edu'
+                 , 'mclark@nrao.edu'
+                 , 'rcreager@nrao.edu'
+                 , 'koneil@nrao.edu'
+                 , 'tminter@nrao.edu'
+                 , 'dbalser@nrao.edu'
+                 , 'rmaddale@nrao.edu'
+                 ]
+        # TBF: more detailed comments here?
+        subject = "Weather Forecasts have been imported."
+        body = """
+        Weather Forecasts have been imported at %s UTC.\n
+        For details see most recent report at:\n
+        /home/dss/release/antioch/admin/CleoDBImport_<timestamp>.txt\n
+        """ % self.import_time
+    
+        emailer = emailNotifier(smtp = "smtp.gb.nrao.edu"
+                              , frm  = "dss@gb.nrao.edu")
+        emailer.SetTo(to_list)
+        emailer.SetSubject(subject)
+        emailer.SetMessage(body)
+        emailer.Notify()
+        
     def performImport(self):
         """
         Higher level function that performs all the steps for importing
@@ -430,6 +458,10 @@ class CleoDBImport:
         self.insert()
 
         self.reportToFile()
+
+        # send an email notification
+        if not self.quiet:
+            self.notify()
 
 # freqFileHeader on next line
 freqFileHeader = "timeListMJD OpacityTime2List_HotSprings OpacityTime3List_HotSprings OpacityTime4List_HotSprings OpacityTime5List_HotSprings OpacityTime6List_HotSprings OpacityTime7List_HotSprings OpacityTime8List_HotSprings OpacityTime9List_HotSprings OpacityTime10List_HotSprings OpacityTime11List_HotSprings OpacityTime12List_HotSprings OpacityTime13List_HotSprings OpacityTime14List_HotSprings OpacityTime15List_HotSprings OpacityTime16List_HotSprings OpacityTime17List_HotSprings OpacityTime18List_HotSprings OpacityTime19List_HotSprings OpacityTime20List_HotSprings OpacityTime21List_HotSprings OpacityTime22List_HotSprings OpacityTime23List_HotSprings OpacityTime24List_HotSprings OpacityTime25List_HotSprings OpacityTime26List_HotSprings OpacityTime27List_HotSprings OpacityTime28List_HotSprings OpacityTime29List_HotSprings OpacityTime30List_HotSprings OpacityTime31List_HotSprings OpacityTime32List_HotSprings OpacityTime33List_HotSprings OpacityTime34List_HotSprings OpacityTime35List_HotSprings OpacityTime36List_HotSprings OpacityTime37List_HotSprings OpacityTime38List_HotSprings OpacityTime39List_HotSprings OpacityTime40List_HotSprings OpacityTime41List_HotSprings OpacityTime42List_HotSprings OpacityTime43List_HotSprings OpacityTime44List_HotSprings OpacityTime45List_HotSprings OpacityTime46List_HotSprings OpacityTime47List_HotSprings OpacityTime48List_HotSprings OpacityTime49List_HotSprings OpacityTime50List_HotSprings OpacityTime51List_HotSprings OpacityTime52List_HotSprings OpacityTime54List_HotSprings OpacityTime56List_HotSprings OpacityTime58List_HotSprings OpacityTime60List_HotSprings OpacityTime62List_HotSprings OpacityTime64List_HotSprings OpacityTime66List_HotSprings OpacityTime68List_HotSprings OpacityTime70List_HotSprings OpacityTime72List_HotSprings OpacityTime74List_HotSprings OpacityTime76List_HotSprings OpacityTime78List_HotSprings OpacityTime80List_HotSprings OpacityTime82List_HotSprings OpacityTime84List_HotSprings OpacityTime86List_HotSprings OpacityTime88List_HotSprings OpacityTime90List_HotSprings OpacityTime92List_HotSprings OpacityTime94List_HotSprings OpacityTime96List_HotSprings OpacityTime98List_HotSprings OpacityTime100List_HotSprings OpacityTime102List_HotSprings OpacityTime104List_HotSprings OpacityTime106List_HotSprings OpacityTime108List_HotSprings OpacityTime110List_HotSprings OpacityTime112List_HotSprings OpacityTime114List_HotSprings OpacityTime116List_HotSprings OpacityTime118List_HotSprings OpacityTime120List_HotSprings TsysTime2List_HotSprings TsysTime3List_HotSprings TsysTime4List_HotSprings TsysTime5List_HotSprings TsysTime6List_HotSprings TsysTime7List_HotSprings TsysTime8List_HotSprings TsysTime9List_HotSprings TsysTime10List_HotSprings TsysTime11List_HotSprings TsysTime12List_HotSprings TsysTime13List_HotSprings TsysTime14List_HotSprings TsysTime15List_HotSprings TsysTime16List_HotSprings TsysTime17List_HotSprings TsysTime18List_HotSprings TsysTime19List_HotSprings TsysTime20List_HotSprings TsysTime21List_HotSprings TsysTime22List_HotSprings TsysTime23List_HotSprings TsysTime24List_HotSprings TsysTime25List_HotSprings TsysTime26List_HotSprings TsysTime27List_HotSprings TsysTime28List_HotSprings TsysTime29List_HotSprings TsysTime30List_HotSprings TsysTime31List_HotSprings TsysTime32List_HotSprings TsysTime33List_HotSprings TsysTime34List_HotSprings TsysTime35List_HotSprings TsysTime36List_HotSprings TsysTime37List_HotSprings TsysTime38List_HotSprings TsysTime39List_HotSprings TsysTime40List_HotSprings TsysTime41List_HotSprings TsysTime42List_HotSprings TsysTime43List_HotSprings TsysTime44List_HotSprings TsysTime45List_HotSprings TsysTime46List_HotSprings TsysTime47List_HotSprings TsysTime48List_HotSprings TsysTime49List_HotSprings TsysTime50List_HotSprings TsysTime51List_HotSprings TsysTime52List_HotSprings TsysTime54List_HotSprings TsysTime56List_HotSprings TsysTime58List_HotSprings TsysTime60List_HotSprings TsysTime62List_HotSprings TsysTime64List_HotSprings TsysTime66List_HotSprings TsysTime68List_HotSprings TsysTime70List_HotSprings TsysTime72List_HotSprings TsysTime74List_HotSprings TsysTime76List_HotSprings TsysTime78List_HotSprings TsysTime80List_HotSprings TsysTime82List_HotSprings TsysTime84List_HotSprings TsysTime86List_HotSprings TsysTime88List_HotSprings TsysTime90List_HotSprings TsysTime92List_HotSprings TsysTime94List_HotSprings TsysTime96List_HotSprings TsysTime98List_HotSprings TsysTime100List_HotSprings TsysTime102List_HotSprings TsysTime104List_HotSprings TsysTime106List_HotSprings TsysTime108List_HotSprings TsysTime110List_HotSprings TsysTime112List_HotSprings TsysTime114List_HotSprings TsysTime116List_HotSprings TsysTime118List_HotSprings TsysTime120List_HotSprings TatmTime2List_HotSprings TatmTime3List_HotSprings TatmTime4List_HotSprings TatmTime5List_HotSprings TatmTime6List_HotSprings TatmTime7List_HotSprings TatmTime8List_HotSprings TatmTime9List_HotSprings TatmTime10List_HotSprings TatmTime11List_HotSprings TatmTime12List_HotSprings TatmTime13List_HotSprings TatmTime14List_HotSprings TatmTime15List_HotSprings TatmTime16List_HotSprings TatmTime17List_HotSprings TatmTime18List_HotSprings TatmTime19List_HotSprings TatmTime20List_HotSprings TatmTime21List_HotSprings TatmTime22List_HotSprings TatmTime23List_HotSprings TatmTime24List_HotSprings TatmTime25List_HotSprings TatmTime26List_HotSprings TatmTime27List_HotSprings TatmTime28List_HotSprings TatmTime29List_HotSprings TatmTime30List_HotSprings TatmTime31List_HotSprings TatmTime32List_HotSprings TatmTime33List_HotSprings TatmTime34List_HotSprings TatmTime35List_HotSprings TatmTime36List_HotSprings TatmTime37List_HotSprings TatmTime38List_HotSprings TatmTime39List_HotSprings TatmTime40List_HotSprings TatmTime41List_HotSprings TatmTime42List_HotSprings TatmTime43List_HotSprings TatmTime44List_HotSprings TatmTime45List_HotSprings TatmTime46List_HotSprings TatmTime47List_HotSprings TatmTime48List_HotSprings TatmTime49List_HotSprings TatmTime50List_HotSprings TatmTime51List_HotSprings TatmTime52List_HotSprings TatmTime54List_HotSprings TatmTime56List_HotSprings TatmTime58List_HotSprings TatmTime60List_HotSprings TatmTime62List_HotSprings TatmTime64List_HotSprings TatmTime66List_HotSprings TatmTime68List_HotSprings TatmTime70List_HotSprings TatmTime72List_HotSprings TatmTime74List_HotSprings TatmTime76List_HotSprings TatmTime78List_HotSprings TatmTime80List_HotSprings TatmTime82List_HotSprings TatmTime84List_HotSprings TatmTime86List_HotSprings TatmTime88List_HotSprings TatmTime90List_HotSprings TatmTime92List_HotSprings TatmTime94List_HotSprings TatmTime96List_HotSprings TatmTime98List_HotSprings TatmTime100List_HotSprings TatmTime102List_HotSprings TatmTime104List_HotSprings TatmTime106List_HotSprings TatmTime108List_HotSprings TatmTime110List_HotSprings TatmTime112List_HotSprings TatmTime114List_HotSprings TatmTime116List_HotSprings TatmTime118List_HotSprings TatmTime120List_HotSprings"
