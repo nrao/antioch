@@ -259,7 +259,7 @@ I thought it would be interesting to do anyways.
 > benchmark_generatePlots_1 :: IO ()
 > benchmark_generatePlots_1 = do
 >   start <- getCPUTime
->   runSim dt 120 "sims" -- a whole semester!
+>   runSim dt 120 "sims" -- a whole trimester!
 >   -- don't need this, due to production of things in the real world (plots)
 >   -- forceExec (show .length $ zs)
 >   stop <- getCPUTime
