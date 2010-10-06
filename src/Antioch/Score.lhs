@@ -265,13 +265,14 @@ Base of exponential Equation 12
 >      let minObs = minObservingEff . frequency $ s
 >      fs <- observingEfficiency dt s
 >      let obsEff' = eval fs
->      [(_, trkErrLimit')] <- trackingErrorLimit dt s
->      let trkErrLimit = case trkErrLimit' of 
+>      -- don't use the scoring function trackingErrorLimit, so
+>      -- that we can use different constants.
+>      trkErrLimit' <- mocTrackingErrorLimit dt s
+>      let trkErrOK = case trkErrLimit' of 
 >                             Just x  -> x
->                             Nothing -> 1
+>                             Nothing -> True
 >      let minObs' = adjustedMinObservingEff minObs
 >      let obsEffOK = obsEff' >= minObs'
->      let trkErrOK = trkErrLimit >= 1
 >      return $ Just (obsEffOK && trkErrOK)
 
 > adjustedMinObservingEff :: Float -> Float
@@ -497,10 +498,28 @@ Equation 24
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
 
+For scheduling, use the specified tracking errors below.
+Use different constants for MOC.
+
 > trackingErrorLimit dt s = do
 >     wind' <- getRealOrForecastedWind dt
->     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
+>     boolean "trackingErrorLimit" $ calculateTRELimit maxTrackErr maxTrackErrArray wind' dt s 
+>       where
+>         maxTrackErr      = 0.2  -- Equation 25
+>         maxTrackErrArray = 0.4  -- Equation 26
 >     
+
+For MOC, use different tracking errors then what we used for scheduling.
+
+> mocTrackingErrorLimit :: DateTime -> Session -> Scoring (Maybe Bool)
+> mocTrackingErrorLimit dt s = do 
+>   w <- weather
+>   -- don't muck around, just get the weather station 2 winds.
+>   realWind <- liftIO $ gbt_wind w dt
+>   return $ calculateTRELimit maxTrackErr maxTrackErrArray realWind dt s  
+>       where
+>         maxTrackErr      = 0.2  -- Equation ? 
+>         maxTrackErrArray = 0.4  -- Equation ?
 
 Equation 13
 
@@ -512,8 +531,8 @@ Equation 16
 > trackErrArray :: Float -> Frequency -> Float
 > trackErrArray w f = variableTrackingError w / (halfPwrBeamWidth f)
 
-> calculateTRELimit :: Maybe Float -> DateTime -> Session -> Maybe Bool
-> calculateTRELimit wind dt s = do
+> calculateTRELimit :: Float -> Float -> Maybe Float -> DateTime -> Session -> Maybe Bool
+> calculateTRELimit maxTrackErr maxTrackErrArray wind dt s = do
 >     wind' <- wind
 >     let f  = trackErr dt wind' (frequency s)
 >     let fv = trackErrArray wind' (frequency s)
@@ -522,9 +541,6 @@ Equation 16
 >                                  else if f  <= maxTrackErr then True
 >                                                            else False
 >     return limit
->       where
->         maxTrackErr      = 0.2  -- Equation 25
->         maxTrackErrArray = 0.4  -- Equation 26
 
 Equation 11
 
