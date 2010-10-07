@@ -34,7 +34,7 @@ and outputs:
 >     print "scheduling around periods: "
 >     printList history
 >     schd <- runScoring w rs rt $ do
->         sf <- genScore dt . scoringSessions dt $ ss
+>         sf <- genScore dt . scoringSessions dt undefined $ ss
 >         dailySchedule sf strategyName dt days history ss False
 >     print . length $ schd
 >     printList schd

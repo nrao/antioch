@@ -27,7 +27,7 @@ Sessions that:
    * have been marked as complete
    * more ...
 
-> type SelectionCriteria = DateTime -> Session -> Bool
+> type SelectionCriteria = DateTime -> Minutes -> Session -> Bool
 
 Possible factors:
    - project time available
@@ -35,10 +35,10 @@ Possible factors:
    - project semester time available
 
 > hasTimeSchedulable :: SelectionCriteria
-> hasTimeSchedulable dt s = sAvail > 0 &&
->                           sAvail >= minDur &&
->                           pAvail > 0 &&
->                           pAvail >= minDur
+> hasTimeSchedulable _ _ s = sAvail > 0 &&
+>                            sAvail >= minDur &&
+>                            pAvail > 0 &&
+>                            pAvail >= minDur
 >   where 
 >     pAvail = pAvailT . project $ s
 >     sAvail = sAvailT s
@@ -51,38 +51,38 @@ Possible factors:
    - session time available
 
 > isNotComplete :: SelectionCriteria
-> isNotComplete _ s = not . sComplete $ s
+> isNotComplete _ _ s = not . sComplete $ s
 
 > isNotTerminated :: SelectionCriteria
-> isNotTerminated _ s = not . sTerminated $ s
+> isNotTerminated _ _ s = not . sTerminated $ s
 
 > isTypeOpen :: SelectionCriteria
-> isTypeOpen _ s = sType s == Open
+> isTypeOpen _ _ s = sType s == Open
 
 > isGradeA_B :: SelectionCriteria
-> isGradeA_B _ s = grade s >= 2.8
+> isGradeA_B _ _ s = grade s >= 2.8
 
 > isNotMaintenance :: SelectionCriteria
-> isNotMaintenance _ s = (pName . project $ s) /= "Maintenance"
+> isNotMaintenance _ _ s = (pName . project $ s) /= "Maintenance"
 
 > isBackup :: SelectionCriteria
-> isBackup _ s = backup s
+> isBackup _ _ s = backup s
 
 > isApproved :: SelectionCriteria
-> isApproved _ s = all (\f -> f s) [enabled, authorized]
+> isApproved _ _ s = all (\f -> f s) [enabled, authorized]
 
 > isAuthorized :: SelectionCriteria
-> isAuthorized _ s = authorized s
+> isAuthorized _ _ s = authorized s
 
 > hasObservers :: SelectionCriteria
-> hasObservers _ s = not . null . observers . project $ s
+> hasObservers _ _ s = not . null . observers . project $ s
 
 Filter candidate sessions dependent on its type.
 
-> isSchedulableType :: DateTime -> Minutes -> Session -> Bool
+> isSchedulableType :: SelectionCriteria
 > isSchedulableType dt dur s
 >   -- Open
->   | isTypeOpen dt s     = True
+>   | isTypeOpen dt dur s = True
 >   | typeWindowed s      = activeWindows (windows s)
 >   | otherwise           = False -- must be Fixed.
 >     where
@@ -104,17 +104,17 @@ should deal with closing old B projects, etc.
 
 > -- TBF is this needed?
 > isSchedulableSemester :: SelectionCriteria 
-> isSchedulableSemester dt s = (semester $ project s) <= current_semester
+> isSchedulableSemester dt _ s = (semester $ project s) <= current_semester
 >    where
 >      current_semester = dt2semester dt
 
-> filterSessions :: DateTime -> [SelectionCriteria] -> [Session] -> [Session]
-> filterSessions dt []       ss = ss
-> filterSessions dt (sc:scs) ss = filterSessions dt scs $ filter (sc dt) ss
+> filterSessions :: DateTime -> Minutes -> [SelectionCriteria] -> [Session] -> [Session]
+> filterSessions dt _   []       ss = ss
+> filterSessions dt dur (sc:scs) ss = filterSessions dt dur scs $ filter (sc dt dur) ss
 
-> meetsCriteria :: DateTime -> Session -> [SelectionCriteria] -> Bool
-> meetsCriteria dt s []       = True
-> meetsCriteria dt s (sc:scs) = (sc dt s) && (meetsCriteria dt s scs)
+> meetsCriteria :: DateTime -> Minutes -> Session -> [SelectionCriteria] -> Bool
+> meetsCriteria dt _ s  []        = True
+> meetsCriteria dt dur s (sc:scs) = (sc dt dur s) && (meetsCriteria dt dur s scs)
 
 Note, selection by type is handled separately by isSchedulableType
 because it requires arguments describing the time period being
@@ -126,10 +126,11 @@ scheduled.
 >       , isNotComplete
 >       , isApproved
 >       , hasObservers
+>       , isSchedulableType
 >                       ]
 
-> schedulableSessions :: DateTime -> [Session] -> [Session]
-> schedulableSessions dt = filterSessions dt schedulableCriteria
+> schedulableSessions :: DateTime -> Minutes -> [Session] -> [Session]
+> schedulableSessions dt dur = filterSessions dt dur schedulableCriteria
 
 > clearWindowedTimeBilled :: Session -> Session
 > clearWindowedTimeBilled s
@@ -142,11 +143,11 @@ scheduled.
 >           | otherwise          = p
 >         pIds = [wPeriodId w | w <- (windows s)]
 
-> schedulableSession :: DateTime -> Session -> Bool
-> schedulableSession dt s = meetsCriteria dt s schedulableCriteria
+> schedulableSession :: DateTime -> Minutes -> Session -> Bool
+> schedulableSession dt dur s = meetsCriteria dt dur s schedulableCriteria
 
-> scoringSessions :: DateTime -> [Session] -> [Session]
-> scoringSessions dt = filterSessions dt [
+> scoringSessions :: DateTime -> Minutes -> [Session] -> [Session]
+> scoringSessions dt dur = filterSessions dt dur [
 >         isGradeA_B
 >       , isNotMaintenance
 >        ]

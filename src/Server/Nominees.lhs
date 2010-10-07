@@ -79,7 +79,7 @@
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
 >                                       ]
->     let schedSessions = filterSessions dt filter
+>     let schedSessions = filterSessions dt undefined filter
 >
 >     -- This is kind of awkward, the various selections the user may
 >     -- specify must be implemented by sessions selection, scoring
@@ -90,7 +90,7 @@
 >     rt <- liftIO $ getReceiverTemperatures
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >     nominees <- liftIO $ runScoring w rs rt $ do
->         sf <- genPartScore dt sfs . scoringSessions dt $ ss
+>         sf <- genPartScore dt sfs . scoringSessions dt undefined $ ss
 >         genNominees sf dt lower upper . schedSessions $ ss
 >     liftIO $ print nominees
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]

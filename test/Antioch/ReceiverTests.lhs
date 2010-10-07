@@ -64,7 +64,7 @@ Rcvr1_2 :
 >       freq3 = 1.12 
 >       s3 = defaultSession { receivers = [[Rcvr1_2, Rcvr2_3]], frequency = freq3 }
 
-> test_data = TestCase $ do
+> check_data = TestCase $ do
 >   projs <- getProjects
 >   print . length $ projs
 >   let ss = concatMap sessions projs

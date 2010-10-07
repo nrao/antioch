@@ -20,6 +20,7 @@
 >   , test_simulateDailyScheduleWithWindows
 >   , test_exhaustive_history
 >   , test_honor_history
+>   --, test_cancellations
 >   , test_updateHistory
 >   , test_updateSessions
 >                  ]
@@ -199,11 +200,11 @@ Here we see if a long simulation honors pre-scheduled periods
 Here we attempt to schedule only a single high-frequency session - if it does
 get on, it has a high chance of being canceled.
 
-> test_cancelations = TestCase $ do
+> test_cancellations = TestCase $ do
 >     (result, tr) <- simulateDailySchedule [] start 2 15 [] ss True True [] []
 >     let cs = getCanceledPeriods $ tr
->     assertEqual "test_cancelations_1" exp result
->     assertEqual "test_cancelations_2" 15 (length cs)
+>     assertEqual "test_cancellations_1" exp result
+>     assertEqual "test_cancellations_2" 15 (length cs)
 >   where
 >     ss = [va]
 >     start = fromGregorian 2006 6 1 0 0 0 -- summer time

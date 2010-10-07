@@ -8,12 +8,13 @@
 > import Antioch.Filters (filterHistory)
 > import Data.Char
 > import Data.List 
-> import Data.Maybe      (isJust, maybeToList)
+> import Data.Maybe      (isJust, maybeToList, fromJust)
 > import System.Random   (getStdGen, setStdGen, mkStdGen)
 > import Test.QuickCheck hiding (frequency)
 > import qualified Test.QuickCheck as T
 > import Control.Monad.RWS.Strict
 > import System.IO.Unsafe  (unsafePerformIO)
+> import Debug.Trace
 
 > instance Arbitrary Project where
 >     arbitrary       = genProject
@@ -49,7 +50,7 @@ TBF: Currently, the idea of semester is very limited.
 >     sB = take 4 $ repeat (s year "B") --"06B", "06B", "06B", "06B"
 >     sC = take 3 $ repeat (s year "C") --"06C", "06C", "06C"
 
-trimesterMonth = [3,1,1,1,1,2,2,2,2,3,3,3] 
+trimesterMonth = [C,A,A,A,A,B,B,B,B,3,3,3] 
 
 > genThesis :: Gen Bool
 > genThesis = T.frequency [(20, return True), (80, return False)]
@@ -218,7 +219,7 @@ Method for producing a generic Open Session.
 >     project    <- genProject
 >     t          <- genSemester
 >     -- first generatre rcvr, then have everything else follow.
->     r          <- genRcvr t
+>     r          <- genRcvr Open t
 >     let b      = receiver2Band r
 >     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
@@ -230,10 +231,10 @@ Method for producing a generic Open Session.
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
 >     --maxD       <- choose (11*60, 12*60)
+>     otype      <- genOType r Open
 >     tb         <- genTimeBetween bk
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
->     stype      <- genSType
 >     trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
@@ -250,7 +251,8 @@ Method for producing a generic Open Session.
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
 >                , lowRFI         = lowRFIFlag
->                , sType          = stype
+>                , sType          = Open
+>                , oType          = otype
 >                , transit        = trans
 >                , grade          = g
 >                , receivers      = [[r]]
@@ -268,7 +270,7 @@ differ from Open ones is TBD.
 >     project    <- genProject
 >     t          <- genSemester
 >     -- first generatre rcvr, then have everything else follow.
->     r          <- genRcvr t
+>     r          <- genRcvr Fixed t
 >     let b      = receiver2Band r
 >     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
@@ -280,6 +282,7 @@ differ from Open ones is TBD.
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
 >     --maxD       <- choose (11*60, 12*60)
+>     otype      <- genOType r Fixed
 >     tb         <- genTimeBetween bk
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
@@ -305,6 +308,7 @@ differ from Open ones is TBD.
 >                , receivers      = [[r]]
 >                , backup         = bk
 >                , sType          = Fixed
+>                , oType          = otype
 >                }
 
 Method for producing a generic Windowed Session.
@@ -316,7 +320,7 @@ differ from Open ones is TBD.
 >     project    <- genProject
 >     t          <- genSemester
 >     -- first generatre rcvr, then have everything else follow.
->     r          <- genRcvr t
+>     r          <- genRcvr Windowed t
 >     let b      = receiver2Band r
 >     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
@@ -328,6 +332,7 @@ differ from Open ones is TBD.
 >     maxD       <- genMaxTP f
 >     --minD       <- choose (2*60, 6*60)
 >     --maxD       <- choose (11*60, 12*60)
+>     otype      <- genOType r Windowed
 >     tb         <- genTimeBetween bk
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
@@ -353,6 +358,7 @@ differ from Open ones is TBD.
 >                , receivers      = [[r]]
 >                , backup         = bk
 >                , sType          = Windowed
+>                , oType          = otype
 >                }
 
 TBF: this is only for use with the scheduleMinDuration strategy.  We want
@@ -548,12 +554,13 @@ TBF: is there a better way to generalize internalConflicts to work w/ Windows?
 > minutesBetween (p:ps) = diffMinutes' (startTime (head ps)) (endTime p) : minutesBetween ps
 
 
-> type Semester = Int
+> type Semester = Char
   
 > genSemester :: Gen Semester
-> genSemester = fmap (read . str) . elements $ "0111122223333"
+> -- b = backup, A = Feb - May, B = Jun - Sep, C = Oct - Jan
+> genSemester = elements "bAAAABBBBCCCC"
 
-> prop_Semester = forAll genSemester $ \s -> s `elem` [0..3]
+> prop_Semester = forAll genSemester $ \s -> s `elem` ['b', 'A', 'B', 'C']
 
 > str :: a -> [a]
 > str = (: [])
@@ -586,10 +593,6 @@ Deprecated: now we specify the band from the receiver.
 > band2Receiver K = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
-
-> genSType :: Gen SessionType
-> genSType = return Open
-
 
 > receiver2Band :: Receiver -> Band
 > receiver2Band Rcvr_RRI = P
@@ -646,14 +649,54 @@ Deprecated: now we specifiy the band from the receiver
 TBF: the below distribution of receivers is arbitrary, and runs across
 all frequencies for demo purposes only.  Dana needs to specify this.
 
-> genRcvr :: Int -> Gen Receiver
-> genRcvr sem = fmap (code2Receiver . str) . elements $ bands !! sem 
+> genRcvr :: SessionType -> Char -> Gen Receiver
+> genRcvr sType sem = fmap (code2Receiver . str) . elements $ band
 >   where
->     bands = [ "338WKKQQAAXUCCSLLLLL"  -- 0 => backup
->             , "338WKKKQQAAXUCCSSLLL"  -- 1
->             , "338WKQQAXUCSLLLLLLLL"  -- 2
->             , "338WKKQQAAAXXUCCSLLL"  -- 3
+>     band = fromJust . lookup (sType, sem) $ bands
+>     -- (session type, trimester)
+>     bands = [ ((Open,'b'),      "338WKKQQAAXUCCSLLLLL")
+>             , ((Open,'A'),      "338WKKKQQAAXUCCSSLLL")
+>             , ((Open,'B'),      "338WKQQAXUCSLLLLLLLL")
+>             , ((Open,'C'),      "338WKKQQAAAXXUCCSLLL")
+>             , ((Fixed,'b'),     "338WKKQQAAXUCCSLLLLL")
+>             , ((Fixed,'A'),     "338WKKKQQAAXUCCSSLLL")
+>             , ((Fixed,'B'),     "338WKQQAXUCSLLLLLLLL")
+>             , ((Fixed,'C'),     "338WKKQQAAAXXUCCSLLL")
+>             , ((Windowed,'b'),  "338WKKQQAAXUCCSLLLLL")
+>             , ((Windowed,'A'),  "338WKKKQQAAXUCCSSLLL")
+>             , ((Windowed,'B'),  "338WKQQAXUCSLLLLLLLL")
+>             , ((Windowed,'C'),  "338WKKQQAAAXXUCCSLLL")
 >             ]
+
+> genOType :: Receiver -> SessionType -> Gen ObservingType
+> genOType rcvr sType = T.frequency [(p,       return SpectralLine)
+>                                  , (100 - p, return Continuum)]
+>   where
+>    o = Open
+>    f = Fixed
+>    w = Windowed
+>    -- returns the percentage of observing type SpectralLine
+>    p = fromJust . lookup (rcvr, sType) $ types
+>    types = [
+>        --            Open                   Fixed                  Windowed
+>        ((Rcvr_RRI,   o),100), ((Rcvr_RRI,   f),100), ((Rcvr_RRI,   w),100)
+>      , ((Rcvr_342,   o),100), ((Rcvr_342,   f),100), ((Rcvr_342,   w),100)
+>      , ((Rcvr_450,   o),100), ((Rcvr_450,   f),100), ((Rcvr_450,   w),100)
+>      , ((Rcvr_600,   o),100), ((Rcvr_600,   f),100), ((Rcvr_600,   w),100)
+>      , ((Rcvr_800,   o),100), ((Rcvr_800,   f),100), ((Rcvr_800,   w),100)
+>      , ((Rcvr_1070,  o),100), ((Rcvr_1070,  f),100), ((Rcvr_1070,  w),100)
+>      , ((Rcvr1_2,    o),100), ((Rcvr1_2,    f),100), ((Rcvr1_2,    w),100)
+>      , ((Rcvr2_3,    o),100), ((Rcvr2_3,    f),100), ((Rcvr2_3,    w),100)
+>      , ((Rcvr4_6,    o),100), ((Rcvr4_6,    f),100), ((Rcvr4_6,    w),100)
+>      , ((Rcvr8_10,   o),100), ((Rcvr8_10,   f),100), ((Rcvr8_10,   w),100)
+>      , ((Rcvr12_18,  o),100), ((Rcvr12_18,  f),100), ((Rcvr12_18,  w),100)
+>      , ((Rcvr18_26,  o),100), ((Rcvr18_26,  f),100), ((Rcvr18_26,  w),100)
+>      , ((Rcvr26_40,  o),100), ((Rcvr26_40,  f),100), ((Rcvr26_40,  w),100)
+>      , ((Rcvr40_52,  o),100), ((Rcvr40_52,  f),100), ((Rcvr40_52,  w),100)
+>      , ((Rcvr_PAR,   o),  0), ((Rcvr_PAR,   f),  0), ((Rcvr_PAR,   w),  0)
+>      , ((Holography, o),100), ((Holography, f),100), ((Holography, w),100)
+>      , ((RcvrArray18_26,o),100), ((RcvrArray18_26,f),100), ((RcvrArray18_26,w),100)
+>     ]
 
 Generate frequency by Band.
 Assume we are observing the water line 40% of the time.

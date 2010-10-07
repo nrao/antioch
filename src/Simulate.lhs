@@ -17,7 +17,7 @@
 
 ./simulate -s=Pack -o=simulations -b=2008-02-01 -d=3 -n=test5_3
 
-./simulate -s=Pack -o=simulations -b=2007-02-01 -d=x -n=test5_3 -t=50/25/25 -m=True -l=100
+./simulate -s=Pack -o=simulations -b=2007-02-01 -d=30 -n=test5_3 -t=50/25/25 -m=True -l=100
 
 > main = do 
 >   args <- getArgs

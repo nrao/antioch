@@ -18,7 +18,6 @@ Interim solution: comparisons use some type of bigbox weather database.
 
 > tests = TestList [
 >    test_getWeatherDates
->  -- , test_getRcvrFreqs
 >  -- , test_getRcvrFreqArgs
 >  -- , test_getMinEffSysTempArgs
 >  -- , test_getMinEffSysTemp

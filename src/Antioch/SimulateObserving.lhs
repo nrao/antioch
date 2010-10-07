@@ -22,7 +22,7 @@ to replace these canceled periods with backups.
 
 > scheduleBackups :: ScoreFunc -> StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
 > scheduleBackups sf sn ss ps dt dur = do
->     let ss' = schedulableSessions dt $ ss
+>     let ss' = schedulableSessions dt dur $ ss
 >     scheduleBackups' sf sn ss' ps dt dur 
 
 > scheduleBackups' :: ScoreFunc -> StrategyName -> [Session] -> [Period] -> DateTime -> Minutes -> Scoring [Period]
@@ -63,7 +63,7 @@ We only we want to be scheduling backups during the specified time range,
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
 >     backupSessions  = filterBackups sn ss p 
->     cantBeCancelled p dt dur = (not $ inCancelRange p dt dur) || (not $ isTypeOpen dt  (session p))
+>     cantBeCancelled p dt dur = (not $ inCancelRange p dt dur) || (not $ isTypeOpen dt dur  (session p))
 
 We only want to check each period for cancelation once.  We do this by 
 only checking those that are within the specified range.

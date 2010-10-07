@@ -1,5 +1,6 @@
 import pg
 import sys
+import settings
 from datetime import *
 
 class WeatherHealth:
@@ -10,7 +11,7 @@ class WeatherHealth:
 
         self.dbname = dbname # ex: "weather"
 
-        self.cnn = pg.connect(user = "dss", dbname = dbname)
+        self.cnn = pg.connect(user = "dss", dbname = dbname, port = settings.DATABASE_PORT)
         
         self.sixHourForecastStart = datetime(2007, 10, 5)
 
@@ -483,8 +484,16 @@ class WeatherHealth:
         r = self.cnn.query(query)
 
         dts = []
+         
+        numRows = len(r.dictresult())
+        rNum = 0
 
         for row in r.dictresult():
+
+            # print a counter
+            print "Cleaning up %d of %d (%f done)." % (rNum, numRows, (100.0*(float(rNum)/float(numRows))))
+            rNum += 1
+
             dt = row['date']
             type = row['forecast_type_id']
 
@@ -531,6 +540,19 @@ class WeatherHealth:
 
         r = self.cnn.query(query)
         print "Deleted this many forecast_times: ", r
+        
+        # really finally, get rid of the dates ...
+        self.cleanupWeatherDates(start, end)
+
+    def cleanupWeatherDates(self, start, end):
+        query = """
+        DELETE FROM weather_dates WHERE date >= '%s' 
+        AND date <= '%s';
+        """ % (start, end)    
+
+        r = self.cnn.query(query)
+        print "Deleted this many weather_dates: ", r
+
 
     def addTimeToDB(self, timestamp, table):
         """
@@ -564,6 +586,6 @@ if __name__ == '__main__':
     wh = WeatherHealth(dbname, filename = filename)
     wh.check()
     wh.report()
-    #start = datetime(2007, 1, 1, 0)
-    #end   = datetime(2008, 2, 1, 12)
-    #wh.cleanUp(start, end)
+    #start = datetime(2004, 1 , 1, 0)
+    #end   = datetime(2008, 12, 19, 0)
+    #wh.cleanupWeatherDates(start, end)

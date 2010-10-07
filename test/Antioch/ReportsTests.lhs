@@ -34,8 +34,8 @@ TBF this test depends on weatherDB instead of weatherUnitTestDB!
 >   assertEqual "test_runSim" True True
 
 > test_textReports = TestCase $ do
->     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo we gaps scores scoreDetails simInput rs history quiet 
->     textReports name outdir now execTime dt days strategyName ss2 schedule2 canceled winfo we gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo we gaps scores scoreDetails simInput rs history quiet 
+>     textReports name outdir now execTime dt days strategyName ss2 schedule2 canceled canceledDetails winfo we gaps scores scoreDetails simInput rs history quiet 
 >   where
 >     name = "unit_test"
 >     outdir = "."
@@ -47,6 +47,7 @@ TBF this test depends on weatherDB instead of weatherUnitTestDB!
 >     ss = []
 >     schedule = []
 >     canceled = []
+>     canceledDetails = []
 >     gaps = []
 >     scores = [("obsEff", [])
 >             , ("atmEff", [])

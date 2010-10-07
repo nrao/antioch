@@ -31,6 +31,7 @@ connection to the DB correctly.
 >     , test_getProjectsProperties
 >     -- , test_putPeriods
 >     , test_makeSession
+>     -- , test_setPeriods
 >     -- , test_setPeriodScore
 >     , test_scoreDSSData
 >     , test_session2

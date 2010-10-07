@@ -490,7 +490,6 @@ error bars done separately in simMeanObsEff
 
 > plotObsMeanObsEffVsFreq  :: PeriodEffStatsPlot
 > plotObsMeanObsEffVsFreq peffs fn n _ ps _ = do
->   print "plotObsMeanObsEffVsFreq"
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Observed Mean Observing Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Observing Efficiency"
@@ -501,7 +500,6 @@ Break down the above plot into the three factors that make up observing eff.
 
 > plotObsMeanAtmEffVsFreq  :: PeriodEffStatsPlot
 > plotObsMeanAtmEffVsFreq peffs fn n _ ps _ = do
->   print "plotObsMeanAtmEffVsFreq"
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> a)
 >   let t = "Observed Mean Atmospheric Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Atmospheric Efficiency"
@@ -511,7 +509,6 @@ simObsMeanTrkFreq
 
 > plotObsMeanTrkEffVsFreq  :: PeriodEffStatsPlot
 > plotObsMeanTrkEffVsFreq peffs fn n _ ps _ = do
->   print "plotObsMeanTrkEffVsFreq"
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> t)
 >   let t = "Observed Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Tracking Efficiency"
@@ -521,7 +518,6 @@ simObsMeanSrfFreq
 
 > plotObsMeanSrfEffVsFreq  :: PeriodEffStatsPlot
 > plotObsMeanSrfEffVsFreq peffs fn n _ ps _ = do
->   print "plotObsMeanSrfEffVsFreq"
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> s)
 >   let t = "Observed Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Surface Obs. Efficiency"
@@ -1106,8 +1102,8 @@ The standard list of plots (that need no extra input).
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"
 
-> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> [(Window, Maybe Period, Period)] -> [((Period, Float),(Period, Float))] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
-> textReports name outdir now execTime dt days strategyName ss ps canceled winfo winEffs gaps scores scoreDetails simInput rs history quiet = do
+> textReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Period] -> CanceledPeriodDetails -> [(Window, Maybe Period, Period)] -> [((Period, Float),(Period, Float))] -> [(DateTime, Minutes)] -> [(String, [Float])] -> [(String, [(Period, Float)])] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> IO () 
+> textReports name outdir now execTime dt days strategyName ss ps canceled canceledDetails winfo winEffs gaps scores scoreDetails simInput rs history quiet = do
 >     if (quiet == False) then putStrLn $ report else putStrLn $ "Quiet Flag Set - report available in file: " ++ filepath
 >     writeFile filepath report
 >   where
@@ -1129,7 +1125,7 @@ The standard list of plots (that need no extra input).
 >     r10 = reportPreScheduled history
 >     r16 = reportWindows history
 >     r11 = reportFinalSchedule ps
->     r12 = reportCanceled canceled
+>     r12 = reportCanceled canceledDetails
 >     r17 = reportFinalWindows winfo
 >     r20 = reportWindowEfficiencies winEffs
 >     r15 = reportScoreDetails scoreDetails
@@ -1391,10 +1387,10 @@ The standard list of plots (that need no extra input).
 >     hdr = "Final Schedule:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
-> reportCanceled :: [Period] -> String
+> reportCanceled :: CanceledPeriodDetails -> String
 > reportCanceled ps = hdr ++ (printPeriods ps)
 >   where
->     hdr = "Canceled Periods:\n"
+>     hdr = "Canceled Period Details:\n"
 >     printPeriods ps = concatMap (\p -> (show p) ++ "\n") ps
 
 > reportTotalScore :: [Period] -> String
@@ -1426,25 +1422,35 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     let canceled = getCanceledPeriods trace
 >     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
+>     -- calculate scheduled and observed efficiencies
+>     begin <- getCurrentTime
 >     w <- if test then getWeatherTest Nothing else getWeather Nothing
+>     rt <- getReceiverTemperatures
+>     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
+>     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
+>     canceledDetails <- getCanceledPeriodsDetails w rt [] canceled 
+>     end <- getCurrentTime
+>     print $ "Calc Period Efficiencies Time: " ++ (show $ end - begin)
 >     -- check efficiency scores for normalicy
->     schdObsEffs <- historicalSchdObsEffs schedule w
->     schdAtmEffs <- historicalSchdAtmEffs schedule w
->     schdTrkEffs <- historicalSchdTrkEffs schedule w
->     schdSrfEffs <- historicalSchdSrfEffs schedule w
+>     let schdObsEffs =  map atso2o $ concatMap snd pSchdEffs
+>     let schdAtmEffs =  map atso2a $ concatMap snd pSchdEffs
+>     let schdTrkEffs =  map atso2t $ concatMap snd pSchdEffs
+>     let schdSrfEffs =  map atso2s $ concatMap snd pSchdEffs
 >     let scores = [("obsEff", schdObsEffs)
 >                 , ("atmEff", schdAtmEffs)
 >                 , ("trkEff", schdTrkEffs)
 >                 , ("srfEff", schdSrfEffs)]
 >     -- map efficiencies to periods for debugging
+>     -- sort both inputs by frequency
 >     let scheduleByFreq = sortBy sortByFreq schedule
->     obsSchdMeanEffs <- historicalSchdMeanObsEffs scheduleByFreq w
+>     let pEffsByFreq    = sortBy sortPEByFreq pSchdEffs
+>     let obsSchdMeanEffs = extractPeriodMeanEffs pEffsByFreq atso2o 
 >     let obsEffDetails = zip scheduleByFreq obsSchdMeanEffs 
->     atmSchdMeanEffs <- historicalSchdMeanAtmEffs scheduleByFreq w
+>     let atmSchdMeanEffs = extractPeriodMeanEffs pEffsByFreq atso2a
 >     let atmEffDetails = zip scheduleByFreq atmSchdMeanEffs 
->     srfSchdMeanEffs <- historicalSchdMeanSrfEffs scheduleByFreq w
+>     let srfSchdMeanEffs = extractPeriodMeanEffs pEffsByFreq atso2s
 >     let srfEffDetails = zip scheduleByFreq srfSchdMeanEffs 
->     trkSchdMeanEffs <- historicalSchdMeanTrkEffs scheduleByFreq w
+>     let trkSchdMeanEffs = extractPeriodMeanEffs pEffsByFreq atso2t
 >     let trkEffDetails = zip scheduleByFreq trkSchdMeanEffs 
 >     let scoreDetails = [("obsEff", obsEffDetails)
 >                       , ("atmEff", atmEffDetails)
@@ -1454,27 +1460,23 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     -- compare window efficinces: chosen vs. default periods
 >     windowEffs <- compareWindowPeriodEfficiencies winfo w
 >     -- text reports 
->     --now <- getCurrentTime
->     textReports name outdir now execTime dt days strategyName ss schedule canceled winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
->     -- create plots
+>     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
+>     -- create generic plots
 >     begin <- getCurrentTime
->     -- generic plots
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (statsPlotsToFile outdir name) 
->     end <- getCurrentTime
->     print $ "Plotting Time: " ++ (show $ end - begin)
->     begin <- getCurrentTime
->     -- period efficiency plots
->     rt <- getReceiverTemperatures
->     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
->     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
+>     -- create period efficiency plots
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs outdir name)
 >     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs outdir name)
 >     end <- getCurrentTime
->     print $ "Eff Plotting Time: " ++ (show $ end - begin)
+>     print $ "Plotting Time: " ++ (show $ end - begin)
 >   where
 >     dur = days * 60 * 24
 >     ss' = removeMaintenanceS ss
 >     scheduleNoMaint = removeMaintenanceP schedule
+>     atso2o = (\(a, t, s, o) -> o)
+>     atso2a = (\(a, t, s, o) -> a)
+>     atso2t = (\(a, t, s, o) -> t)
+>     atso2s = (\(a, t, s, o) -> s)
 
 > sortByFreq :: Period -> Period -> Ordering
 > sortByFreq p1 p2
@@ -1484,3 +1486,12 @@ Trying to emulate the Beta Test's Scoring Tab:
 >   where
 >     f1 = frequency . session $ p1
 >     f2 = frequency . session $ p2
+
+> sortPEByFreq :: PeriodEfficiency -> PeriodEfficiency -> Ordering
+> sortPEByFreq p1 p2
+>    | f1 <  f2     = LT
+>    | f1 == f2     = EQ
+>    | f1 >  f2     = GT
+>   where
+>     f1 = frequency . session . fst $ p1
+>     f2 = frequency . session . fst $ p2
