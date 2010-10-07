@@ -74,6 +74,8 @@
 >     let completed = fromJust . fromJust . lookup "completed" $ params
 >     let filter = catMaybes . concat $ [
 >             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
+>           , [Just isNotMaintenance]
+>           , [Just isNotTypeFixed]
 >           , [Just isApproved]
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
