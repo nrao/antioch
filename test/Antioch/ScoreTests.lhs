@@ -969,7 +969,6 @@ If none is sanctioned, then there should never be an observer available
 >       o   = defaultObserver {oId = 264
 >                            , firstName = "Bengt-Goran"
 >                            , lastName = "Andersson"
->                            , username = "bgandersson"
 >                            , pstId = 3113
 >                            , sanctioned = False
 >                            , reservations = []

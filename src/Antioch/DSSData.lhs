@@ -74,12 +74,12 @@ TBF: currently no observer black out date tables
 TBF: We currently cannot link info in the DSS database to the id's used in the
 BOS web services to retrieve reservation dates.
 
-TBF: Beware original_id, pst_id, username, and contact_instructions
+TBF: Beware original_id, pst_id,  and contact_instructions
 in the User table can be null.
 
 > getProjectObservers :: Int -> Connection -> IO [Observer]
 > getProjectObservers projId cnn = handleSqlError $ do
->     -- 0. Get basic info on observers: username, pst id, sanctioned
+>     -- 0. Get basic info on observers: pst id, sanctioned
 >     observers' <- getObservers projId cnn
 >     -- 1. Use these to lookup the needed info from the BOS web service.
 >     -- 1. Use these to lookup the needed info from the DSS database
@@ -98,16 +98,17 @@ Sets the basic Observer Data Structure info
 >   return $ toObserverList result 
 >     where
 >       xs = [toSql projId]
->       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.username, u.pst_id FROM investigators AS inv, users AS u WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
+>       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id FROM investigators AS inv, users AS u WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
 >       toObserverList = map toObserver
->       toObserver (id:first:last:sanc:uname:pid:[]) = 
+>       toObserver (id:first:last:sanc:pid:[]) = 
 >         defaultObserver 
 >           { oId = fromSql id
 >           , firstName = fromSql first
 >           , lastName = fromSql last
 >           , sanctioned = fromSql sanc
->           , username = fromSqlUserName uname
 >           , pstId = fromSqlInt pid }
+
+TBF: use this if we need to pull username from PST mirror, if ever.
 
 > fromSqlUserName :: SqlValue -> String
 > fromSqlUserName SqlNull = ""
