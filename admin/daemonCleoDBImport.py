@@ -28,8 +28,7 @@ def parseForecastTime(line):
                              "%H:%M:%S %d%b%y")
 
 filePath = RONPATH + RONFILE
-info = os.stat(filePath)
-previous_change = info.st_mtime
+previous_change = 0
 
 print "Checking %s for inserting weather into %s" % (filePath, WEATHERDATABASE)
 
