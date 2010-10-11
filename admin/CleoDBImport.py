@@ -1,6 +1,7 @@
 from DBImport        import DBImport
 from os              import listdir, system
 from datetime        import datetime, timedelta
+from emailNotifier   import emailNotifier
 import sys
 import TimeAgent
 import pg
@@ -54,11 +55,6 @@ class CleoDBImport:
         # here we init settings for the kind of info we're getting from the CLEO
         self.cleoCmdLine = "/home/dss/bin/forecastsCmdLine"
 
-        # First the Atmosphere by frequency:
-        # Frequencies: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 
-        #freqs = range(1, 51)
-
-        # Frequencies: 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 60 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120
         freqs = range(2, 53)
         freqs.extend(range(54, 122, 2))          
         self.atmoFreqs = freqs
@@ -67,7 +63,7 @@ class CleoDBImport:
 
         measurements = ["OpacityTime", "TsysTime", "TatmTime"]
         measurementsStr = " ".join(measurements)
-        sites = ["HotSprings"]
+        sites = ["Elkins", "HotSprings", "Lewisburg"]
         sitesStr = " ".join(sites)
 
         if self.history:
@@ -76,16 +72,14 @@ class CleoDBImport:
         else:
             historyOption = ''
 
-        self.atmoCmdLine = "%s -readCaches -sites %s -calculate %s -freqList %s -elevTsys 90 %s" % \
+        self.atmoCmdLine = "%s -sites %s -average -calculate %s -freqList %s -elevTsys 90 %s" % \
             (self.cleoCmdLine, sitesStr, measurementsStr, freqStr, historyOption)
 
         # Then the winds, etc.
         measurements = ["GroundTime", "CloudsPrecipTime"]
         measurementsStr = " ".join(measurements)
-        sites = ["Elkins", "Lewisburg"]
-        sitesStr = " ".join(sites)
 
-        self.windCmdLine = "%s -readCaches -sites %s -average -calculate %s %s" % \
+        self.windCmdLine = "%s -sites %s -average -calculate %s %s" % \
             (self.cleoCmdLine, sitesStr, measurementsStr, historyOption)
 
     def reportLine(self, line):
@@ -119,10 +113,10 @@ class CleoDBImport:
     def getWeather(self):
         "Make actual calls to cleo to populate weather data files."
 
-        self.reportLine("%s\n" % self.atmoCmdLine)
+        print self.atmoCmdLine
         system(self.atmoCmdLine)
 
-        self.reportLine("%s\n" % self.windCmdLine)
+        print self.windCmdLine
         system(self.windCmdLine)
 
         # where are the files?  See the cleo help:
@@ -163,7 +157,6 @@ class CleoDBImport:
         lines      = f.readlines()
         header     = lines[0]
         assert header.strip() == windFileHeader.strip()  
-        #windcol    = lines[0].split(' ').index('smphTimeList_avrg')
 
         for line in lines[1:]:
             row = line.split(' ')
@@ -216,11 +209,11 @@ class CleoDBImport:
                 continue
             # frequencies
             self.data[timestamp]['freqs'] = []
-            # OpacityTime<freq>List_HotSprings
+            # OpacityTime<freq>List_avrg
             self.data[timestamp]['tauCleo']  = []
-            # TsysTime<freq>List_HotSprings
+            # TsysTime<freq>List_avrg
             self.data[timestamp]['tSysCleo'] = []
-            # TatmTime<freq>List_HotSprings
+            # TatmTime<freq>List_avrg
             self.data[timestamp]['tAtmCleo'] = []
             num = self.numAtmoFreqs
             for i in range(num):
@@ -260,7 +253,23 @@ class CleoDBImport:
         return self.addTimeToDB(timestamp, "import_times")
 
     def addWeatherDate(self, timestamp):
-        return self.addTimeToDB(timestamp, "weather_dates")
+        """
+        Searches for given timestamp value in the weather_dates
+        table.  If it doesn't exist, create it.
+        In any case returns it's ID.
+        """
+
+        # look to see if this timestamp already exists
+        r = self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+
+        if len(r.dictresult()) == 0:
+            # it doesn't, insert it
+            self.c.query("INSERT INTO weather_dates (date) VALUES ('%s')" % timestamp)
+            # now get the id of what we just created
+            r = \
+                self.c.query("SELECT id FROM weather_dates WHERE date = '%s'" % timestamp)
+
+        return r.dictresult()[0]["id"]
 
     def addForecast(self
                   , forecast_type_id
@@ -372,7 +381,7 @@ class CleoDBImport:
             if "Forecasts" in d])[-2:]
 
         # the frequency dependent realted stuff was written first    
-        atmFile =  self.path + "/" + f1 + '/time_HotSprings' + \
+        atmFile =  self.path + "/" + f1 + '/time_avrg' + \
             f1[9:] + '.txt'
 
         # then came the 'ground' or wind speed stuff     
@@ -403,6 +412,33 @@ class CleoDBImport:
         f.writelines(fileLines)
         f.close()
 
+    def notify(self):
+        "Sends email notification about import"
+
+        to_list = ['pmargani@nrao.edu'
+                 , 'ashelton@nrao.edu'
+                 , 'mclark@nrao.edu'
+                 , 'rcreager@nrao.edu'
+                 , 'koneil@nrao.edu'
+                 , 'tminter@nrao.edu'
+                 , 'dbalser@nrao.edu'
+                 , 'rmaddale@nrao.edu'
+                 ]
+        # TBF: more detailed comments here?
+        subject = "Weather Forecasts have been imported."
+        body = """
+        Weather Forecasts have been imported at %s UTC.\n
+        For details see most recent report at:\n
+        /home/dss/release/antioch/admin/CleoDBImport_<timestamp>.txt\n
+        """ % self.import_time
+    
+        emailer = emailNotifier(smtp = "smtp.gb.nrao.edu"
+                              , frm  = "dss@gb.nrao.edu")
+        emailer.SetTo(to_list)
+        emailer.SetSubject(subject)
+        emailer.SetMessage(body)
+        emailer.Notify()
+        
     def performImport(self):
         """
         Higher level function that performs all the steps for importing
@@ -431,7 +467,9 @@ class CleoDBImport:
 
         self.reportToFile()
 
-# freqFileHeader on next line
-freqFileHeader = "timeListMJD OpacityTime2List_HotSprings OpacityTime3List_HotSprings OpacityTime4List_HotSprings OpacityTime5List_HotSprings OpacityTime6List_HotSprings OpacityTime7List_HotSprings OpacityTime8List_HotSprings OpacityTime9List_HotSprings OpacityTime10List_HotSprings OpacityTime11List_HotSprings OpacityTime12List_HotSprings OpacityTime13List_HotSprings OpacityTime14List_HotSprings OpacityTime15List_HotSprings OpacityTime16List_HotSprings OpacityTime17List_HotSprings OpacityTime18List_HotSprings OpacityTime19List_HotSprings OpacityTime20List_HotSprings OpacityTime21List_HotSprings OpacityTime22List_HotSprings OpacityTime23List_HotSprings OpacityTime24List_HotSprings OpacityTime25List_HotSprings OpacityTime26List_HotSprings OpacityTime27List_HotSprings OpacityTime28List_HotSprings OpacityTime29List_HotSprings OpacityTime30List_HotSprings OpacityTime31List_HotSprings OpacityTime32List_HotSprings OpacityTime33List_HotSprings OpacityTime34List_HotSprings OpacityTime35List_HotSprings OpacityTime36List_HotSprings OpacityTime37List_HotSprings OpacityTime38List_HotSprings OpacityTime39List_HotSprings OpacityTime40List_HotSprings OpacityTime41List_HotSprings OpacityTime42List_HotSprings OpacityTime43List_HotSprings OpacityTime44List_HotSprings OpacityTime45List_HotSprings OpacityTime46List_HotSprings OpacityTime47List_HotSprings OpacityTime48List_HotSprings OpacityTime49List_HotSprings OpacityTime50List_HotSprings OpacityTime51List_HotSprings OpacityTime52List_HotSprings OpacityTime54List_HotSprings OpacityTime56List_HotSprings OpacityTime58List_HotSprings OpacityTime60List_HotSprings OpacityTime62List_HotSprings OpacityTime64List_HotSprings OpacityTime66List_HotSprings OpacityTime68List_HotSprings OpacityTime70List_HotSprings OpacityTime72List_HotSprings OpacityTime74List_HotSprings OpacityTime76List_HotSprings OpacityTime78List_HotSprings OpacityTime80List_HotSprings OpacityTime82List_HotSprings OpacityTime84List_HotSprings OpacityTime86List_HotSprings OpacityTime88List_HotSprings OpacityTime90List_HotSprings OpacityTime92List_HotSprings OpacityTime94List_HotSprings OpacityTime96List_HotSprings OpacityTime98List_HotSprings OpacityTime100List_HotSprings OpacityTime102List_HotSprings OpacityTime104List_HotSprings OpacityTime106List_HotSprings OpacityTime108List_HotSprings OpacityTime110List_HotSprings OpacityTime112List_HotSprings OpacityTime114List_HotSprings OpacityTime116List_HotSprings OpacityTime118List_HotSprings OpacityTime120List_HotSprings TsysTime2List_HotSprings TsysTime3List_HotSprings TsysTime4List_HotSprings TsysTime5List_HotSprings TsysTime6List_HotSprings TsysTime7List_HotSprings TsysTime8List_HotSprings TsysTime9List_HotSprings TsysTime10List_HotSprings TsysTime11List_HotSprings TsysTime12List_HotSprings TsysTime13List_HotSprings TsysTime14List_HotSprings TsysTime15List_HotSprings TsysTime16List_HotSprings TsysTime17List_HotSprings TsysTime18List_HotSprings TsysTime19List_HotSprings TsysTime20List_HotSprings TsysTime21List_HotSprings TsysTime22List_HotSprings TsysTime23List_HotSprings TsysTime24List_HotSprings TsysTime25List_HotSprings TsysTime26List_HotSprings TsysTime27List_HotSprings TsysTime28List_HotSprings TsysTime29List_HotSprings TsysTime30List_HotSprings TsysTime31List_HotSprings TsysTime32List_HotSprings TsysTime33List_HotSprings TsysTime34List_HotSprings TsysTime35List_HotSprings TsysTime36List_HotSprings TsysTime37List_HotSprings TsysTime38List_HotSprings TsysTime39List_HotSprings TsysTime40List_HotSprings TsysTime41List_HotSprings TsysTime42List_HotSprings TsysTime43List_HotSprings TsysTime44List_HotSprings TsysTime45List_HotSprings TsysTime46List_HotSprings TsysTime47List_HotSprings TsysTime48List_HotSprings TsysTime49List_HotSprings TsysTime50List_HotSprings TsysTime51List_HotSprings TsysTime52List_HotSprings TsysTime54List_HotSprings TsysTime56List_HotSprings TsysTime58List_HotSprings TsysTime60List_HotSprings TsysTime62List_HotSprings TsysTime64List_HotSprings TsysTime66List_HotSprings TsysTime68List_HotSprings TsysTime70List_HotSprings TsysTime72List_HotSprings TsysTime74List_HotSprings TsysTime76List_HotSprings TsysTime78List_HotSprings TsysTime80List_HotSprings TsysTime82List_HotSprings TsysTime84List_HotSprings TsysTime86List_HotSprings TsysTime88List_HotSprings TsysTime90List_HotSprings TsysTime92List_HotSprings TsysTime94List_HotSprings TsysTime96List_HotSprings TsysTime98List_HotSprings TsysTime100List_HotSprings TsysTime102List_HotSprings TsysTime104List_HotSprings TsysTime106List_HotSprings TsysTime108List_HotSprings TsysTime110List_HotSprings TsysTime112List_HotSprings TsysTime114List_HotSprings TsysTime116List_HotSprings TsysTime118List_HotSprings TsysTime120List_HotSprings TatmTime2List_HotSprings TatmTime3List_HotSprings TatmTime4List_HotSprings TatmTime5List_HotSprings TatmTime6List_HotSprings TatmTime7List_HotSprings TatmTime8List_HotSprings TatmTime9List_HotSprings TatmTime10List_HotSprings TatmTime11List_HotSprings TatmTime12List_HotSprings TatmTime13List_HotSprings TatmTime14List_HotSprings TatmTime15List_HotSprings TatmTime16List_HotSprings TatmTime17List_HotSprings TatmTime18List_HotSprings TatmTime19List_HotSprings TatmTime20List_HotSprings TatmTime21List_HotSprings TatmTime22List_HotSprings TatmTime23List_HotSprings TatmTime24List_HotSprings TatmTime25List_HotSprings TatmTime26List_HotSprings TatmTime27List_HotSprings TatmTime28List_HotSprings TatmTime29List_HotSprings TatmTime30List_HotSprings TatmTime31List_HotSprings TatmTime32List_HotSprings TatmTime33List_HotSprings TatmTime34List_HotSprings TatmTime35List_HotSprings TatmTime36List_HotSprings TatmTime37List_HotSprings TatmTime38List_HotSprings TatmTime39List_HotSprings TatmTime40List_HotSprings TatmTime41List_HotSprings TatmTime42List_HotSprings TatmTime43List_HotSprings TatmTime44List_HotSprings TatmTime45List_HotSprings TatmTime46List_HotSprings TatmTime47List_HotSprings TatmTime48List_HotSprings TatmTime49List_HotSprings TatmTime50List_HotSprings TatmTime51List_HotSprings TatmTime52List_HotSprings TatmTime54List_HotSprings TatmTime56List_HotSprings TatmTime58List_HotSprings TatmTime60List_HotSprings TatmTime62List_HotSprings TatmTime64List_HotSprings TatmTime66List_HotSprings TatmTime68List_HotSprings TatmTime70List_HotSprings TatmTime72List_HotSprings TatmTime74List_HotSprings TatmTime76List_HotSprings TatmTime78List_HotSprings TatmTime80List_HotSprings TatmTime82List_HotSprings TatmTime84List_HotSprings TatmTime86List_HotSprings TatmTime88List_HotSprings TatmTime90List_HotSprings TatmTime92List_HotSprings TatmTime94List_HotSprings TatmTime96List_HotSprings TatmTime98List_HotSprings TatmTime100List_HotSprings TatmTime102List_HotSprings TatmTime104List_HotSprings TatmTime106List_HotSprings TatmTime108List_HotSprings TatmTime110List_HotSprings TatmTime112List_HotSprings TatmTime114List_HotSprings TatmTime116List_HotSprings TatmTime118List_HotSprings TatmTime120List_HotSprings"
+        # send an email notification
+        if not self.quiet:
+            self.notify()
 
-#freqFileHeader = "timeListMJD OpacityTime1List_HotSprings OpacityTime2List_HotSprings OpacityTime3List_HotSprings OpacityTime4List_HotSprings OpacityTime5List_HotSprings OpacityTime6List_HotSprings OpacityTime7List_HotSprings OpacityTime8List_HotSprings OpacityTime9List_HotSprings OpacityTime10List_HotSprings OpacityTime11List_HotSprings OpacityTime12List_HotSprings OpacityTime13List_HotSprings OpacityTime14List_HotSprings OpacityTime15List_HotSprings OpacityTime16List_HotSprings OpacityTime17List_HotSprings OpacityTime18List_HotSprings OpacityTime19List_HotSprings OpacityTime20List_HotSprings OpacityTime21List_HotSprings OpacityTime22List_HotSprings OpacityTime23List_HotSprings OpacityTime24List_HotSprings OpacityTime25List_HotSprings OpacityTime26List_HotSprings OpacityTime27List_HotSprings OpacityTime28List_HotSprings OpacityTime29List_HotSprings OpacityTime30List_HotSprings OpacityTime31List_HotSprings OpacityTime32List_HotSprings OpacityTime33List_HotSprings OpacityTime34List_HotSprings OpacityTime35List_HotSprings OpacityTime36List_HotSprings OpacityTime37List_HotSprings OpacityTime38List_HotSprings OpacityTime39List_HotSprings OpacityTime40List_HotSprings OpacityTime41List_HotSprings OpacityTime42List_HotSprings OpacityTime43List_HotSprings OpacityTime44List_HotSprings OpacityTime45List_HotSprings OpacityTime46List_HotSprings OpacityTime47List_HotSprings OpacityTime48List_HotSprings OpacityTime49List_HotSprings OpacityTime50List_HotSprings TsysTime1List_HotSprings TsysTime2List_HotSprings TsysTime3List_HotSprings TsysTime4List_HotSprings TsysTime5List_HotSprings TsysTime6List_HotSprings TsysTime7List_HotSprings TsysTime8List_HotSprings TsysTime9List_HotSprings TsysTime10List_HotSprings TsysTime11List_HotSprings TsysTime12List_HotSprings TsysTime13List_HotSprings TsysTime14List_HotSprings TsysTime15List_HotSprings TsysTime16List_HotSprings TsysTime17List_HotSprings TsysTime18List_HotSprings TsysTime19List_HotSprings TsysTime20List_HotSprings TsysTime21List_HotSprings TsysTime22List_HotSprings TsysTime23List_HotSprings TsysTime24List_HotSprings TsysTime25List_HotSprings TsysTime26List_HotSprings TsysTime27List_HotSprings TsysTime28List_HotSprings TsysTime29List_HotSprings TsysTime30List_HotSprings TsysTime31List_HotSprings TsysTime32List_HotSprings TsysTime33List_HotSprings TsysTime34List_HotSprings TsysTime35List_HotSprings TsysTime36List_HotSprings TsysTime37List_HotSprings TsysTime38List_HotSprings TsysTime39List_HotSprings TsysTime40List_HotSprings TsysTime41List_HotSprings TsysTime42List_HotSprings TsysTime43List_HotSprings TsysTime44List_HotSprings TsysTime45List_HotSprings TsysTime46List_HotSprings TsysTime47List_HotSprings TsysTime48List_HotSprings TsysTime49List_HotSprings TsysTime50List_HotSprings TatmTime1List_HotSprings TatmTime2List_HotSprings TatmTime3List_HotSprings TatmTime4List_HotSprings TatmTime5List_HotSprings TatmTime6List_HotSprings TatmTime7List_HotSprings TatmTime8List_HotSprings TatmTime9List_HotSprings TatmTime10List_HotSprings TatmTime11List_HotSprings TatmTime12List_HotSprings TatmTime13List_HotSprings TatmTime14List_HotSprings TatmTime15List_HotSprings TatmTime16List_HotSprings TatmTime17List_HotSprings TatmTime18List_HotSprings TatmTime19List_HotSprings TatmTime20List_HotSprings TatmTime21List_HotSprings TatmTime22List_HotSprings TatmTime23List_HotSprings TatmTime24List_HotSprings TatmTime25List_HotSprings TatmTime26List_HotSprings TatmTime27List_HotSprings TatmTime28List_HotSprings TatmTime29List_HotSprings TatmTime30List_HotSprings TatmTime31List_HotSprings TatmTime32List_HotSprings TatmTime33List_HotSprings TatmTime34List_HotSprings TatmTime35List_HotSprings TatmTime36List_HotSprings TatmTime37List_HotSprings TatmTime38List_HotSprings TatmTime39List_HotSprings TatmTime40List_HotSprings TatmTime41List_HotSprings TatmTime42List_HotSprings TatmTime43List_HotSprings TatmTime44List_HotSprings TatmTime45List_HotSprings TatmTime46List_HotSprings TatmTime47List_HotSprings TatmTime48List_HotSprings TatmTime49List_HotSprings TatmTime50List_HotSprings"
+# freqFileHeader on next line
+freqFileHeader = "timeListMJD OpacityTime2List_avrg OpacityTime3List_avrg OpacityTime4List_avrg OpacityTime5List_avrg OpacityTime6List_avrg OpacityTime7List_avrg OpacityTime8List_avrg OpacityTime9List_avrg OpacityTime10List_avrg OpacityTime11List_avrg OpacityTime12List_avrg OpacityTime13List_avrg OpacityTime14List_avrg OpacityTime15List_avrg OpacityTime16List_avrg OpacityTime17List_avrg OpacityTime18List_avrg OpacityTime19List_avrg OpacityTime20List_avrg OpacityTime21List_avrg OpacityTime22List_avrg OpacityTime23List_avrg OpacityTime24List_avrg OpacityTime25List_avrg OpacityTime26List_avrg OpacityTime27List_avrg OpacityTime28List_avrg OpacityTime29List_avrg OpacityTime30List_avrg OpacityTime31List_avrg OpacityTime32List_avrg OpacityTime33List_avrg OpacityTime34List_avrg OpacityTime35List_avrg OpacityTime36List_avrg OpacityTime37List_avrg OpacityTime38List_avrg OpacityTime39List_avrg OpacityTime40List_avrg OpacityTime41List_avrg OpacityTime42List_avrg OpacityTime43List_avrg OpacityTime44List_avrg OpacityTime45List_avrg OpacityTime46List_avrg OpacityTime47List_avrg OpacityTime48List_avrg OpacityTime49List_avrg OpacityTime50List_avrg OpacityTime51List_avrg OpacityTime52List_avrg OpacityTime54List_avrg OpacityTime56List_avrg OpacityTime58List_avrg OpacityTime60List_avrg OpacityTime62List_avrg OpacityTime64List_avrg OpacityTime66List_avrg OpacityTime68List_avrg OpacityTime70List_avrg OpacityTime72List_avrg OpacityTime74List_avrg OpacityTime76List_avrg OpacityTime78List_avrg OpacityTime80List_avrg OpacityTime82List_avrg OpacityTime84List_avrg OpacityTime86List_avrg OpacityTime88List_avrg OpacityTime90List_avrg OpacityTime92List_avrg OpacityTime94List_avrg OpacityTime96List_avrg OpacityTime98List_avrg OpacityTime100List_avrg OpacityTime102List_avrg OpacityTime104List_avrg OpacityTime106List_avrg OpacityTime108List_avrg OpacityTime110List_avrg OpacityTime112List_avrg OpacityTime114List_avrg OpacityTime116List_avrg OpacityTime118List_avrg OpacityTime120List_avrg TsysTime2List_avrg TsysTime3List_avrg TsysTime4List_avrg TsysTime5List_avrg TsysTime6List_avrg TsysTime7List_avrg TsysTime8List_avrg TsysTime9List_avrg TsysTime10List_avrg TsysTime11List_avrg TsysTime12List_avrg TsysTime13List_avrg TsysTime14List_avrg TsysTime15List_avrg TsysTime16List_avrg TsysTime17List_avrg TsysTime18List_avrg TsysTime19List_avrg TsysTime20List_avrg TsysTime21List_avrg TsysTime22List_avrg TsysTime23List_avrg TsysTime24List_avrg TsysTime25List_avrg TsysTime26List_avrg TsysTime27List_avrg TsysTime28List_avrg TsysTime29List_avrg TsysTime30List_avrg TsysTime31List_avrg TsysTime32List_avrg TsysTime33List_avrg TsysTime34List_avrg TsysTime35List_avrg TsysTime36List_avrg TsysTime37List_avrg TsysTime38List_avrg TsysTime39List_avrg TsysTime40List_avrg TsysTime41List_avrg TsysTime42List_avrg TsysTime43List_avrg TsysTime44List_avrg TsysTime45List_avrg TsysTime46List_avrg TsysTime47List_avrg TsysTime48List_avrg TsysTime49List_avrg TsysTime50List_avrg TsysTime51List_avrg TsysTime52List_avrg TsysTime54List_avrg TsysTime56List_avrg TsysTime58List_avrg TsysTime60List_avrg TsysTime62List_avrg TsysTime64List_avrg TsysTime66List_avrg TsysTime68List_avrg TsysTime70List_avrg TsysTime72List_avrg TsysTime74List_avrg TsysTime76List_avrg TsysTime78List_avrg TsysTime80List_avrg TsysTime82List_avrg TsysTime84List_avrg TsysTime86List_avrg TsysTime88List_avrg TsysTime90List_avrg TsysTime92List_avrg TsysTime94List_avrg TsysTime96List_avrg TsysTime98List_avrg TsysTime100List_avrg TsysTime102List_avrg TsysTime104List_avrg TsysTime106List_avrg TsysTime108List_avrg TsysTime110List_avrg TsysTime112List_avrg TsysTime114List_avrg TsysTime116List_avrg TsysTime118List_avrg TsysTime120List_avrg TatmTime2List_avrg TatmTime3List_avrg TatmTime4List_avrg TatmTime5List_avrg TatmTime6List_avrg TatmTime7List_avrg TatmTime8List_avrg TatmTime9List_avrg TatmTime10List_avrg TatmTime11List_avrg TatmTime12List_avrg TatmTime13List_avrg TatmTime14List_avrg TatmTime15List_avrg TatmTime16List_avrg TatmTime17List_avrg TatmTime18List_avrg TatmTime19List_avrg TatmTime20List_avrg TatmTime21List_avrg TatmTime22List_avrg TatmTime23List_avrg TatmTime24List_avrg TatmTime25List_avrg TatmTime26List_avrg TatmTime27List_avrg TatmTime28List_avrg TatmTime29List_avrg TatmTime30List_avrg TatmTime31List_avrg TatmTime32List_avrg TatmTime33List_avrg TatmTime34List_avrg TatmTime35List_avrg TatmTime36List_avrg TatmTime37List_avrg TatmTime38List_avrg TatmTime39List_avrg TatmTime40List_avrg TatmTime41List_avrg TatmTime42List_avrg TatmTime43List_avrg TatmTime44List_avrg TatmTime45List_avrg TatmTime46List_avrg TatmTime47List_avrg TatmTime48List_avrg TatmTime49List_avrg TatmTime50List_avrg TatmTime51List_avrg TatmTime52List_avrg TatmTime54List_avrg TatmTime56List_avrg TatmTime58List_avrg TatmTime60List_avrg TatmTime62List_avrg TatmTime64List_avrg TatmTime66List_avrg TatmTime68List_avrg TatmTime70List_avrg TatmTime72List_avrg TatmTime74List_avrg TatmTime76List_avrg TatmTime78List_avrg TatmTime80List_avrg TatmTime82List_avrg TatmTime84List_avrg TatmTime86List_avrg TatmTime88List_avrg TatmTime90List_avrg TatmTime92List_avrg TatmTime94List_avrg TatmTime96List_avrg TatmTime98List_avrg TatmTime100List_avrg TatmTime102List_avrg TatmTime104List_avrg TatmTime106List_avrg TatmTime108List_avrg TatmTime110List_avrg TatmTime112List_avrg TatmTime114List_avrg TatmTime116List_avrg TatmTime118List_avrg TatmTime120List_avrg"

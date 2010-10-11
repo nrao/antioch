@@ -1,0 +1,24 @@
+# examples:
+#     cd some temp directory
+#     <path to this directory>/fillyear my_weather_db 2006 28
+#     <path to this directory>/fillyear my_weather_db 2008 29
+
+year=$2
+jan='01-01 0 31'
+feb="02-01 0 $3"
+mar='03-01 0 31'
+apr='04-01 0 30'
+may='05-01 0 31'
+jun='06-01 0 30'
+jul='07-01 0 31'
+aug='08-01 0 31'
+sep='09-01 0 30'
+oct='10-01 0 31'
+nov='11-01 0 30'
+dec='12-01 0 31'
+
+for m in "${jan}" "${feb}" "${mar}" "${apr}" "${may}" "${jun}" "${jul}" "${aug}" "${sep}" "${oct}" "${nov}" "${dec}"
+do
+    python ../../cleoDBBackfill.py $1 ${year}-${m}
+    rm -fr Forecasts_* CleoDBImport_*
+done

@@ -19,7 +19,13 @@
 >           , test_LST2
 >           , test_LST3
 >           , test_LST3'
+>           , test_inTimeRange
 >           , test_overlie
+>           , test_within
+>           , test_periodInWindow
+>           , test_freq2ForecastIndex
+>           , test_freq2HistoryIndex
+>           , test_approximate
 >                  ]
 
 > test_dt2semester = TestCase $ do
@@ -44,7 +50,7 @@ dt = datetime(2006, 10, 15, 11)
 TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 
 > test_utc2lstHours = TestCase $ do
->   assertAlmostEqual "test_utc2lstHours_1" 11 1.90240073092 lst1
+>   assertEqual "test_utc2lstHours_1" 1.9024007260691838 lst1
 >   assertEqual "test_utc2lstHours_2" expLsts lsts
 >     where
 >   dt = fromGregorian 2006 10 15 11 0 0
@@ -52,14 +58,7 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >   start = fromGregorian 2006 10 16 0 0 0
 >   dts = [(i*60) `addMinutes'` start | i <- [0..23]]
 >   lsts = map (hrs2rad' . utc2lstHours') dts
->   expLsts = [5.315110951199158, 5.577627121975965, 5.840143292798607,
->              6.102659463575412, 8.19903271726322e-2, 0.34450649799528205,
->              0.6070226687720879, 0.8695388395488933, 1.1320550103715363,
->              1.3945711811483423, 1.6570873519251479, 1.9196035227477983,
->              2.1821196935246108, 2.444635864301424, 2.7071520351240674,
->              2.9696682059008657, 3.2321843766776714, 3.494700547500314,
->              3.7572167182771192, 4.019732889053926, 4.282249059876575,
->              4.544765230653381, 4.8072814014301875, 5.06979757225283]
+>   expLsts = [5.315110946351022,5.577627117127827,5.840143287950469,6.102659458727275,8.199032232449549e-2,0.3445064931471453,0.6070226639239512,0.8695388347007567,1.1320550055233998,1.3945711763002058,1.657087347077011,1.9196035178996615,2.182119688676474,2.4446358594532875,2.7071520302759304,2.9696682010527287,3.2321843718295353,3.4947005426521778,3.7572167134289827,4.01973288420579,4.282249055028439,4.544765225805245,4.8072813965820504,5.069797567404693]
 
 > test_LST1 = TestCase $ do
 >   mapM_ (runUtc2LstTest "test_LST1") times
@@ -105,16 +104,50 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >       ((00, 00, 08), (2006, 5, 5, 14, 26, 13))
 >       ]
 
+> test_LST3' = TestCase $ do
+>   mapM_ (runUtc2LstTest "test_LST3'") times
+>   mapM_ (runLst2UtcTest "test_LST3'" now) times
+>     where
+>   now = (2006, 5, 5, 22, 0, 0)
+>   times = [
+>       --   LST              UTC
+>       ((09, 35, 30), (2006, 5, 6, 00, 00, 01)),
+>       ((09, 35, 31), (2006, 5, 6, 00, 00, 02)),
+>       ((09, 35, 32), (2006, 5, 6, 00, 00, 03)),
+>       ((09, 35, 33), (2006, 5, 6, 00, 00, 03)),
+>       ((09, 35, 34), (2006, 5, 6, 00, 00, 04)),
+>       ((09, 35, 35), (2006, 5, 6, 00, 00, 05)),
+>       ((09, 35, 36), (2006, 5, 6, 00, 00, 06)),
+>       ((09, 35, 37), (2006, 5, 6, 00, 00, 07))
+>       ]
+
+> test_inTimeRange = TestCase $ do
+>   assertEqual "test_inTimeRange_1"  False (inTimeRange dt1 start dur)
+>   assertEqual "test_inTimeRange_2"  True  (inTimeRange dt2 start dur)
+>   assertEqual "test_inTimeRange_3"  True  (inTimeRange dt3 start dur)
+>   assertEqual "test_inTimeRange_4"  False (inTimeRange dt4 start dur)
+>   assertEqual "test_inTimeRange_5"  False (inTimeRange dt5 start dur)
+>     where
+>   start = fromGregorian 2006 6 1 12 0 0
+>   dur = 4*60
+>   dt1 = (-15) `addMinutes` start
+>   dt2 = start
+>   dt3 = (2*60) `addMinutes` start
+>   dt4 = dur `addMinutes` start
+>   dt5 = (dur+15) `addMinutes` start
+
 > test_overlie = TestCase $ do
->   assertEqual "test_overlie_1" True  (overlie dt1 dur1 p1)
->   assertEqual "test_overlie_2" True  (overlie dt1 dur2 p1)
->   assertEqual "test_overlie_3" True  (overlie dt1 dur1 p2)
->   assertEqual "test_overlie_4" False (overlie dt2 dur1 p1)
->   assertEqual "test_overlie_5" False (overlie dt3 dur1 p1)
->   assertEqual "test_overlie_6" True  (overlie dt3 dur2 p1)
->   assertEqual "test_overlie_7" True  (overlie dt4 dur1 p2)
->   assertEqual "test_overlie_8" True  (overlie dt4 dur2 p2)
->   assertEqual "test_overlie_9" False (overlie dt2 dur2 p1)
+>   assertEqual "test_overlie_1"  True  (overlie dt1 dur1 p1)
+>   assertEqual "test_overlie_2"  True  (overlie dt1 dur2 p1)
+>   assertEqual "test_overlie_3"  True  (overlie dt1 dur1 p2)
+>   assertEqual "test_overlie_4"  False (overlie dt2 dur1 p1)
+>   assertEqual "test_overlie_5"  False (overlie dt3 dur1 p1)
+>   assertEqual "test_overlie_6"  True  (overlie dt3 dur2 p1)
+>   assertEqual "test_overlie_7"  True  (overlie dt4 dur1 p2)
+>   assertEqual "test_overlie_8"  True  (overlie dt4 dur2 p2)
+>   assertEqual "test_overlie_9"  False (overlie dt2 dur2 p1)
+>   assertEqual "test_overlie_10" False (overlie dt5 dur1 p1)
+>   assertEqual "test_overlie_11" True  (overlie dt5 dur1 p2)
 >     where
 >   dt1 = fromGregorian 2006 6 1 12 0 0
 >   dur1 = 4*60
@@ -124,6 +157,47 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >   dt2 = fromGregorian 2006 6 1 20 0 0
 >   dt3 = fromGregorian 2006 6 1 8 0 0
 >   dt4 = fromGregorian 2006 6 1 13 0 0
+>   dt5 = fromGregorian 2006 6 1 16 0 0
+
+> test_within = TestCase $ do
+>   assertEqual "test_within_1"  True  (within dt1 dur1 p1)
+>   assertEqual "test_within_2"  True  (within dt1 dur2 p1)
+>   assertEqual "test_within_3"  False (within dt1 dur1 p2)
+>   assertEqual "test_within_4"  False (within dt2 dur1 p1)
+>   assertEqual "test_within_5"  False (within dt3 dur1 p1)
+>   assertEqual "test_within_6"  False (within dt3 dur2 p1)
+>   assertEqual "test_within_7"  False (within dt4 dur1 p2)
+>   assertEqual "test_within_8"  False (within dt4 dur2 p2)
+>   assertEqual "test_within_9"  False (within dt2 dur2 p1)
+>   assertEqual "test_within_10" False (within dt5 dur1 p1)
+>   assertEqual "test_within_11" False (within dt5 dur1 p2)
+>   assertEqual "test_within_12" True  (within dt3 dur3 p1)
+>   assertEqual "test_within_13" True  (within dt3 dur3 p2)
+>     where
+>   dt1 = fromGregorian 2006 6 1 12 0 0
+>   dur1 = 4*60
+>   p1 = defaultPeriod {startTime = dt1, duration = dur1}
+>   dur2 = 6*60
+>   dur3 = 10*60
+>   p2 = defaultPeriod {startTime = dt1, duration = dur2}
+>   dt2 = fromGregorian 2006 6 1 20 0 0
+>   dt3 = fromGregorian 2006 6 1 8 0 0
+>   dt4 = fromGregorian 2006 6 1 13 0 0
+>   dt5 = fromGregorian 2006 6 1 16 0 0
+
+> test_periodInWindow = TestCase $ do
+>   assertEqual "test_periodInWindow_1"  True  (periodInWindow p1 w)
+>   assertEqual "test_periodInWindow_2"  True  (periodInWindow p2 w)
+>   assertEqual "test_periodInWindow_3"  False (periodInWindow p3 w)
+>   assertEqual "test_periodInWindow_4"  False (periodInWindow p4 w)
+>   assertEqual "test_periodInWindow_5"  True  (periodInWindow p5 w)
+>     where
+>   w = defaultWindow { wDuration = 6*60 }
+>   p1 = defaultPeriod {duration = 6*60-1}
+>   p2 = defaultPeriod {duration = 6*60}
+>   p3 = defaultPeriod {duration = 6*60+1}
+>   p4 = defaultPeriod {startTime = (-1) `addMinutes` defaultStartTime, duration = 6*60+1}
+>   p5 = defaultPeriod {startTime = (1) `addMinutes` defaultStartTime, duration = 6*60-1}
 
 > test_LST3 = TestCase $ do
 >   mapM_ (runUtc2LstTest "test_LST3") times
@@ -144,22 +218,74 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >       ((09, 35, 29), (2006, 5, 5, 23, 59, 59))
 >       ]
 
-> test_LST3' = TestCase $ do
->   mapM_ (runUtc2LstTest "test_LST3'") times
->   mapM_ (runLst2UtcTest "test_LST3'" now) times
->     where
->   now = (2006, 5, 5, 22, 0, 0)
->   times = [
->       --   LST              UTC
->       ((09, 35, 30), (2006, 5, 6, 00, 00, 01)),
->       ((09, 35, 31), (2006, 5, 6, 00, 00, 02)),
->       ((09, 35, 32), (2006, 5, 6, 00, 00, 03)),
->       ((09, 35, 33), (2006, 5, 6, 00, 00, 03)),
->       ((09, 35, 34), (2006, 5, 6, 00, 00, 04)),
->       ((09, 35, 35), (2006, 5, 6, 00, 00, 05)),
->       ((09, 35, 36), (2006, 5, 6, 00, 00, 06)),
->       ((09, 35, 37), (2006, 5, 6, 00, 00, 07))
->       ]
+> test_freq2ForecastIndex = TestCase $ do
+>   -- freq2ForecastIndex'
+>   assertEqual "test_freq2ForecastIndex 1" 120  (freq2ForecastIndex' 140.0)
+>   assertEqual "test_freq2ForecastIndex 2" 2    (freq2ForecastIndex' 1.0)
+>   assertEqual "test_freq2ForecastIndex 3" 2    (freq2ForecastIndex' 0.4)
+>   assertEqual "test_freq2ForecastIndex 4" 5    (freq2ForecastIndex' 5.2)
+>   assertEqual "test_freq2ForecastIndex 5" 6    (freq2ForecastIndex' 5.5)
+>   -- freq2ForecastIndex
+>   assertEqual "test_freq2ForecastIndex 6" 120  (freq2ForecastIndex 140.0)
+>   assertEqual "test_freq2ForecastIndex 7" 2    (freq2ForecastIndex 1.0)
+>   assertEqual "test_freq2ForecastIndex 8" 2    (freq2ForecastIndex 0.4)
+>   assertEqual "test_freq2ForecastIndex 9" 5    (freq2ForecastIndex 5.2)
+>   assertEqual "test_freq2ForecastIndex 10" 6   (freq2ForecastIndex 5.5)
+>   assertEqual "test_freq2ForecastIndex 11" 52  (freq2ForecastIndex 52.3)
+>   assertEqual "test_freq2ForecastIndex 12" 58  (freq2ForecastIndex 57.1)
+>   assertEqual "test_freq2ForecastIndex 13" 120 (freq2ForecastIndex 140.0)
+
+> test_freq2HistoryIndex = TestCase $ do
+>   assertEqual "test_freq2HistoryIndex_1" 40000    (freq2HistoryIndex Rcvr26_40 52.0)
+>   assertEqual "test_freqHistory2Index_2" 100      (freq2HistoryIndex Rcvr_RRI 0.0)
+>   assertEqual "test_freqHistory2Index_3" 700      (freq2HistoryIndex Rcvr_600 0.65)
+>   assertEqual "test_freqHistory2Index_4" 900      (freq2HistoryIndex Rcvr_1070 0.85)
+>   assertEqual "test_freq2HistoryIndex_5" 1000     (freq2HistoryIndex Rcvr_1070 1.24)
+>   assertEqual "test_freq2HistoryIndex_6" 100      (freq2HistoryIndex Rcvr_RRI 0.02)
+>   assertEqual "test_freq2HistoryIndex_7" 5000     (freq2HistoryIndex Rcvr4_6 5.23)
+>   assertEqual "test_freq2HistoryIndex_8" 6000     (freq2HistoryIndex Rcvr4_6 5.5)
+>   assertEqual "test_freq2HistoryIndex_9" 50000    (freq2HistoryIndex Rcvr40_52 52.3)
+>   assertEqual "test_freq2HistoryIndex_10" 50000   (freq2HistoryIndex Rcvr40_52 57.1)
+>   assertEqual "test_freq2HistoryIndex_11" 100000  (freq2HistoryIndex Rcvr_PAR 101.5)
+
+> test_approximate = TestCase $ do
+>     let ys = [4, 8, 11, 15, 16]
+>     assertEqual "test_approximate 1"   4  (approximate closest  2 ys)
+>     assertEqual "test_approximate 2"   4  (approximate closest  4 ys)
+>     assertEqual "test_approximate 3"   4  (approximate closest  5 ys)
+>     assertEqual "test_approximate 4"   8  (approximate closest  6 ys)
+>     assertEqual "test_approximate 5"   8  (approximate closest  7 ys)
+>     assertEqual "test_approximate 6"   8  (approximate closest  8 ys)
+>     assertEqual "test_approximate 7"   8  (approximate closest  9 ys)
+>     assertEqual "test_approximate 8"  11  (approximate closest 10 ys)
+>     assertEqual "test_approximate 9"  11  (approximate closest 11 ys)
+>     assertEqual "test_approximate 10" 11  (approximate closest 12 ys)
+>     assertEqual "test_approximate 11" 16  (approximate closest 16 ys)
+>     assertEqual "test_approximate 12" 16  (approximate closest 17 ys)
+>     assertEqual "test_approximate 13"  4  (approximate lowest  2 ys)
+>     assertEqual "test_approximate 14"  4  (approximate lowest  4 ys)
+>     assertEqual "test_approximate 15"  4  (approximate lowest  5 ys)
+>     assertEqual "test_approximate 16"  4  (approximate lowest  6 ys)
+>     assertEqual "test_approximate 17"  4  (approximate lowest  7 ys)
+>     assertEqual "test_approximate 18"  8  (approximate lowest  8 ys)
+>     assertEqual "test_approximate 19"  8  (approximate lowest  9 ys)
+>     assertEqual "test_approximate 20"  8  (approximate lowest 10 ys)
+>     assertEqual "test_approximate 21" 11  (approximate lowest 11 ys)
+>     assertEqual "test_approximate 22" 11  (approximate lowest 12 ys)
+>     assertEqual "test_approximate 23" 16  (approximate lowest 16 ys)
+>     assertEqual "test_approximate 24" 16  (approximate lowest 17 ys)
+>     assertEqual "test_approximate 25"  4  (approximate highest  2 ys)
+>     assertEqual "test_approximate 26"  4  (approximate highest  4 ys)
+>     assertEqual "test_approximate 27"  8  (approximate highest  5 ys)
+>     assertEqual "test_approximate 28"  8  (approximate highest  6 ys)
+>     assertEqual "test_approximate 29"  8  (approximate highest  7 ys)
+>     assertEqual "test_approximate 30"  8  (approximate highest  8 ys)
+>     assertEqual "test_approximate 31" 11  (approximate highest  9 ys)
+>     assertEqual "test_approximate 32" 11  (approximate highest 10 ys)
+>     assertEqual "test_approximate 33" 11  (approximate highest 11 ys)
+>     assertEqual "test_approximate 34" 15  (approximate highest 12 ys)
+>     assertEqual "test_approximate 35" 16  (approximate highest 16 ys)
+>     assertEqual "test_approximate 36" 16  (approximate highest 17 ys)
 
 Utilities
 

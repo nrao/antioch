@@ -1,8 +1,8 @@
-> module Antioch.SimulationTests where
+> module Antioch.FilterTests where
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather
+> --import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.PProjects
 > --import Antioch.Schedule
@@ -50,12 +50,12 @@
 
 > test_sim_timeLeft = TestCase $ do
 >   -- dt1 => 09B, dt* => 09A
->   assertEqual "test_timeLeft_1" False (hasTimeSchedulable dt1 s1)
->   assertEqual "test_timeLeft_2" True  (hasTimeSchedulable dt1 s2)
->   assertEqual "test_timeLeft_3" True  (hasTimeSchedulable dt1 s3)
->   assertEqual "test_timeLeft_4" False (hasTimeSchedulable dt1 s4)
->   assertEqual "test_timeLeft_5" False (hasTimeSchedulable dt2 s6)
->   assertEqual "test_timeLeft_6" True  (hasTimeSchedulable dt1 s6)
+>   assertEqual "test_timeLeft_1" False (hasTimeSchedulable dt1 undefined s1)
+>   assertEqual "test_timeLeft_2" True  (hasTimeSchedulable dt1 undefined s2)
+>   assertEqual "test_timeLeft_3" False  (hasTimeSchedulable dt1 undefined s3)
+>   assertEqual "test_timeLeft_4" False (hasTimeSchedulable dt1 undefined s4)
+>   assertEqual "test_timeLeft_5" True (hasTimeSchedulable dt2 undefined s6)
+>   assertEqual "test_timeLeft_6" True  (hasTimeSchedulable dt1 undefined s6)
 >     where
 >       -- vanilla test
 >       dt1 = fromGregorian 2009 6 2 0 0 0 -- 09B
@@ -97,30 +97,30 @@
 
 > test_schedulableSessions = TestCase $ do
 >     let s = findPSessionByName "GB"
->     assertEqual "test_schedulableSessions 1" True (isTypeOpen dt s)
+>     assertEqual "test_schedulableSessions 1" True (isTypeOpen dt undefined s)
 >     let ts = s {sType = Fixed}
->     assertEqual "test_schedulableSessions 2" False (isTypeOpen dt ts)
+>     assertEqual "test_schedulableSessions 2" False (isTypeOpen dt undefined ts)
 >     let s = findPSessionByName "LP"
 >     let ts = s {sAllottedT = 10*60, sAllottedS = 10*60}
->     assertEqual "test_schedulableSessions 3" True (hasTimeSchedulable dt ts)
+>     assertEqual "test_schedulableSessions 3" True (hasTimeSchedulable dt undefined ts)
 >     let ts = s {sAllottedT = 9*60, sAllottedS = 9*60}
->     assertEqual "test_schedulableSessions 4" False (hasTimeSchedulable dt ts)
+>     assertEqual "test_schedulableSessions 4" False (hasTimeSchedulable dt undefined ts)
 >     let s = findPSessionByName "GB"
->     assertEqual "test_schedulableSessions 5" True (isSchedulableSemester dt s)
->     assertEqual "test_schedulableSessions 6" False (isSchedulableSemester early s)
->     assertEqual "test_schedulableSessions 7" True (isSchedulableSemester late s)
+>     assertEqual "test_schedulableSessions 5" True (isSchedulableSemester dt undefined s)
+>     assertEqual "test_schedulableSessions 6" False (isSchedulableSemester early undefined s)
+>     assertEqual "test_schedulableSessions 7" True (isSchedulableSemester late undefined s)
 >     let s = findPSessionByName "TX"
->     assertEqual "test_schedulableSessions 8" True (isApproved dt s)
+>     assertEqual "test_schedulableSessions 8" True (isApproved dt undefined s)
 >     let ts = s {enabled = False}
->     assertEqual "test_schedulableSessions 9" False (isApproved dt ts)
+>     assertEqual "test_schedulableSessions 9" False (isApproved dt undefined ts)
 >     let ts = s {authorized = False}
->     assertEqual "test_schedulableSessions 10" False (isApproved dt ts)
+>     assertEqual "test_schedulableSessions 10" False (isApproved dt undefined ts)
 >     let s = findPSessionByName "CV"
->     assertEqual "test_schedulableSessions 11" True (hasObservers dt s)
+>     assertEqual "test_schedulableSessions 11" True (hasObservers dt undefined s)
 >     let ts = s {project = defaultProject {observers = []}}
->     assertEqual "test_schedulableSessions 12" False (hasObservers dt ts)
+>     assertEqual "test_schedulableSessions 12" False (hasObservers dt undefined ts)
 >     assertEqual "test_schedulableSessions 13" 10 (length ss)
->     let sss = scoringSessions dt ss
+>     let sss = scoringSessions dt undefined ss
 >     assertEqual "test_schedulableSessions 14" 10 (length sss)
 >     --print . length $ sss
 >   where
@@ -135,7 +135,7 @@
 >     let s' = clearWindowedTimeBilled s
 >     -- because pDuration is not checked in session equivalence
 >     assertEqual "test_clearWindowedTimeBilled 1" s s'
->     assertEqual "test_clearWindowedTimeBilled 2" 180 (pDuration . fromJust . wPeriod . head . windows $ s)
+>     --assertEqual "test_clearWindowedTimeBilled 2" 180 (pDuration . fromJust . wPeriod . head . windows $ s)
 >     assertEqual "test_clearWindowedTimeBilled 3" 0 (pDuration . fromJust . wPeriod . head . windows $ s')
 >     -- should be nop
 >     let cv' = clearWindowedTimeBilled cv
@@ -144,15 +144,26 @@
 > test_isSchedulableType = TestCase $ do
 >     -- session is Open, who cares about windows?
 >     assertEqual "test_isSchedulableType 1" True  (isSchedulableType undefined undefined cv)
->     -- session is Windowed, but no windows inside the scheduling range
->     assertEqual "test_isSchedulableType 2" False (isSchedulableType dt (24*60) tw2)
->     -- session is Windowed with a window inside the scheduling range
->     assertEqual "test_isSchedulableType 3" True  (isSchedulableType dt (4*24*60) tw2)
+>     -- session is Windowed, has no windows inside the scheduling range
+>     -- but has a chosen period
+>     assertEqual "test_isSchedulableType 2" False (isSchedulableType dt1 (24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range,
+>     -- and has a chosen period
+>     assertEqual "test_isSchedulableType 3" False  (isSchedulableType dt1 (6*24*60) tw2)
 >     -- session is Windowed with a window inside the scheduling range,
 >     -- but with the window's period also in the scheduling range
->     assertEqual "test_isSchedulableType 4" False (isSchedulableType dt (8*24*60) tw2)
+>     -- and has a chosen period
+>     assertEqual "test_isSchedulableType 4" False (isSchedulableType dt1 (8*24*60) tw2)
+>     -- session is Windowed, but no windows inside the scheduling range
+>     assertEqual "test_isSchedulableType 5" False (isSchedulableType dt2 (2*24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range
+>     assertEqual "test_isSchedulableType 6" True  (isSchedulableType dt2 (5*24*60) tw2)
+>     -- session is Windowed with a window inside the scheduling range,
+>     -- but with the window's period also in the scheduling range
+>     assertEqual "test_isSchedulableType 7" False (isSchedulableType dt2 (9*24*60) tw2)
 >       where
->         dt = fromGregorian 2006 10 13  0 0 0
+>         dt1 = fromGregorian 2006 10 13  0 0 0
+>         dt2 = fromGregorian 2006  9 20  0 0 0
 
 Test Utilities:
 

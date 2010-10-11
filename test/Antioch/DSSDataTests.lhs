@@ -2,10 +2,11 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather (getWeather)
+> import Antioch.Weather (getWeatherTest)
 > import Antioch.Score
 > import Antioch.DSSData
 > import Antioch.Utilities
+> import Antioch.ReceiverTemperatures (getRT)
 > import Antioch.Generators (internalConflicts, internalConflicts', validRA, validDec)
 > import Maybe
 > import List (nub, sort)
@@ -30,6 +31,7 @@ connection to the DB correctly.
 >     , test_getProjectsProperties
 >     -- , test_putPeriods
 >     , test_makeSession
+>     -- , test_setPeriods
 >     -- , test_setPeriodScore
 >     , test_scoreDSSData
 >     , test_session2
@@ -102,7 +104,8 @@ Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
 
 > test_scoreDSSData = TestCase $ do
->     w <- getWeather . Just $ starttime 
+>     w <- getWeatherTest . Just $ starttime 
+>     rt <- getRT
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
 >     let sess' = fromJust . find (\s -> (sType s) == Open) $ ss
@@ -110,7 +113,7 @@ session scores zero through out a 24 hr period.
 >     let p' = project sess'
 >     let p = p' { observers = [defaultObserver] }
 >     let sess = sess' { project = p }
->     let score' w dt = runScoring w [] $ do
+>     let score' w dt = runScoring w [] rt $ do
 >         fs <- genScore starttime ss 
 >         s <- fs dt sess
 >         return $ eval s
@@ -125,7 +128,8 @@ How a session scores can also reveal errors in how it was imported
 from the database.
 
 > test_session_scores = TestCase $ do
->     w <- getWeather $ Just start
+>     w <- getWeatherTest $ Just start
+>     rt <- getRT
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
 >     -- get the session and give it an observer
@@ -133,7 +137,7 @@ from the database.
 >     let p' = project s'
 >     let p = p' { observers = [defaultObserver] }
 >     let s = s' { project = p }
->     let score' w dt = runScoring w [] $ do
+>     let score' w dt = runScoring w [] rt $ do
 >         fs <- genScore start ss 
 >         sf <- fs dt s
 >         return $ eval sf
@@ -143,7 +147,7 @@ from the database.
 >       name = "GBT09B-010-02"
 >       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [4.8970695,5.6242566,6.2726855,7.2982635,7.3224306,7.3224306,7.3597226,7.3597226,7.3597226,7.3597226,7.3869443,7.3651834,7.342054,7.317443,7.3142033,7.2867956,7.2259903]
+>       expScores = [6.240864,6.2606325,6.299751,6.382004,6.3978586,6.3978586,6.4384303,6.4384303,6.4384303,6.4384303,6.459629,6.4459248,6.4313345,6.415765,6.4129176,6.3954983,6.3567185]
 
 Test a specific session's attributes:
 

@@ -4,11 +4,15 @@
 
 Databases:
 
-> weatherDB :: String
-> weatherDB = "weather_unit_tests"      --MODIFY--
+> weatherDB, weatherUnitTestDB :: String
+> -- used for unit tests
+> weatherUnitTestDB = "weather_unit_tests_bigbox"
+> -- used for EVERYTHING else
+> weatherDB = "weather_bigbox"      --MODIFY--
 
-> hardwareScheduleDB = "dss_unit_tests" --MODIFY--
-> dssDataDB          = "dss_unit_tests" --MODIFY--
+> -- used for everything
+> hardwareScheduleDB = "dss_unit_tests_bigbox" --MODIFY--
+> dssDataDB          = "dss_unit_tests_bigbox" --MODIFY--
 
 Ports:
 

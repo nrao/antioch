@@ -36,6 +36,7 @@
 > import Antioch.Types
 > import Antioch.Utilities                     (readMinutes)
 > import Antioch.Weather                       (getWeather, Weather)
+> import Antioch.ReceiverTemperatures
 
 > getScoresHandler :: Connection -> Handler()
 > getScoresHandler cnn = hMethodRouter [
@@ -61,12 +62,13 @@
 >
 >     -- get target session, and scoring sessions
 >     projs <- liftIO getProjects
->     let ss = scoringSessions dt . concatMap sessions $ projs
+>     let ss = scoringSessions dt undefined . concatMap sessions $ projs
 >     let s = getSessionFromPeriod id cnn 
 >
 >     w <- liftIO $ getWeather Nothing
+>     rt <- liftIO $ getReceiverTemperatures
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
->     scores <- liftIO $ mapM (scoreAt w rs ss s) dts
+>     scores <- liftIO $ mapM (scoreAt w rs rt ss s) dts
 >     liftIO $ print scores
 >     let pscores = toPScores id startStr scores
 >     jsonHandler $ makeObj [("pscores", showJSON pscores)]
@@ -78,10 +80,10 @@
 >       , sScores     = Just scs
 >     }
 
-> scoreAt :: Weather -> ReceiverSchedule -> [Session] -> IO Session -> DateTime -> IO Score
-> scoreAt w rs ss s dt = do
+> scoreAt :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Session] -> IO Session -> DateTime -> IO Score
+> scoreAt w rs rt ss s dt = do
 >     s' <- liftIO s
->     fs <- runScoring w rs $ genScore dt ss >>= \f -> f dt s'
+>     fs <- runScoring w rs rt $ genScore dt ss >>= \f -> f dt s'
 >     return . eval  $ fs
 
 > data JScores = JScores {

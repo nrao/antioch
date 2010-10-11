@@ -7,31 +7,50 @@
 > import Antioch.Reports
 > import Antioch.Simulate
 > import Antioch.DateTime
-> --import Antioch.Generators
 > import Antioch.GenerateSchedule
+> import Antioch.Generators
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    
 > import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Debug
 > import Control.Monad.Writer
 > import Data.List
-> import Data.Maybe           (fromMaybe, mapMaybe, isJust, fromJust)
+> import Data.Maybe
 > import System.CPUTime
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
 
-> runSim start days filepath = runSimulation Pack filepath (statsPlotsToFile filepath "") start days "" False True
+Shortcut to runSimulation:
 
-> runSimulation :: StrategyName -> String -> [[Session] -> [Period] -> [Trace] -> IO ()] -> DateTime -> Int -> String -> Bool -> Bool -> IO ()
-> runSimulation strategyName outdir sps dt days name simInput quiet = do
+> runSim start days filepath = runSimulation Pack start days False 100 0 0 2000 filepath "" False True False
+
+This high-level function sets up all the input (sessions, periods, etc.), 
+passes it to simulateDailySchedule, and processes the output (ex: reports and plots are generated). 
+
+   * strategyName: one of Pack, MinimumDuration ... 
+   * outdir: where the plots and text report go
+   * dt: starting datetime
+   * days: num days of simulation
+   * maint: generate maintenance sessions
+   * open: per cent open sessions
+   * fixed: per cent fixed sessions
+   * windowed: per cent windowed sessions
+   * backlog: hours of backlog sessions
+   * name: name of simulation (a label in report and plots)
+   * simInput: use real projs from DB, or simulated?
+   * quiet: sssh!
+   * test: if this is a test, use weatherTestDB
+
+> runSimulation :: StrategyName -> DateTime -> Int -> Bool -> Int -> Int -> Int -> Int -> String -> String -> Bool -> Bool -> Bool -> IO ()
+> runSimulation strategyName dt days maint open fixed windowed backlog outdir name simInput quiet test = do
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
->     w <- getWeather Nothing
->     (rs, ss, projs, history') <- if simInput then simulatedInput dt days else dbInput dt
+>     (rs, ss, projs, history') <- if simInput then simulatedInput dt days maint open fixed windowed backlog else dbInput dt
 >     let rs = [] -- TBF
->     --print . show $ rs
+>     -- print . show $ rs
 >     -- print . show $ ss
 >     -- print . show $ projs
 >     -- print . show $ history'
@@ -41,15 +60,21 @@
 >     printList history
 >     let total = sum $ map sAllottedT ss
 >     print ("total session time (mins): ", total, total `div` 60)
+>     let wss = filter typeWindowed ss
+>     let badWinSessions = filter (not . validSimulatedWindows) wss
+>     if (length badWinSessions == 0) then print "Simulated Windows OK" else do
+>       print "Invalid Windows Detected; exiting simulation."
+>       return ()
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
->     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet [] []
+>     let quiet = True
+>     (results, trace) <- simulateDailySchedule rs dt 2 days history ss quiet test [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
->     createPlotsAndReports sps name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet 
+>     createPlotsAndReports name outdir now execTime dt days (show strategyName) ss results trace simInput rs history quiet test 
 >     -- new schedule to DB; only write the new periods
 >     --putPeriods $ results \\ history
 
@@ -81,28 +106,38 @@ Get everything we need from the Database.
 >     return $ (rs, ss, projs, history)
 
 Get everything we need from the simulated input (Generators).
-WARNING: the ratio of the amount of session time requested to the
-simulation time range is important.  The generators will try to create 
-a random fixed and windowed schedule that satisfies a percentage of the
-session time requested all within the sim. time range.
-For examples:
-genSimTime 500 dt 10 : won't work, too many hours of pre-scheduled periods
-                       to cram into those 10 days.
-genSimTime 150 dt 10 : less pre-scheduled periods can fit in 10 days.
+Note how genSimTime works: here you specify lots of things about the input.
+
+NOTE: the last parameter to genSimTime is the hours of backlog, which you may want
+to change depending on how long the simulation is running.
 
 NOTE: The old simulations ran for 365 days using 255 projects, which came 
 out to be about 10,000 hours.
 
-> simulatedInput :: DateTime -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput start days = return $ (rs, ss, projs, history)
+> simulatedInput :: DateTime -> Int -> Bool -> Int -> Int -> Int -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
+> simulatedInput start days maint open fixed windowed backlog = return $ (rs, ss, projs, history)
 >   where
 >     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
 >     g = mkStdGen 1
->     projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 1.5 
+>     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
+>     pc2frac i = (fromIntegral i) / 100.0
+>     projs = generate 0 g $ genSimTime start days maint (pc2frac open, pc2frac fixed, pc2frac windowed) backlog 
+>     --projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
+>     --projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 2000 
 >     --projs = generate 0 g $ genProjects 255
 >     ss' = concatMap sessions projs
->     ss  = zipWith (\s n -> s {sId = n}) ss' [0..]
+>     -- assign Id's to the open sessions
+>     maxId = maximum $ map sId ss'
+>     ss  = (filter (not . typeOpen) ss') ++ (zipWith (\s n -> s {sId = n}) (filter typeOpen ss') [(maxId+1)..])
 >     history = sort $ concatMap periods ss 
 
-
-
+> runDailyEfficiencies :: DateTime -> Int -> Bool -> IO [()]
+> runDailyEfficiencies dt days simInput = do
+>     w <- getWeather Nothing
+>     let g = mkStdGen 1
+>     -- make number of projects independent of number of days
+>     let projs = generate 0 g $ genProjects 255
+>     let ss = concatMap sessions projs
+>     print $ "Session Hours: " ++ (show $ sum (map sAllottedS ss))
+>     print "Plotting daily mean efficiencies:"
+>     plotEfficienciesByTime w ss dt days

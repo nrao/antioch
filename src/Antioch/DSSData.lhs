@@ -74,12 +74,12 @@ TBF: currently no observer black out date tables
 TBF: We currently cannot link info in the DSS database to the id's used in the
 BOS web services to retrieve reservation dates.
 
-TBF: Beware original_id, pst_id, username, and contact_instructions
+TBF: Beware original_id, pst_id,  and contact_instructions
 in the User table can be null.
 
 > getProjectObservers :: Int -> Connection -> IO [Observer]
 > getProjectObservers projId cnn = handleSqlError $ do
->     -- 0. Get basic info on observers: username, pst id, sanctioned
+>     -- 0. Get basic info on observers: pst id, sanctioned
 >     observers' <- getObservers projId cnn
 >     -- 1. Use these to lookup the needed info from the BOS web service.
 >     -- 1. Use these to lookup the needed info from the DSS database
@@ -98,16 +98,17 @@ Sets the basic Observer Data Structure info
 >   return $ toObserverList result 
 >     where
 >       xs = [toSql projId]
->       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.username, u.pst_id FROM investigators AS inv, users AS u WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
+>       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id FROM investigators AS inv, users AS u WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
 >       toObserverList = map toObserver
->       toObserver (id:first:last:sanc:uname:pid:[]) = 
+>       toObserver (id:first:last:sanc:pid:[]) = 
 >         defaultObserver 
 >           { oId = fromSql id
 >           , firstName = fromSql first
 >           , lastName = fromSql last
 >           , sanctioned = fromSql sanc
->           , username = fromSqlUserName uname
 >           , pstId = fromSqlInt pid }
+
+TBF: use this if we need to pull username from PST mirror, if ever.
 
 > fromSqlUserName :: SqlValue -> String
 > fromSqlUserName SqlNull = ""
@@ -248,10 +249,10 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, stype.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS stype, observing_types AS otype WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = stype.id AND s.observing_type_id = otype.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?;"
+>       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, stype.type, otype.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS stype, observing_types AS otype WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = stype.id AND s.observing_type_id = otype.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?;"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:oty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -272,6 +273,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , band = deriveBand $ fromSql freq
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
+>           , oType = toObservingType oty
 >         }
 
 > getSessionFromPeriod :: Int -> Connection -> IO Session
@@ -387,6 +389,11 @@ TBF: is this totaly legit?  and should it be somewhere else?
 > toSessionType val = read . toUpperFirst $ fromSql val
 >   where
 >     toUpperFirst x = [toUpper . head $ x] ++ tail x
+
+> toObservingType :: SqlValue -> ObservingType
+> toObservingType val = read . toUpperFirst $ fromSql val
+>   where
+>     toUpperFirst x = if x == "spectral line" then "SpectralLine" else [toUpper . head $ x] ++ tail x
 
 Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions
@@ -615,8 +622,8 @@ fetchPeriod is used in unit tests only.
 >   return ()
 
 Here we add a new period to the database.  
-Initialize the Period in the Pending state (state_id = 1)
-Since Antioch is creating it
+Initialize the Period in the Pending state (state_id = 1).
+Since Antioch is creating it,
 we will set the Period_Accounting.scheduled field
 and the associated receviers using the session's receivers.
 
@@ -687,7 +694,7 @@ You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
 >   result <- quickQuery' cnn pquery pxs 
 >   let periodId = fromSqlInt . head . head $ result
 >   -- search session's windows for first intersecting window
->   let window = find (\w -> overlie (wStart w) (wDuration w) p) (windows . session $ p)
+>   let window = find (periodInWindow p) (windows . session $ p)
 >   if window == Nothing then return ()
 >                        -- update window with the period_id
 >                        else updateWindow' cnn periodId (wId . fromJust $ window)

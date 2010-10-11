@@ -53,9 +53,14 @@ receiver which were collected on the given date and returns the means
 of the temperatures across all beams and polarizations, i.e., 
 [(frequency, temperature)]
 
-MUSTANG currently does not have calibrations, so fake a constant temperature
+Some receivers do not have calibrations, so fake a constant temperature
 
-> collectNewTemps cnn r chn dt = if (r == "Rcvr_PAR") then return $ [(80.0,120.0),(100.0,120.0)] else collectNewTemps' cnn r chn dt
+> collectNewTemps cnn r chn dt 
+>    | r == "Rcvr_PAR"   = return $ [(80.0,120.0),(100.0,120.0)] 
+>    | r == "Rcvr_RRI"   = return $ [(0.1,300.0),(1.6,300.0)] 
+>    | r == "Holography" = return $ [(11.7,1e6),(12.2,1e6)] 
+>    | otherwise = collectNewTemps' cnn r chn dt
+
 
 > -- collectNewTemps :: Database.HDBC.MySQL.Connection.Connection -> String -> String -> IO [(Double, Double)]
 > collectNewTemps' cnn r chn dt = do

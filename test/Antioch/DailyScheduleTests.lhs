@@ -2,17 +2,19 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather
+> import Antioch.Weather               (getWeatherTest)
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Score
-> import Antioch.Schedule
 > import Antioch.DailySchedule
+> import Antioch.Schedule
 > import Antioch.Filters
-> import Data.List (zipWith6, sort, find)
+> import Antioch.ReceiverTemperatures
+> import Data.List                     (zipWith6, sort, find)
 > import Data.Maybe
 > import Test.HUnit
 > import System.Random
+> import Control.Monad.Trans  (lift, liftIO) -- debug
 
 > tests = TestList [
 >       test_removeBuffer
@@ -20,7 +22,8 @@
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     , test_runDailySchedule_3
->     ]
+>     , test_crop_session
+>      ]
 
 > test_removeBuffer = TestCase $ do
 >   -- simplest case
@@ -62,20 +65,21 @@ Here do the simplest schedule you can handle: one giant period
 just make sure it gets cut off properly.
 
 > test_runDailySchedule_1 = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest Nothing
+>   rt <- getRT
 >   -- get one big period
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history [s]  
->   results <- runScoring w [] $ do
->       sf <- genScore dt . scoringSessions dt $ [s]
->       dailySchedule' sf Pack dt minutes history [s]  
+>   results <- runScoring w [] rt $ do
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
+>       dailySchedule' sf Pack dt minutes history [s]
 >   assertEqual "test_runDailySchedule_1_1" exp results
 >   -- nothing should get filtered out
 >   let filtered = removeBuffer start minutes results history
 >   assertEqual "test_runDailySchedule_1_2" exp filtered
 >   -- make sure you work around pre-scheduled ones
 >   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history2 [s]  
->   results <- runScoring w [] $ do 
->       sf <- genScore dt . scoringSessions dt $ [s]
+>   results <- runScoring w [] rt $ do 
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
 >       dailySchedule' sf Pack dt minutes history2 [s]  
 >   assertEqual "test_runDailySchedule_1_3" exp2 results
 >   -- last one should get filtered out
@@ -103,11 +107,12 @@ Now, make a number of shorter spaced out periods by
 adjusting max duration and time between.
 
 > test_runDailySchedule_2 = TestCase $ do
->   w <- getWeather Nothing
->   --sf <- genScore dt . scoringSessions dt $ [s]
+>   w <- getWeatherTest Nothing
+>   rt <- getRT
+>   --sf <- genScore dt . scoringSessions dt undefined $ [s]
 >   -- get a number of smaller periods
->   results <- runScoring w [] $ do 
->       sf <- genScore dt . scoringSessions dt $ [s]
+>   results <- runScoring w [] rt $ do 
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
 >       dailySchedule' sf Pack dt minutes history [s]  
 >   assertEqual "test_runDailySchedule_2_1" exp results
 >   -- some of these should now get removed
@@ -129,11 +134,12 @@ adjusting max duration and time between.
 >   exp2 = take 2 exp
 
 > test_runDailySchedule_3 = TestCase $ do
->   w <- getWeather Nothing
+>   w <- getWeatherTest . Just $ (-60) `addMinutes` dt
+>   rt <- getRT
 >   let ss = concatMap sessions pTestProjects
 >   let ps = concatMap periods ss
->   results <- runScoring w [] $ do
->       sf <- genScore dt . scoringSessions dt $ ss 
+>   results <- runScoring w [] rt $ do
+>       sf <- genScore dt . scoringSessions dt undefined $ ss 
 >       dailySchedule' sf Pack dt minutes ps ss
 >   assertEqual "test_runDailySchedule_3" p (head $ results)
 >     where
@@ -141,6 +147,13 @@ adjusting max duration and time between.
 >       days = 1
 >       minutes = (24*60*days)::Minutes
 >       p = (periods . findPSessionByName $ "TestWindowed2") !! 1
+
+> test_crop_session = TestCase $ do
+>     assertEqual "test_crop_session 1" (sAllottedT o) (sAllottedT . crop_session $ o)
+>     assertEqual "test_crop_session 2" (maxDuration w) (sAllottedT . crop_session $ w)
+>         where
+>             o = head  getOpenPSessions
+>             w = head getWindowedPSessions
 
 Utilities:
 
@@ -164,6 +177,7 @@ Utilities:
 >                         , minDuration = 2*60
 >                         , maxDuration = 100*60
 >                         , frequency = 2.0
+>                         , receivers = [[Rcvr1_2]]
 >                         , ra = 0.0 
 >                         , dec = 1.5 --1.2217 -- always up
 >                          }
