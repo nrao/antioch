@@ -110,7 +110,7 @@ because of dateSafe should they all not return the 2006 value?
 >   let dt  = fromGregorian 2006 1 1 1 0 0 
 >   w <- getWeatherTest $ Just now
 >   wind' <- wind w dt
->   assertEqual "test_dataFirstLine_wind" 5.840522 (fromMaybe 0.0 wind')
+>   assertEqual "test_dataFirstLine_wind" 4.5476837 (fromMaybe 0.0 wind')
 >   wind' <- gbt_wind w dt
 >   assertEqual "test_dataFirstLine_w2_wind" 6.57004 (fromMaybe 0.0 wind')
 >   
@@ -143,7 +143,7 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertEqual "test_data0_11Night_opacity" 1.5096413e-2 (fromMaybe 0.0 opacity')
 >   assertEqual "test_data0_11Night_tsys" 273.97748 (fromMaybe 0.0 tsys')
->   assertEqual "test_data0_11Night_wind"  1.2572011 (fromMaybe 0.0 wind')
+>   assertEqual "test_data0_11Night_wind"  1.2572 (fromMaybe 0.0 wind')
 >   assertEqual "test_data0_11Night_w2_wind" 1.5640465 (fromMaybe 0.0 w2_wind')
 
 BETA: TestTWeather.testData0_11Day - uses 2007 in date, but server converts this
@@ -160,7 +160,7 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertEqual "test_data0_11Day_opacity" 1.5868748e-2 (fromMaybe 0.0 opacity')
 >   assertEqual "test_data0_11Day_tsys" 273.97607 (fromMaybe 0.0 tsys')
->   assertEqual "test_data0_11Day_wind"  3.4955003 (fromMaybe 0.0 wind')
+>   assertEqual "test_data0_11Day_wind"  3.4955013 (fromMaybe 0.0 wind')
 >   assertEqual "test_data0_11Day_w2_wind"  3.146323 (fromMaybe 0.0 w2_wind')
 
 BETA: TestTWeather.testData36_47Night - uses 2007 in date, but server converts this
@@ -177,7 +177,7 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertEqual "test_data36_47Night_opacity" 0.22306535 (fromMaybe 0.0 opacity')
 >   assertEqual "test_data36_47Night_tsys" 277.59595 (fromMaybe 0.0 tsys')
->   assertEqual "test_data36_47Night_wind" 3.454303 (fromMaybe 0.0 wind')
+>   assertEqual "test_data36_47Night_wind" 3.4543138 (fromMaybe 0.0 wind')
 >   assertEqual "test_data36_47Night_w2_wind" 3.2963674 (fromMaybe 0.0 w2_wind')
 
 BETA: TestTWeather.testData36_47Day - uses 2007 in date, but server converts this
@@ -194,15 +194,15 @@ to 2006 date.
 >   tsys' <- tsys w dt freq
 >   assertEqual "test_data36_47Day_opacity" 2.7477108e-2 (fromMaybe 0.0 opacity')
 >   assertEqual "test_data36_47Day_tsys" 275.6452 (fromMaybe 0.0 tsys')
->   assertEqual "test_data36_47Day_wind" 4.5088205 (fromMaybe 0.0 wind')
+>   assertEqual "test_data36_47Day_wind" 4.5088153 (fromMaybe 0.0 wind')
 >   assertEqual "test_data36_47Day_w2_wind" 2.259703 (fromMaybe 0.0 w2_wind')
 
 > test_correctWindSpeed = TestCase $ do
->   assertEqual "test_correctWindSpeed night" 5.029251 (correctWindSpeed night 17.66975)
->   assertEqual "test_correctWindSpeed day" 6.041008 (correctWindSpeed day 16.19775)
+>   assertEqual "test_correctWindSpeed night" (Just 5.029251) (correctWindSpeed night 17.66975)
+>   assertEqual "test_correctWindSpeed day" (Just 6.041008) (correctWindSpeed day 16.19775)
 >     where
->       night = fromGregorian 2006 12 10 14 15 0 
->       day = fromGregorian 2006 12 10 14 30 0 
+>       night = fromGregorian 2006 12 10 10 15 0
+>       day = fromGregorian 2006 12 10 19 30 0
 
 > test_gbt_wind = TestCase $ do
 >   let now = fromGregorian 2006 6 1 8 0 0 
@@ -222,13 +222,13 @@ to 2006 date.
 >   let dt = fromGregorian 2006 6 1 9 0 0 
 >   w <- getWeatherTest $ Just now
 >   wind' <- wind w dt
->   assertEqual "test_wind_1"  1.2572011 (fromMaybe 0.0 wind')
+>   assertEqual "test_wind_1"  1.2572 (fromMaybe 0.0 wind')
 >   winds <- mapM (getWind w) (dts dt)
 >   assertEqual "test_wind_2"  exp winds
 >     where
 >       dts start = map (\q -> (q*15) `addMinutes'` start) [0..8]
 >       getWind w d = wind w d
->       exp = [Just 1.2572011,Just 1.2572011,Just 1.2332773,Just 1.2332773,Just 1.2332773,Just 1.2332773,Just 1.2409991,Just 1.2409991,Just 1.2409991]
+>       exp = [Just 1.2572,Just 1.2572,Just 1.2332773,Just 1.2332773,Just 1.2332773,Just 1.2332773,Just 1.240999,Just 1.240999,Just 1.240999]
 
 > print_weather_values = TestCase $ do
 >   mapM print_weather (dts start)
