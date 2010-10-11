@@ -90,7 +90,6 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     rs <- liftIO $ getReceiverSchedule $ Just dt
 >
 >     score <- liftIO $ scoreSession dt dur s sss w rs rt
->     liftIO $ print score
 >     jsonHandler $ makeObj [("score", showJSON score)]
 
 > scoresListToJSValue :: [(Int, Score)] -> JSValue
