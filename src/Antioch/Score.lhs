@@ -1082,10 +1082,13 @@ Need to translate a session's factors into the final product score.
 > weatherFactors s w dt = do
 >   wind' <- wind w dt
 >   wind'' <- wind_mph w dt
+>   irradiance' <- irradiance w dt
 >   opacity' <- opacity w dt freq
 >   tsys' <- tsys w dt freq 
 >   return [("wind_mph", wind''), ("wind_ms", wind')
->         , ("opacity", opacity'), ("tsys", tsys')]
+>         , ("irradiance", irradiance')
+>         , ("opacity", opacity'), ("tsys", tsys')
+>          ]
 >     where
 >   freq = frequency s
 
