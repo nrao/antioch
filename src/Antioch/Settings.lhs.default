@@ -6,13 +6,13 @@ Databases:
 
 > weatherDB, weatherUnitTestDB :: String
 > -- used for unit tests
-> weatherUnitTestDB = "weather_unit_tests_bigbox"
+> weatherUnitTestDB = "weather_unit_tests"
 > -- used for EVERYTHING else
-> weatherDB = "weather_bigbox"      --MODIFY--
+> weatherDB = "weather"      --MODIFY--
 
 > -- used for everything
-> hardwareScheduleDB = "dss_unit_tests_bigbox" --MODIFY--
-> dssDataDB          = "dss_unit_tests_bigbox" --MODIFY--
+> hardwareScheduleDB = "dss_unit_tests" --MODIFY--
+> dssDataDB          = "dss_unit_tests" --MODIFY--
 
 Ports:
 
