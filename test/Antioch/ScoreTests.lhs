@@ -1104,7 +1104,7 @@ Equation 16
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     rt <- getReceiverTemperatures
 >     factors <- scoreElements s w rt pSessions dt dur []
->     assertEqual "test_scoreElements 1" 30 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 31 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
