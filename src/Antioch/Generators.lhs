@@ -381,9 +381,11 @@ only schedule Periods of length minDuration.
 >     ss <- genSessions n
 >     return $ s : ss
 
-Assumes a single scalar rcvr group
+Assumes a single scalar rcvr group - avoid PF receivers
 
-> prop_Receiver s = (head . head . receivers $ s) == band2Receiver (band s)
+> prop_Receiver s = if (elem rcvr [NoiseSource .. Rcvr_1070]) then True else (rcvr == band2Receiver (band s))
+>   where
+>     rcvr = head . head . receivers $ s
 
 > prop_Ra s = 0.0 <= ra s && ra s <= 2 * pi
 
@@ -585,6 +587,7 @@ Q      80     5.3%     3.2   6
 Deprecated: now we specify the band from the receiver.
 
 > band2Receiver :: Band -> Receiver
+> band2Receiver P = Rcvr_1070 -- TBF: 1 -> many ? which rcvr to use?
 > band2Receiver L = Rcvr1_2
 > band2Receiver S = Rcvr2_3
 > band2Receiver C = Rcvr4_6
@@ -593,6 +596,7 @@ Deprecated: now we specify the band from the receiver.
 > band2Receiver K = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
+> band2Receiver W = Rcvr_PAR
 
 > receiver2Band :: Receiver -> Band
 > receiver2Band Rcvr_RRI = P
