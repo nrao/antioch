@@ -64,7 +64,7 @@ in a temporary file.
 Given the map of our results, and all the elements of the key to that map,
 returns the string representation of the tuple of keys & value.  This form
 is taken so that it can be easily parsed by another program.  Ex:
-'(8,2000,45,1,1.22)\n'
+(8,2000,45,1,1.22)\n
 
 > getStringencyLine stringencies rcvr freq elev obstype hrs cnn = do
 >     rcvrId <- getRcvrId cnn rcvr

@@ -96,7 +96,7 @@ Also see comments below.
 
 Call this function to print out all the receiver temperatures that will ever
 get used from our database.  This is a small set due to the output from
-'getRcvrFreqIndices'.  For example, for Rcvr1_2, this is simply
+getRcvrFreqIndices.  For example, for Rcvr1_2, this is simply
 [1000, 2000] (MHz).
 
 > getAllRcvrTemps :: IO [(Receiver, [(Int, Maybe Float)])]
@@ -113,7 +113,7 @@ get used from our database.  This is a small set due to the output from
 >   rtrs rt (rcvr, rfs) = mapM (getReceiverTemperature rt (Just rcvr) ) rfs 
 >   rcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
-This function is where you cut and past the output from 'getAllRcvrTemps'
+This function is where you cut and past the output from getAllRcvrTemps
 
 > allUsedRcvrTemps :: [(Receiver, [(Int, Maybe Float)])]
 > allUsedRcvrTemps = [
