@@ -13,6 +13,7 @@
 >   , test_data36_47Day
 >   , test_data36_47Night
 >   -- , test_years
+>   , test_getLastImportTime
 >   , test_WeatherIsJust
 >   , test_dataFirstLine
 >   -- , test_fetchAnyWind
@@ -64,6 +65,12 @@ because of dateSafe should they all not return the 2006 value?
 >       dt07  = fromGregorian 2007 2 1 0 0 0 
 >       dt08  = fromGregorian 2008 2 1 0 0 0 
 >       dt09  = fromGregorian 2009 2 1 0 0 0 
+
+> test_getLastImportTime = TestCase $ do
+>   cnn <- connectTest
+>   let exp = fromGregorian 2010 7 20 19 11 0
+>   res <- getLastImportTime cnn
+>   assertEqual "test_getLastImportTime" exp res
 
 > test_WindsArePositive = TestCase $ do
 >   cnn <- connectTest

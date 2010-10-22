@@ -14,7 +14,7 @@
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
-> import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
+> --import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
 
 The DB used for these unit tests is the DB used for the simulation of the
 first two weeks of 09B, *w/ out* the resultant periods.

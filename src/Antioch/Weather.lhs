@@ -474,6 +474,14 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >       query   = "SELECT total FROM t_sys\n\
 >                 \WHERE frequency = ? AND elevation = ? AND receiver_id = ?"
 
+> getLastImportTime :: Connection -> IO DateTime
+> getLastImportTime cnn = do
+>   result <- quickQuery' cnn query []
+>   return $ toImportTime result
+>     where
+>       query = "SELECT date FROM import_times ORDER BY date DESC LIMIT 1"
+>       toImportTime = sqlToDateTime . head . head
+
 Creates a connection to the weather forecast database.
 
 > connect, connectTest :: IO Connection
