@@ -537,8 +537,14 @@ it an exclusion range.
 
 > getWindows :: Connection -> Session -> IO [Window]
 > getWindows cnn s = do
->     dbWindows <- fetchWindows cnn s 
+>     dbWindows' <- fetchWindows cnn s 
+>     dbWindows <- mapM (adjustTotalTime cnn) dbWindows'
 >     return $ sort $ dbWindows
+
+> adjustTotalTime :: Connection -> Window -> IO Window
+> adjustTotalTime cnn w = do
+>     tb <- getWindowTimeBilled cnn w
+>     return w {wTotalTime = (wTotalTime w) - tb}
 
 > fetchWindows :: Connection -> Session -> IO [Window]
 > fetchWindows cnn s = do 
@@ -546,15 +552,30 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT w.id, w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w, periods as p, period_states as s WHERE (w.default_period_id = p.id OR w.period_id = p.id) AND p.state_id = s.id AND s.abbreviation <> 'D' AND w.session_id = ?;"
+>     query = "SELECT w.id, w.start_date, w.duration, w.default_period_id, w.complete, w.total_time FROM windows as w, periods as p, period_states as s WHERE p.state_id = s.id AND s.abbreviation <> 'D' AND w.session_id = ?;"
 >     toWindowList = map toWindow
->     toWindow(id:strt:dur:dpid:pid:[]) =
+>     toWindow(id:strt:dur:dpid:c:tt:[]) =
 >       defaultWindow { wId        = fromSql id
 >                     , wStart     = sqlToDate strt
 >                     , wDuration  = 24*60*(fromSql dur)
 >                     , wPeriodId  = fromSql dpid
->                     , wHasChosen = pid /= SqlNull
+>                     , wComplete  = fromSql c
+>                     , wTotalTime = 24*60*(fromSql tt)
 >                     }
+
+> getWindowTimeBilled :: Connection -> Window -> IO Minutes
+> getWindowTimeBilled cnn w = do
+>   result <- quickQuery' cnn query xs 
+>   return . sum . toTotalTimeBilled $ result
+>   where
+>     xs = [toSql . wId $ w]
+>     -- don't pick up deleted periods!
+>     query = "SELECT state.abbreviation, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, pa.not_billable FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.window_id = ?;"
+>     toTotalTimeBilled = map toTimeBilled
+>     toTimeBilled (state:sch:osw:osr:oso:ltw:ltr:lto:nb:[]) =
+>        if (deriveState . fromSql $ state) == Pending
+>        then 0::Minutes
+>        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 
 > getPeriods :: Connection -> Session -> IO [Period]
 > getPeriods cnn s = do

@@ -96,15 +96,16 @@ use a single data structure for all sessions.
 
 > data Window  = Window {
 >     wId          :: Int
->   , wSession     :: Session
+>   , wSession     :: Session    -- assigned for simulations only
 >   , wStart       :: DateTime   -- date, no time
 >   , wDuration    :: Minutes    -- from day count
 >   , wPeriodId    :: Int        -- default period id
->   , wHasChosen   :: Bool       -- has period
+>   , wComplete    :: Bool       -- requires more observing or not
+>   , wTotalTime   :: Minutes    -- time allotted
 >    }
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " to " ++ toSqlString (wEnd w) ++ " (for " ++ show (flip div (24*60) . wDuration $ w) ++ " days) " ++ show (wHasChosen w) -- ++ "; wPeriods: " ++ show (wPeriods (wSession w) w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " to " ++ toSqlString (wEnd w) ++ " (for " ++ show (flip div (24*60) . wDuration $ w) ++ " days) " -- ++ "; wPeriods: " ++ show (wPeriods (wSession w) w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -195,12 +196,12 @@ Tying the knot.
 >     peId        :: Int
 >   , session     :: Session
 >   , startTime   :: DateTime
->   , duration    :: Minutes
->   , pScore      :: Score  -- Average forecasted score
+>   , duration    :: Minutes    -- assigned time
+>   , pScore      :: Score      -- Average forecasted score
 >   , pState      :: StateType
 >   , pForecast   :: DateTime
 >   , pBackup     :: Bool
->   , pDuration   :: Minutes
+>   , pDuration   :: Minutes    -- billed time
 >   } 
 
 > instance Show Period where
@@ -321,5 +322,6 @@ Simple Functions for Periods:
 >   , wStart       = defaultStartTime
 >   , wDuration    = 0
 >   , wPeriodId    = 0
->   , wHasChosen   = False
+>   , wComplete    = False
+>   , wTotalTime   = 0
 >    }
