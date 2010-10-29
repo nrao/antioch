@@ -96,10 +96,11 @@ Filter candidate sessions dependent on its type.
 >         | filter schedulableWindow ws == [] = False
 >         | otherwise                         = True
 >
->       schedulableWindow w = all ($ w) [intersect, withNoDefault, needsPeriod]
->       intersect w = wStart w < dtEnd && dt < wEnd w
+>       schedulableWindow w = all ($ w) [intersect, withNoDefault, hasTime, isNotComplete]
+>       intersect w     = wStart w < dtEnd && dt < wEnd w
 >       withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
->       needsPeriod w = not . wHasChosen $ w
+>       isNotComplete w = not . wComplete $ w
+>       hasTime w       = (wTotalTime w) >= quarter
 >       dtEnd = dur `addMinutes` dt
 
 We are explicitly ignoring grade here: it has been decided that a human

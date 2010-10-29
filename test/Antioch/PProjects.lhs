@@ -274,7 +274,8 @@
 >                 wStart = fromGregorian' 2006 10 15
 >               , wDuration = 7*24*60
 >               , wPeriodId = 201
->               , wHasChosen = True
+>               , wComplete = True
+>               , wTotalTime = 0
 >                }
 >           ]
 >       , periods = [

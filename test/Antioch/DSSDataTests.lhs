@@ -14,7 +14,6 @@
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
-> --import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
 
 The DB used for these unit tests is created and populated via the
 instructions in admin/genDssTestDatagase.py.
@@ -27,6 +26,8 @@ instructions in admin/genDssTestDatagase.py.
 >     , test_getProjectData
 >     -- , test_getProjectsProperties
 >     -- , test_putPeriods
+>     -- , test_populateSession
+>     -- , test_populateWindowedSession
 >     , test_makeSession
 >     , test_scoreDSSData
 >     , test_session2
@@ -234,6 +235,15 @@ example in comments.
 >   assertEqual "test_populateSession 9" (fromGregorian 2009 6 10 0 0 0) (wStart . head . windows $ ios)
 >     where
 >       sId =  194
+>       pId = 1760
+
+> test_populateWindowedSession = TestCase $ do
+>   cnn <- connect
+>   s <- getSession sId cnn
+>   ios <- populateSession cnn s
+>   assertEqual "test_populateWindowedSession 1" s ios
+>     where
+>       sId =  194  -- just placeholders
 >       pId = 1760
 
 > mkSqlLst  :: Int -> DateTime -> Int -> Int -> Int -> Int -> String -> [SqlValue]
