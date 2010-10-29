@@ -730,7 +730,7 @@ Equation 24
 >     let sess = findPSessionByName "AS"
 >     assertResult' "test_efficiency 5" (Just wdt) 0.9648925 (efficiency dt sess) 
 >     assertResult' "test_efficiencyHA 6" (Just wdt) 0.496098 (efficiencyHA dt sess)
->     assertResult' "test_efficiency 7" (Just wdt) 0.96206343 (efficiency dt sessBug)
+>     assertResult' "test_efficiency 7" (Just wdt) 0.32182154 (efficiency dt sessBug)
 >     assertResult' "test_efficiency 8" (Just wdt) 0.9464483 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0

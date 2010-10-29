@@ -713,18 +713,6 @@ You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
 >       wquery = "UPDATE windows SET period_id = ? WHERE id = ?;"
 >       wxs = [toSql periodId, toSql windowId]
 
-> setPeriodScore :: Connection -> Score -> Int -> IO ()
-> setPeriodScore cnn v pid = do
->   ct <- getCurrentTime
->   let dt = toSql . toSqlString $ ct
->   quickQuery' cnn query [value, dt, id]
->   commit cnn
->     where
->       query = "UPDATE periods SET score = ?, forecast = ? WHERE id = ?;"
->       value = toSql v
->       id = toSql pid
-
-
 > minutesToSqlHrs :: Minutes -> SqlValue
 > minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
 
