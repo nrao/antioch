@@ -552,7 +552,7 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT w.id, w.start_date, w.duration, w.default_period_id, w.complete, w.total_time FROM windows as w, periods as p, period_states as s WHERE p.state_id = s.id AND s.abbreviation <> 'D' AND w.session_id = ?;"
+>     query = "SELECT id, start_date, duration, default_period_id, complete, total_time FROM windows WHERE session_id = ?;"
 >     toWindowList = map toWindow
 >     toWindow(id:strt:dur:dpid:c:tt:[]) =
 >       defaultWindow { wId        = fromSql id
@@ -560,7 +560,7 @@ it an exclusion range.
 >                     , wDuration  = 24*60*(fromSql dur)
 >                     , wPeriodId  = fromSql dpid
 >                     , wComplete  = fromSql c
->                     , wTotalTime = 24*60*(fromSql tt)
+>                     , wTotalTime = fromSqlMinutes tt
 >                     }
 
 > getWindowTimeBilled :: Connection -> Window -> IO Minutes

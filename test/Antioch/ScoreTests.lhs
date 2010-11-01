@@ -70,6 +70,7 @@
 >   , test_subfactorFactors
 >   , test_weatherFactors
 >   , test_scoreFactors
+>   , test_availWindows
 >   , test_inWindows
 >   , test_scoreElements
 >   , test_zenithAngleLimit
@@ -1070,6 +1071,18 @@ Equation 16
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
 >     assertEqual "test_scoreFactors 3" 1.9724026 fPress
+
+> test_availWindows = TestCase $ do
+>     w <- getWeatherTest . Just $ fromGregorian 2006 9 20 1 0 0
+>     rt <- getReceiverTemperatures
+>     let s = findPSessionByName "TestWindowed1"
+>     let results = availWindows s
+>     -- should never return any window which is complete
+>     assertBool "test_availWindows_1" (not . or . map wComplete $ results)
+>     let s = findPSessionByName "TestWindowed2"
+>     let results = availWindows s
+>     -- should never return any window which is complete
+>     assertBool "test_availWindows_2" (not . or . map wComplete $ results)
 
 > test_inWindows = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 20 1 0 0

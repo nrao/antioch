@@ -230,11 +230,13 @@
 >                 wStart = fromGregorian' 2006 10 1
 >               , wDuration = 7*24*60
 >               , wPeriodId = 100
+>               , wTotalTime = 4*60
 >                }
 >           , defaultWindow {
 >                 wStart = fromGregorian' 2006 10 22
 >               , wDuration = 7*24*60
 >               , wPeriodId = 101
+>               , wTotalTime = 4*60
 >                }
 >           ]
 >       , periods = [
@@ -269,13 +271,14 @@
 >                 wStart = fromGregorian' 2006 9 22
 >               , wDuration = 7*24*60
 >               , wPeriodId = 200
+>               , wTotalTime = 3*60
 >                }
 >           , defaultWindow {
 >                 wStart = fromGregorian' 2006 10 15
 >               , wDuration = 7*24*60
 >               , wPeriodId = 201
+>               , wTotalTime = 15 -- complete, but not all time consumed
 >               , wComplete = True
->               , wTotalTime = 0
 >                }
 >           ]
 >       , periods = [

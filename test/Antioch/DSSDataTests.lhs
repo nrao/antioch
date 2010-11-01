@@ -20,6 +20,7 @@ instructions in admin/genDssTestDatagase.py.
 
 > tests = TestList [
 >       test_fetchPeriods
+>     , test_getWindows
 >     , test_getPeriods
 >     , test_getProjects
 >     -- , test_numPeriods
@@ -54,12 +55,12 @@ instructions in admin/genDssTestDatagase.py.
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 720 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 1 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects4" 2 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
->     assertEqual "test_getProjects10" 1 (length allPeriods)    
+>     assertEqual "test_getProjects10" 4 (length allPeriods)    
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
@@ -144,7 +145,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [0.0,1.0911006,1.0982922,1.1073105,1.1103191,1.1170144,1.120861,1.1242979,1.1320864,1.1346878,1.137038,1.139167,1.1408842,1.141817,1.133193,1.1340336,1.1333339]
+>       expScores = [0.0,0.8257167,0.83115923,0.83798414,0.8402609,0.8453277,0.84823877,0.85083956,0.8567337,0.85870236,0.86048096,0.86209214,0.8633917,0.86409765,0.8575712,0.8582072,0.85767794]
 
 Test a specific session's attributes:
 
@@ -272,6 +273,14 @@ example in comments.
 >       s' = defaultSession { sAllottedT = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
 >       w' = defaultWindow { wDuration = 7, wPeriodId = peId p' }
+
+> test_getWindows = TestCase $ do
+>   cnn <- connect
+>   s <- getSession 2 cnn
+>   results <- getWindows cnn s
+>   assertEqual "test_getWindows_1" 1 (length results)
+>   assertEqual "test_getWindows_2" (6*60) (wTotalTime . head $ results)
+>   assertEqual "test_getWindows_3" False (wComplete . head $ results)
 
 > test_getPeriods = TestCase $ do
 >   cnn <- connect
