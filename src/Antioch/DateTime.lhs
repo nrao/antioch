@@ -130,6 +130,9 @@ Combine pieces and parts to produce a UTCTime.
 > roundToHour :: DateTime -> DateTime
 > roundToHour dt = 3600 * ((dt + 1800) `div` 3600)
 
+> roundToQuarter :: DateTime -> DateTime
+> roundToQuarter dt = 900 * ((dt + 450) `div` 900)
+
 Getting closer to the machine: Not all the functionality of
 System.Time is available in Data.Time, and the only way we can convert
 back and forth is to go through seconds.
@@ -275,8 +278,13 @@ http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 > (a, b, c, d, e) = (11.2178,  1.2754, -0.0915, 0.0673, 0.1573)
 > (l, m, n, o, p) = (23.3553, -1.3304,  0.3406, 0.0525, 0.1520)
 
-> sunRiseAndSet    :: DateTime -> (DateTime, DateTime)
-> sunRiseAndSet dt = (midnight + hoursToSeconds rise, midnight + hoursToSeconds set)
+> sunRiseAndSet :: DateTime -> (DateTime, DateTime)
+> sunRiseAndSet dt = (roundToHour rise, roundToHour set)
+>   where
+>     (rise, set) = sunRiseAndSet' dt
+
+> sunRiseAndSet' :: DateTime -> (DateTime, DateTime)
+> sunRiseAndSet' dt = (midnight + hoursToSeconds rise, midnight + hoursToSeconds set)
 >   where
 >     midnight = 86400 * (dt `div` 86400)
 >     day = dayOfYear midnight

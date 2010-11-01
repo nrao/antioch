@@ -612,7 +612,7 @@ Equation 5
 >     -- forecast because in future
 >     let dt1 = fromGregorian 2006 10 13 16 0 0
 >     r1 <- runScoring w [] rt (getRealOrForecastedWind dt1)
->     assertEqual "test_getRealOrForecastedWind 1" (Just 4.6638403) r1
+>     assertEqual "test_getRealOrForecastedWind 1" (Just 4.6638374) r1
 >     -- measured because in past
 >     let dt2 = fromGregorian 2006 9 13 0 0 0
 >     r2 <- runScoring w [] rt (getRealOrForecastedWind dt2)
@@ -620,7 +620,7 @@ Equation 5
 >     -- forecast because measured is unavailable
 >     let dt3 = fromGregorian 2006 6 22 12 0 0
 >     r3 <- runScoring w [] rt (getRealOrForecastedWind dt3)
->     assertEqual "test_getRealOrForecastedWind 3" (Just 3.5221467) r3
+>     assertEqual "test_getRealOrForecastedWind 3" (Just 3.5221453) r3
 
 > test_minimumObservingConditions = TestCase $ do
 >     let dt = fromGregorian 2006 10 13 16 0 0
@@ -694,7 +694,7 @@ Equation 5
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
 >     assertEqual "test_observingEfficiency2_1" 0.9861518 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
->     assertEqual "test_observingEfficiency2_2" 0.9837168 (eval fs)
+>     assertEqual "test_observingEfficiency2_2" 0.9809487 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
 >     assertEqual "test_observingEfficiency2_3" 0.809369 (eval fs)
 
@@ -1355,7 +1355,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [0.50573075,0.50723356,0.37941712,0.4378961,0.46524638,0.49138007,0.5099908,0.511102,0.51175827,0.5123564,0.5181857,0.5183689,0.51871,0.51913476,0.524883,0.524883,0.5249703,0.5249703,0.5265836,0.5265836,0.52651185,0.52635866,0.5258168,0.52562726,0.5255274,0.52531004,0.524077,0.5237679,0.5234247,0.52283955,0.5232655,0.52255327,0.5216983,0.5206546]
+> defaultScores = [0.50573075,0.50723356,0.37941712,0.4378961,0.46524638,0.49138007,0.5099908,0.511102,0.51175827,0.5123564,0.5186518,0.5188351,0.5194414,0.51960164,0.524883,0.524883,0.5249703,0.5249703,0.5265836,0.5265836,0.52651185,0.52635866,0.5258168,0.52562726,0.5255274,0.52531004,0.524077,0.5237679,0.5234247,0.52283955,0.5232655,0.52255327,0.5216983,0.5206546]
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeatherTest . Just $ origin 
