@@ -314,14 +314,30 @@ PTCS day/night correction for meters per second
 > correctWindSpeed' :: [Float] -> Float -> Float
 > correctWindSpeed' cfs w = sum . map (\x -> (fst x)*w**(snd x)) . zip (reverse cfs) $ [0..]
 
-> windDayCoeff = [-1.70737148e-04,  6.56523342e-03,
+Coeff. from DSPN6.1 using 1 May 2004 to 1 Mar 2007 weather
+
+> {--windDayCoeff = [-1.70737148e-04,  6.56523342e-03,
 >                 -9.82652357e-02,  7.21325467e-01,
 >                 -2.68827245e+00,  5.24223121e+00,
 >                 -7.61618314e-01]::[Float]
 > windNightCoeff = [-3.38584062e-04,  1.19917649e-02,
 >                   -1.61474697e-01,  1.02041521e+00,
 >                   -2.98028690e+00,  3.89258501e+00,
->                   -5.69079000e-01]::[Float]
+>                   -5.69079000e-01]::[Float]--}
+
+Coeff. using 1 Sep 2008 to 31 Aug 2010 weather
+(N.B., On 18 Dec 2007 weather forecasts went from 12hr to 6hr updates;
+this included a change in the wind speed algorithm.)
+
+> windDayCoeff = [1.03136467e-04,  -4.09837631e-03,
+>                 6.52629009e-02,  -5.31163369e-01,
+>                 2.33592497e+00,  -5.42793252e+00,
+>                 7.12632578e+00,  -1.07039484e+00]::[Float]
+> windNightCoeff = [1.62510757e-04,  -6.31744909e-03,
+>                   9.84059248e-02,  -7.80041906e-01,
+>                   3.28349217e+00,  -6.90486810e+00,
+>                   7.06266889e+00,  -1.10385720e+00]::[Float]
+
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.  Here it's cache is initialized.

@@ -17,7 +17,7 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
-> import Data.Maybe         (fromMaybe, isJust, fromJust)
+> import Data.Maybe         (fromMaybe, isJust, fromJust, catMaybes)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -257,7 +257,33 @@ Base of exponential Equation 12
 > calculateTE :: Frequency -> Float
 > calculateTE f = 1.0 + 4.0 * log lff * f ^ 2
 
-> minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
+
+> minimumObservingConditions  :: DateTime -> Minutes -> Session -> Scoring (Maybe Bool)
+> minimumObservingConditions dt dur s = do
+>     let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
+>     fcts <- mapM (minObsFactors s) dts
+>     liftIO $ print $ "minObsCond: " ++ (toSqlString dt) ++ " for " ++ (show dur)
+>     liftIO $ print . show $ s
+>     liftIO $ printList fcts
+>     let effProducts = map (\(fs, tr) -> ((eval fs) * tr)) fcts
+>     let meanEff = if (length effProducts) > 0 then (sum effProducts) / (fromIntegral . length $ effProducts) else 0.0
+>     return $ Just (meanEff >= minObs)
+>   where
+>     dts = [(15 * m) `addMinutes` dt | m <- [0 .. (dur `div` 15) - 1]]
+
+> minObsFactors :: Session -> DateTime -> Scoring (Factors, Float)
+> minObsFactors s dt = do
+>    w  <- weather
+>    w' <- liftIO $ newWeather w (Just dt)
+>    local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
+>      fss <- observingEfficiency dt s
+>      trkErrLimit <- mocTrackingErrorLimit dt s
+>      let trkErrLimit' = case trkErrLimit of
+>                             Nothing -> 0.0
+>                             Just x  -> if x then 1.0 else 0.0
+>      return (fss, trkErrLimit')
+
+> {--minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
 > minimumObservingConditions dt s = do
 >    w  <- weather
 >    w' <- liftIO $ newWeather w (Just dt)
@@ -273,7 +299,7 @@ Base of exponential Equation 12
 >                             Nothing -> True
 >      let minObs' = adjustedMinObservingEff minObs
 >      let obsEffOK = obsEff' >= minObs'
->      return $ Just (obsEffOK && trkErrOK)
+>      return $ Just (obsEffOK && trkErrOK) --}
 
 > adjustedMinObservingEff :: Float -> Float
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
@@ -283,8 +309,12 @@ Base of exponential Equation 12
 > stringency                 :: ScoreFunc
 > stringency _ s = do
 >     w <- weather
->     str <- liftIO $ stringency' w s 
->     factor "stringency" str
+>     jstr <- liftIO $ stringency' w s
+>     let str' = do
+>         str <- jstr
+>         return $ str ** 1.0
+>     factor "stringency" str' 
+
 
 > stringency' :: Weather -> Session -> IO (Maybe Float)
 > stringency' w s = do
@@ -554,6 +584,12 @@ Equation 15
 
 > trackingError :: Float -> Float -> Float
 > trackingError w te = sqrt $ te ^ 2 + (abs w / 2.1) ^ 4
+
+Scale the wind speed by 1.5 to account for weather differences between 
+2003 (when calibration was performed) and 2009 (current weather station)
+
+> {--trackingError :: Float -> Float -> Float
+> trackingError w te = sqrt $ te ^ 2 + (abs w / (2.1 * 1.5)) ^ 4--}
 
 > epsilonZero :: Float
 > epsilonZero = 1.2
