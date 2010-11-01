@@ -141,7 +141,7 @@ Reintroducing static isDayTime code brings it back to almost same time as 959!
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet True sched trace 
 >   stop <- getCPUTime
 >   showExecTime "benchmark_simulate_1" start stop
 >     where
@@ -162,7 +162,7 @@ More Sessions, for longer
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet True sched trace 
 >   stop <- getCPUTime
 >   print . show . length $ ss
 >   showExecTime "benchmark_simulate_2" start stop
@@ -182,7 +182,7 @@ More Sessions, for longer
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet True sched trace 
 >   stop <- getCPUTime
 >   showExecTime "benchmark_simulateScheduling_1" start stop
 >     where
@@ -203,7 +203,7 @@ More sessions, for longer
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   start <- getCPUTime
->   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet sched trace 
+>   (results, trace) <- simulateDailySchedule rs dt packdays simdays hist ss quiet True sched trace 
 >   stop <- getCPUTime
 >   showExecTime "benchmark_simulateScheduling_2" start stop
 >     where
@@ -259,7 +259,7 @@ I thought it would be interesting to do anyways.
 > benchmark_generatePlots_1 :: IO ()
 > benchmark_generatePlots_1 = do
 >   start <- getCPUTime
->   runSim dt 120 "sims" -- a whole semester!
+>   runSim dt 120 "sims" -- a whole trimester!
 >   -- don't need this, due to production of things in the real world (plots)
 >   -- forceExec (show .length $ zs)
 >   stop <- getCPUTime

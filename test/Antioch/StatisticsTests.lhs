@@ -103,7 +103,7 @@
 >     -- the windows info doesn't really matter
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
 >     exp2 = [((cp, 0.632838677),(dp, 0.6808202))
->            ,((cp2,0.67720616), (dp2,0.6639635))]
+>            ,((cp2,0.67720616), (dp2,0.66395444))]
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
@@ -157,7 +157,7 @@ Test that two ways to get the same result yield the same answer.
 >   assertEqual "test_periodSchdFactors_1" 0.9992234 (head fcs)
 >   assertEqual "test_periodSchdFactors_2" 0.9968952 (last fcs)
 >   fcs <- periodSchdFactors getTestPeriod2 trackingEfficiency w
->   assertEqual "test_periodSchdFactors_3" 0.9771694  (head fcs)
+>   assertEqual "test_periodSchdFactors_3" 0.9713378  (head fcs)
 >   assertEqual "test_periodSchdFactors_4" 0.96175045 (last fcs)
 
 > test_periodObsFactors = TestCase $ do

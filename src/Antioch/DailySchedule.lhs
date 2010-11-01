@@ -108,6 +108,8 @@ boundary affects.
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes
+>       -- TBF: in the PhaseOne branch we will do this in schedulableSess.
+>       ss' = filter (not . projectBlackedOut dt (dur + bufferHrs))  ss
 
 Given the start of the scheduling period, number of days plus the
 offset on the last day, returns the time in UTC of the end of the

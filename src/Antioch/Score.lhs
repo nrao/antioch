@@ -728,6 +728,18 @@ is handled by previously filtering out observerless sessions.
 >   where 
 >     isBlackedOut dt obs = any (inDateRange dt) (blackouts obs)
 
+Project Blackouts are a simple version of user blackouts: if the 
+datetime lands in any one of them, you score zero.
+
+> projectBlackout :: ScoreFunc
+> projectBlackout dt s = boolean "projectBlackout" . Just $ projectBlackout' dt s
+
+> projectBlackout' :: DateTime -> Session -> Bool
+> projectBlackout' dt s | bs == []  = True
+>                       | otherwise = not $ any (inDateRange dt) bs
+>   where
+>     bs = pBlackouts . project $ s
+
 The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 
 > needsLowRFI :: ScoreFunc
@@ -1106,10 +1118,13 @@ Need to translate a session's factors into the final product score.
 > weatherFactors s w dt = do
 >   wind' <- wind w dt
 >   wind'' <- wind_mph w dt
+>   irradiance' <- irradiance w dt
 >   opacity' <- opacity w dt freq
 >   tsys' <- tsys w dt freq 
 >   return [("wind_mph", wind''), ("wind_ms", wind')
->         , ("opacity", opacity'), ("tsys", tsys')]
+>         , ("irradiance", irradiance')
+>         , ("opacity", opacity'), ("tsys", tsys')
+>          ]
 >     where
 >   freq = frequency s
 
@@ -1170,6 +1185,7 @@ for to generate new periods.
 >       , lstExcepted
 >       , enoughTimeBetween
 >       , observerAvailable
+>       , projectBlackout
 >       , inAvailWindows
 >        ]
 
@@ -1206,6 +1222,7 @@ vacancy control panel.
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       --, observerAvailable
+>       , projectBlackout
 >       , inAvailWindows
 >       ] ++ sfs) dt s
 
@@ -1246,6 +1263,7 @@ scores of zero.
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       , observerAvailable
+>       , projectBlackout
 >       , inAnyWindows
 >        ]
 

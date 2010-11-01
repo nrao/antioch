@@ -18,8 +18,35 @@
 >    , test_schedulableSessions
 >    , test_clearWindowedTimeBilled
 >    , test_isSchedulableType
+>    , test_projectBlackedOut
 >   ]
 >
+
+> test_projectBlackedOut = TestCase $ do
+>   -- no blackouts
+>   assertEqual "test_projectBlackedOut_1" False (pb dt dur s)
+>   -- dur not covered by blackouts
+>   assertEqual "test_projectBlackedOut_2" False (pb dt dur s2)
+>   -- dur covered by blackouts
+>   assertEqual "test_projectBlackedOut_3" True (pb dt dur2 s2)
+>   -- dur not covered by blackouts
+>   assertEqual "test_projectBlackedOut_4" False (pb dt dur s3)
+>   -- dur not covered by blackouts at all
+>   assertEqual "test_projectBlackedOut_5" False (pb dt2 dur2 s3)
+>     where
+>       pb = projectBlackedOut
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dur = 3*24*60 -- 3 days ~scheduling range
+>       dur2 = 1 -- *23*60 
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       s   = defaultSession
+>       p   = defaultProject { pBlackouts = bs }
+>       s2  = defaultSession { project = p }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       p2  = defaultProject { pBlackouts = bs ++ bs2 }
+>       s3  = defaultSession { project = p2}
 
 > test_sim_timeLeft = TestCase $ do
 >   -- dt1 => 09B, dt* => 09A

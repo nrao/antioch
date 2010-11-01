@@ -94,6 +94,7 @@
 >   , test_obsAvailable2
 >   , test_obsAvailable3
 >   , test_observerAvailable
+>   , test_projectBlackout
 >   , test_needsLowRFI
 >   , test_lstExcepted
 >   , test_enoughTimeBetween
@@ -611,7 +612,7 @@ Equation 5
 >     -- forecast because in future
 >     let dt1 = fromGregorian 2006 10 13 16 0 0
 >     r1 <- runScoring w [] rt (getRealOrForecastedWind dt1)
->     assertEqual "test_getRealOrForecastedWind 1" (Just 4.6638403) r1
+>     assertEqual "test_getRealOrForecastedWind 1" (Just 4.6638374) r1
 >     -- measured because in past
 >     let dt2 = fromGregorian 2006 9 13 0 0 0
 >     r2 <- runScoring w [] rt (getRealOrForecastedWind dt2)
@@ -619,7 +620,7 @@ Equation 5
 >     -- forecast because measured is unavailable
 >     let dt3 = fromGregorian 2006 6 22 12 0 0
 >     r3 <- runScoring w [] rt (getRealOrForecastedWind dt3)
->     assertEqual "test_getRealOrForecastedWind 3" (Just 3.5221467) r3
+>     assertEqual "test_getRealOrForecastedWind 3" (Just 3.5221453) r3
 
 > test_minimumObservingConditions = TestCase $ do
 >     let dt = fromGregorian 2006 10 13 16 0 0
@@ -693,7 +694,7 @@ Equation 5
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
 >     assertEqual "test_observingEfficiency2_1" 0.9861518 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
->     assertEqual "test_observingEfficiency2_2" 0.9837168 (eval fs)
+>     assertEqual "test_observingEfficiency2_2" 0.9809487 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
 >     assertEqual "test_observingEfficiency2_3" 0.809369 (eval fs)
 
@@ -729,7 +730,7 @@ Equation 24
 >     let sess = findPSessionByName "AS"
 >     assertResult' "test_efficiency 5" (Just wdt) 0.9648925 (efficiency dt sess) 
 >     assertResult' "test_efficiencyHA 6" (Just wdt) 0.496098 (efficiencyHA dt sess)
->     assertResult' "test_efficiency 7" (Just wdt) 0.96206343 (efficiency dt sessBug)
+>     assertResult' "test_efficiency 7" (Just wdt) 0.32182154 (efficiency dt sessBug)
 >     assertResult' "test_efficiency 8" (Just wdt) 0.9464483 (efficiency dt sessBug2) 
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
@@ -1064,7 +1065,7 @@ Equation 16
 >     let dur = 15::Minutes
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 20 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreFactors 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -1103,7 +1104,7 @@ Equation 16
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     rt <- getReceiverTemperatures
 >     factors <- scoreElements s w rt pSessions dt dur []
->     assertEqual "test_scoreElements 1" 29 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 31 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -1354,7 +1355,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [0.50573075,0.50723356,0.37941712,0.4378961,0.46524638,0.49138007,0.5099908,0.511102,0.51175827,0.5123564,0.5181857,0.5183689,0.51871,0.51913476,0.524883,0.524883,0.5249703,0.5249703,0.5265836,0.5265836,0.52651185,0.52635866,0.5258168,0.52562726,0.5255274,0.52531004,0.524077,0.5237679,0.5234247,0.52283955,0.5232655,0.52255327,0.5216983,0.5206546]
+> defaultScores = [0.50573075,0.50723356,0.37941712,0.4378961,0.46524638,0.49138007,0.5099908,0.511102,0.51175827,0.5123564,0.5186518,0.5188351,0.5194414,0.51960164,0.524883,0.524883,0.5249703,0.5249703,0.5265836,0.5265836,0.52651185,0.52635866,0.5258168,0.52562726,0.5255274,0.52531004,0.524077,0.5237679,0.5234247,0.52283955,0.5232655,0.52255327,0.5216983,0.5206546]
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeatherTest . Just $ origin 
@@ -1515,7 +1516,6 @@ If none is sanctioned, then there should never be an observer available
 >       o   = defaultObserver {oId = 264
 >                            , firstName = "Bengt-Goran"
 >                            , lastName = "Andersson"
->                            , username = "bgandersson"
 >                            , pstId = 3113
 >                            , sanctioned = False
 >                            , reservations = []
@@ -1554,6 +1554,44 @@ If none is sanctioned, then there should never be an observer available
 >       s3  = defaultSession { project = p2}
 >       expTrue = 1.0
 >       expFalse = 0.0
+
+> test_projectBlackout = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   rt <- getReceiverTemperatures
+>   -- no blackouts
+>   fs <- runScoring w [] rt (projectBlackout dt s)
+>   assertEqual "test_projectBlackout_1" expTrue (eval fs)
+>   -- blackouts, dt in range
+>   fs <- runScoring w [] rt (projectBlackout dt s2)
+>   assertEqual "test_projectBlackout_2" expFalse (eval fs)
+>   -- blackouts, dt out of range
+>   fs <- runScoring w [] rt (projectBlackout dt2 s2)
+>   assertEqual "test_projectBlackout_3" expTrue (eval fs)
+>   -- more blackouts, dt in range
+>   fs <- runScoring w [] rt (projectBlackout dt s3)
+>   assertEqual "test_projectBlackout_4" expFalse (eval fs)
+>   -- more blackouts, dt out of range
+>   fs <- runScoring w [] rt (projectBlackout dt2 s3)
+>   assertEqual "test_projectBlackout_5" expTrue (eval fs)
+>   -- more blackouts, dt in range
+>   fs <- runScoring w [] rt (projectBlackout dt3 s3)
+>   assertEqual "test_projectBlackout_6" expFalse (eval fs)
+>     where
+>       dt  = fromGregorian 2006 2 1  0 0 0
+>       dt2 = fromGregorian 2006 2 7  0 0 0
+>       dt3 = fromGregorian 2006 2 11 0 0 0
+>       s   = defaultSession
+>       p   = defaultProject { pBlackouts = bs }
+>       s2  = defaultSession { project = p }
+>       --o   = defaultObserver { blackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
+>       --o2  = defaultObserver { blackouts = bs ++ bs2 }
+>       p2  = defaultProject { pBlackouts = bs ++ bs2 }
+>       s3  = defaultSession { project = p2}
+>       expTrue = 1.0
+>       expFalse = 0.0
+
 
 > test_needsLowRFI = TestCase $ do
 >   w <- getWeatherTest Nothing

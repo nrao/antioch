@@ -14,25 +14,20 @@
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
-> import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
+> --import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
 
-The DB used for these unit tests is the DB used for the simulation of the
-first two weeks of 09B, *w/ out* the resultant periods.
-
-TBF: tests hang when all are run togethor - I don't think I'm handling the 
-connection to the DB correctly.
+The DB used for these unit tests is created and populated via the
+instructions in admin/genDssTestDatagase.py.
 
 > tests = TestList [
->     --  test_fetchPeriods
->     --, test_fetchPeriod
->       test_getProjects
+>       test_fetchPeriods
+>     , test_getPeriods
+>     , test_getProjects
 >     -- , test_numPeriods
 >     , test_getProjectData
->     , test_getProjectsProperties
+>     -- , test_getProjectsProperties
 >     -- , test_putPeriods
 >     , test_makeSession
->     -- , test_setPeriods
->     -- , test_setPeriodScore
 >     , test_scoreDSSData
 >     , test_session2
 >     , test_session_scores
@@ -45,8 +40,8 @@ connection to the DB correctly.
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
 >     d <- fetchProjectData cnn
->     assertEqual "test_getProjectData1" 103 (length d)  
->     assertEqual "test_getProjectData2" "BB240" (pName . head $ d)  
+>     assertEqual "test_getProjectData1" 1 (length d)  
+>     assertEqual "test_getProjectData2" "GBT09A-001" (pName . head $ d)  
 >     assertEqual "test_getProjectData3" False (thesis . head $ d)  
 >     disconnect cnn
 
@@ -54,17 +49,17 @@ connection to the DB correctly.
 >     ps <- getProjects 
 >     let ss = sessions . head $ ps
 >     let allPeriods = sort $ concatMap periods $ concatMap sessions ps
->     assertEqual "test_getProjects1" 103 (length ps)  
->     assertEqual "test_getProjects5" 2 (pId . head $ ps)  
->     assertEqual "test_getProjects2" "BB240" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 48480 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 16 (length . sessions . head $ ps)  
->     assertEqual "test_getProjects8" Windowed (sType . head $ ss)
->     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
+>     assertEqual "test_getProjects1" 1 (length ps)  
+>     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
+>     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
+>     assertEqual "test_getProjects3" 720 (pAllottedT . head $ ps)  
+>     assertEqual "test_getProjects4" 1 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects8" Open (sType . head $ ss)
+>     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
->     assertEqual "test_getProjects10" 0 (length allPeriods)    
->     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head . tail $ ss)
+>     assertEqual "test_getProjects10" 1 (length allPeriods)    
+>     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
 so, clean up by hand for now.
@@ -96,9 +91,9 @@ once and has a total time that is the sum of the grade hrs.
 
 > test_totaltime = TestCase $ do
 >   projs <- getProjects
->   let ps = filter (\p -> (pName p) == "GBT09B-010") projs
+>   let ps = filter (\p -> (pName p) == "GBT09A-001") projs
 >   assertEqual "test_sAllottedT_1" 1 (length ps)
->   assertEqual "test_sAllottedT_2" (22*60) (pAllottedT . head $ ps)
+>   assertEqual "test_sAllottedT_2" (12*60) (pAllottedT . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -144,32 +139,33 @@ from the database.
 >     scores <- mapM (score' w) times
 >     assertEqual "test_session_scores" expScores scores
 >     where
->       name = "GBT09B-010-02"
->       start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
+>       name = "GBT09A-001-02"
+>       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
+>       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [6.240864,6.2606325,6.299751,6.382004,6.3978586,6.3978586,6.4384303,6.4384303,6.4384303,6.4384303,6.459629,6.4459248,6.4313345,6.415765,6.4129176,6.3954983,6.3567185]
+>       expScores = [0.0,1.0911006,1.0982922,1.1073105,1.1103191,1.1170144,1.120861,1.1242979,1.1320864,1.1346878,1.137038,1.139167,1.1408842,1.141817,1.133193,1.1340336,1.1333339]
 
 Test a specific session's attributes:
 
 > test_session2 = TestCase $ do
 >   ps <- getProjects 
 >   let ss = concatMap sessions ps
->   let s = head $ filter (\s -> (sName s == "GBT09A-081-02")) ss
+>   let s = head $ filter (\s -> (sName s == "GBT09A-001-02")) ss
 >   assertEqual "test_session2_1" 3.0 (grade s)
 >   assertEqual "test_session2_2" Open (sType s)
->   assertEqual "test_session2_3" 124 (sId s)
->   assertEqual "test_session2_4" "GBT09A-081-02" (sName s)
->   assertEqual "test_session2_5" "GBT09A-081" (pName . project $ s)
+>   assertEqual "test_session2_3" 1 (sId s)
+>   assertEqual "test_session2_4" "GBT09A-001-02" (sName s)
+>   assertEqual "test_session2_5" "GBT09A-001" (pName . project $ s)
 >   assertEqual "test_session2_6" "09A" (semester . project $ s)
 >   assertEqual "test_session2_7" 210 (sAllottedT s)
 >   assertEqual "test_session2_8" 180 (minDuration s)
 >   assertEqual "test_session2_9" 210 (maxDuration s)
 >   assertEqual "test_session2_10" 0 (timeBetween s)
->   assertEqual "test_session2_11" 0.34 (frequency s)
+>   assertEqual "test_session2_11" 9.3 (frequency s)
 >   assertEqual "test_session2_12" 5.861688  (ra s)
 >   assertEqual "test_session2_13" (-0.11362094) (dec s)
->   assertEqual "test_session2_14" [[Rcvr_342]] (receivers s)
->   assertEqual "test_session2_15" L (band s)
+>   assertEqual "test_session2_14" [[Rcvr8_10]] (receivers s)
+>   assertEqual "test_session2_15" X (band s)
 >   assertEqual "test_session2_16" False (lowRFI s)
 >   assertEqual "test_session2_17" 1 (length . lstExclude $ s)
 
@@ -199,28 +195,6 @@ generated: it's the input we want to test, really.
 >                    -- TBF!! &&  (sAllottedT s)     >= (minDuration s)
 >                     &&  (validRA s) && (validDec s)
 >       validPeriods allPeriods = not . internalConflicts $ allPeriods
-
-> test_setPeriodScore = TestCase $ do
->   putPeriods [p1]
->   cnn <- connect
->   r <- quickQuery' cnn ("SELECT id FROM periods") []
->   let id = fromSqlInt . head . head $ r
->   ct <- getCurrentTime
->   setPeriodScore cnn score id
->
->   p' <- fetchPeriod id cnn
->   let p = p' {session = s }
->   disconnect cnn
->   cleanup "periods"
->   assertEqual "test_setPeriodScore 1" score (pScore p)
->   assertEqual "test_setPeriodScore 2" ct (pForecast p)
->     where
->       score = 3.2
->       dt = fromGregorian 2006 1 1 0 0 0
->       s  = defaultSession { sId = 1 }
->       p1 = defaultPeriod { session = defaultSession { sId = 1 }
->                          , startTime = dt
->                          , pForecast = dt }
 
 > test_putPeriods = TestCase $ do
 >   r1 <- getNumRows "periods"
@@ -291,36 +265,29 @@ example in comments.
 
 > test_getPeriods = TestCase $ do
 >   cnn <- connect
->   s <- getSession 35 cnn
->   let p1 = defaultPeriod { session = s 
->                          , startTime = dt
->                          , pScore = 4.7
->                          , pForecast = dt }
->   putPeriods [p1]
+>   s <- getSession 1 cnn
 >   ps' <- getPeriods cnn s
->   -- getPeriods doesn't set the period's session, so we'l do that
->   let ps = map (\p -> p { session = s }) ps'
+>   -- note fetchPeriods doesn't set the period's session
+>   let ps = [defaultPeriod { session = defaultSession 
+>                           , startTime = dt
+>                           , duration = 240}]
 >   disconnect cnn
->   cleanup "periods"
->   assertEqual "test_getPeriods" p1 (head ps)
->     where
->       dt = fromGregorian 2006 4 1 0 0 0
-
-> test_fetchPeriods = TestCase $ do
->   putPeriods [p1]
->   cnn <- connect
->   ps' <- fetchPeriods cnn s
->   -- fetchPeriods doesn't set the period's session, so we'l do that
->   let ps = map (\p -> p { session = s }) ps'
->   disconnect cnn
->   cleanup "periods"
->   assertEqual "test_fetchPeriods" [p1] ps 
+>   assertEqual "test_getPeriods" ps ps'
 >     where
 >       dt = fromGregorian 2006 1 1 0 0 0
->       s  = defaultSession { sId = 1 }
->       p1 = defaultPeriod { session = s
->                          , startTime = dt
->                          , pForecast = dt }
+
+> test_fetchPeriods = TestCase $ do
+>   cnn <- connect
+>   s <- getSession 1 cnn
+>   ps' <- fetchPeriods cnn s
+>   -- note fetchPeriods doesn't set the period's session
+>   let ps = [defaultPeriod { session = defaultSession
+>                           , startTime = dt
+>                           , duration = 240}]
+>   disconnect cnn
+>   assertEqual "test_fetchPeriods" ps ps' 
+>     where
+>       dt = fromGregorian 2006 1 1 0 0 0
 
 > fromFloat2Sql :: Float ->  SqlValue
 > fromFloat2Sql = toSql

@@ -162,6 +162,7 @@ Tying the knot.
 >   , sessions        :: [Session]
 >   , thesis          :: !Bool
 >   , observers       :: [Observer]
+>   , pBlackouts      :: [DateRange]
 >   } deriving Eq
 
 > makeProject :: Project -> Minutes -> Minutes -> [Session] -> Project
@@ -184,7 +185,6 @@ Tying the knot.
 >     oId          :: Int
 >   , firstName    :: String -- for debugging
 >   , lastName     :: String -- for debugging
->   , username     :: String
 >   , pstId        :: Int
 >   , sanctioned   :: Bool
 >   , reservations :: [DateRange]
@@ -282,7 +282,6 @@ Simple Functions for Periods:
 >     oId          = 0 
 >   , firstName    = "" -- for debugging
 >   , lastName     = "" -- for debugging
->   , username     = ""
 >   , pstId        = 0 
 >   , sanctioned   = True
 >   , reservations = []
@@ -298,6 +297,7 @@ Simple Functions for Periods:
 >   , pAllottedT      = 0
 >   , pAllottedS      = 0
 >   , observers       = [defaultObserver]
+>   , pBlackouts       = []
 >   , pClosed         = False
 >   }
 
