@@ -234,20 +234,21 @@ def create_receiver_schedule():
         rs.save()
 
 def populate_project1():
-    fdata = dict(
-        type         = "science"
-      , semester     = "09A"
-      , pcode        = "GBT09A-001"
-      , total_time   = 8.0
-      , PSC_time     = 8.0
-      , sem_time     = 8.0
-      , grade        = 4.0
-      , PSC_time_2   = 4.0
-      , total_time_2 = 4.0
-      , sem_time_2   = 2.0
-      , grade_2      = 3.0
-      )
-    proj = create_project(fdata)
+    #fdata = dict(
+    #    type         = "science"
+    #  , semester     = "09A"
+    #  , pcode        = "GBT09A-001"
+    #  , total_time   = 8.0
+    #  , PSC_time     = 8.0
+    #  , sem_time     = 8.0
+    #  , grade        = 4.0
+    #  , PSC_time_2   = 4.0
+    #  , total_time_2 = 4.0
+    #  , sem_time_2   = 2.0
+    #  , grade_2      = 3.0
+    #  )
+    #proj = create_project(fdata)
+    proj = Project.objects.get(pcode = "GBT09A-001")
     sess = Sesshun(project = proj)
     fdata = dict(
         type       = "open"

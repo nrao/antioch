@@ -52,7 +52,7 @@ instructions in admin/genDssTestDatagase.py.
 >     assertEqual "test_getProjects1" 1 (length ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 720 (pAllottedT . head $ ps)  
+>     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
 >     assertEqual "test_getProjects4" 1 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
@@ -93,7 +93,7 @@ once and has a total time that is the sum of the grade hrs.
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09A-001") projs
 >   assertEqual "test_sAllottedT_1" 1 (length ps)
->   assertEqual "test_sAllottedT_2" (12*60) (pAllottedT . head $ ps)
+>   assertEqual "test_sAllottedT_2" 0 (pAllottedT . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -143,7 +143,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [0.0,1.0911006,1.0982922,1.1073105,1.1103191,1.1170144,1.120861,1.1242979,1.1320864,1.1346878,1.137038,1.139167,1.1408842,1.141817,1.133193,1.1340336,1.1333339]
+>       expScores = [0.0,0.71801454,0.7227472,0.7286818,0.73066163,0.7350675,0.7375989,0.7398605,0.7449859,0.7466977,0.7482444,0.74964535,0.75077534,0.7513892,0.745714,0.74626714,0.7458069]
 
 Test a specific session's attributes:
 
