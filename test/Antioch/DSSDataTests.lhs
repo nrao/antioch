@@ -18,6 +18,12 @@
 The DB used for these unit tests is created and populated via the
 instructions in admin/genDssTestDatagase.py.
 
+Projects: [<Project: GBT09A-001, 09A, >, <Project: GBT09A-001, 09A, >]
+Sessions: [<Sesshun: (1) GBT09A-001-02 :  9.30 GHz,  3.50 Hrs, Rcvrs: (X), status: (1) e: False; a: False; c: False; b: False>, <Sesshun: (2) GBT09A-001-03 :  1.40 GHz,  8.00 Hrs, Rcvrs: (L), status: (2) e: False; a: False; c: False; b: False>]
+Types: Open, Windowed
+Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hrs (P) - Id (1); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>],
+ [<Period: Period (2) for Session (2): 2006-07-10 00:00:00 for  2.00 Hrs (S) - Id (2); SC: 2.00 OT: 2.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>, <Period: Period (3) for Session (2): 2006-07-18 00:00:00 for  4.00 Hrs (P) - Id (3); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>, <Period: Period (4) for Session (2): 2006-08-08 00:00:00 for  8.00 Hrs (P) - Id (4); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>]]
+
 > tests = TestList [
 >       test_fetchPeriods
 >     , test_getWindows
@@ -42,22 +48,23 @@ instructions in admin/genDssTestDatagase.py.
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
 >     d <- fetchProjectData cnn
->     assertEqual "test_getProjectData1" 1 (length d)  
+>     assertEqual "test_getProjectData1" 2 (length d)  
 >     assertEqual "test_getProjectData2" "GBT09A-001" (pName . head $ d)  
 >     assertEqual "test_getProjectData3" False (thesis . head $ d)  
 >     disconnect cnn
 
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
->     let ss = sessions . head $ ps
->     let allPeriods = sort $ concatMap periods $ concatMap sessions ps
->     assertEqual "test_getProjects1" 1 (length ps)  
+>     let ss = concatMap sessions ps
+>     let allPeriods = sort $ concatMap periods $ ss
+>     assertEqual "test_getProjects1" 2 (length ps)  
+>     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 720 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 2 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects3" 720 (pAllottedT . last $ ps)  
+>     assertEqual "test_getProjects4" 2 (length . sessions . last $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
->     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
+>     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 4 (length allPeriods)    
@@ -94,8 +101,8 @@ once and has a total time that is the sum of the grade hrs.
 > test_totaltime = TestCase $ do
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09A-001") projs
->   assertEqual "test_sAllottedT_1" 1 (length ps)
->   assertEqual "test_sAllottedT_2" (12*60) (pAllottedT . head $ ps)
+>   assertEqual "test_sAllottedT_1" 2 (length ps)
+>   assertEqual "test_sAllottedT_2" (12*60) (pAllottedT . last $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -145,7 +152,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [0.0,0.8257167,0.83115923,0.83798414,0.8402609,0.8453277,0.84823877,0.85083956,0.8567337,0.85870236,0.86048096,0.86209214,0.8633917,0.86409765,0.8575712,0.8582072,0.85767794]
+>       expScores = [0.0,1.108699,1.1160067,1.1251704,1.1282275,1.1350307,1.1389395,1.1424316,1.1503458,1.152989,1.1553773,1.1575406,1.1592854,1.1602333,1.1514703,1.1523243,1.1516135]
 
 Test a specific session's attributes:
 
