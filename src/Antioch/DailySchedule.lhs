@@ -60,7 +60,7 @@ hour scheduling period.
 >     liftIO $ pr quiet $ "scheduling around periods: "
 >     liftIO $ prl quiet $ history'
 >     -- schedule with a buffer
->     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' . map crop_session $ ss
+>     schdWithBuffer <- dailySchedule' sf strategyName dt dur history' ss
 >     liftIO $ pr quiet $ "scheduled w/ buffer: "
 >     liftIO $ pr quiet $ show . length $ schdWithBuffer
 >     liftIO $ prl quiet $ schdWithBuffer
@@ -74,11 +74,6 @@ hour scheduling period.
 
 Make a windowed session's allotted time equal to one period to prevent
 scheduling of multiple periods
-
-> crop_session :: Session -> Session
-> crop_session s
->     | typeWindowed s = s {sAllottedT = min (sAllottedT s) (maxDuration s)}
->     | otherwise      = s
 
 > pr :: Bool -> String -> IO ()
 > pr quiet str = do
@@ -98,16 +93,18 @@ start hour of the work day in ET.
 >     return $ getEndTime' dt days endTimeMinutes
 
 Actually calls the strategy (ex: Pack) for the days we are interested in, 
-scheduling a 'buffer' zone, and then removing this 'buffer' to avoid 
-boundary affects.
+including the 'buffer' that will be removed in dailySchedule.
+Also of importance here is the filtering of the pool of sessions, and
+the necessary adjustments to windowed sessions.
 
 > dailySchedule' :: ScoreFunc -> StrategyName -> DateTime -> Minutes -> [Period] -> [Session] -> Scoring [Period]
 > dailySchedule' sf strategyName dt dur history ss = do
->   let strategy = getStrategy strategyName 
->   schedPeriods <- strategy sf dt (dur + bufferHrs) history . schedulableSessions dt dur $ ss
+>   let strategy = getStrategy strategyName
+>   schedPeriods <- strategy sf dt (dur + bufferHrs) history ss' 
 >   return schedPeriods
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes
+>       ss' = map (adjustWindowSessionDuration dt dur) $ schedulableSessions dt dur $ ss
 
 Given the start of the scheduling period, number of days plus the
 offset on the last day, returns the time in UTC of the end of the
