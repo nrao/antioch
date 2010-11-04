@@ -22,7 +22,7 @@
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     , test_runDailySchedule_3
->     , test_crop_session
+>     , test_scheduleWindows
 >      ]
 
 > test_removeBuffer = TestCase $ do
@@ -148,14 +148,99 @@ adjusting max duration and time between.
 >       minutes = (24*60*days)::Minutes
 >       p = (periods . findPSessionByName $ "TestWindowed2") !! 1
 
-> test_crop_session = TestCase $ do
->     assertEqual "test_crop_session 1" (sAllottedT o) (sAllottedT . crop_session $ o)
->     assertEqual "test_crop_session 2" (maxDuration w) (sAllottedT . crop_session $ w)
->         where
->             o = head  getOpenPSessions
->             w = head getWindowedPSessions
+Here we build up a test of the window scheduling:
+we start with a simple open session that can be scheduled throughout
+the Scheduling Range (SR), then make it windowed, then start adding
+more constraints.
+
+> test_scheduleWindows = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   rt <- getRT
+>   -- if this was an open session, it would get scheduled w/ in the
+>   -- entire scheduling range (SR).  
+>   results <- runScoring w [] rt $ dailySchd dt getSchedulableSession [] 
+>   assertEqual "test_scheduleWindows_0" dt (startTime . head $ results)
+>   assertEqual "test_scheduleWindows_0" srDur (duration . head $ results)
+>   -- As a windowed session, with the SR
+>   -- falling completely w/ in the window, it acts the same.
+>   results <- runScoring w [] rt $ dailySchd dt s history 
+>   assertEqual "test_scheduleWindows_1" wtime (duration . head $ results)
+>   assertEqual "test_scheduleWindows_2" (fromGregorian 2006 10 14 23 30 0) (startTime . head $ results)
+>   -- now test the boundaries of the window - the SR only overlaps
+>   -- w/ the begining of the window
+>   results <- runScoring w [] rt $ dailySchd srStart2 s history 
+>   assertEqual "test_scheduleWindows_3" (wStart . head . windows $ s) (startTime . head $ results)
+>   assertEqual "test_scheduleWindows_4" (48*60) (duration . head $ results)
+>   -- now put the SR completely out of the window, and watch nothing
+>   -- get scheduled:
+>   results <- runScoring w [] rt $ dailySchd srStart3 s history 
+>   assertEqual "test_scheduleWindows_5" [] results 
+>   -- now, change the min/max duration & window total time
+>   -- to match that of the default period (standard setup)
+>   -- and watch the chosen period scheduled match that min/max value:
+>   -- USE the availabel time in the sesssion!!!!!!!!!!!!!
+>   results <- runScoring w [] rt $ dailySchd dt minMaxS history 
+>   assertEqual "test_scheduleWindows_6" True (all (\p -> ((duration p)== 4*60)) results) 
+>   assertEqual "test_scheduleWindows_7" 1 (length results) 
+>   -- Now place the SR in range of the default period, and that's all
+>   -- we should get scheduled
+>   results <- runScoring w [] rt $ dailySchd srStart4 s history 
+>   assertEqual "test_scheduleWindows_8" [dp] results 
+>   -- Now, fuck with the window: give it a chosen period, and reduce
+>   -- the default period's duration by half to compensate.  We also 
+>   -- change wTotalTime, since this is really the time remaining for
+>   -- the window.  Then make sure that
+>   -- the chosen period scheduled is only equal to this new duration.
+>   results <- runScoring w [] rt $ dailySchd dt s2 hist2 
+>   assertEqual "test_scheduleWindows_9" True (all (\p -> ((duration p)== remaining)) results) 
+>   assertEqual "test_scheduleWindows_10" 1 (length results) 
+>     where
+>   dt = fromGregorian 2006 10 14 12 0 0
+>   days = 3
+>   srDur = (days*24*60) + (12*60)
+>   minutes = (24*60*days)::Minutes
+>   -- a windowed session that can easily be scheduled
+>   s' = getSchedulableSession { sType = Windowed }
+>   -- a week long window
+>   -- give it a lot of time at first so that we can see the window range
+>   -- TBF: anything more then 2 days causes an exception!!!! WTF!!!!
+>   wtime = (2*24*60)
+>   w =       defaultWindow {
+>                 wStart = fromGregorian' 2006 10 12
+>               , wDuration = 7*24*60
+>               , wPeriodId = 100
+>               , wTotalTime =  wtime
+>                }
+>   -- w/ a default period near the end of it
+>   dpDur = 4 * 60
+>   dp = defaultPeriod { startTime = fromGregorian 2006 10 18 12 0 0
+>                      , duration = dpDur
+>                      , peId = 100
+>                      , session = s' } 
+>   history = [dp]
+>   s  = makeSession s' [w] [dp]
+>   dailySchd dt s history = do
+>     sf <- genScore dt . scoringSessions dt undefined $ [s]
+>     dailySchedule' sf Pack dt minutes history [s]
+>   srStart2 = fromGregorian 2006 10 10 12 0 0
+>   srStart3 = fromGregorian 2006 10 1 12 0 0
+>   -- reduce the time for the window & min/max to match the default period
+>   -- this should be the standard setup
+>   w2 = w { wTotalTime = dpDur }
+>   minMaxS = makeSession s { minDuration = dpDur, maxDuration = dpDur } [w2] [dp] 
+>   srStart4 = fromGregorian 2006 10 17 12 0 0
+>   -- schedule 1/2 the window: wTotalTime is really remaining time 
+>   remaining = dpDur `div` 2
+>   dp' = dp { duration = remaining }
+>   w3 = w2 { wTotalTime = remaining }
+>   chosenPeriod = dp' { startTime = fromGregorian 2006 10 12 12 0 0
+>                      , pDuration = remaining
+>                      , peId = 101 }
+>   s2 = makeSession minMaxS [w3] [dp, chosenPeriod]
+>   hist2 = periods s2
 
 Utilities:
+
 
 > mkPeriod s time = defaultPeriod { session = s
 >                                 , startTime = fst time

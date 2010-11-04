@@ -638,7 +638,7 @@ up, all the time.
 >     inWindow dt w = inTimeRange dt (wStart w) (wDuration w)
 
 > availWindows :: Session -> [Window]
-> availWindows = filter (not . wHasChosen) . windows
+> availWindows = filter (not . wComplete) . windows
 
 > inAvailWindows :: ScoreFunc
 > inAvailWindows dt s = factor "inWindows" . Just . inWindows dt availWindows $ s

@@ -182,6 +182,18 @@ def create_session(sesshun, project, fdata):
 
     return sesshun
 
+def create_window(sesshun, fdata):
+    window = Window()
+    window.session = sesshun
+    window.start_date = fdata.get("start_date",
+                                  datetime(2006, 5, 11, 0, 0, 0))
+    window.duration = fdata.get("duration", 7)
+    window.total_time = fdata.get("total_time", 0.0)
+    window.complete = fdata.get("complete", False)
+
+    window.save()
+    return window
+
 def create_period(sesshun, fdata):
     period = Period()
     period.score = 0.0
@@ -191,11 +203,14 @@ def create_period(sesshun, fdata):
     period.duration = fdata.get("duration", 1.0)
     stateAbbr = fdata.get("state", "P")
     period.state = first(Period_State.objects.filter(abbreviation=stateAbbr))
+    window = fdata.get("window", None)
+    period.window_id = window.id if window is not None else None
     pa = Period_Accounting(scheduled = 0.0)
     pa.save()
     period.accounting = pa
 
     period.save()
+    return period
 
 def create_receiver_schedule():
     receiver_schedule = [
@@ -234,6 +249,7 @@ def create_receiver_schedule():
         rs.save()
 
 def populate_project1():
+
     #fdata = dict(
     #    type         = "science"
     #  , semester     = "09A"
@@ -277,6 +293,64 @@ def populate_project1():
       , state      = "P"
       )
     create_period(sess, fdata)
+
+    # Windowed session with one Window having a Pending period and
+    # a Scheduled period
+    sess = Sesshun(project = proj)
+    fdata = dict(
+        type       = "windowed"
+      , science    = "pulsar"
+      , name       = "GBT09A-001-03"
+      , freq       = 1.4
+      , req_max    =  8.0
+      , req_min    =  8.0
+      , between    = None
+      , PSC_time   = 8.0
+      , total_time = 8.0
+      , sem_time   = 8.0
+      , grade      = 4.0
+      , receiver   = u'L'
+      , coord_mode = "J2000"
+      , source_v   = 1.2
+      , source_h   = 5.8
+      , source     = "0329+54"
+      , lst_ex     = None
+      )
+    create_session(sess, proj, fdata)
+    fdata = dict(
+        start_date = datetime(2006, 7, 9, 0, 0, 0)
+      , duration = 30
+      , total_time = 8.0
+      , complete = False
+      )
+    window = create_window(sess, fdata)
+    fdata = dict(
+        forecast   = datetime(2006, 7, 10, 0, 0, 0)
+      , start      = datetime(2006, 7, 10, 0, 0, 0)
+      , duration   = 2.0
+      , state      = "S"
+      , window     = window
+      )
+    period = create_period(sess, fdata)
+    period.accounting.scheduled = period.duration
+    period.accounting.save()
+    fdata = dict(
+        forecast   = datetime(2006, 7, 18, 0, 0, 0)
+      , start      = datetime(2006, 7, 18, 0, 0, 0)
+      , duration   = 4.0
+      , state      = "P"
+      , window     = window
+      )
+    create_period(sess, fdata)
+    fdata = dict(
+        forecast   = datetime(2006, 8, 8, 0, 0, 0)
+      , start      = datetime(2006, 8, 8, 0, 0, 0)
+      , duration   = 8.0
+      , state      = "P"
+      , window     = window
+      )
+    window.default_period = create_period(sess, fdata)
+    window.save()
 
 if __name__ == "__main__":
     create_receiver_schedule()

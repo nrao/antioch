@@ -18,23 +18,25 @@
 >    , test_schedulableSessions
 >    , test_clearWindowedTimeBilled
 >    , test_isSchedulableType
+>    , test_activeWindows
+>    , test_adjustWindowSessionDuration
 >    , test_projectBlackedOut
 >   ]
 >
 
 > test_projectBlackedOut = TestCase $ do
 >   -- no blackouts
->   assertEqual "test_projectBlackedOut_1" False (pb dt dur s)
+>   assertEqual "test_projectBlackedOut_1" True (pb dt dur s)
 >   -- dur not covered by blackouts
->   assertEqual "test_projectBlackedOut_2" False (pb dt dur s2)
+>   assertEqual "test_projectBlackedOut_2" True (pb dt dur s2)
 >   -- dur covered by blackouts
->   assertEqual "test_projectBlackedOut_3" True (pb dt dur2 s2)
+>   assertEqual "test_projectBlackedOut_3" False (pb dt dur2 s2)
 >   -- dur not covered by blackouts
->   assertEqual "test_projectBlackedOut_4" False (pb dt dur s3)
+>   assertEqual "test_projectBlackedOut_4" True (pb dt dur s3)
 >   -- dur not covered by blackouts at all
->   assertEqual "test_projectBlackedOut_5" False (pb dt2 dur2 s3)
+>   assertEqual "test_projectBlackedOut_5" True (pb dt2 dur2 s3)
 >     where
->       pb = projectBlackedOut
+>       pb = projectNotBlackedOut
 >       dt  = fromGregorian 2006 2 1  0 0 0
 >       dur = 3*24*60 -- 3 days ~scheduling range
 >       dur2 = 1 -- *23*60 
@@ -146,24 +148,103 @@
 >     assertEqual "test_isSchedulableType 1" True  (isSchedulableType undefined undefined cv)
 >     -- session is Windowed, has no windows inside the scheduling range
 >     -- but has a chosen period
->     assertEqual "test_isSchedulableType 2" False (isSchedulableType dt1 (24*60) tw2)
+>     assertEqual "test_isSchedulableType 2" False (isSchedulableType oct (24*60) tw2)
 >     -- session is Windowed with a window inside the scheduling range,
->     -- and has a chosen period
->     assertEqual "test_isSchedulableType 3" False  (isSchedulableType dt1 (6*24*60) tw2)
+>     -- and is complete
+>     assertEqual "test_isSchedulableType 3" False  (isSchedulableType oct (6*24*60) tw2)
 >     -- session is Windowed with a window inside the scheduling range,
 >     -- but with the window's period also in the scheduling range
->     -- and has a chosen period
->     assertEqual "test_isSchedulableType 4" False (isSchedulableType dt1 (8*24*60) tw2)
+>     -- and is complete
+>     assertEqual "test_isSchedulableType 4" False (isSchedulableType oct (8*24*60) tw2)
 >     -- session is Windowed, but no windows inside the scheduling range
->     assertEqual "test_isSchedulableType 5" False (isSchedulableType dt2 (2*24*60) tw2)
+>     assertEqual "test_isSchedulableType 5" False (isSchedulableType sep (2*24*60) tw2)
 >     -- session is Windowed with a window inside the scheduling range
->     assertEqual "test_isSchedulableType 6" True  (isSchedulableType dt2 (5*24*60) tw2)
+>     -- but no default period win the scheduling range
+>     assertEqual "test_isSchedulableType 6" True  (isSchedulableType sep (5*24*60) tw2)
 >     -- session is Windowed with a window inside the scheduling range,
->     -- but with the window's period also in the scheduling range
->     assertEqual "test_isSchedulableType 7" False (isSchedulableType dt2 (9*24*60) tw2)
+>     -- but with the window's default period also in the scheduling range
+>     assertEqual "test_isSchedulableType 7" False (isSchedulableType sep (9*24*60) tw2)
 >       where
->         dt1 = fromGregorian 2006 10 13  0 0 0
+>         sep = fromGregorian 2006  9 20  0 0 0 -- incomplete window
+>         oct = fromGregorian 2006 10 13  0 0 0 --   complete window
+
+> test_activeWindows = TestCase $ do
+>     -- no overlap
+>     let wins' = activeWindows dt1 (2*24*60) win1s
+>     assertEqual "test_activeWindows_1" [] wins'
+>     -- some overlap
+>     let wins' = activeWindows dt1 (4*24*60) win1s
+>     assertEqual "test_activeWindows_2" [head win1s] wins'
+>     -- too much overlap
+>     let wins' = activeWindows dt1 (8*24*60) win1s
+>     assertEqual "test_activeWindows_3" [] wins'
+>     -- overlap into second window
+>     let wins' = activeWindows dt1 (26*24*60) win1s
+>     assertEqual "test_activeWindows_4" [head . tail $ win1s] wins'
+>     -- overlap into second window's default
+>     let wins' = activeWindows dt1 (31*24*60) win1s
+>     assertEqual "test_activeWindows_5" [] wins'
+>     -- no overlap
+>     let wins' = activeWindows dt2 (2*24*60) win2s
+>     assertEqual "test_activeWindows_6" [] wins'
+>     -- some overlap
+>     let wins' = activeWindows dt2 (8*24*60) win2s
+>     assertEqual "test_activeWindows_7" [head win2s] wins'
+>     -- too much overlap
+>     let wins' = activeWindows dt2 (10*24*60) win2s
+>     assertEqual "test_activeWindows_8" [] wins'
+>     -- full overlap, but first covers the default and second
+>     -- is completed
+>     let wins' = activeWindows dt2 (60*24*60) win2s
+>     assertEqual "test_activeWindows_9" [] wins'
+>       where
+>         dt1 = fromGregorian 2006  9 29  0 0 0
 >         dt2 = fromGregorian 2006  9 20  0 0 0
+>         win1s = windows tw1
+>         win2s = windows tw2
+
+> test_adjustWindowSessionDuration = TestCase $ do
+>     -- no active windows, no adjustment
+>     let s = adjustWindowSessionDuration dt1 (2*24*60) tw
+>     assertEqual "test_adjustWindowSessionDuration_1" tw s
+>     assertEqual "test_adjustWindowSessionDuration_2" tt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_3" tt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_3" at (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_3" at (sAllottedT s)
+>     -- first window is active, causes an adjustment
+>     let s = adjustWindowSessionDuration dt1 (5*24*60) tw
+>     assertEqual "test_adjustWindowSessionDuration_4" ntt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_5" ntt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_5" ntt (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_5" ntt (sAllottedT s)
+>     -- include default, first window is inactive, no adjustment
+>     let s = adjustWindowSessionDuration dt1 (6*24*60) tw
+>     assertEqual "test_adjustWindowSessionDuration_6" tt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_7" tt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_7" at (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_7" at (sAllottedT s)
+>     -- second window is active, no adjustment
+>     let s = adjustWindowSessionDuration dt1 (28*24*60) tw
+>     assertEqual "test_adjustWindowSessionDuration_8"  tt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_9" tt (maxDuration s)
+>     -- last part of first window, first part of second window
+>     -- (no defaults), adjust according to the first active window
+>     let s = adjustWindowSessionDuration dt2 (25*24*60) tw
+>     assertEqual "test_adjustWindowSessionDuration_10" ntt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_11" ntt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_11" ntt (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_11" ntt (sAllottedT s)
+>       where
+>         -- test session where first window's total time is
+>         -- less than the session's min/max durations
+>         at   = 8*60 -- allotted time of session
+>         tt   = 4*60 -- total time of each window
+>         ntt  = 2*60 -- new total time, i.e. remaining time of window!
+>         win1 = (head . windows $ tw1) { wTotalTime = ntt }
+>         win2 = head . tail . windows $ tw1
+>         tw   =  tw1 { windows = [win1, win2] }
+>         dt1  = fromGregorian 2006  9 29  0 0 0
+>         dt2  = fromGregorian 2006 10  5  0 0 0
 
 Test Utilities:
 

@@ -71,7 +71,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         -- schedule range mean those windows won't get scheduled here.
 >         let h = filterHistory history start (packDays+1) 
 >         let ws' = getWindows sessions'' h 
->         let ws = map (\w -> w {wHasChosen = True}) ws'
+>         let ws = map (\w -> w {wComplete = True}) ws'
 >         let sessions' = updateSessions sessions'' [] [] ws
 >
 >         -- now we pack, and look for backups
@@ -106,7 +106,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         -- find all windows that got scheduled this time around
 >         let wps = filter (typeWindowed . session) newSched
 >         let ws' = getWindows sessions wps 
->         let ws = map (\w -> w { wHasChosen = True }) ws'
+>         let ws = map (\w -> w { wComplete = True }) ws'
 >         --liftIO $ print $ "Compare periods to default periods: "
 >         --liftIO $ printList $ getDefaultPeriods sessions ws
 >         let dps = getDefaultPeriods sessions ws
