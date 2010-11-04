@@ -209,14 +209,20 @@
 >     assertEqual "test_adjustWindowSessionDuration_1" tw s
 >     assertEqual "test_adjustWindowSessionDuration_2" tt (minDuration s)
 >     assertEqual "test_adjustWindowSessionDuration_3" tt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_3" at (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_3" at (sAllottedT s)
 >     -- first window is active, causes an adjustment
 >     let s = adjustWindowSessionDuration dt1 (5*24*60) tw
->     assertEqual "test_adjustWindowSessionDuration_4"  ntt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_4" ntt (minDuration s)
 >     assertEqual "test_adjustWindowSessionDuration_5" ntt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_5" ntt (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_5" ntt (sAllottedT s)
 >     -- include default, first window is inactive, no adjustment
 >     let s = adjustWindowSessionDuration dt1 (6*24*60) tw
->     assertEqual "test_adjustWindowSessionDuration_6"  tt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_6" tt (minDuration s)
 >     assertEqual "test_adjustWindowSessionDuration_7" tt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_7" at (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_7" at (sAllottedT s)
 >     -- second window is active, no adjustment
 >     let s = adjustWindowSessionDuration dt1 (28*24*60) tw
 >     assertEqual "test_adjustWindowSessionDuration_8"  tt (minDuration s)
@@ -224,13 +230,16 @@
 >     -- last part of first window, first part of second window
 >     -- (no defaults), adjust according to the first active window
 >     let s = adjustWindowSessionDuration dt2 (25*24*60) tw
->     assertEqual "test_adjustWindowSessionDuration_10"  ntt (minDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_10" ntt (minDuration s)
 >     assertEqual "test_adjustWindowSessionDuration_11" ntt (maxDuration s)
+>     assertEqual "test_adjustWindowSessionDuration_11" ntt (sAllottedS s)
+>     assertEqual "test_adjustWindowSessionDuration_11" ntt (sAllottedT s)
 >       where
 >         -- test session where first window's total time is
 >         -- less than the session's min/max durations
->         tt   = 4*60
->         ntt  = 2*60
+>         at   = 8*60 -- allotted time of session
+>         tt   = 4*60 -- total time of each window
+>         ntt  = 2*60 -- new total time, i.e. remaining time of window!
 >         win1 = (head . windows $ tw1) { wTotalTime = ntt }
 >         win2 = head . tail . windows $ tw1
 >         tw   =  tw1 { windows = [win1, win2] }

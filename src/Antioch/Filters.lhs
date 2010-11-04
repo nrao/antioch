@@ -105,9 +105,11 @@ An active window:
 >   hasTime w       = (wTotalTime w) >= quarter
 >   isNotComplete w = not . wComplete $ w
 
-Modify the min/max duration of a windowed session to the length of its
-first active window's total time. Note this code assumes that
-minDuration == maxDuration.
+Modify the min/max duration & alloted time of a windowed session 
+to the length of its first active window's total time.  This ensures:
+   * that we will get a chosen period scheduled of the correct duration
+   * that we will only get ONE chosen period scheduled in the call 2 pack
+Note this code assumes that minDuration == maxDuration.
 
 > adjustWindowSessionDuration :: DateTime -> Minutes -> Session -> Session
 > adjustWindowSessionDuration dt dur s
@@ -117,8 +119,19 @@ minDuration == maxDuration.
 >     aws = activeWindows dt dur . windows $ s
 >     s'
 >         | aws == []   = s
->         | otherwise   = s { minDuration = mmd, maxDuration = mmd }
->     mmd = wTotalTime . head $ aws
+>         | otherwise   = s { minDuration = mmd
+>                           , maxDuration = mmd   
+>                           -- we want the allotted time to be enough such
+>                           -- that the session has just enough sAvailT
+>                           -- such that it gets scheduled only once
+>                           , sAllottedT  = mmd  + (sCommittedT s) 
+>                           , sAllottedS  = mmd  + (sCommittedT s) 
+>                           }
+>     -- for windows read from the DB, wTotalTime is really the time
+>     -- remaining for a window, which is dynamically calculated when
+>     -- read from the DB as being the window's total time minus the
+>     -- time billed of all other periods in the window.
+>     mmd = wTotalTime . head $ aws 
 
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
