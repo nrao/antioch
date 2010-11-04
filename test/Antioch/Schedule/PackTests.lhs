@@ -60,6 +60,7 @@
 >   , test_Pack6
 >   , test_Pack7
 >   , test_Pack8
+>   , test_Pack9
 >   , test_PackWorker'1
 >   , test_PackWorker'3
 >   , test_PackWorker'5
@@ -1245,6 +1246,72 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >                                }
 >     expStartTime = fromGregorian 2006 11 8 22 0 0
 >     expPeriod = Period 0 candidate expStartTime 120 1.2334107 Pending expStartTime False 120
+
+> test_Pack9 = TestCase $ do
+>     w <- getWeatherTest . Just $ starttime 
+>     rt <- getRT
+>     -- pack a single session that is always up
+>     periods' <- runScoring w [] rt $ do
+>         fs <- genScore starttime [candidate]
+>         pack fs starttime dur [] [candidate]
+>     assertEqual "test_Pack9_1" 1 (length periods')
+>     assertEqual "test_Pack9_2" (2*60) (duration (head periods'))
+>     -- now make sure it makes way for a fixed in the beginning
+>     periods' <- runScoring w [] rt $ do
+>         fs <- genScore starttime [candidate]
+>         pack fs starttime dur [fixedP] [candidate]
+>     assertEqual "test_Pack9_3" 2 (length periods')
+>     assertEqual "test_Pack9_4" (2*60) (duration (last periods'))
+>     assertEqual "test_Pack9_5" "candidate" (sName . session . last $ periods')
+>     -- now make sure it can handle having periods w/ out billed time 
+>     periods' <- runScoring w [] rt $ do
+>         fs <- genScore starttime [c2]
+>         pack fs starttime dur [p2, fixedP] [c2]
+>     assertEqual "test_Pack9_3" 2 (length periods')
+>     assertEqual "test_Pack9_4" (2*60) (duration (last periods'))
+>     assertEqual "test_Pack9_5" "candidate" (sName . session . last $ periods')
+>     -- TBF: uncomment this too see the BUG!!! WTF.
+>     -- now push the sessions periods w/ out billed time to w/ in the
+>     -- range of pack (put it where that fixed period was), and watch
+>     -- the bug: pack thinks the session has no more time left
+>     --periods' <- runScoring w [] rt $ do
+>     --    fs <- genScore starttime [c2]
+>     --    pack fs starttime dur [p3] [c3]
+>     --print "pack w/ fixed: "
+>     --print periods'
+>     --assertEqual "test_Pack9_3" 2 (length periods')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     dur = 12*60
+>     candidate' = defaultSession { minDuration = 2*60
+>                                , maxDuration = 2*60
+>                                , frequency = 2.0
+>                                , receivers = [[Rcvr1_2]]
+>                                , project = testProject
+>                                , sAllottedT = 4*60
+>                                , sAllottedS = 4*60
+>                                , ra = 0.0
+>                                , dec = 1.5 -- always up
+>                                , sName = "candidate"
+>                                , sId = 101
+>                                }
+>     p1 = defaultPeriod { session = candidate'
+>                       , startTime = fromGregorian 2006 10 1 0 0 0
+>                       , duration = 2*60
+>                       , pDuration = 2*60
+>                       }
+>     candidate = makeSession candidate' [] [p1]
+>     fixedP = defaultPeriod { startTime = starttime
+>              , duration = 2*60 
+>              , pDuration = 2*60
+>              }
+>     p2 = p1 { startTime = fromGregorian 2006 11 1 0 0 0, pDuration = 0}
+>     c2 = makeSession candidate' [] [p1, p2]
+>     p3 = p1 { startTime = starttime, pDuration = 0}
+>     c3 = makeSession candidate' [] [p1, p3]
+
+
+
 
 > test_Pack_overlapped_fixed = TestCase $ do
 >     w <- getWeatherTest . Just $ starttime 
