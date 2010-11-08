@@ -48,7 +48,7 @@ Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hr
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
 >     d <- fetchProjectData cnn
->     assertEqual "test_getProjectData1" 2 (length d)  
+>     assertEqual "test_getProjectData1" 1 (length d)  
 >     assertEqual "test_getProjectData2" "GBT09A-001" (pName . head $ d)  
 >     assertEqual "test_getProjectData3" False (thesis . head $ d)  
 >     disconnect cnn
@@ -57,14 +57,14 @@ Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hr
 >     ps <- getProjects 
 >     let ss = concatMap sessions ps
 >     let allPeriods = sort $ concatMap periods $ ss
->     assertEqual "test_getProjects1" 2 (length ps)  
+>     assertEqual "test_getProjects1" 1 (length ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 1 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects4" 2 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
->     assertEqual "test_getProjects6" 2 (pId . project . head $ ss)    
+>     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 4 (length allPeriods)    
