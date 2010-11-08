@@ -646,6 +646,10 @@ Equation 5
 >   --result <- mapM (runScoring w rs rt $ goodElective) hist
 >   result <- mapM (goodElective' w rs rt) ps
 >   assertEqual "test_goodElective_1" exp result
+>   -- move the third period from False to True by making it scheduled
+>   let scheduledPeriod = (mkPeriod e1 dt 60) { pState = Scheduled }
+>   result <- mapM (goodElective' w rs rt) [scheduledPeriod]
+>   assertEqual "test_goodElective_2" [True] result
 >     where
 >   exp = [True, True, False, True]
 >   mkPeriod s dt dur = defaultPeriod { session = s

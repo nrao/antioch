@@ -283,15 +283,18 @@ MOC, unless they are gauranteed, and this is the last period in
 the elective group.
 
 > goodElective :: Period -> Scoring (Bool)
-> goodElective p | isNotElective $ p = return True
+> goodElective p | isNotElective p = return True
+>                | isScheduledElective p = return True
 >                | otherwise = do
 >   -- check for gauranteed?
 >   moc <- minimumObservingConditions dt s
+>   liftIO $ print ("checking for a good elective: ", moc, p)
 >   case moc of
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
 >     isNotElective p = (sType . session $ p) /= Elective
+>     isScheduledElective p = ((sType . session $ p) == Elective) && (pState p == Scheduled)
 >     dt = startTime p
 >     s = session p
 
