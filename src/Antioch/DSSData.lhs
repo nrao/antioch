@@ -471,6 +471,7 @@ For now, just set:
 >     | n == "Transit"         = s { transit = toTransit pBool }
 >     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
 >     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
+>     | n == "Not Guaranteed"  = s { guaranteed = not . fromSql $ pBool }   
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName

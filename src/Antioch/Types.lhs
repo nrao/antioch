@@ -86,6 +86,7 @@ use a single data structure for all sessions.
 >   , transit     :: TransitType
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
+>   , guaranteed  :: Bool
 >   } deriving Show
 
 > instance Eq Session where
@@ -277,6 +278,7 @@ Simple Functions for Periods:
 >   , transit     = Optional
 >   , xi          = 1.0
 >   , elLimit     = Nothing
+>   , guaranteed  = True 
 >   }
 
 > defaultObserver = Observer {

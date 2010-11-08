@@ -70,6 +70,7 @@ Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hr
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 4 (length allPeriods)    
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head $ ss)
+>     assertEqual "test_getProject99" True (guaranteed . head $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
 so, clean up by hand for now.
