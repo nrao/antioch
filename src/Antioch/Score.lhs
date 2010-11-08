@@ -278,6 +278,23 @@ Base of exponential Equation 12
 > adjustedMinObservingEff :: Float -> Float
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
 
+Periods from Elective Sessions should not run if they don't pass
+MOC, unless they are gauranteed, and this is the last period in 
+the elective group.
+
+> goodElective :: Period -> Scoring (Bool)
+> goodElective p | isNotElective $ p = return True
+>                | otherwise = do
+>   -- check for gauranteed?
+>   moc <- minimumObservingConditions dt s
+>   case moc of
+>     Nothing -> return False
+>     Just moc'  -> return moc'
+>   where
+>     isNotElective p = (sType . session $ p) /= Elective
+>     dt = startTime p
+>     s = session p
+
 3.2 Stringency
 
 > stringency                 :: ScoreFunc

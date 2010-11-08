@@ -5,6 +5,7 @@
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (showList', dt2semester, overlie)
 
+
 Pass on to the simulation only the history of pre-scheduled periods that 
 we care about: those that fall in between the dates we are simulating for.
 We do this, because otherwise the reports at the end of the simulations will
@@ -15,10 +16,11 @@ be confused and raise false alarams.
 >   where
 >     overlie' p = overlie start (daysDur*24*60) p
 
-> typeOpen , typeWindowed , typeFixed :: Session -> Bool
+> typeOpen , typeWindowed , typeFixed, typeElective :: Session -> Bool
 > typeOpen s = sType s == Open
 > typeWindowed s = sType s == Windowed
 > typeFixed s = sType s == Fixed
+> typeElective s = sType s == Elective
 
 Not all sessions should be considered for scheduling.  We may not one to pass
 Sessions that:

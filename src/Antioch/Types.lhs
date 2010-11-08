@@ -48,7 +48,7 @@ such as: P
 
 > data Band = P | L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
-> data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
+> data SessionType = Open | Fixed | Windowed | Elective deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
 > data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing deriving (Ord, Eq, Show, Read)

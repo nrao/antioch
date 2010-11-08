@@ -33,6 +33,7 @@ Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hr
 >     , test_getProjectData
 >     -- , test_getProjectsProperties
 >     -- , test_putPeriods
+>     -- , test_movePeriodsToDeleted
 >     -- , test_populateSession
 >     -- , test_populateWindowedSession
 >     , test_makeSession
@@ -217,6 +218,29 @@ generated: it's the input we want to test, really.
 >                          , startTime = dt
 >                          , pScore = 0.0
 >                          , pForecast = dt }
+
+> test_movePeriodsToDeleted = TestCase $ do
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   let exp = [Pending,Scheduled,Pending,Pending]
+>   assertEqual "test_movePeriods_1" exp (map pState ps) 
+>   -- move all to deleted
+>   movePeriodsToDeleted ps
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   --let exp = [Deleted,Deleted,Deleted,Deleted]
+>   -- won't pick them up from DB since they are deleted
+>   assertEqual "test_movePeriods_2" [] ps 
+>   -- move them back
+>   cnn <- connect
+>   movePeriodToState cnn 1 1 
+>   movePeriodToState cnn 2 2 
+>   movePeriodToState cnn 3 1 
+>   movePeriodToState cnn 4 1 
+>   -- make sure the moved back okay
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   assertEqual "test_movePeriods_3" exp (map pState ps) 
 
 Kluge, data base has to be prepped manually for test to work, see
 example in comments.

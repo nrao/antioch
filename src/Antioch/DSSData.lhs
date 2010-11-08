@@ -762,6 +762,27 @@ Creates a new period accounting row, and returns this new rows ID
 >       queryId = "SELECT MAX(id) FROM periods_accounting"
 >       toId [[x]] = fromSql x
 
+Change the state of all given periods to Deleted.
+
+> movePeriodsToDeleted :: [Period] -> IO ()
+> movePeriodsToDeleted ps = do
+>   cnn <- connect
+>   result <- mapM (movePeriodToDeleted cnn) ps
+>   return ()
+>     where
+>   movePeriodToDeleted cnn p = movePeriodToState cnn (peId p) 3
+
+Changes the state of a Period.
+
+> movePeriodToState :: Connection -> Int -> Int -> IO ()
+> movePeriodToState cnn periodId stateId = handleSqlError $ do
+>   result <- quickQuery' cnn query xs
+>   commit cnn
+>   return ()
+>     where
+>       query = "UPDATE periods SET state_id = ? WHERE id = ?;"
+>       xs = [toSql stateId, toSql periodId]
+
 Utilities
 
 What's the largest (i.e. newest) primary key in the given table?

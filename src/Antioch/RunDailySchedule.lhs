@@ -30,7 +30,11 @@ and outputs:
 >     rt <- getReceiverTemperatures
 >     -- now get all the input from the DB
 >     (rs, ss, projs, history') <- dbInput dt
->     let history = filterHistory history' dt (days + 1) 
+>     let history' = filterHistory history' dt (days + 1) 
+>     -- TBF: Really, this should be done inside dailySchedule so that electives
+>     -- can be covered by simualtions as well, but it's so much simpler to do
+>     -- it here, and I doubt sims will need to cover electives.  so there.
+>     history <- filterElectives history'
 >     print "scheduling around periods: "
 >     printList history
 >     schd <- runScoring w rs rt $ do
@@ -43,6 +47,16 @@ and outputs:
 >     print "writing new periods to DB: " 
 >     printList newPeriods
 >     putPeriods newPeriods
+>     -- do we need to remove any failed electives?
+>     movePeriodsToDeleted $ history \\ history' 
+
+TBF: HACK HACK - this really should be in Filters, but it requires
+Score, which would cause cyclical imports.
+Filter out of the history any elective periods that shouldn't
+stay on the schedule.
+
+> filterElectives :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period] -> IO ([Period])
+> filterElectives w rs rt ps =  runScoring w rs rt $ filter goodElective ps
 
 TBF: HACK HACK - dbInput is in RunSimulation too!
 Get everything we need from the Database.

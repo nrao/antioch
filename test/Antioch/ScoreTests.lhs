@@ -35,6 +35,7 @@
 >   , test_systemNoiseTemperature'
 >   , test_minTsys'
 >   , test_minimumObservingConditions
+>   , test_goodElective
 >   , test_getRealOrForecastedWind
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
@@ -636,6 +637,35 @@ Equation 5
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
 >     expected = [False,True,True,False,False,False,True]
+
+> test_goodElective = TestCase $ do
+>   --hist' <- mapM goodElective' hist
+>   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
+>   let rs = []
+>   rt <- getReceiverTemperatures
+>   --result <- mapM (runScoring w rs rt $ goodElective) hist
+>   result <- mapM (goodElective' w rs rt) ps
+>   assertEqual "test_goodElective_1" exp result
+>     where
+>   exp = [True, True, False, True]
+>   mkPeriod s dt dur = defaultPeriod { session = s
+>                                     , startTime = dt
+>                                     , duration = dur
+>                                     }
+>   gb = head $ findPSessionsByName "GB"
+>   cv = head $ findPSessionsByName "CV"
+>   e1 = gb { sType = Elective }
+>   e2 = cv { sType = Elective }
+>   -- use the date & sessions from test_minimumObservingConditions
+>   -- to get predictable results
+>   dt = fromGregorian 2006 10 13 16 0 0
+>   ps = [mkPeriod gb dt 60
+>       , mkPeriod cv dt 60
+>       , mkPeriod e1 dt 60
+>       , mkPeriod e2 dt 60
+>        ]
+>   goodElective' w rs rt p = runScoring w rs rt $ goodElective p
+>   
 
 > test_observingEfficiency = TestCase $ do
 >     -- pTestProjects session CV
