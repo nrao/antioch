@@ -17,7 +17,7 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
-> import Data.Maybe         (fromMaybe, isJust, fromJust)
+> import Data.Maybe         (fromMaybe, isJust, isNothing, fromJust)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -285,18 +285,37 @@ the elective group.
 > goodElective :: Period -> Scoring (Bool)
 > goodElective p | isNotElective p = return True
 >                | isScheduledElective p = return True
+>                | isGuaranteedElective p = return True
 >                | otherwise = do
 >   -- check for gauranteed?
 >   moc <- minimumObservingConditions dt s
->   liftIO $ print ("checking for a good elective: ", moc, p)
 >   case moc of
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
 >     isNotElective p = (sType . session $ p) /= Elective
->     isScheduledElective p = ((sType . session $ p) == Elective) && (pState p == Scheduled)
+>     isElective p = (sType . session $ p) == Elective
+>     isScheduledElective p = (isElective p) && (pState p == Scheduled)
+>     isGuaranteedElective p = (isElective p) && (guaranteed . session $ p) && (isLastPeriodOfElective p) 
 >     dt = startTime p
 >     s = session p
+
+The last periods in a group of periods (Electives) needs special 
+consideration: if it's session is NOT gauranteed time, then there's
+a chance even the last periods won't observe.
+
+> isLastPeriodOfElective :: Period -> Bool
+> isLastPeriodOfElective p = isLastPeriod p elec
+>   where 
+>     pid = peId p
+>     elecs = electives . session $ p
+>     periodInElective e = any (==pid) (ePeriodIds e) 
+>     elecs' = filter periodInElective elecs  
+>     elec = if (length elecs') == 1 then Just . head $ elecs' else Nothing
+
+> isLastPeriod :: Period -> Maybe Electives -> Bool
+> isLastPeriod p me | isNothing me = False
+>                   | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
 
 3.2 Stringency
 

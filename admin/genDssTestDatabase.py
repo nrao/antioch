@@ -205,6 +205,8 @@ def create_period(sesshun, fdata):
     period.state = first(Period_State.objects.filter(abbreviation=stateAbbr))
     window = fdata.get("window", None)
     period.window_id = window.id if window is not None else None
+    elective = fdata.get("elective", None)
+    period.elective_id = elective.id if elective is not None else None
     pa = Period_Accounting(scheduled = 0.0)
     pa.save()
     period.accounting = pa
@@ -351,6 +353,48 @@ def populate_project1():
       )
     window.default_period = create_period(sess, fdata)
     window.save()
+    # Elective Session w/ one pair of periods
+    sess = Sesshun(project = proj)
+    fdata = dict(
+        type       = "elective"
+      , science    = "pulsar"
+      , name       = "GBT09A-001-04"
+      , freq       = 1.4
+      , req_max    =  8.0
+      , req_min    =  8.0
+      , between    = None
+      , PSC_time   = 8.0
+      , total_time = 8.0
+      , sem_time   = 8.0
+      , grade      = 4.0
+      , receiver   = u'L'
+      , coord_mode = "J2000"
+      , source_v   = 1.2
+      , source_h   = 5.8
+      , source     = "0329+54"
+      , lst_ex     = None
+      )
+    create_session(sess, proj, fdata)
+    elective = Elective(session = sess
+                      , complete = False
+                        )
+    elective.save()                        
+    fdata = dict(
+        forecast   = datetime(2006, 9, 18, 0, 0, 0)
+      , start      = datetime(2006, 9, 18, 0, 0, 0)
+      , duration   = 4.0
+      , state      = "P"
+      , elective   = elective
+      )
+    create_period(sess, fdata)
+    fdata = dict(
+        forecast   = datetime(2006, 9, 22, 0, 0, 0)
+      , start      = datetime(2006, 9, 22, 0, 0, 0)
+      , duration   = 4.0
+      , state      = "P"
+      , elective   = elective
+      )
+    create_period(sess, fdata)
 
 if __name__ == "__main__":
     create_receiver_schedule()

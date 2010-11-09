@@ -66,6 +66,7 @@ use a single data structure for all sessions.
 >   , sClosed     :: Bool
 >   , project     :: Project
 >   , windows     :: [Window]
+>   , electives   :: [Electives]
 >   , periods     :: [Period]
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
@@ -139,6 +140,20 @@ data does not have periods with unique ids).
 >     eqIds    = (==) `on` wSession
 >     eqStarts = (==) `on` wStart
 >     eqDurs   = (==) `on` wDuration
+
+
+Electives are just a means of grouping some periods.  But we do need
+an easy way of determining if a period is the last period in an elective,
+in case the Sesshun does not have gauranteed time.
+
+> data Electives = Electives {
+>     eId        :: Int -- DB PK
+>   , eComplete  :: Bool
+>   , ePeriodIds :: [Int] -- PK's of periods, sorted by ASC startTime
+> } deriving Eq
+
+> instance Show Electives where
+>     show e = "Elective (" ++ (show . eId $ e) ++ ")"
 
 Need to calculate a windowed session's opportunities from its observation details.
 
@@ -255,6 +270,7 @@ Simple Functions for Periods:
 >   , sName       = ""
 >   , project     = defaultProject 
 >   , windows     = []
+>   , electives   = []
 >   , periods     = [defaultPeriod]
 >   , sAllottedT  = 0
 >   , sAllottedS  = 0

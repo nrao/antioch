@@ -63,14 +63,16 @@ Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hr
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 2 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects4" 3 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
->     assertEqual "test_getProjects10" 4 (length allPeriods)    
+>     assertEqual "test_getProjects10" 6 (length allPeriods)    
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head $ ss)
 >     assertEqual "test_getProject99" True (guaranteed . head $ ss)
+>     assertEqual "test_getProject99" 1 (length . electives . last $ ss)
+>     assertEqual "test_getProject99" [5,6] (ePeriodIds . head . electives . last $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
 so, clean up by hand for now.

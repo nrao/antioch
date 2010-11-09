@@ -36,6 +36,7 @@
 >   , test_minTsys'
 >   , test_minimumObservingConditions
 >   , test_goodElective
+>   , test_isLastPeriodOfElective
 >   , test_getRealOrForecastedWind
 >   , test_observingEfficiency
 >   , test_observingEfficiency2
@@ -639,37 +640,64 @@ Equation 5
 >     expected = [False,True,True,False,False,False,True]
 
 > test_goodElective = TestCase $ do
->   --hist' <- mapM goodElective' hist
 >   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
 >   let rs = []
 >   rt <- getReceiverTemperatures
->   --result <- mapM (runScoring w rs rt $ goodElective) hist
 >   result <- mapM (goodElective' w rs rt) ps
 >   assertEqual "test_goodElective_1" exp result
 >   -- move the third period from False to True by making it scheduled
->   let scheduledPeriod = (mkPeriod e1 dt 60) { pState = Scheduled }
+>   let scheduledPeriod = (mkPeriod es1 dt 60 3) { pState = Scheduled }
 >   result <- mapM (goodElective' w rs rt) [scheduledPeriod]
 >   assertEqual "test_goodElective_2" [True] result
+>   -- move the period #5 from True to False by making it NOT gauranteed
+>   let es2' = es1 { guaranteed = False }
+>   let ps' = [mkPeriod es2' dt 60 5]
+>   result <- mapM (goodElective' w rs rt) ps'
+>   assertEqual "test_goodElective_3" [False] result
 >     where
->   exp = [True, True, False, True]
->   mkPeriod s dt dur = defaultPeriod { session = s
->                                     , startTime = dt
->                                     , duration = dur
->                                     }
+>   exp = [True, True, False, True, True, True]
+>   mkPeriod s dt dur id = defaultPeriod { session   = s
+>                                        , startTime = dt
+>                                        , duration  = dur
+>                                        , peId      = id
+>                                        }
 >   gb = head $ findPSessionsByName "GB"
 >   cv = head $ findPSessionsByName "CV"
->   e1 = gb { sType = Elective }
->   e2 = cv { sType = Elective }
+>   e1 = Electives 1 True [3, 5] 
+>   e2 = Electives 2 True [4, 6] 
+>   es1 = gb { sType = Elective, electives = [e1], sId = 100 }
+>   es2 = cv { sType = Elective, electives = [e2], sId = 101}
 >   -- use the date & sessions from test_minimumObservingConditions
 >   -- to get predictable results
 >   dt = fromGregorian 2006 10 13 16 0 0
->   ps = [mkPeriod gb dt 60
->       , mkPeriod cv dt 60
->       , mkPeriod e1 dt 60
->       , mkPeriod e2 dt 60
+>   ps = [mkPeriod gb dt 60 1
+>       , mkPeriod cv dt 60 2
+>       , mkPeriod es1 dt 60 3 -- 1st in elective
+>       , mkPeriod es2 dt 60 4 -- 1st
+>       , mkPeriod es1 dt 60 5 -- last in elective
+>       , mkPeriod es2 dt 60 6 -- last
 >        ]
 >   goodElective' w rs rt p = runScoring w rs rt $ goodElective p
 >   
+
+> test_isLastPeriodOfElective = TestCase $ do
+>     assertEqual "test_isLastPeriodOfElective_1" False (isLastPeriodOfElective p1) 
+>     assertEqual "test_isLastPeriodOfElective_2" True (isLastPeriodOfElective p2) 
+>     assertEqual "test_isLastPeriodOfElective_3" False (isLastPeriodOfElective p3) 
+>     assertEqual "test_isLastPeriodOfElective_4" True (isLastPeriodOfElective p4) 
+>     assertEqual "test_isLastPeriodOfElective_5" False (isLastPeriodOfElective p5) 
+>   where
+>     -- order of period Ids is assumed to be by ASC startTime (DSSData)
+>     e1 = Electives 1 False [100, 101] 
+>     e2 = Electives 2 False [102, 103] 
+>     s' = defaultSession { sType = Elective
+>                         , electives = [e1, e2] }
+>     p1 = defaultPeriod { session = s', peId = 100 }
+>     p2 = defaultPeriod { session = s', peId = 101 }
+>     p3 = defaultPeriod { session = s', peId = 102 }
+>     p4 = defaultPeriod { session = s', peId = 103 }
+>     p5 = defaultPeriod { session = s', peId = 105 }
+>     s  = makeSession s' [] [p1, p2, p3, p4] -- not used, WTF
 
 > test_observingEfficiency = TestCase $ do
 >     -- pTestProjects session CV

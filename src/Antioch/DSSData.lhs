@@ -439,7 +439,9 @@ TBF: why aren't we getting the rcvr info here?
 >     s' <- setObservingParameters cnn s
 >     ps <- getPeriods cnn s'
 >     ws <- getWindows cnn s'
->     return $ makeSession s' ws ps
+>     es <- getElectives cnn s'
+>     let s'' = s' { electives = es }
+>     return $ makeSession s'' ws ps
 
 The following recursive patterns work for setting the observing params
 that are one-to-one between the DB and the Session (ex: Night Time -> low rfi).  However,
@@ -535,6 +537,33 @@ it an exclusion range.
 >     lowValue = lstRangeLow' . head $ filter (isLSTName n) sqlValues
 >     --isLow (pName:pFloat:[]) = (fromSql pName) == "LST Exclude Low"
 >     lstRangeLow' (pName:pLow:[]) = fromSql pLow
+
+> getElectives :: Connection -> Session -> IO [Electives]
+> getElectives cnn s = do
+>   result <- quickQuery' cnn query xs 
+>   let elecs' = toElectiveList result
+>   elecs <- mapM (getElectivePeriods cnn) elecs'
+>   return elecs
+>   where
+>     xs = [toSql . sId $ s]
+>     query = "SELECT id, complete FROM electives WHERE session_id = ?;"
+>     toElectiveList = map toElective
+>     toElective(id:comp:[]) =
+>       Electives { eId = fromSql id
+>                 , eComplete = fromSql comp 
+>                 , ePeriodIds = [] -- for later
+>                }
+
+> getElectivePeriods :: Connection -> Electives -> IO (Electives)
+> getElectivePeriods cnn elec = do
+>   result <- quickQuery' cnn query xs
+>   let ids = toIdList result
+>   return $ elec {ePeriodIds = ids}
+>   where
+>     xs = [toSql . eId $ elec]
+>     query = "SELECT id FROM periods WHERE elective_id = ? ORDER BY start ASC;"
+>     toIdList = map toId
+>     toId(id:[]) = fromSql id
 
 > getWindows :: Connection -> Session -> IO [Window]
 > getWindows cnn s = do
