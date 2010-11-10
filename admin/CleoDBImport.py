@@ -419,6 +419,7 @@ class CleoDBImport:
                  , 'ashelton@nrao.edu'
                  , 'mclark@nrao.edu'
                  , 'rcreager@nrao.edu'
+                 , 'mmccarty@nrao.edu'
                  , 'koneil@nrao.edu'
                  , 'tminter@nrao.edu'
                  , 'dbalser@nrao.edu'
