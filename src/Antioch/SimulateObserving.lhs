@@ -89,8 +89,6 @@ Specifically, we want to include any period that overlaps with the start, but
 > cancelPeriod :: BackupStrategy
 > cancelPeriod sn sf backups p = do
 >   tell [Cancellation p]
->   liftIO $ print $ "Canceled: " ++ (show . session $ p)
->   liftIO $ print . show $ p
 >   if length backups == 0 
 >     then return Nothing
 >     else replaceWithBackup sn sf backups p

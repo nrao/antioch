@@ -613,7 +613,7 @@ Equation 5
 >     -- forecast because in future
 >     let dt1 = fromGregorian 2006 10 13 16 0 0
 >     r1 <- runScoring w [] rt (getRealOrForecastedWind dt1)
->     assertEqual "test_getRealOrForecastedWind 1" (Just 4.6638374) r1
+>     assertEqual "test_getRealOrForecastedWind 1" (Just 6.5983596) r1
 >     -- measured because in past
 >     let dt2 = fromGregorian 2006 9 13 0 0 0
 >     r2 <- runScoring w [] rt (getRealOrForecastedWind dt2)
@@ -621,7 +621,7 @@ Equation 5
 >     -- forecast because measured is unavailable
 >     let dt3 = fromGregorian 2006 6 22 12 0 0
 >     r3 <- runScoring w [] rt (getRealOrForecastedWind dt3)
->     assertEqual "test_getRealOrForecastedWind 3" (Just 3.5221453) r3
+>     assertEqual "test_getRealOrForecastedWind 3" (Just 3.8565624) r3
 
 > test_minimumObservingConditions = TestCase $ do
 >     let dt = fromGregorian 2006 10 13 16 0 0
@@ -631,7 +631,7 @@ Equation 5
 >     assertEqual "test_minimumObservingConditions" expected mocs
 >   where
 >     moc w rt dt s = do
->       Just result <- runScoring w [] rt (minimumObservingConditions dt s)
+>       Just result <- runScoring w [] rt (minimumObservingConditions dt 15 s)
 >       return result
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
@@ -646,31 +646,31 @@ Equation 5
 >     let s = findPSessionByName "CV"
 >     fs <- runScoring w [] rt (observingEfficiency dt s)
 >     let result = eval fs
->     assertEqual "test_observingEfficiency" 0.9269926 result
+>     assertEqual "test_observingEfficiency" 0.9285591 result
 
 > test_minObservingEfficiencyFactor = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
 >     rt <- getReceiverTemperatures
 >     fs <- runScoring w [] rt (observingEfficiency dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 1" 0.45692018 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.45671964 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s1)
 >     assertEqual "test_minObservingEfficiencyFactor 2" 0.4698731 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 3" 2.3909143e-18 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 2.1842974e-18 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 4" 0.45692018 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 0.45671964 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 5" 0.4698731 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 6" 2.3909143e-18 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 2.1842974e-18 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s3)
->     assertEqual "test_minObservingEfficiencyFactor 7" 0.7139377 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 7" 0.71362436 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 8" 0.73417664 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 9" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s4)
->     assertEqual "test_minObservingEfficiencyFactor 10" 0.97243315 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 10" 0.9720063 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s4)
@@ -693,11 +693,11 @@ Equation 5
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
->     assertEqual "test_observingEfficiency2_1" 0.9861518 (eval fs)
+>     assertEqual "test_observingEfficiency2_1" 0.9861073 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
->     assertEqual "test_observingEfficiency2_2" 0.9809487 (eval fs)
+>     assertEqual "test_observingEfficiency2_2" 0.98086834 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
->     assertEqual "test_observingEfficiency2_3" 0.809369 (eval fs)
+>     assertEqual "test_observingEfficiency2_3" 0.8084462 (eval fs)
 
 > test_observingEfficiencyLimit = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
@@ -706,7 +706,7 @@ Equation 5
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
->     assertEqual "test_observingEfficiencyLimit <18" 0.8549047 result
+>     assertEqual "test_observingEfficiencyLimit <18" 0.8904976 result
 >     let s = findPSessionByName "GB"
 >     [(_, Just result)] <- runScoring w [] rt (observingEfficiencyLimit dt s)
 >     assertEqual "test_observingEfficiencyLimit >=18" 0.0 result
@@ -963,10 +963,10 @@ Equation 14
 Equation 12
 
 > test_trackingObservingEfficiency = TestCase $ do
->     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99996424)  (trackingObservingEfficiency wind1 dt1 False freq1)
->     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99996424)  (trackingObservingEfficiency wind1 dt1 True freq1)
->     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9923971)  (trackingObservingEfficiency wind2 dt2 False freq2)
->     assertEqual "test_trackingObservingEfficiency 4" (Just 0.9929574)  (trackingObservingEfficiency wind2 dt2 True freq2)
+>     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 False freq1)
+>     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 True freq1)
+>     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9980345)  (trackingObservingEfficiency wind2 dt2 False freq2)
+>     assertEqual "test_trackingObservingEfficiency 4" (Just 0.99860287)  (trackingObservingEfficiency wind2 dt2 True freq2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -978,19 +978,19 @@ Equation 12
 > test_trackingEfficiency = TestCase $ do
 >     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult' "test_trackingEfficiency lp" Nothing 0.99996424 (trackingEfficiency dt sess)
+>     assertScoringResult' "test_trackingEfficiency lp" Nothing 0.99995804 (trackingEfficiency dt sess)
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingEfficiency dt s)
->     assertEqual "test_trackingEfficiency cv" 0.9923971 result 
+>     assertEqual "test_trackingEfficiency cv" 0.9940742 result 
 
 Equation 13
 
 > test_trackErr = TestCase $ do
->     assertEqual "test_trackErr 1" 2.0589652e-2 (trackErr dt1 wind1 freq1)
->     assertEqual "test_trackErr 2" 4.0554617e-2 (trackErr dt2 wind2 freq2)
+>     assertEqual "test_trackErr 1" 2.0463584e-2 (trackErr dt1 wind1 freq1)
+>     assertEqual "test_trackErr 2" 2.4898745e-2 (trackErr dt2 wind2 freq2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -1002,8 +1002,8 @@ Equation 13
 Equation 16
 
 > test_trackErrArray = TestCase $ do
->     assertEqual "test_trackErrArray 1" 9.117578e-3 (trackErrArray wind1 freq1)
->     assertEqual "test_trackErrArray 2" 3.640869e-2 (trackErrArray wind2 freq2)
+>     assertEqual "test_trackErrArray 1" 8.829199e-3 (trackErrArray wind1 freq1)
+>     assertEqual "test_trackErrArray 2" 1.7345414e-2 (trackErrArray wind2 freq2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -1054,7 +1054,7 @@ Equation 16
 >     assertEqual "test_weatherFactors wind_mph" 12.485167 wind_mph
 >     --
 >     let wind_ms = fromJust . fromJust . lookup "wind_ms" $ factors
->     assertEqual "test_weatherFactors wind_ms" 5.2077017 wind_ms
+>     assertEqual "test_weatherFactors wind_ms" 7.294977 wind_ms
 >     let opacity = fromJust . fromJust . lookup "opacity" $ factors
 >     assertEqual "test_weatherFactors opacity" 8.936982e-3 opacity
 >     let tsys = fromJust . fromJust . lookup "tsys" $ factors
@@ -1139,36 +1139,36 @@ Equation 11
 > test_rmsTrackingError = TestCase $ do
 >     let dt  = fromGregorian 2006 4 15 16 0 0
 >     let res = rmsTrackingError dt 3.4
->     let exp = 4.214415
+>     let exp = 3.499613 
 >     assertEqual "test_rmsTrackingError 1" exp res
 >     let res = rmsTrackingError dt 17.2
->     let exp = 67.16505
+>     let exp = 29.997143 
 >     assertEqual "test_rmsTrackingError 2" exp res
 >     let res = rmsTrackingError dt 0.1
->     let exp = 3.3000007
+>     let exp = 3.3
 >     assertEqual "test_rmsTrackingError 3" exp res
 >     let dt  = fromGregorian 2006 4 16 4 0 0
 >     let res = rmsTrackingError dt 3.4
->     let exp = 3.8355308
+>     let exp = 3.0327039 
 >     assertEqual "test_rmsTrackingError 4" exp res
 >     let res = rmsTrackingError dt 17.2
->     let exp = 67.142334
+>     let exp = 29.946262 
 >     assertEqual "test_rmsTrackingError 5" exp res
 >     let res = rmsTrackingError dt 0.1
->     let exp = 2.800001
+>     let exp = 2.8000002
 >     assertEqual "test_rmsTrackingError 6" exp res
 
 Equation 15
 
 > test_variableTrackingError = TestCase $ do
 >     let res = variableTrackingError 3.4
->     let exp = 2.882932
+>     let exp = 1.6725109
 >     assertEqual "test_variableTrackingError 1" exp res
 >     let res = variableTrackingError 17.2
->     let exp = 67.09466
+>     let exp = 29.839212
 >     assertEqual "test_variableTrackingError 2" exp res
 >     let res = variableTrackingError 0.1
->     let exp = 1.2000022
+>     let exp = 1.2000005
 >     assertEqual "test_variableTrackingError 3" exp res
 
 Equation 9
@@ -1199,7 +1199,7 @@ Equation 9
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV" 3.3521867 result  
+>     assertEqual "test_scoreCV" 3.4976518 result  
 
 New tests that do *not* match up to a 'beta test python code test', but rather
 to use in conjunction with Pack tests.
@@ -1213,7 +1213,7 @@ to use in conjunction with Pack tests.
 >     let s = head $ filter (\s -> "CV" == (sName s)) ss
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
->     assertEqual "test_scoreCV2" 4.156445 result  
+>     assertEqual "test_scoreCV2" 4.1611986 result  
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather
@@ -1363,12 +1363,12 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = [2.3009138,2.2980595,2.2946684,2.292651,2.2878866] ++ (replicate 92 0.0)
+>     expected = [2.3009086,2.2980537,2.2946627,2.292648,2.2878835] ++ (replicate 92 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [0.50573075,0.50723356,0.37941712,0.4378961,0.46524638,0.49138007,0.5099908,0.511102,0.51175827,0.5123564,0.5186518,0.5188351,0.5194414,0.51960164,0.524883,0.524883,0.5249703,0.5249703,0.5265836,0.5265836,0.52651185,0.52635866,0.5258168,0.52562726,0.5255274,0.52531004,0.524077,0.5237679,0.5234247,0.52283955,0.5232655,0.52255327,0.5216983,0.5206546]
+> defaultScores = [0.5058345,0.5073376,0.38199204,0.44000292,0.46694967,0.49243346,0.5100889,0.51120037,0.5118567,0.5124549,0.51849306,0.5186764,0.5192825,0.5194427,0.5247254,0.5247254,0.52481264,0.52481264,0.52643895,0.52643895,0.52636725,0.5262142,0.5256728,0.5254833,0.5253835,0.52516615,0.52396524,0.5236562,0.52331305,0.522728,0.5231732,0.52246106,0.5216063,0.52056277]
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeatherTest . Just $ origin 
@@ -1377,19 +1377,19 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 3.9147372, 4*60 + 30)
+>     let expected = (s, 3.9186277, 4*60 + 30)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- best period length overriding min/max
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 3.8906476, 4*60)
+>     let expected = (s, 3.894584, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >     -- best period length using session's min/max, but only 4 hours left
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing exht
->     let expected = (exht, 3.8906476, 4*60)
+>     let expected = (exht, 3.894584, 4*60)
 >     assertEqual "test_bestDuration 3" expected bestDur
 >   where
 >     origin = fromGregorian 2006 10 1 18 0 0
@@ -1418,11 +1418,11 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 1" 12 (length bestDurs)
 >     let (s, v, d) = bestDurs !! 1
 >     assertEqual "test_bestDurations 2 n" "CV" (sName s)
->     assertEqual "test_bestDurations 2 v" 3.9760742 v
+>     assertEqual "test_bestDurations 2 v" 3.9800308 v
 >     assertEqual "test_bestDurations 2 d" 360 d
 >     let (s, v, d) = bestDurs !! 6
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
->     assertEqual "test_bestDurations 3 v" 3.316514 v
+>     assertEqual "test_bestDurations 3 v" 3.3165581 v
 >     assertEqual "test_bestDurations 3 d" 450 d
 >   where
 >     starttime = fromGregorian 2006 10 1 17 0 0
@@ -1482,7 +1482,7 @@ Look at the scores over a range where none are zero.
 >     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
->     expectedTotal = 3.8079967
+>     expectedTotal = 3.8158395 
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
 > test_obsAvailable = TestCase $ do

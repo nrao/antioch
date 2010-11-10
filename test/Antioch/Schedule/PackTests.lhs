@@ -677,7 +677,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
 >     scores = (take 44 defaultPackSessionScores) ++
->              [0.0,0.0,3.1388562,3.145695]
+>              [0.0,0.0,3.1394598,3.1463003]
 >     expected = dItem { iId = sess
 >                    , iMinDur = 8
 >                    , iMaxDur = 24
@@ -977,11 +977,12 @@ produce changes in the final result.
 >         names = ["CV", "AS", "CV"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [195,405,195]
+>         durs = [210,390,195]
 >         times = [ starttime
->                 , fromGregorian 2006 11 8  15 15 0
+>                 , fromGregorian 2006 11 8  15 30 0
 >                 , fromGregorian 2006 11 9   8 45 0 ]
->         scores = [2.9165013, 3.2747638, 3.2450633]
+>         --scores = [2.9165013, 3.2747638, 3.2450633]
+>         scores = [2.9471364, 3.260362, 3.232128]
 
 Same test, but this time, stick some fixed periods in there.
 TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
@@ -1341,8 +1342,8 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     fixed3 = Period 0 ds {sId = 1002, sName = "1002"} ft3 d 0.0 Pending starttime False d
 >     fixed4 = Period 0 ds {sId = 1003, sName = "1003"} ft4 d 0.0 Pending starttime False d
 >     fixed = [fixed1, fixed2, fixed3, fixed4]
->     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 195 9165013 Pending starttime False 195
->     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 15 0) 405 3.2747638 Pending starttime False 405
+>     open1 = Period 0 (ds {sName = "CV", sId =  getPSessionId "CV"}) starttime 210 9165013 Pending starttime False 210
+>     open2 = Period 0 (ds {sName = "AS", sId = getPSessionId "AS"}) (fromGregorian 2006 11 8 15 30 0) 390 3.2747638 Pending starttime False 390
 >     expPeriods = [open1, open2, fixed2, fixed3]
 
 The beta test code runs packing using TScore, which is essentially a
@@ -1534,7 +1535,8 @@ increments starting at starttime is taken from the ScoreTests.lhs
 > --                [3.2114944,3.2196305,3.2241328,2.8470442,3.0492089
 > --                ,3.1139324,3.140008,3.187729,3.1933162]
 > defaultPackSessionScores = (replicate 40 0.0) ++ 
->     [3.1126366,3.1218858,2.33521,2.6951327,2.863466,3.0243123,3.1388562,3.145695]
+> --    [3.1126366,3.1218858,2.33521,2.6951327,2.863466,3.0243123,3.1388562,3.145695]
+>       [3.113275,3.1225264,2.3510582,2.7080994,2.8739493,3.030795,3.1394598,3.1463003]
 
 This is the list of random numbers generated on the python side:
 

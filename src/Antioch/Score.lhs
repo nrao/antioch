@@ -262,9 +262,6 @@ Base of exponential Equation 12
 > minimumObservingConditions dt dur s = do
 >     let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
 >     fcts <- mapM (minObsFactors s) dts
->     liftIO $ print $ "minObsCond: " ++ (toSqlString dt) ++ " for " ++ (show dur)
->     liftIO $ print . show $ s
->     liftIO $ printList fcts
 >     let effProducts = map (\(fs, tr) -> ((eval fs) * tr)) fcts
 >     let meanEff = if (length effProducts) > 0 then (sum effProducts) / (fromIntegral . length $ effProducts) else 0.0
 >     return $ Just (meanEff >= minObs)
@@ -282,24 +279,6 @@ Base of exponential Equation 12
 >                             Nothing -> 0.0
 >                             Just x  -> if x then 1.0 else 0.0
 >      return (fss, trkErrLimit')
-
-> {--minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
-> minimumObservingConditions dt s = do
->    w  <- weather
->    w' <- liftIO $ newWeather w (Just dt)
->    local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
->      let minObs = minObservingEff . frequency $ s
->      fs <- observingEfficiency dt s
->      let obsEff' = eval fs
->      -- don't use the scoring function trackingErrorLimit, so
->      -- that we can use different constants.
->      trkErrLimit' <- mocTrackingErrorLimit dt s
->      let trkErrOK = case trkErrLimit' of 
->                             Just x  -> x
->                             Nothing -> True
->      let minObs' = adjustedMinObservingEff minObs
->      let obsEffOK = obsEff' >= minObs'
->      return $ Just (obsEffOK && trkErrOK) --}
 
 > adjustedMinObservingEff :: Float -> Float
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
@@ -581,9 +560,6 @@ Equation 15
 
 > variableTrackingError :: Float -> Float
 > variableTrackingError w = trackingError w epsilonZero
-
-> {--trackingError :: Float -> Float -> Float
-> trackingError w te = sqrt $ te ^ 2 + (abs w / 2.1) ^ 4--}
 
 Scale the wind speed by 1.5 to account for weather differences between 
 2003 (when calibration was performed) and 2009 (current weather station)
