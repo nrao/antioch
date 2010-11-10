@@ -582,14 +582,14 @@ Equation 15
 > variableTrackingError :: Float -> Float
 > variableTrackingError w = trackingError w epsilonZero
 
-> trackingError :: Float -> Float -> Float
-> trackingError w te = sqrt $ te ^ 2 + (abs w / 2.1) ^ 4
+> {--trackingError :: Float -> Float -> Float
+> trackingError w te = sqrt $ te ^ 2 + (abs w / 2.1) ^ 4--}
 
 Scale the wind speed by 1.5 to account for weather differences between 
 2003 (when calibration was performed) and 2009 (current weather station)
 
-> {--trackingError :: Float -> Float -> Float
-> trackingError w te = sqrt $ te ^ 2 + (abs w / (2.1 * 1.5)) ^ 4--}
+> trackingError :: Float -> Float -> Float
+> trackingError w te = sqrt $ te ^ 2 + (abs w / (2.1 * 1.5)) ^ 4
 
 > epsilonZero :: Float
 > epsilonZero = 1.2

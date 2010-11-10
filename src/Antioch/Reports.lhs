@@ -31,19 +31,6 @@
 > import Graphics.Gnuplot.Simple
 
 
-For plotting the forecast wind speed correction curve
-
-> plotWindCorrection :: IO ()
-> plotWindCorrection = plotFuncs attrs (linearScale 1000 (0.0, 16.0)) [day, night]
->   where
->     t     = "Forecasted vs Corrected Wind Speed"
->     x     = "Forecasted Wind"
->     y     = "Corrected Forecasted Wind"
->     day   = correctWindSpeed' windDayCoeff
->     night = correctWindSpeed' windNightCoeff
->     attrs = (tail $ scatterAttrs t x y "windCorr.png") ++ [XRange (0.0, 16.0), YRange (0.0, 16.0)] 
-
-
 simRemainingTime
 
 Here we are trying to reproduce subcompenents of the pressure calculations.
@@ -201,6 +188,9 @@ make changes to them.
 >       yl = "Temperature (K)"
 >       fn r = (show r) ++ "Temp.png"
 
+
+For plotting the forecast wind speed correction curve
+
 > plotWindCorrection :: IO ()
 > plotWindCorrection = plotFuncs attrs (linearScale 1000 (0.0, 16.0)) [day, night]
 >   where
@@ -209,8 +199,8 @@ make changes to them.
 >     y     = "Corrected Forecasted Wind"
 >     day   = correctWindSpeed' windDayCoeff
 >     night = correctWindSpeed' windNightCoeff
->     -- TBF how to label the two parameters, i.e., day and night?
->     attrs = (tail $ scatterAttrs t x y "windCorr.png") ++ [XRange (0.0, 16.0), YRange (0.0, 8.0)]
+>     attrs = (tail $ scatterAttrs t x y "windCorr.png") ++ [XRange (0.0, 16.0), YRange (0.0, 16.0)] 
+
 
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
