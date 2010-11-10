@@ -45,6 +45,7 @@ def sendWarning():
              , 'ashelton@nrao.edu'
              , 'mclark@nrao.edu'
              , 'rcreager@nrao.edu'
+             , 'mmccarty@nrao.edu'
              ]
     # TBF: more detailed comments here?
     subject = "Warning: Weather has not been imported recently"
