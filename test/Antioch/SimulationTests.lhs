@@ -262,7 +262,7 @@ get on, it has a high chance of being canceled.
 >     --    session's first period has changed
 >     assertEqual "test_updateSessions_5" tw1_newPs (periods tw1')
 >     --    session's first chosen flag has changed
->     assertEqual "test_updateSessions_6" [True, False] (map wHasChosen $ windows tw1')
+>     assertEqual "test_updateSessions_6" [True, False] (map wComplete $ windows tw1')
 >     --    session's windows have not changed
 >     assertEqual "test_updateSessions_7" (windows tw1) (windows tw1')
 >     --    session's default periods have not changed
@@ -282,7 +282,7 @@ get on, it has a high chance of being canceled.
 >     new_cv_period = defaultPeriod { peId = 3, session = cv }
 >     new_ps = [new_lp_period, new_cv_period]
 >     getPeriodIds sess = sort $ map peId $ concatMap periods sess
->     w1 = (head . windows $ tw1) {wHasChosen = True}
+>     w1 = (head . windows $ tw1) {wComplete = True}
 >     condemned = head . periods $ tw1
 >     chosen = defaultPeriod {
 >                 session = tw1

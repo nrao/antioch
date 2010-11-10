@@ -35,7 +35,7 @@ runhaskell UpdateReceiverTemperatures <name> Rcvr1_2 2005-05-27
 >   
 >   removeOldTemps pcnn rcvr
 >   insertNewTemps pcnn rcvr fts
->   putStr $ "Wrote " ++ (show . length $ fts) ++ " Receiver Temperature measuremnts to database.\n"
+>   putStr $ "Wrote " ++ (show . length $ fts) ++ " Receiver Temperature measurements to database.\n"
 
 > getMySqlRcvr :: String -> (String, Maybe String)
 > getMySqlRcvr dssRcvr | dssRcvr `elem` pf1Rcvrs = ("RcvrPF_1", Just (getChannel dssRcvr))

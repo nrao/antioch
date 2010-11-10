@@ -14,19 +14,27 @@
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
-> --import Database.HDBC.PostgreSQL            (Connection, connectPostgreSQL) -- dbug
 
 The DB used for these unit tests is created and populated via the
 instructions in admin/genDssTestDatagase.py.
 
+Projects: [<Project: GBT09A-001, 09A, >, <Project: GBT09A-001, 09A, >]
+Sessions: [<Sesshun: (1) GBT09A-001-02 :  9.30 GHz,  3.50 Hrs, Rcvrs: (X), status: (1) e: False; a: False; c: False; b: False>, <Sesshun: (2) GBT09A-001-03 :  1.40 GHz,  8.00 Hrs, Rcvrs: (L), status: (2) e: False; a: False; c: False; b: False>]
+Types: Open, Windowed
+Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hrs (P) - Id (1); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>],
+ [<Period: Period (2) for Session (2): 2006-07-10 00:00:00 for  2.00 Hrs (S) - Id (2); SC: 2.00 OT: 2.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>, <Period: Period (3) for Session (2): 2006-07-18 00:00:00 for  4.00 Hrs (P) - Id (3); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>, <Period: Period (4) for Session (2): 2006-08-08 00:00:00 for  8.00 Hrs (P) - Id (4); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>]]
+
 > tests = TestList [
 >       test_fetchPeriods
+>     , test_getWindows
 >     , test_getPeriods
 >     , test_getProjects
 >     -- , test_numPeriods
 >     , test_getProjectData
 >     -- , test_getProjectsProperties
 >     -- , test_putPeriods
+>     -- , test_populateSession
+>     -- , test_populateWindowedSession
 >     , test_makeSession
 >     , test_scoreDSSData
 >     , test_session2
@@ -47,18 +55,19 @@ instructions in admin/genDssTestDatagase.py.
 
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
->     let ss = sessions . head $ ps
->     let allPeriods = sort $ concatMap periods $ concatMap sessions ps
+>     let ss = concatMap sessions ps
+>     let allPeriods = sort $ concatMap periods $ ss
 >     assertEqual "test_getProjects1" 1 (length ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
+>     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 720 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 1 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
+>     assertEqual "test_getProjects4" 2 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
->     assertEqual "test_getProjects10" 1 (length allPeriods)    
+>     assertEqual "test_getProjects10" 4 (length allPeriods)    
 >     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head $ ss)
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
@@ -93,7 +102,7 @@ once and has a total time that is the sum of the grade hrs.
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09A-001") projs
 >   assertEqual "test_sAllottedT_1" 1 (length ps)
->   assertEqual "test_sAllottedT_2" (12*60) (pAllottedT . head $ ps)
+>   assertEqual "test_sAllottedT_2" 0 (pAllottedT . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -143,7 +152,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [0.0,1.0911006,1.0982922,1.1073105,1.1103191,1.1170144,1.120861,1.1242979,1.1320864,1.1346878,1.137038,1.139167,1.1408842,1.141817,1.133193,1.1340336,1.1333339]
+>       expScores = [0.0,0.71801454,0.7227472,0.7286818,0.73066163,0.7350675,0.7375989,0.7398605,0.7449859,0.7466977,0.7482444,0.74964535,0.75077534,0.7513892,0.745714,0.74626714,0.7458069]
 
 Test a specific session's attributes:
 
@@ -236,6 +245,15 @@ example in comments.
 >       sId =  194
 >       pId = 1760
 
+> test_populateWindowedSession = TestCase $ do
+>   cnn <- connect
+>   s <- getSession sId cnn
+>   ios <- populateSession cnn s
+>   assertEqual "test_populateWindowedSession 1" s ios
+>     where
+>       sId =  194  -- just placeholders
+>       pId = 1760
+
 > mkSqlLst  :: Int -> DateTime -> Int -> Int -> Int -> Int -> String -> [SqlValue]
 > mkSqlLst id strt dur def per pid st =
 >     [toSql id
@@ -262,6 +280,14 @@ example in comments.
 >       s' = defaultSession { sAllottedT = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
 >       w' = defaultWindow { wDuration = 7, wPeriodId = peId p' }
+
+> test_getWindows = TestCase $ do
+>   cnn <- connect
+>   s <- getSession 2 cnn
+>   results <- getWindows cnn s
+>   assertEqual "test_getWindows_1" 1 (length results)
+>   assertEqual "test_getWindows_2" (6*60) (wTotalTime . head $ results)
+>   assertEqual "test_getWindows_3" False (wComplete . head $ results)
 
 > test_getPeriods = TestCase $ do
 >   cnn <- connect
