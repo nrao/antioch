@@ -18,12 +18,6 @@
 The DB used for these unit tests is created and populated via the
 instructions in admin/genDssTestDatagase.py.
 
-Projects: [<Project: GBT09A-001, 09A, >, <Project: GBT09A-001, 09A, >]
-Sessions: [<Sesshun: (1) GBT09A-001-02 :  9.30 GHz,  3.50 Hrs, Rcvrs: (X), status: (1) e: False; a: False; c: False; b: False>, <Sesshun: (2) GBT09A-001-03 :  1.40 GHz,  8.00 Hrs, Rcvrs: (L), status: (2) e: False; a: False; c: False; b: False>]
-Types: Open, Windowed
-Periods: [[<Period: Period (1) for Session (1): 2006-01-01 00:00:00 for  4.00 Hrs (P) - Id (1); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>],
- [<Period: Period (2) for Session (2): 2006-07-10 00:00:00 for  2.00 Hrs (S) - Id (2); SC: 2.00 OT: 2.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>, <Period: Period (3) for Session (2): 2006-07-18 00:00:00 for  4.00 Hrs (P) - Id (3); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>, <Period: Period (4) for Session (2): 2006-08-08 00:00:00 for  8.00 Hrs (P) - Id (4); SC: 0.00 OT: 0.00 NB: 0.00 OS: 0.00 LT: 0.00 SN: 0.00>]]
-
 > tests = TestList [
 >       test_fetchPeriods
 >     , test_getWindows
@@ -156,7 +150,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes'` start | q <- [0..16]]
->       expScores = [0.0,0.71801454,0.7227472,0.7286818,0.73066163,0.7350675,0.7375989,0.7398605,0.7449859,0.7466977,0.7482444,0.74964535,0.75077534,0.7513892,0.745714,0.74626714,0.7458069]
+>       expScores = [0.0,0.71830034,0.723035,0.72897196,0.7306815,0.73508745,0.7376189,0.73988056,0.7450153,0.7467272,0.7482739,0.74967504,0.75080574,0.7514196,0.7457443,0.7462974,0.7458333]
 
 Test a specific session's attributes:
 

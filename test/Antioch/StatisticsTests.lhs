@@ -97,18 +97,18 @@
 >     dp = head . periods $ s2'
 >     s2 = makeSession s2' (windows s2') [cp]
 >     wInfo2 = [(head . windows $ s2, Just cp, dp)]
->     exp = [((cp,0.63283867),(dp,0.6808202))]
+>     exp = [((cp,0.6328392),(dp,0.6808212))]
 >     cp2 = cp { startTime = fromGregorian 2006 4 5 12 0 0 }
 >     dp2 = dp { startTime = fromGregorian 2006 4 1 12 0 0 }
 >     -- the windows info doesn't really matter
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
->     exp2 = [((cp, 0.632838677),(dp, 0.6808202))
->            ,((cp2,0.67720616), (dp2,0.6639635))]
+>     exp2 = [((cp, 0.6328392),(dp,0.6808212 ))
+>            ,((cp2,0.68145156), (dp2,0.6647108))]
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   r <- historicalSchdMeanFactors [p] trackingEfficiency w
->   assertEqual "test_historicalSchdMeanFactors_1" [0.99842864] r
+>   assertEqual "test_historicalSchdMeanFactors_1" [0.99873495] r
 >     where
 >   p = getTestPeriod
 
@@ -118,7 +118,7 @@ TBF: refactor so that historical*Factors methods can take a test weather.
 >   w <- getWeatherTest Nothing
 >   r <- historicalSchdObsEffs [getTestPeriod] w 
 >   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
->   assertEqual "test_historicalSchdObsEffs_1" [0.9802974,0.97683257] (take 2 r)
+>   assertEqual "test_historicalSchdObsEffs_1" [0.9804807,0.9770225] (take 2 r)
 >   -- these should be equivalent
 >   rt <- getReceiverTemperatures
 >   pSchdEffs <- getPeriodsSchdEffs w rt [] [getTestPeriod]
@@ -142,8 +142,9 @@ Test that two ways to get the same result yield the same answer.
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   pSchdEffs <- getPeriodsSchdEffs w rt [] [getTestPeriod]
->   let exp = [(0.9814386,0.9992234,0.9996135,0.9802974)
->             ,(0.977912,0.99928236,0.9996135,0.97683257) ]
+>   --let exp = [(0.9814386,0.9992234,0.9996135,0.9802974)
+>   --          ,(0.977912,0.99928236,0.9996135,0.97683257) ]
+>   let exp = [(0.9814386,0.9994102,0.9996135,0.9804807),(0.977912,0.99947673,0.9996135,0.9770225)]
 >   assertEqual "test_getPeriodsSchdEffs_1" exp (take 2 $ snd . head $ pSchdEffs)
 >   --let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
 >   pObsEffs  <- getPeriodsObsEffs w rt [] [getTestPeriod]
@@ -154,17 +155,17 @@ Test that two ways to get the same result yield the same answer.
 >   -- now socre the period, and make sure results match
 >   w <- getWeatherTest Nothing
 >   fcs <- periodSchdFactors getTestPeriod trackingEfficiency w
->   assertEqual "test_periodSchdFactors_1" 0.9992234 (head fcs)
->   assertEqual "test_periodSchdFactors_2" 0.9968952 (last fcs)
+>   assertEqual "test_periodSchdFactors_1" 0.9994102 (head fcs)
+>   assertEqual "test_periodSchdFactors_2" 0.9973051 (last fcs)
 >   fcs <- periodSchdFactors getTestPeriod2 trackingEfficiency w
->   assertEqual "test_periodSchdFactors_3" 0.9771694  (head fcs)
->   assertEqual "test_periodSchdFactors_4" 0.96175045 (last fcs)
+>   assertEqual "test_periodSchdFactors_3" 0.9761378  (head fcs)
+>   assertEqual "test_periodSchdFactors_4" 0.97425276 (last fcs)
 
 > test_periodObsFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   fcs <- periodObsFactors getTestPeriod2 trackingEfficiency w
->   assertEqual "test_periodObsFactors_1" 0.97644264 (head fcs)
->   assertEqual "test_periodObsFactors_2" 0.97598696 (last fcs)
+>   assertEqual "test_periodObsFactors_1" 0.9774544 (head fcs)
+>   assertEqual "test_periodObsFactors_2" 0.9773642 (last fcs)
 
 > test_fracObservedTimeByDays = TestCase $ do
 >     let result = fracObservedTimeByDays ss ps
