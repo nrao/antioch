@@ -671,6 +671,7 @@ up, all the time.
 > inWindows dt f s
 >       | sType s == Open           = 1.0
 >       | sType s == Fixed          = 1.0
+>       | sType s == Elective       = 1.0
 >       | any (inWindow dt) $ f s   = 1.0
 >       | otherwise                 = 0.0
 >   where
