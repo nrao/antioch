@@ -133,6 +133,9 @@ Combine pieces and parts to produce a UTCTime.
 > roundToQuarter :: DateTime -> DateTime
 > roundToQuarter dt = 900 * ((dt + 450) `div` 900)
 
+> roundToHalfPast :: DateTime -> DateTime
+> roundToHalfPast dt = 3600 * (dt `div` 3600) + 1800
+
 Getting closer to the machine: Not all the functionality of
 System.Time is available in Data.Time, and the only way we can convert
 back and forth is to go through seconds.
@@ -241,20 +244,13 @@ day/night boundary.
 >     rise' = rise - 86400
 >     set'  = set - 86400
 
-Pysical Sun Rise/Set:
+Physical Sun Rise/Set:
 
 > isDayTime    :: DateTime -> Bool
 > isDayTime dt = isDayTime' dt 0 0 
 
-PTCS Version 1.0:
-
-> isPTCSDayTime    :: DateTime -> Bool
-> isPTCSDayTime dt = isDayTime' dt (3600 * 2) (3600 *3)
-
-PTCS Version 2.0:
-
-> isPTCSDayTime_V2    :: DateTime -> Bool
-> isPTCSDayTime_V2 dt = isDayTime' dt 0 (3600 *3)
+> isPTCSDayTime :: DateTime -> Bool
+> isPTCSDayTime dt = isDayTime' dt 0 (3600 * 3)
 
 TBF use ET and translate to UT
 

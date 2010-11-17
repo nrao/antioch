@@ -14,15 +14,14 @@
 >                 , test_addMonth
 >                 , test_translations
 >                 , test_setHour
->                 --, test_toDayOfYear
->                 --, test_fromHoursToHourMins
 >                 , test_isDayTime
 >                 -- TBF, WTF: toggle this once sponsor testing is done
 >                 --, test_isDayTime_2
+>                 , test_roundToHour
+>                 , test_roundToHalfPast
 >                 , test_isPTCSDayTime
 >                 , test_getRise
 >                 , test_getSet
->                 --, test_getSunRiseSets
 >                  ]
 
 > test_setHour = TestCase $ do
@@ -71,46 +70,27 @@ TBF must be some way to factor out the common code in these, but ...
 >     let lt_http = formatLocalTime httpFormat lt
 >     assertEqual "test_translations_6" (Just lt) (parseLocalTime httpFormat lt_http)
 
-Below unit tests were deprecated when SunRiseSet.lhs was refactored.
+> test_roundToHour = TestCase $ do
+>     let inp = fromGregorian 2010 11 16 11 29 0
+>     let exp = fromGregorian 2010 11 16 11  0 0
+>     assertEqual "test_roundToHour_1" exp (roundToHour inp)
+>     let inp = fromGregorian 2010 11 16 11 30 0
+>     let exp = fromGregorian 2010 11 16 12  0 0
+>     assertEqual "test_roundToHour_2" exp (roundToHour inp)
+>     let inp = fromGregorian 2010 11 16 11 31 0
+>     let exp = fromGregorian 2010 11 16 12  0 0
+>     assertEqual "test_roundToHour_3" exp (roundToHour inp)
 
-> {-
-> test_toDayOfYear =  TestCase $ do
->     assertEqual "test_toDayOfYear_1" 1 (toDayOfYear dt1)
->     assertEqual "test_toDayOfYear_2" 1 (toDayOfYear dt2)
->     assertEqual "test_toDayOfYear_3" 1 (toDayOfYear dt3)
->     assertEqual "test_toDayOfYear_4" 2 (toDayOfYear dt4)
->     assertEqual "test_toDayOfYear_5" 91 (toDayOfYear dt5)
->     assertEqual "test_toDayOfYear_6" 365 (toDayOfYear dt6)
->   where
->     dt1 = fromGregorian 2006 1 1 0 0 0
->     dt2 = fromGregorian 2006 1 1 1 0 0
->     dt3 = fromGregorian 2006 1 1 23 0 0
->     dt4 = fromGregorian 2006 1 2 0 0 0
->     dt5 = fromGregorian 2006 4 1 0 0 0
->     dt6 = fromGregorian 2006 12 31 12 0 0
-
-> test_fromHoursToHourMins =  TestCase $ do
->     assertEqual "test_fromHoursToHourMins_1" (12,0) (fromHoursToHourMins 12.0)
->     assertEqual "test_fromHoursToHourMins_2" (12,30) (fromHoursToHourMins 12.5)
->     assertEqual "test_fromHoursToHourMins_3" (13,0) (fromHoursToHourMins 13.0)
-
-> test_getSunRiseSets = TestCase $ do
->   assertEqual "test_getSunRiseSets_1" exp (getSunRiseSets dt sunRise sunSet)
->   assertEqual "test_getSunRiseSets_2" exp_2 (getSunRiseSets dt ptcsSunRise_V2 ptcsSunSet_V2)
->     where 
->   dt = fromGregorian 2006 1 1 0 0 0
->   dt1 = fromGregorian 2005 12 31 12 33 0
->   dt2 = fromGregorian 2005 12 31 22  4 0
->   dt3 = fromGregorian 2006  1  1 12 33 0
->   dt4 = fromGregorian 2006  1  1 22  5 0
->   dt5 = fromGregorian 2006  1  2 12 34 0
->   dt6 = fromGregorian 2006  1  2 22  6 0
->   exp = [(dt1,dt2),(dt3,dt4),(dt5,dt6)]
->   dt2_2 = fromGregorian 2006 1 1 1 4 0
->   dt4_2 = fromGregorian 2006 1 2 1 5 0
->   dt6_2 = fromGregorian 2006 1 3 1 6 0
->   exp_2 = [(dt1,dt2_2),(dt3,dt4_2),(dt5,dt6_2)]
-> -}
+> test_roundToHalfPast = TestCase $ do
+>     let inp = fromGregorian 2010 11 16 11 59 0
+>     let exp = fromGregorian 2010 11 16 11 30 0
+>     assertEqual "test_roundToHalfPast_1" exp (roundToHalfPast inp)
+>     let inp = fromGregorian 2010 11 16 12  0 0
+>     let exp = fromGregorian 2010 11 16 12 30 0
+>     assertEqual "test_roundToHalfPast_2" exp (roundToHalfPast inp)
+>     let inp = fromGregorian 2010 11 16 12  1 0
+>     let exp = fromGregorian 2010 11 16 12 30 0
+>     assertEqual "test_roundToHalfPast_3" exp (roundToHalfPast inp)
 
 > test_isDayTime = TestCase $ do
 >     assertEqual "test_isDayTime_1" False (isDayTime dt1)
@@ -139,25 +119,25 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 
 > test_isPTCSDayTime = TestCase $ do
 >     assertEqual "test_isPTCSDayTime_1" False (isPTCSDayTime dt1)
->     assertEqual "test_isPTCSDayTime_2" False (isPTCSDayTime dt2)
+>     assertEqual "test_isPTCSDayTime_2" True (isPTCSDayTime dt2)
 >     assertEqual "test_isPTCSDayTime_3" True  (isPTCSDayTime dt3)
 >     assertEqual "test_isPTCSDayTime_4" True  (isPTCSDayTime dt4)
 >     assertEqual "test_isPTCSDayTime_5" False (isPTCSDayTime dt5)
->     assertEqual "test_isPTCSDayTime_6" True (isPTCSDayTime_V2 dt10)
->     assertEqual "test_isPTCSDayTime_7" True (isPTCSDayTime_V2 dt11)
->     assertEqual "test_isPTCSDayTime_8" False (isPTCSDayTime_V2 dt12)
+>     assertEqual "test_isPTCSDayTime_6" True (isPTCSDayTime dt10)
+>     assertEqual "test_isPTCSDayTime_7" True (isPTCSDayTime dt11)
+>     assertEqual "test_isPTCSDayTime_8" False (isPTCSDayTime dt12)
 >   where
 >     -- physical rise = 12.6, set = 22.1
->     -- PTCS rise = 12.6 + 2 = 14.6
+>     -- PTCS rise = 12.6 + 0 = 12.6
 >     -- PTCS set  = 22.1 + 3 = 25.1 = 1.1
 >     dt1 = fromGregorian 2006 1 1 10 0 0 
 >     dt2 = fromGregorian 2006 1 1 14 0 0 
 >     dt3 = fromGregorian 2006 1 1 15 0 0 
 >     dt4 = fromGregorian 2006 1 1 23 10 0 
 >     dt5 = fromGregorian 2006 1 2 5  0 0  
->     dt10 =  fromGregorian 2006 1 10 23 0 0 -- is ptcsDayTime_V2
->     dt11 = fromGregorian 2006 1 11 0 0 0 -- is ptcsDayTime_V2
->     dt12 = fromGregorian 2006 1 11 2 0 0 -- is NOT ptcsDayTime_V2
+>     dt10 = fromGregorian 2006 1 10 23 0 0 -- is ptcsDayTime
+>     dt11 = fromGregorian 2006 1 11 0 0 0 -- is ptcsDayTime
+>     dt12 = fromGregorian 2006 1 11 2 0 0 -- is NOT ptcsDayTime
 
 > test_getRise = TestCase $ do
 >     assertEqual "test_getRise_1" dt1_2 (getRise dt1_1)

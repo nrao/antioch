@@ -208,7 +208,7 @@ Equation 9
 
 > surfaceObservingEfficiency' :: DateTime -> Frequency -> Score
 > surfaceObservingEfficiency' dt f = 
->     if isPTCSDayTime_V2 dt
+>     if isPTCSDayTime dt
 >     then
 >         exp (-(k * f^2 * epsilonFactor))
 >     else
