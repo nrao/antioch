@@ -97,13 +97,13 @@
 >     dp = head . periods $ s2'
 >     s2 = makeSession s2' (windows s2') [cp]
 >     wInfo2 = [(head . windows $ s2, Just cp, dp)]
->     exp = [((cp,0.6328392),(dp,0.6808212))]
+>     exp = [((cp,0.6327699),(dp,0.6808212))]
 >     cp2 = cp { startTime = fromGregorian 2006 4 5 12 0 0 }
 >     dp2 = dp { startTime = fromGregorian 2006 4 1 12 0 0 }
 >     -- the windows info doesn't really matter
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
->     exp2 = [((cp, 0.6328392),(dp,0.6808212 ))
->            ,((cp2,0.68145156), (dp2,0.6647108))]
+>     exp2 = [((cp, 0.6327699),(dp,0.6808212 ))
+>            ,((cp2,0.6814143), (dp2,0.6646747))]
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
