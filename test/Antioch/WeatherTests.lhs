@@ -235,7 +235,7 @@ to 2006 date.
 >     where
 >       dts start = map (\q -> (q*15) `addMinutes'` start) [0..8]
 >       getWind w d = wind w d
->       exp = [Just 2.3770752,Just 2.3770752,Just 2.1293852,Just 2.1293852,Just 2.1293852,Just 2.1293852,Just 1.9167798,Just 1.9167798,Just 1.9167798]
+>       exp = [Just 2.3770752,Just 2.3770752,Just 3.725532,Just 3.725532,Just 3.725532,Just 3.725532,Just 3.4385333,Just 3.4385333,Just 3.4385333]
 
 > print_weather_values = TestCase $ do
 >   mapM print_weather (dts start)

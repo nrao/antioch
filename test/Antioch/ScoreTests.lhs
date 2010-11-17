@@ -714,25 +714,25 @@ Equation 5
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
 >     rt <- getReceiverTemperatures
 >     fs <- runScoring w [] rt (observingEfficiency dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 1" 0.45671964 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 1" 0.45012027 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s1)
 >     assertEqual "test_minObservingEfficiencyFactor 2" 0.4698731 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s1)
->     assertEqual "test_minObservingEfficiencyFactor 3" 2.1842974e-18 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 3" 1.0551452e-19 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 4" 0.45671964 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 4" 0.45012027 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s2)
 >     assertEqual "test_minObservingEfficiencyFactor 5" 0.4698731 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s2)
->     assertEqual "test_minObservingEfficiencyFactor 6" 2.1842974e-18 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 6" 1.0551452e-19 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s3)
->     assertEqual "test_minObservingEfficiencyFactor 7" 0.71362436 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 7" 0.7033129 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 8" 0.73417664 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s3)
 >     assertEqual "test_minObservingEfficiencyFactor 9" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt s4)
->     assertEqual "test_minObservingEfficiencyFactor 10" 0.9720063 (eval fs)
+>     assertEqual "test_minObservingEfficiencyFactor 10" 0.9579614 (eval fs)
 >     fs <- runScoring w [] rt (atmosphericEfficiency dt s4)
 >     assertEqual "test_minObservingEfficiencyFactor 11" 1.0 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiencyLimit dt s4)
@@ -755,11 +755,11 @@ Equation 5
 >     let sLP = findPSessionByName "LP" 
 >     let sGB = findPSessionByName "GB" 
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
->     assertEqual "test_observingEfficiency2_1" 0.9861073 (eval fs)
+>     assertEqual "test_observingEfficiency2_1" 0.9846228 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
->     assertEqual "test_observingEfficiency2_2" 0.98086834 (eval fs)
+>     assertEqual "test_observingEfficiency2_2" 0.9792517 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
->     assertEqual "test_observingEfficiency2_3" 0.8084462 (eval fs)
+>     assertEqual "test_observingEfficiency2_3" 0.77861434 (eval fs)
 
 > test_observingEfficiencyLimit = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
@@ -1025,7 +1025,7 @@ Equation 14
 Equation 12
 
 > test_trackingObservingEfficiency = TestCase $ do
->     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 False freq1)
+>     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99909395)  (trackingObservingEfficiency wind1 dt1 False freq1)
 >     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 True freq1)
 >     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9980345)  (trackingObservingEfficiency wind2 dt2 False freq2)
 >     assertEqual "test_trackingObservingEfficiency 4" (Just 0.99860287)  (trackingObservingEfficiency wind2 dt2 True freq2)
@@ -1040,7 +1040,7 @@ Equation 12
 > test_trackingEfficiency = TestCase $ do
 >     let sess = findPSessionByName "LP"
 >     let dt = fromGregorian 2006 10 15 12 0 0
->     assertScoringResult' "test_trackingEfficiency lp" Nothing 0.99995804 (trackingEfficiency dt sess)
+>     assertScoringResult' "test_trackingEfficiency lp" Nothing 0.9986691 (trackingEfficiency dt sess)
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >     rt <- getReceiverTemperatures
 >     let dt = fromGregorian 2006 9 2 14 30 0
@@ -1051,7 +1051,7 @@ Equation 12
 Equation 13
 
 > test_trackErr = TestCase $ do
->     assertEqual "test_trackErr 1" 2.0463584e-2 (trackErr dt1 wind1 freq1)
+>     assertEqual "test_trackErr 1" 2.4107518e-2 (trackErr dt1 wind1 freq1)
 >     assertEqual "test_trackErr 2" 2.4898745e-2 (trackErr dt2 wind2 freq2)
 >      where
 >        freq1 = 5.4
@@ -1425,7 +1425,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = [2.3009086,2.2980537,2.2946627,2.292648,2.2878835] ++ (replicate 92 0.0)
+>     expected = [2.3009086,2.2980537,2.2946627,2.2924707,2.2877066] ++ (replicate 92 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
