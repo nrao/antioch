@@ -118,14 +118,14 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 >     exp = (take (12*4 + 3) $ repeat False) ++ (take (9*4 + 2) $ repeat True) ++ (take (1*4 + 3) $ repeat False)
 
 > test_isPTCSDayTime = TestCase $ do
->     assertEqual "test_isPTCSDayTime_1" False (isPTCSDayTime dt1)
->     assertEqual "test_isPTCSDayTime_2" True (isPTCSDayTime dt2)
->     assertEqual "test_isPTCSDayTime_3" True  (isPTCSDayTime dt3)
->     assertEqual "test_isPTCSDayTime_4" True  (isPTCSDayTime dt4)
->     assertEqual "test_isPTCSDayTime_5" False (isPTCSDayTime dt5)
->     assertEqual "test_isPTCSDayTime_6" True (isPTCSDayTime dt10)
->     assertEqual "test_isPTCSDayTime_7" True (isPTCSDayTime dt11)
->     assertEqual "test_isPTCSDayTime_8" False (isPTCSDayTime dt12)
+>     assertEqual "test_isPTCSDayTime_1" False (isPTCSDayTime id dt1)
+>     assertEqual "test_isPTCSDayTime_2" True (isPTCSDayTime id dt2)
+>     assertEqual "test_isPTCSDayTime_3" True  (isPTCSDayTime id dt3)
+>     assertEqual "test_isPTCSDayTime_4" True  (isPTCSDayTime id dt4)
+>     assertEqual "test_isPTCSDayTime_5" False (isPTCSDayTime id dt5)
+>     assertEqual "test_isPTCSDayTime_6" True (isPTCSDayTime id dt10)
+>     assertEqual "test_isPTCSDayTime_7" True (isPTCSDayTime id dt11)
+>     assertEqual "test_isPTCSDayTime_8" False (isPTCSDayTime id dt12)
 >   where
 >     -- physical rise = 12.6, set = 22.1
 >     -- PTCS rise = 12.6 + 0 = 12.6

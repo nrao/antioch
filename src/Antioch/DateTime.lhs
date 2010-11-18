@@ -148,6 +148,8 @@ back and forth is to go through seconds.
 > fromSeconds s = fromMJD $
 >     fromIntegral s / 86400 + startOfTimeMJD
 
+TBF never used
+
 > toClockTime    :: UTCTime -> ClockTime
 > toClockTime dt = TOD (fromIntegral . toSeconds $ dt) 0
 
@@ -237,20 +239,22 @@ Here we allow generic offsets to be passed in (for use w/ PTCS definitions)
 and also catch cases where offsets from the previous day change the
 day/night boundary.
 
-> isDayTime' :: DateTime -> DateTime -> DateTime -> Bool
-> isDayTime' dt riseOffset setOffset = rise + riseOffset <= dt && dt < set + setOffset || rise' + riseOffset <= dt && dt < set' + setOffset
+> isDayTime' :: (DateTime -> DateTime) -> DateTime -> DateTime -> DateTime -> Bool
+> isDayTime' rnd dt riseOffset setOffset = rise + riseOffset <= dt && dt < set + setOffset || rise' + riseOffset <= dt && dt < set' + setOffset
 >   where
->     (rise, set) = sunRiseAndSet dt
+>     (rise, set) = sunRiseAndSet rnd dt
 >     rise' = rise - 86400
 >     set'  = set - 86400
 
 Physical Sun Rise/Set:
 
 > isDayTime    :: DateTime -> Bool
-> isDayTime dt = isDayTime' dt 0 0 
+> isDayTime dt = isDayTime' roundToQuarter dt 0 0 
 
-> isPTCSDayTime :: DateTime -> Bool
-> isPTCSDayTime dt = isDayTime' dt 0 (3600 * 3)
+PTCS solar warming boundaries
+
+> isPTCSDayTime :: (DateTime -> DateTime) -> DateTime -> Bool
+> isPTCSDayTime rnd dt = isDayTime' rnd dt 0 (3600 * 3)
 
 TBF use ET and translate to UT
 
@@ -274,8 +278,8 @@ http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 > (a, b, c, d, e) = (11.2178,  1.2754, -0.0915, 0.0673, 0.1573)
 > (l, m, n, o, p) = (23.3553, -1.3304,  0.3406, 0.0525, 0.1520)
 
-> sunRiseAndSet :: DateTime -> (DateTime, DateTime)
-> sunRiseAndSet dt = (roundToHour rise, roundToHour set)
+> sunRiseAndSet :: (DateTime -> DateTime) -> DateTime -> (DateTime, DateTime)
+> sunRiseAndSet rnd dt = (rnd rise, rnd set)
 >   where
 >     (rise, set) = sunRiseAndSet' dt
 

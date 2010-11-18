@@ -309,8 +309,8 @@ with day/night correction
 > correctWindSpeed dt w = return $ correctWindSpeed' cfs w'
 >   where
 >     cfs
->         | isPTCSDayTime dt = windDayCoeff
->         | otherwise        = windNightCoeff
+>         | isPTCSDayTime id dt = windDayCoeff
+>         | otherwise           = windNightCoeff
 >     w' = mph2mps w
 
 Miles per hour to meters per second conversion

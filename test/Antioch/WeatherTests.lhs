@@ -117,7 +117,7 @@ because of dateSafe should they all not return the 2006 value?
 >   let dt  = fromGregorian 2006 1 1 1 0 0 
 >   w <- getWeatherTest $ Just now
 >   wind' <- wind w dt
->   assertEqual "test_dataFirstLine_wind" 7.6271973 (fromMaybe 0.0 wind')
+>   assertEqual "test_dataFirstLine_wind" 8.181183 (fromMaybe 0.0 wind')
 >   wind' <- gbt_wind w dt
 >   assertEqual "test_dataFirstLine_w2_wind" 6.57004 (fromMaybe 0.0 wind')
 >   

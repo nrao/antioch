@@ -208,7 +208,7 @@ Equation 9
 
 > surfaceObservingEfficiency' :: DateTime -> Frequency -> Score
 > surfaceObservingEfficiency' dt f = 
->     if isPTCSDayTime dt
+>     if isPTCSDayTime roundToHalfPast dt
 >     then
 >         exp (-(k * f^2 * epsilonFactor))
 >     else
@@ -229,7 +229,7 @@ Equation 14
 > halfPwrBeamWidth f = 740.0 / f
 
 > rmsTE :: DateTime -> Float
-> rmsTE dt = if isPTCSDayTime dt then trErrSigmaDay else trErrSigmaNight
+> rmsTE dt = if isPTCSDayTime roundToHalfPast dt then trErrSigmaDay else trErrSigmaNight
 
 > trErrSigmaNight, trErrSigmaDay :: Float
 > trErrSigmaNight = 2.8

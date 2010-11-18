@@ -757,7 +757,7 @@ Equation 5
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sLP)
 >     assertEqual "test_observingEfficiency2_1" 0.9846228 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt2 sLP)
->     assertEqual "test_observingEfficiency2_2" 0.9792517 (eval fs)
+>     assertEqual "test_observingEfficiency2_2" 0.98363626 (eval fs)
 >     fs <- runScoring w [] rt (observingEfficiency dt1 sGB)
 >     assertEqual "test_observingEfficiency2_3" 0.77861434 (eval fs)
 
@@ -1425,12 +1425,12 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         return $ eval s
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
->     expected = [2.3009086,2.2980537,2.2946627,2.2924707,2.2877066] ++ (replicate 92 0.0)
+>     expected = [2.3009086,2.2980537,2.2946627,2.292648,2.2878835] ++ (replicate 92 0.0)
 
 For defaultSession w/ sAllottedT = 24*60; start time is  2006 11 8 12 0 0
 plus 40 quarters.
 
-> defaultScores = [0.5058345,0.5073376,0.38199204,0.44000292,0.46694967,0.49243346,0.5100889,0.51120037,0.5118567,0.5124549,0.51849306,0.5186764,0.5192825,0.5194427,0.5247254,0.5247254,0.52481264,0.52481264,0.52643895,0.52643895,0.52636725,0.5262142,0.5256728,0.5254833,0.5253835,0.52516615,0.52396524,0.5236562,0.52331305,0.522728,0.5231732,0.52246106,0.5216063,0.52056277]
+> defaultScores = [0.5058345,0.5073376,0.38199204,0.44000292,0.46694967,0.49243346,0.5100889,0.51120037,0.5118567,0.5124549,0.5183046,0.5184878,0.518829,0.518989,0.5247254,0.5247254,0.52481264,0.52481264,0.52643895,0.52643895,0.52636725,0.5262142,0.5256728,0.5254833,0.5253835,0.52516615,0.52396524,0.5236562,0.52331305,0.522728,0.5231732,0.52246106,0.5216063,0.52056277]
 
 > test_bestDuration = TestCase $ do
 >     w <- getWeatherTest . Just $ origin 
