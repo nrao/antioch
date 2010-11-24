@@ -59,7 +59,7 @@ We only we want to be scheduling backups during the specified time range,
 > scheduleBackup :: ScoreFunc -> StrategyName -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
 > scheduleBackup sf sn ss p dt dur | cantBeCancelled p dt dur = return $ Just p
 >                                  | otherwise = do
->   moc <- minimumObservingConditions (startTime p) (session p)
+>   moc <- minimumObservingConditions (startTime p) (duration p) (session p)
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
 >     backupSessions  = filterBackups sn ss p 
@@ -111,7 +111,7 @@ schedule deadtime.
 > replaceWithBackup :: BackupStrategy
 > replaceWithBackup sn sf backups p = do
 >   (s, score) <- findBestBackup sn sf backups p
->   moc        <- minimumObservingConditions (startTime p) s 
+>   moc        <- minimumObservingConditions (startTime p) (duration p) s 
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
 >     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p)

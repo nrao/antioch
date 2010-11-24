@@ -180,12 +180,11 @@ column name).
 > getWind, getWindMPH, getIrradiance :: ForecastFunc
 
 > getWind cache cnn ftype dt = do
->     result <- withCache key cache $ fetchForecastData cnn dt ftype column
+>     result <- withCache key cache $ fetchWindData cnn dt ftype "wind_speed_mph"
 >     -- print ("getWind", toSqlString dt, result)
 >     return result
 >   where
->     column = "wind_speed"
->     key = (dt, ftype, column)
+>     key = (dt, ftype, "wind_speed")
 
 > getWindMPH cache cnn ftype dt = do
 >     result <- withCache key cache $ fetchForecastData cnn dt ftype column
@@ -244,6 +243,16 @@ given query (by forecast id), try again (getting most recent forecast).
 >       [[value]] -> return $ fromSql' value
 >       _        -> if try then fetchAnyForecastValue cnn dt ftype column else return Nothing
 
+> fetchWindData :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
+> fetchWindData cnn dt ftype column = do
+>   jmph <- fetchForecastData' cnn dt ftype query xs column True
+>   let jmps = do
+>       jmph >>= correctWindSpeed dt
+>   return jmps
+>     where
+>       query = getForecastDataQuery column
+>       xs    = [toSql' dt, toSql ftype]
+
 Get a value (ex: wind_speed) from the Forecasts table with the most recent
 forecast type.
 Note: only applicable for columns in the Forecasts table
@@ -296,24 +305,27 @@ Note: only applicable for columns in the Forecasts table
 Changes wind miles per hour to PTCS meters to second
 with day/night correction
 
-> correctWindSpeed :: DateTime -> Float -> Float
-> correctWindSpeed dt w = correctWindSpeed' cfs w'
+> correctWindSpeed :: DateTime -> Float -> Maybe Float
+> correctWindSpeed dt w = return $ correctWindSpeed' cfs w'
 >   where
 >     cfs
->         | isPTCSDayTime dt = windDayCoeff
->         | otherwise        = windNightCoeff
->     w' = mph2ms w
+>         | isPTCSDayTime id dt = windDayCoeff
+>         | otherwise           = windNightCoeff
+>     w' = mph2mps w
 
 Miles per hour to meters per second conversion
 
-> mph2ms :: Float -> Float
-> mph2ms w = w / 2.237
+> mph2mps :: Float -> Float
+> mph2mps w = w / 2.237
 
 PTCS day/night correction for meters per second
 
 > correctWindSpeed' :: [Float] -> Float -> Float
 > correctWindSpeed' cfs w = sum . map (\x -> (fst x)*w**(snd x)) . zip (reverse cfs) $ [0..]
 
+Coeff. from DSPN6.1 using 1 May 2004 to 1 Mar 2007 weather
+
+> {-
 > windDayCoeff = [-1.70737148e-04,  6.56523342e-03,
 >                 -9.82652357e-02,  7.21325467e-01,
 >                 -2.68827245e+00,  5.24223121e+00,
@@ -322,6 +334,20 @@ PTCS day/night correction for meters per second
 >                   -1.61474697e-01,  1.02041521e+00,
 >                   -2.98028690e+00,  3.89258501e+00,
 >                   -5.69079000e-01]::[Float]
+> -}
+
+Coeff. using 1 Sep 2008 to 31 Aug 2010 weather
+(N.B., On 18 Dec 2007 weather forecasts went from 12hr to 6hr updates;
+this included a change in the wind speed algorithm.)
+
+> windDayCoeff = [1.03136467e-04,  -4.09837631e-03,
+>                 6.52629009e-02,  -5.31163369e-01,
+>                 2.33592497e+00,  -5.42793252e+00,
+>                 7.12632578e+00,  -1.07039484e+00]::[Float]
+> windNightCoeff = [1.62510757e-04,  -6.31744909e-03,
+>                   9.84059248e-02,  -7.80041906e-01,
+>                   3.28349217e+00,  -6.90486810e+00,
+>                   7.06266889e+00,  -1.10385720e+00]::[Float]
 
 However, opacity and system temperature (tsys) are values forecast dependent
 on frequency.  Here it's cache is initialized.
@@ -474,6 +500,14 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >       query   = "SELECT total FROM t_sys\n\
 >                 \WHERE frequency = ? AND elevation = ? AND receiver_id = ?"
 
+> getLastImportTime :: Connection -> IO DateTime
+> getLastImportTime cnn = do
+>   result <- quickQuery' cnn query []
+>   return $ toImportTime result
+>     where
+>       query = "SELECT date FROM import_times ORDER BY date DESC LIMIT 1"
+>       toImportTime = sqlToDateTime . head . head
+
 Creates a connection to the weather forecast database.
 
 > connect, connectTest :: IO Connection
@@ -564,7 +598,7 @@ Helper function to get singular Float values out of the database.
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
 >         -- TBF: This match can cause failures for legitimate querys, e.g.,
->         -- "SELECT wind_speed FROM forecasts"
+>         -- "SELECT wind_speed_mph FROM forecasts"
 >         x     -> fail "There is more than one forecast with that time stamp."
 
 Just some test functions to make sure things are working.

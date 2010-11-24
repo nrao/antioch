@@ -32,7 +32,7 @@ Attempt to see if the old test_sim_pack still works:
 >     --print $ take 4 $ map duration result
 >     --print $ take 4 $ map (toSqlString . startTime) result
 >     --print $ take 4 $ map (sName . session) result
->     assertEqual "SimulationTests_test_sim_pack" (take 4 exp) (take 4 result)
+>     assertEqual "SimulationTests_test_sim_pack" exp (take 4 result)
 >   where
 >     rs  = []
 >     dt = fromGregorian 2006 2 1 0 0 0
@@ -40,20 +40,13 @@ Attempt to see if the old test_sim_pack still works:
 >     packDays = 2
 >     history = []
 >     ss = getOpenPSessions
->     expSs = [gb, cv, va, tx, tx, gb, lp, cv, tx, cv, as]
->     dts = [ fromGregorian 2006 2 1  1 30 0
->           , fromGregorian 2006 2 1  6 15 0
->           , fromGregorian 2006 2 1  8 15 0
->           , fromGregorian 2006 2 1 12 15 0
->           , fromGregorian 2006 2 1 18  0 0
->           , fromGregorian 2006 2 1 22 45 0
->           , fromGregorian 2006 2 2  6 45 0
->           , fromGregorian 2006 2 2 12 45 0
->           , fromGregorian 2006 2 2 14 45 0
->           , fromGregorian 2006 2 3  5  0 0
->           , fromGregorian 2006 2 3 18 15 0
->            ]
->     durs = [285, 120, 240, 345, 240, 480, 360, 120, 285, 195, 480]
+>     expSs = [cv, va, tx, tx]
+>     dts = [ fromGregorian 2006 2 1  3 15 0
+>           , fromGregorian 2006 2 1  8  0 0
+>           , fromGregorian 2006 2 1 12  0 0
+>           , fromGregorian 2006 2 1 16 30 0
+>           ]
+>     durs = [285, 240, 270, 240] 
 >     scores = replicate 10 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
@@ -262,7 +255,7 @@ get on, it has a high chance of being canceled.
 >     --    session's first period has changed
 >     assertEqual "test_updateSessions_5" tw1_newPs (periods tw1')
 >     --    session's first chosen flag has changed
->     assertEqual "test_updateSessions_6" [True, False] (map wHasChosen $ windows tw1')
+>     assertEqual "test_updateSessions_6" [True, False] (map wComplete $ windows tw1')
 >     --    session's windows have not changed
 >     assertEqual "test_updateSessions_7" (windows tw1) (windows tw1')
 >     --    session's default periods have not changed
@@ -282,7 +275,7 @@ get on, it has a high chance of being canceled.
 >     new_cv_period = defaultPeriod { peId = 3, session = cv }
 >     new_ps = [new_lp_period, new_cv_period]
 >     getPeriodIds sess = sort $ map peId $ concatMap periods sess
->     w1 = (head . windows $ tw1) {wHasChosen = True}
+>     w1 = (head . windows $ tw1) {wComplete = True}
 >     condemned = head . periods $ tw1
 >     chosen = defaultPeriod {
 >                 session = tw1

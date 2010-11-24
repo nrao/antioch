@@ -17,7 +17,7 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
-> import Data.Maybe         (fromMaybe, isJust, fromJust)
+> import Data.Maybe         (fromMaybe, isJust, isNothing, fromJust, catMaybes)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -208,7 +208,7 @@ Equation 9
 
 > surfaceObservingEfficiency' :: DateTime -> Frequency -> Score
 > surfaceObservingEfficiency' dt f = 
->     if isPTCSDayTime_V2 dt
+>     if isPTCSDayTime roundToHalfPast dt
 >     then
 >         exp (-(k * f^2 * epsilonFactor))
 >     else
@@ -229,7 +229,7 @@ Equation 14
 > halfPwrBeamWidth f = 740.0 / f
 
 > rmsTE :: DateTime -> Float
-> rmsTE dt = if isPTCSDayTime dt then trErrSigmaDay else trErrSigmaNight
+> rmsTE dt = if isPTCSDayTime roundToHalfPast dt then trErrSigmaDay else trErrSigmaNight
 
 > trErrSigmaNight, trErrSigmaDay :: Float
 > trErrSigmaNight = 2.8
@@ -257,34 +257,83 @@ Base of exponential Equation 12
 > calculateTE :: Frequency -> Float
 > calculateTE f = 1.0 + 4.0 * log lff * f ^ 2
 
-> minimumObservingConditions  :: DateTime -> Session -> Scoring (Maybe Bool)
-> minimumObservingConditions dt s = do
+
+> minimumObservingConditions  :: DateTime -> Minutes -> Session -> Scoring (Maybe Bool)
+> minimumObservingConditions dt dur s = do
+>     let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
+>     fcts <- mapM (minObsFactors s) dts
+>     let effProducts = map (\(fs, tr) -> ((eval fs) * tr)) fcts
+>     let meanEff = if (length effProducts) > 0 then (sum effProducts) / (fromIntegral . length $ effProducts) else 0.0
+>     return $ Just (meanEff >= minObs)
+>   where
+>     dts = [(15 * m) `addMinutes` dt | m <- [0 .. (dur `div` 15) - 1]]
+
+> minObsFactors :: Session -> DateTime -> Scoring (Factors, Float)
+> minObsFactors s dt = do
 >    w  <- weather
 >    w' <- liftIO $ newWeather w (Just dt)
 >    local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
->      let minObs = minObservingEff . frequency $ s
->      fs <- observingEfficiency dt s
->      let obsEff' = eval fs
->      -- don't use the scoring function trackingErrorLimit, so
->      -- that we can use different constants.
->      trkErrLimit' <- mocTrackingErrorLimit dt s
->      let trkErrOK = case trkErrLimit' of 
->                             Just x  -> x
->                             Nothing -> True
->      let minObs' = adjustedMinObservingEff minObs
->      let obsEffOK = obsEff' >= minObs'
->      return $ Just (obsEffOK && trkErrOK)
+>      fss <- observingEfficiency dt s
+>      trkErrLimit <- mocTrackingErrorLimit dt s
+>      let trkErrLimit' = case trkErrLimit of
+>                             Nothing -> 0.0
+>                             Just x  -> if x then 1.0 else 0.0
+>      return (fss, trkErrLimit')
 
 > adjustedMinObservingEff :: Float -> Float
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
+
+Periods from Elective Sessions should not run if they don't pass
+MOC, unless they are gauranteed, and this is the last period in 
+the elective group.
+
+> goodElective :: Period -> Scoring (Bool)
+> goodElective p | isNotElective p = return True
+>                | isScheduledElective p = return True
+>                | isGuaranteedElective p = return True
+>                | otherwise = do
+>   -- check for gauranteed?
+>   moc <- minimumObservingConditions dt dur s
+>   case moc of
+>     Nothing -> return False
+>     Just moc'  -> return moc'
+>   where
+>     isNotElective p = (sType . session $ p) /= Elective
+>     isElective p = (sType . session $ p) == Elective
+>     isScheduledElective p = (isElective p) && (pState p == Scheduled)
+>     isGuaranteedElective p = (isElective p) && (guaranteed . session $ p) && (isLastPeriodOfElective p) 
+>     dt = startTime p
+>     dur = duration p
+>     s = session p
+
+The last periods in a group of periods (Electives) needs special 
+consideration: if it's session is NOT gauranteed time, then there's
+a chance even the last periods won't observe.
+
+> isLastPeriodOfElective :: Period -> Bool
+> isLastPeriodOfElective p = isLastPeriod p elec
+>   where 
+>     pid = peId p
+>     elecs = electives . session $ p
+>     periodInElective e = any (==pid) (ePeriodIds e) 
+>     elecs' = filter periodInElective elecs  
+>     elec = if (length elecs') == 1 then Just . head $ elecs' else Nothing
+
+> isLastPeriod :: Period -> Maybe Electives -> Bool
+> isLastPeriod p me | isNothing me = False
+>                   | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
 
 3.2 Stringency
 
 > stringency                 :: ScoreFunc
 > stringency _ s = do
 >     w <- weather
->     str <- liftIO $ stringency' w s 
->     factor "stringency" str
+>     jstr <- liftIO $ stringency' w s
+>     let str' = do
+>         str <- jstr
+>         return $ str ** 1.0
+>     factor "stringency" str' 
+
 
 > stringency' :: Weather -> Session -> IO (Maybe Float)
 > stringency' w s = do
@@ -552,8 +601,11 @@ Equation 15
 > variableTrackingError :: Float -> Float
 > variableTrackingError w = trackingError w epsilonZero
 
+Scale the wind speed by 1.5 to account for weather differences between 
+2003 (when calibration was performed) and 2009 (current weather station)
+
 > trackingError :: Float -> Float -> Float
-> trackingError w te = sqrt $ te ^ 2 + (abs w / 2.1) ^ 4
+> trackingError w te = sqrt $ te ^ 2 + (abs w / (2.1 * 1.5)) ^ 4
 
 > epsilonZero :: Float
 > epsilonZero = 1.2
@@ -632,13 +684,14 @@ up, all the time.
 > inWindows dt f s
 >       | sType s == Open           = 1.0
 >       | sType s == Fixed          = 1.0
+>       | sType s == Elective       = 1.0
 >       | any (inWindow dt) $ f s   = 1.0
 >       | otherwise                 = 0.0
 >   where
 >     inWindow dt w = inTimeRange dt (wStart w) (wDuration w)
 
 > availWindows :: Session -> [Window]
-> availWindows = filter (not . wHasChosen) . windows
+> availWindows = filter (not . wComplete) . windows
 
 > inAvailWindows :: ScoreFunc
 > inAvailWindows dt s = factor "inWindows" . Just . inWindows dt availWindows $ s

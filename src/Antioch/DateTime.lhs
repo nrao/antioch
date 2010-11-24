@@ -130,6 +130,12 @@ Combine pieces and parts to produce a UTCTime.
 > roundToHour :: DateTime -> DateTime
 > roundToHour dt = 3600 * ((dt + 1800) `div` 3600)
 
+> roundToQuarter :: DateTime -> DateTime
+> roundToQuarter dt = 900 * ((dt + 450) `div` 900)
+
+> roundToHalfPast :: DateTime -> DateTime
+> roundToHalfPast dt = 3600 * (dt `div` 3600) + 1800
+
 Getting closer to the machine: Not all the functionality of
 System.Time is available in Data.Time, and the only way we can convert
 back and forth is to go through seconds.
@@ -141,6 +147,8 @@ back and forth is to go through seconds.
 > fromSeconds   :: Int -> UTCTime
 > fromSeconds s = fromMJD $
 >     fromIntegral s / 86400 + startOfTimeMJD
+
+TBF never used
 
 > toClockTime    :: UTCTime -> ClockTime
 > toClockTime dt = TOD (fromIntegral . toSeconds $ dt) 0
@@ -231,27 +239,22 @@ Here we allow generic offsets to be passed in (for use w/ PTCS definitions)
 and also catch cases where offsets from the previous day change the
 day/night boundary.
 
-> isDayTime' :: DateTime -> DateTime -> DateTime -> Bool
-> isDayTime' dt riseOffset setOffset = rise + riseOffset <= dt && dt < set + setOffset || rise' + riseOffset <= dt && dt < set' + setOffset
+> isDayTime' :: (DateTime -> DateTime) -> DateTime -> DateTime -> DateTime -> Bool
+> isDayTime' rnd dt riseOffset setOffset = rise + riseOffset <= dt && dt < set + setOffset || rise' + riseOffset <= dt && dt < set' + setOffset
 >   where
->     (rise, set) = sunRiseAndSet dt
+>     (rise, set) = sunRiseAndSet rnd dt
 >     rise' = rise - 86400
 >     set'  = set - 86400
 
-Pysical Sun Rise/Set:
+Physical Sun Rise/Set:
 
 > isDayTime    :: DateTime -> Bool
-> isDayTime dt = isDayTime' dt 0 0 
+> isDayTime dt = isDayTime' roundToQuarter dt 0 0 
 
-PTCS Version 1.0:
+PTCS solar warming boundaries
 
-> isPTCSDayTime    :: DateTime -> Bool
-> isPTCSDayTime dt = isDayTime' dt (3600 * 2) (3600 *3)
-
-PTCS Version 2.0:
-
-> isPTCSDayTime_V2    :: DateTime -> Bool
-> isPTCSDayTime_V2 dt = isDayTime' dt 0 (3600 *3)
+> isPTCSDayTime :: (DateTime -> DateTime) -> DateTime -> Bool
+> isPTCSDayTime rnd dt = isDayTime' rnd dt 0 (3600 * 3)
 
 TBF use ET and translate to UT
 
@@ -275,8 +278,13 @@ http://aa.usno.navy.mil/data/docs/RS_OneYear.php
 > (a, b, c, d, e) = (11.2178,  1.2754, -0.0915, 0.0673, 0.1573)
 > (l, m, n, o, p) = (23.3553, -1.3304,  0.3406, 0.0525, 0.1520)
 
-> sunRiseAndSet    :: DateTime -> (DateTime, DateTime)
-> sunRiseAndSet dt = (midnight + hoursToSeconds rise, midnight + hoursToSeconds set)
+> sunRiseAndSet :: (DateTime -> DateTime) -> DateTime -> (DateTime, DateTime)
+> sunRiseAndSet rnd dt = (rnd rise, rnd set)
+>   where
+>     (rise, set) = sunRiseAndSet' dt
+
+> sunRiseAndSet' :: DateTime -> (DateTime, DateTime)
+> sunRiseAndSet' dt = (midnight + hoursToSeconds rise, midnight + hoursToSeconds set)
 >   where
 >     midnight = 86400 * (dt `div` 86400)
 >     day = dayOfYear midnight

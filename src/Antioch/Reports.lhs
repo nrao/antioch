@@ -188,6 +188,20 @@ make changes to them.
 >       yl = "Temperature (K)"
 >       fn r = (show r) ++ "Temp.png"
 
+
+For plotting the forecast wind speed correction curve
+
+> plotWindCorrection :: IO ()
+> plotWindCorrection = plotFuncs attrs (linearScale 1000 (0.0, 16.0)) [day, night]
+>   where
+>     t     = "Forecasted vs Corrected Wind Speed"
+>     x     = "Forecasted Wind"
+>     y     = "Corrected Forecasted Wind"
+>     day   = correctWindSpeed' windDayCoeff
+>     night = correctWindSpeed' windNightCoeff
+>     attrs = (tail $ scatterAttrs t x y "windCorr.png") ++ [XRange (0.0, 16.0), YRange (0.0, 16.0)] 
+
+
 This function produces a graph of the wind values taken directly from the
 CLEO forecasts: the wind speed in mph.  This graph can then be compared to
 the graph produced by CLEO forecasts, requesting 'Ground Speed', just sites
@@ -222,6 +236,7 @@ hours offset vs. raw wind speed
 >     plotMinEffSysTemp
 >     plotAvgObservingEff
 >     plotRcvrTemps -- not really historical weather, but what the hey!
+>     plotWindCorrection
 
 TBF: declared also in HistoricalWeather but have cyclical refs now.
 

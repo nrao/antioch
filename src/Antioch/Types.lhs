@@ -48,7 +48,7 @@ such as: P
 
 > data Band = P | L | S | C | X | U | K | A | Q | W
 >           deriving (Bounded, Enum, Eq, Ix, Ord, Read, Show)
-> data SessionType = Open | Fixed | Windowed deriving (Eq, Show, Read)
+> data SessionType = Open | Fixed | Windowed | Elective deriving (Eq, Show, Read)
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
 > data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing deriving (Ord, Eq, Show, Read)
@@ -66,6 +66,7 @@ use a single data structure for all sessions.
 >   , sClosed     :: Bool
 >   , project     :: Project
 >   , windows     :: [Window]
+>   , electives   :: [Electives]
 >   , periods     :: [Period]
 >   , minDuration :: Minutes
 >   , maxDuration :: Minutes
@@ -86,6 +87,7 @@ use a single data structure for all sessions.
 >   , transit     :: TransitType
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
+>   , guaranteed  :: Bool
 >   } deriving Show
 
 > instance Eq Session where
@@ -96,15 +98,16 @@ use a single data structure for all sessions.
 
 > data Window  = Window {
 >     wId          :: Int
->   , wSession     :: Session
+>   , wSession     :: Session    -- assigned for simulations only
 >   , wStart       :: DateTime   -- date, no time
 >   , wDuration    :: Minutes    -- from day count
 >   , wPeriodId    :: Int        -- default period id
->   , wHasChosen   :: Bool       -- has period
+>   , wComplete    :: Bool       -- requires more observing or not
+>   , wTotalTime   :: Minutes    -- time allotted
 >    }
 
 > instance Show Window where
->     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " to " ++ toSqlString (wEnd w) ++ " (for " ++ show (flip div (24*60) . wDuration $ w) ++ " days) " ++ show (wHasChosen w) -- ++ "; wPeriods: " ++ show (wPeriods (wSession w) w)
+>     show w = "Window for: " ++ printName w ++ " from " ++ toSqlString (wStart w) ++ " to " ++ toSqlString (wEnd w) ++ " (for " ++ show (flip div (24*60) . wDuration $ w) ++ " days) Cmp: " ++ (show . wComplete $ w) ++ " Time: " ++ (show . wTotalTime $ w) -- ++ "; wPeriods: " ++ show (wPeriods (wSession w) w)
 >       where 
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
@@ -137,6 +140,20 @@ data does not have periods with unique ids).
 >     eqIds    = (==) `on` wSession
 >     eqStarts = (==) `on` wStart
 >     eqDurs   = (==) `on` wDuration
+
+
+Electives are just a means of grouping some periods.  But we do need
+an easy way of determining if a period is the last period in an elective,
+in case the Sesshun does not have gauranteed time.
+
+> data Electives = Electives {
+>     eId        :: Int -- DB PK
+>   , eComplete  :: Bool
+>   , ePeriodIds :: [Int] -- PK's of periods, sorted by ASC startTime
+> } deriving Eq
+
+> instance Show Electives where
+>     show e = "Elective (" ++ (show . eId $ e) ++ ")"
 
 Need to calculate a windowed session's opportunities from its observation details.
 
@@ -195,12 +212,12 @@ Tying the knot.
 >     peId        :: Int
 >   , session     :: Session
 >   , startTime   :: DateTime
->   , duration    :: Minutes
->   , pScore      :: Score  -- Average forecasted score
+>   , duration    :: Minutes    -- assigned time
+>   , pScore      :: Score      -- Average forecasted score
 >   , pState      :: StateType
 >   , pForecast   :: DateTime
 >   , pBackup     :: Bool
->   , pDuration   :: Minutes
+>   , pDuration   :: Minutes    -- billed time
 >   } 
 
 > instance Show Period where
@@ -253,6 +270,7 @@ Simple Functions for Periods:
 >   , sName       = ""
 >   , project     = defaultProject 
 >   , windows     = []
+>   , electives   = []
 >   , periods     = [defaultPeriod]
 >   , sAllottedT  = 0
 >   , sAllottedS  = 0
@@ -276,6 +294,7 @@ Simple Functions for Periods:
 >   , transit     = Optional
 >   , xi          = 1.0
 >   , elLimit     = Nothing
+>   , guaranteed  = True 
 >   }
 
 > defaultObserver = Observer {
@@ -321,5 +340,6 @@ Simple Functions for Periods:
 >   , wStart       = defaultStartTime
 >   , wDuration    = 0
 >   , wPeriodId    = 0
->   , wHasChosen   = False
+>   , wComplete    = False
+>   , wTotalTime   = 0
 >    }

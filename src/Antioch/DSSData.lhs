@@ -10,7 +10,7 @@
 > import Control.Monad.Trans             (liftIO)
 > import Data.List                       (sort, nub, find)
 > import Data.Char                       (toUpper)
-> import Maybe                           (fromJust)
+> import Maybe                           (fromJust, isNothing)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 
@@ -439,7 +439,9 @@ TBF: why aren't we getting the rcvr info here?
 >     s' <- setObservingParameters cnn s
 >     ps <- getPeriods cnn s'
 >     ws <- getWindows cnn s'
->     return $ makeSession s' ws ps
+>     es <- getElectives cnn s'
+>     let s'' = s' { electives = es }
+>     return $ makeSession s'' ws ps
 
 The following recursive patterns work for setting the observing params
 that are one-to-one between the DB and the Session (ex: Night Time -> low rfi).  However,
@@ -471,6 +473,7 @@ For now, just set:
 >     | n == "Transit"         = s { transit = toTransit pBool }
 >     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
 >     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
+>     | n == "Not Guaranteed"  = s { guaranteed = not . fromSql $ pBool }   
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName
@@ -535,10 +538,43 @@ it an exclusion range.
 >     --isLow (pName:pFloat:[]) = (fromSql pName) == "LST Exclude Low"
 >     lstRangeLow' (pName:pLow:[]) = fromSql pLow
 
+> getElectives :: Connection -> Session -> IO [Electives]
+> getElectives cnn s = do
+>   result <- quickQuery' cnn query xs 
+>   let elecs' = toElectiveList result
+>   elecs <- mapM (getElectivePeriods cnn) elecs'
+>   return elecs
+>   where
+>     xs = [toSql . sId $ s]
+>     query = "SELECT id, complete FROM electives WHERE session_id = ?;"
+>     toElectiveList = map toElective
+>     toElective(id:comp:[]) =
+>       Electives { eId = fromSql id
+>                 , eComplete = fromSql comp 
+>                 , ePeriodIds = [] -- for later
+>                }
+
+> getElectivePeriods :: Connection -> Electives -> IO (Electives)
+> getElectivePeriods cnn elec = do
+>   result <- quickQuery' cnn query xs
+>   let ids = toIdList result
+>   return $ elec {ePeriodIds = ids}
+>   where
+>     xs = [toSql . eId $ elec]
+>     query = "SELECT id FROM periods WHERE elective_id = ? ORDER BY start ASC;"
+>     toIdList = map toId
+>     toId(id:[]) = fromSql id
+
 > getWindows :: Connection -> Session -> IO [Window]
 > getWindows cnn s = do
->     dbWindows <- fetchWindows cnn s 
+>     dbWindows' <- fetchWindows cnn s 
+>     dbWindows <- mapM (adjustTotalTime cnn) dbWindows'
 >     return $ sort $ dbWindows
+
+> adjustTotalTime :: Connection -> Window -> IO Window
+> adjustTotalTime cnn w = do
+>     tb <- getWindowTimeBilled cnn w
+>     return w {wTotalTime = (wTotalTime w) - tb}
 
 > fetchWindows :: Connection -> Session -> IO [Window]
 > fetchWindows cnn s = do 
@@ -546,15 +582,30 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT w.id, w.start_date, w.duration, w.default_period_id, w.period_id FROM windows as w, periods as p, period_states as s WHERE (w.default_period_id = p.id OR w.period_id = p.id) AND p.state_id = s.id AND s.abbreviation <> 'D' AND w.session_id = ?;"
+>     query = "SELECT id, start_date, duration, default_period_id, complete, total_time FROM windows WHERE session_id = ?;"
 >     toWindowList = map toWindow
->     toWindow(id:strt:dur:dpid:pid:[]) =
+>     toWindow(id:strt:dur:dpid:c:tt:[]) =
 >       defaultWindow { wId        = fromSql id
 >                     , wStart     = sqlToDate strt
 >                     , wDuration  = 24*60*(fromSql dur)
 >                     , wPeriodId  = fromSql dpid
->                     , wHasChosen = pid /= SqlNull
+>                     , wComplete  = fromSql c
+>                     , wTotalTime = fromSqlMinutes tt
 >                     }
+
+> getWindowTimeBilled :: Connection -> Window -> IO Minutes
+> getWindowTimeBilled cnn w = do
+>   result <- quickQuery' cnn query xs 
+>   return . sum . toTotalTimeBilled $ result
+>   where
+>     xs = [toSql . wId $ w]
+>     -- don't pick up deleted periods!
+>     query = "SELECT state.abbreviation, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, pa.not_billable FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.window_id = ?;"
+>     toTotalTimeBilled = map toTimeBilled
+>     toTimeBilled (state:sch:osw:osr:oso:ltw:ltr:lto:nb:[]) =
+>        if (deriveState . fromSql $ state) == Pending
+>        then 0::Minutes
+>        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 
 > getPeriods :: Connection -> Session -> IO [Period]
 > getPeriods cnn s = do
@@ -566,6 +617,7 @@ it an exclusion range.
 >   result <- quickQuery' cnn query xs 
 >   return $ toPeriodList result
 >   where
+>     st = sType s
 >     xs = [toSql . sId $ s]
 >     -- don't pick up deleted periods!
 >     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, pa.not_billable FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
@@ -579,8 +631,13 @@ it an exclusion range.
 >                     , pForecast = sqlToDateTime forecast
 >                     , pBackup = fromSql backup
 >                     --, pDuration = fromSqlMinutes durHrs  -- db simulation
+>                     -- time billed is complex for scheduled periods,
+>                     -- but simple for pending (but not windowed).
+>                     -- windows are an exception because they have 
+>                     -- default periods in pending, whose time should not
+>                     -- be counted.
 >                     , pDuration = 
->                        if (deriveState . fromSql $ state) == Pending
+>                        if (deriveState . fromSql $ state) == Pending  && (st /= Windowed)
 >                        then fromSqlMinutes durHrs
 >                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 >                     }
@@ -631,28 +688,32 @@ and the associated receviers using the session's receivers.
 > putPeriod cnn p = do
 >   -- make an entry in the periods_accounting table
 >   accounting_id <- putPeriodAccounting cnn (duration p)
+>   -- is this period part of a window?
+>   let window = find (periodInWindow p) (windows . session $ p)
+>   let winId = if (isNothing window) then SqlNull else (toSql . wId . fromJust $ window)
 >   -- now for the period itself
->   quickQuery' cnn query (xs accounting_id) 
+>   quickQuery' cnn query (xs accounting_id winId) 
 >   commit cnn
 >   pId <- getNewestID cnn "periods"
 >   -- init the rcvrs associated w/ this period
 >   putPeriodReceivers cnn p pId
 >   -- now, mark if a window got scheduled early by this period
->   updateWindow cnn p
+>   --updateWindow cnn p
 >   commit cnn
 >   -- finally, track changes in the DB by filling in the reversion tables
 >   putPeriodReversion cnn p accounting_id
 >   commit cnn
 >     where
->       xs a = [toSql . sId . session $ p
->             , toSql $ (toSqlString . startTime $ p) 
->             , minutesToSqlHrs . duration $ p
->             , toSql . pScore $ p
->             , toSql . toSqlString . pForecast $ p
->             , toSql . pBackup $ p
->             , toSql a
+>       xs a w = [toSql . sId . session $ p
+>              , toSql $ (toSqlString . startTime $ p) 
+>              , minutesToSqlHrs . duration $ p
+>              , toSql . pScore $ p
+>              , toSql . toSqlString . pForecast $ p
+>              , toSql . pBackup $ p
+>              , toSql a
+>              , w
 >             ]
->       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, 1, false);"
+>       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, window_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, false);"
 
 When we create a period, we are going to associate the rcvrs from the session
 to it's period (they can be changed later by schedulers)
@@ -713,18 +774,6 @@ You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
 >       wquery = "UPDATE windows SET period_id = ? WHERE id = ?;"
 >       wxs = [toSql periodId, toSql windowId]
 
-> setPeriodScore :: Connection -> Score -> Int -> IO ()
-> setPeriodScore cnn v pid = do
->   ct <- getCurrentTime
->   let dt = toSql . toSqlString $ ct
->   quickQuery' cnn query [value, dt, id]
->   commit cnn
->     where
->       query = "UPDATE periods SET score = ?, forecast = ? WHERE id = ?;"
->       value = toSql v
->       id = toSql pid
-
-
 > minutesToSqlHrs :: Minutes -> SqlValue
 > minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
 
@@ -742,6 +791,27 @@ Creates a new period accounting row, and returns this new rows ID
 >       xsId = []
 >       queryId = "SELECT MAX(id) FROM periods_accounting"
 >       toId [[x]] = fromSql x
+
+Change the state of all given periods to Deleted.
+
+> movePeriodsToDeleted :: [Period] -> IO ()
+> movePeriodsToDeleted ps = do
+>   cnn <- connect
+>   result <- mapM (movePeriodToDeleted cnn) ps
+>   return ()
+>     where
+>   movePeriodToDeleted cnn p = movePeriodToState cnn (peId p) 3
+
+Changes the state of a Period.
+
+> movePeriodToState :: Connection -> Int -> Int -> IO ()
+> movePeriodToState cnn periodId stateId = handleSqlError $ do
+>   result <- quickQuery' cnn query xs
+>   commit cnn
+>   return ()
+>     where
+>       query = "UPDATE periods SET state_id = ? WHERE id = ?;"
+>       xs = [toSql stateId, toSql periodId]
 
 Utilities
 

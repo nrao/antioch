@@ -30,14 +30,16 @@
 > getMOC :: Connection -> StateT Context IO ()
 > getMOC cnn = do
 >     params <- hParameters
+>     liftIO $ print ("getMOC: ", params)
 >     let start     = fromJust . fromHttpString $ getParam "start" params
+>     let dur = read $ getParam "duration" params
 >     let sessionId = read $ getParam "session_id" params
 >     session <- liftIO $ getSession sessionId cnn
 >     w <- liftIO $ getWeather Nothing
 >     rs <- liftIO $ getReceiverSchedule $ Just start
 >     rt <- liftIO $ getReceiverTemperatures
 >     moc <- liftIO $ runScoring w rs rt $ do
->         minimumObservingConditions start session
+>         minimumObservingConditions start dur session
 >     jsonHandler $ makeObj [("moc", showJSON . fromJust $ moc)]
 >   where
 >     getParam p ps = fromJust . fromJust . lookup p $ ps
