@@ -185,13 +185,17 @@ def create_session(sesshun, project, fdata):
 def create_window(sesshun, fdata):
     window = Window()
     window.session = sesshun
-    window.start_date = fdata.get("start_date",
-                                  datetime(2006, 5, 11, 0, 0, 0))
-    window.duration = fdata.get("duration", 7)
     window.total_time = fdata.get("total_time", 0.0)
     window.complete = fdata.get("complete", False)
 
     window.save()
+    wr = WindowRange()
+    wr.start_date = fdata.get("start_date",
+                                  datetime(2006, 5, 11, 0, 0, 0))
+    wr.duration = fdata.get("duration", 7)
+    wr.window = window
+    wr.save()
+    
     return window
 
 def create_period(sesshun, fdata):

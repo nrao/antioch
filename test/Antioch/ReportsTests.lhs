@@ -151,9 +151,9 @@ Utilities:
 >                        , duration = 60*2 
 >                        , session = s'
 >                        , pForecast = scheduled}
+>     wr = [(winStart, addMinutes' winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
->                        , wStart = winStart
->                        , wDuration = winDur }
+>                        , wRanges = wr }
 
 > getTestWindowSession2 :: Session
 > getTestWindowSession2 = makeSession s' [w'] [p']
@@ -165,7 +165,7 @@ Utilities:
 >     p' = defaultPeriod { startTime = pStart
 >                        , duration = 60*2 
 >                        , session = s' }
+>     wr = [(winStart, addMinutes' winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
->                        , wStart = winStart
->                        , wDuration = winDur }
+>                        , wRanges = wr }
 

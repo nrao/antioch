@@ -567,7 +567,8 @@ it an exclusion range.
 
 > getWindows :: Connection -> Session -> IO [Window]
 > getWindows cnn s = do
->     dbWindows' <- fetchWindows cnn s 
+>     dbWindows'' <- fetchWindows cnn s 
+>     dbWindows' <- mapM (fetchWindowRanges cnn) dbWindows''
 >     dbWindows <- mapM (adjustTotalTime cnn) dbWindows'
 >     return $ sort $ dbWindows
 
@@ -582,16 +583,28 @@ it an exclusion range.
 >   return $ toWindowList result
 >   where
 >     xs = [toSql . sId $ s]
->     query = "SELECT id, start_date, duration, default_period_id, complete, total_time FROM windows WHERE session_id = ?;"
+>     query = "SELECT id, default_period_id, complete, total_time FROM windows WHERE session_id = ?;"
 >     toWindowList = map toWindow
->     toWindow(id:strt:dur:dpid:c:tt:[]) =
+>     toWindow(id:dpid:c:tt:[]) =
 >       defaultWindow { wId        = fromSql id
->                     , wStart     = sqlToDate strt
->                     , wDuration  = 24*60*(fromSql dur)
 >                     , wPeriodId  = fromSql dpid
 >                     , wComplete  = fromSql c
 >                     , wTotalTime = fromSqlMinutes tt
 >                     }
+
+A single Window can have mutliple date ranges associated with it.
+
+> fetchWindowRanges :: Connection -> Window -> IO Window
+> fetchWindowRanges cnn w = do 
+>   result <- quickQuery' cnn query xs 
+>   let ranges = toDateRangeList result
+>   return w {wRanges = ranges}
+>   where
+>     xs = [toSql . wId $ w]
+>     query = "SELECT start_date, duration FROM window_ranges WHERE window_id = ?"
+>     toDateRangeList = map toDateRange
+>     toDateRange (start:dur:[]) = (sqlToDate start, toEnd (sqlToDate start) (fromSql dur))
+>     toEnd start days = addMinutes' (days*24*60) start 
 
 > getWindowTimeBilled :: Connection -> Window -> IO Minutes
 > getWindowTimeBilled cnn w = do

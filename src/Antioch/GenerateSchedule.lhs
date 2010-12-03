@@ -239,8 +239,7 @@ From an evenly spaced list of periods, create the list of windows
 >     -- a window can't be more then one day less then the separation between
 >     maxWidthDays = (pDiff - days 2) `div` (24*60)
 >     numPs = length ps
->     mkWindow dur dt = defaultWindow { wStart = dt
->                                     , wDuration = dur + days 2 }
+>     mkWindow dur dt = defaultWindow {wRanges = [(dt, addMinutes' (dur + days 2) dt)]}
 
 Self-test to be called in unit tests and simulations
 

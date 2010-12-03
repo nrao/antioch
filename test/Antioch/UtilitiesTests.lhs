@@ -192,7 +192,8 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >   assertEqual "test_periodInWindow_4"  False (periodInWindow p4 w)
 >   assertEqual "test_periodInWindow_5"  True  (periodInWindow p5 w)
 >     where
->   w = defaultWindow { wDuration = 6*60 }
+>   wr = [(defaultStartTime, addMinutes' (6*60) defaultStartTime)]
+>   w = defaultWindow { wRanges = wr }
 >   p1 = defaultPeriod {duration = 6*60-1}
 >   p2 = defaultPeriod {duration = 6*60}
 >   p3 = defaultPeriod {duration = 6*60+1}
