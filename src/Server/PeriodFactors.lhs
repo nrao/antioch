@@ -88,7 +88,7 @@ score of the specified period.
 >     factors' <- liftIO $ scoreFactors s w ss dt factorsDur [] --rs
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
 >     let rawScores = map eval factors' 
->     liftIO $ print $ "weighted mean score: " ++ (show . weightedMeanScore $ rawScores)
+>     liftIO $ print $ "weighted mean score: " ++ (show . weightedMeanScore (oType sess) $ rawScores)
 >     factors <- liftIO $ scoreElements s w ss dt factorsDur rs
 >     let scoresNfactors = zipWith (++) scores factors
 >     -- make sure we can reproduce the score

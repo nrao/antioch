@@ -169,7 +169,9 @@ more constraints.
 >   -- now test the boundaries of the window - the SR only overlaps
 >   -- w/ the begining of the window
 >   results <- runScoring w [] rt $ dailySchd srStart2 s history 
->   assertEqual "test_scheduleWindows_3" (wStart . head . windows $ s) (startTime . head $ results)
+>   -- offset because a windowed session can start earlier than midnight
+>   -- because zero scores in the "overhead" quarter(s) are ignored
+>   assertEqual "test_scheduleWindows_3" (addMinutes (-15) . wStart . head . windows $ s) (startTime . head $ results)
 >   assertEqual "test_scheduleWindows_4" (48*60) (duration . head $ results)
 >   -- now put the SR completely out of the window, and watch nothing
 >   -- get scheduled:

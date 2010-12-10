@@ -123,6 +123,14 @@ use a single data structure for all sessions.
 
 > wEnd w = addMinutes' (wDuration w) (wStart w)
 
+> isVlbi :: Session -> Bool
+> isVlbi s = (oType s) == Vlbi
+
+> getOverhead :: Session -> Int
+> getOverhead s = if isVlbi s
+>                 then 2
+>                 else 1
+
 Relies on wPeriodId, and therefore only works for real data (simulated
 data does not have periods with unique ids).
 

@@ -41,12 +41,12 @@ Attempt to see if the old test_sim_pack still works:
 >     history = []
 >     ss = getOpenPSessions
 >     expSs = [cv, va, tx, tx]
->     dts = [ fromGregorian 2006 2 1  3 15 0
+>     dts = [ fromGregorian 2006 2 1  3  0 0
 >           , fromGregorian 2006 2 1  8  0 0
 >           , fromGregorian 2006 2 1 12  0 0
->           , fromGregorian 2006 2 1 16 30 0
+>           , fromGregorian 2006 2 1 16  0 0
 >           ]
->     durs = [285, 240, 270, 240] 
+>     durs = [300, 240, 240, 255] 
 >     scores = replicate 10 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
@@ -59,7 +59,7 @@ Attempt to see if the old test_sim_pack still works:
 >     -- Four scheduled periods, first is new on first day of window and
 >     -- rest are defaults
 >     assertEqual "test_simulateDailyScheduleWithWindows 1" 4 (length result)
->     assertEqual "test_simulateDailyScheduleWithWindows 2" (fromGregorian 2006 9 22 4 0 0) (startTime . head $ result)
+>     assertEqual "test_simulateDailyScheduleWithWindows 2" (fromGregorian 2006 9 22 3 45 0) (startTime . head $ result)
 >     assertEqual "test_simulateDailyScheduleWithWindows 3" (tail dwps) (tail result)
 >     let (win, chosen, def) = head . getWindowPeriodsFromTrace $ t
 >     -- New period causes the chosen flag in the window to become true
@@ -74,7 +74,7 @@ Attempt to see if the old test_sim_pack still works:
 >     -- Four scheduled periods, all the default periods
 >     assertEqual "test_simulateDailyScheduleWithWindows 6" 4 (length result)
 >     -- The first one being the first period in session TestWindowed2
->     assertEqual "test_simulateDailyScheduleWithWindows 7" (fromGregorian 2006 9 22 4 0 0) (startTime . head $ result)
+>     assertEqual "test_simulateDailyScheduleWithWindows 7" (fromGregorian 2006 9 22 3 45 0) (startTime . head $ result)
 >     assertEqual "test_simulateDailyScheduleWithWindows 8" (tail dwps) (tail result)
 >     let (win, chosen, def) = head . getWindowPeriodsFromTrace $ t
 >     -- Same new period in the result and in the trace

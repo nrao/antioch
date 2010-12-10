@@ -104,7 +104,9 @@
 >   , test_receiverBoost
 >   , test_receiverBoost2
 >   , test_observerOnSite
+>   , test_scorePeriodOverhead
 >   , test_scorePeriod
+>   , test_scoreVlbiPeriod
 >   , test_elevationLimit
 >   , test_atmosphericStability
 >   , test_calculateAtmStabilityLimit
@@ -1359,11 +1361,12 @@ to use in conjunction with Pack tests.
 > 
 
 > test_weightedMeanScore = TestCase $ do
->     assertEqual "test_weightedMeanScore 0" 0.0 (weightedMeanScore [])
->     assertEqual "test_weightedMeanScore 1" 0.0 (weightedMeanScore [17.0])
->     assertEqual "test_weightedMeanScore 2" 6.5 (weightedMeanScore [17.0, 13.0])
->     assertEqual "test_weightedMeanScore 3" 8.0 (weightedMeanScore [17.0, 13.0, 11.0])
->     assertEqual "test_weightedMeanScore 4" 7.75 (weightedMeanScore [17.0, 13.0, 11.0, 7.0])
+>     assertEqual "test_weightedMeanScore 0" 0.0 (weightedMeanScore SpectralLine [])
+>     assertEqual "test_weightedMeanScore 1" 0.0 (weightedMeanScore Continuum [17.0])
+>     assertEqual "test_weightedMeanScore 2" 6.5 (weightedMeanScore Radar [17.0, 13.0])
+>     assertEqual "test_weightedMeanScore 3" 8.0 (weightedMeanScore SpectralLine[17.0, 13.0, 11.0])
+>     assertEqual "test_weightedMeanScore 4" 7.75 (weightedMeanScore Continuum [17.0, 13.0, 11.0, 7.0])
+>     assertEqual "test_weightedMeanScore 4" 4.5 (weightedMeanScore Vlbi [17.0, 13.0, 11.0, 7.0])
 
 Test the 24-hour scoring profile of the default session, per quarter.
 
@@ -1439,23 +1442,23 @@ plus 40 quarters.
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing s
->     let expected = (s, 3.9186277, 4*60 + 30)
+>     let expected = (s, 4.0253725, 8*60)
 >     assertEqual "test_bestDuration 1" expected bestDur
 >     -- best period length overriding min/max
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
->         bestDuration sf starttime (Just 0) (Just (4*60::Minutes)) s
->     let expected = (s, 3.894584, 4*60)
+>         bestDuration sf starttime (Just (1*60+45::Minutes)) (Just (4*60::Minutes)) s
+>     let expected = (s, 3.884861, 4*60)
 >     assertEqual "test_bestDuration 2" expected bestDur
 >     -- best period length using session's min/max, but only 4 hours left
 >     bestDur <- runScoring w [] rt $ do
 >         sf <- genScore starttime ss
 >         bestDuration sf starttime Nothing Nothing exht
->     let expected = (exht, 3.894584, 4*60)
+>     let expected = (exht, 3.884861, 4*60)
 >     assertEqual "test_bestDuration 3" expected bestDur
 >   where
->     origin = fromGregorian 2006 10 1 18 0 0
->     starttime = fromGregorian 2006 10 1 18 30 0
+>     origin = fromGregorian 2006 10 1 10 30 0
+>     starttime = fromGregorian 2006 10 1 11 0 0
 >     -- a nearly exhausted session, i.e., only 4 hours left
 >     ss = concatMap sessions pTestProjects
 >     s = head $ filter (\s -> "CV" == (sName s)) ss
@@ -1858,6 +1861,55 @@ Assumes the Rcvr getting boosted is Rcvr_1070.
 >       pr2 = defaultProject { observers = [o2, o3] }
 >       s2  = defaultSession { project = pr2 }
 
+> test_scorePeriodOverhead = TestCase $ do
+>   -- do explicitly what scorePeriod is supposed to do
+>   w <- getWeatherTest $ Just startDt
+>   rt <- getReceiverTemperatures
+>   scores <- mapM (scoreSession s' w rt) dts
+>   let scores_0 = take 4 . tail . tail $ scores
+>   let scores_1 = take 4 . tail $ scores
+>   let scores_2 = take 4 scores
+>   let avg_score_0 = (sum . tail $ scores_0) / 4.0
+>   let avg_score_1 = (sum . tail $ scores_1) / 4.0
+>   let avg_score_2 = (sum . tail .tail $ scores_2) / 4.0
+>   -- to verify the initial quarter(s) in test data are zero
+>   assertEqual "test_scorePeriodOverhead_1" es scores
+>   -- now test if overheads for periods are being handled correctly
+>   periodScore <- scorePeriod p0 s_sl ss w [] rt
+>   assertEqual "test_scorePeriodOverhead_2" avg_score_0 periodScore
+>   periodScore <- scorePeriod p1 s_sl ss w [] rt
+>   assertEqual "test_scorePeriodOverhead_3" avg_score_1 periodScore
+>   periodScore <- scorePeriod p2 s_ov ss w [] rt
+>   assertEqual "test_scorePeriodOverhead_4" avg_score_2 periodScore
+>   where
+>     startDt = fromGregorian 2006 2 1 20 45 0
+>     es = [0.0,0.0,1.6101582,1.6151073,1.6185511,1.621222]
+>     scoreSession s w rt dt = do
+>       fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
+>       return $ eval fs
+>     ss = pSessions
+>     s' = head ss
+>     s_sl = s' { oType = SpectralLine }
+>     s_ov = s' { oType = Vlbi }
+>     mins = [0, 15 .. 75]
+>     dts = map (\m -> addMinutes m startDt) mins
+>     -- create periods that covers the time ranges
+>     p0 = defaultPeriod { session = s_sl
+>                        , startTime = 30 `addMinutes` startDt
+>                        , duration = 60
+>                        , pForecast = startDt
+>                        }
+>     p1 = defaultPeriod { session = s_sl
+>                        , startTime = 15 `addMinutes` startDt
+>                        , duration = 60
+>                        , pForecast = startDt
+>                        }
+>     p2 = defaultPeriod { session = s_ov
+>                        , startTime = startDt
+>                        , duration = 60
+>                        , pForecast = startDt
+>                        }
+
 > test_scorePeriod = TestCase $ do
 >   -- do explicitly what scorePeriod is supposed to do
 >   w <- getWeatherTest $ Just startDt
@@ -1874,6 +1926,32 @@ Assumes the Rcvr getting boosted is Rcvr_1070.
 >       return $ eval fs
 >     ss = pSessions
 >     s = head ss
+>     -- do this explicitly to avoid mistakes
+>     mins = [0, 15, 30, 45] -- 60 minutes!
+>     dts = map (\m -> addMinutes m startDt) mins
+>     -- create a period that covers this same time range
+>     p = defaultPeriod { session = s
+>                       , startTime = startDt
+>                       , duration = 60
+>                       , pForecast = startDt
+>                       }
+
+> test_scoreVlbiPeriod = TestCase $ do
+>   -- do explicitly what scorePeriod is supposed to do
+>   w <- getWeatherTest $ Just startDt
+>   rt <- getReceiverTemperatures
+>   scores <- mapM (scoreSession w rt) dts
+>   let weightedAvgScore = (sum . tail . tail $ scores) / 4.0
+>   -- now 
+>   periodScore <- scorePeriod p s ss w [] rt
+>   assertEqual "test_scorePeriod_1" weightedAvgScore periodScore
+>   where
+>     startDt = fromGregorian 2006 2 1 0 30 0
+>     scoreSession w rt dt = do
+>       fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
+>       return $ eval fs
+>     ss = pSessions
+>     s = (head ss) {oType = Vlbi}
 >     -- do this explicitly to avoid mistakes
 >     mins = [0, 15, 30, 45] -- 60 minutes!
 >     dts = map (\m -> addMinutes m startDt) mins
