@@ -205,11 +205,12 @@ more constraints.
 >   -- give it a lot of time at first so that we can see the window range
 >   -- TBF: anything more then 2 days causes an exception!!!! WTF!!!!
 >   wtime = (2*24*60)
+>   winStart1 = fromGregorian' 2006 10 12
+>   wr = [(winStart1, addMinutes' (7*24*60) winStart1)]
 >   w =       defaultWindow {
->                 wStart = fromGregorian' 2006 10 12
->               , wDuration = 7*24*60
->               , wPeriodId = 100
+>                 wPeriodId = 100
 >               , wTotalTime =  wtime
+>               , wRanges =  wr
 >                }
 >   -- w/ a default period near the end of it
 >   dpDur = 4 * 60

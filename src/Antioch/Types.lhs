@@ -99,8 +99,7 @@ use a single data structure for all sessions.
 > data Window  = Window {
 >     wId          :: Int
 >   , wSession     :: Session    -- assigned for simulations only
->   , wStart       :: DateTime   -- date, no time
->   , wDuration    :: Minutes    -- from day count
+>   , wRanges      :: [DateRange]
 >   , wPeriodId    :: Int        -- default period id
 >   , wComplete    :: Bool       -- requires more observing or not
 >   , wTotalTime   :: Minutes    -- time allotted
@@ -112,6 +111,15 @@ use a single data structure for all sessions.
 >         n = sName . wSession $ w
 >         printName w = if n == "" then show . sId . wSession $ w else n
 
+> wStart :: Window -> DateTime
+> wStart w = minimum $ map fst $ wRanges w
+
+> wEnd :: Window -> DateTime
+> wEnd w = maximum $ map snd $ wRanges w 
+
+> wDuration :: Window -> Minutes
+> wDuration w = diffMinutes' (wEnd w) (wStart w)
+
 > instance Ord Window where
 >     (<) = (<) `on` wStart
 >     (>) = (>) `on` wStart
@@ -121,7 +129,6 @@ use a single data structure for all sessions.
 > instance Eq Window where
 >     (==) = windowsEqual
 
-> wEnd w = addMinutes' (wDuration w) (wStart w)
 
 Relies on wPeriodId, and therefore only works for real data (simulated
 data does not have periods with unique ids).
@@ -140,7 +147,6 @@ data does not have periods with unique ids).
 >     eqIds    = (==) `on` wSession
 >     eqStarts = (==) `on` wStart
 >     eqDurs   = (==) `on` wDuration
-
 
 Electives are just a means of grouping some periods.  But we do need
 an easy way of determining if a period is the last period in an elective,
@@ -337,8 +343,7 @@ Simple Functions for Periods:
 > defaultWindow  = Window {
 >     wId          = 0
 >   , wSession     = defaultSession
->   , wStart       = defaultStartTime
->   , wDuration    = 0
+>   , wRanges      = []
 >   , wPeriodId    = 0
 >   , wComplete    = False
 >   , wTotalTime   = 0

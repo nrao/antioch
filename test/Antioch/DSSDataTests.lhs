@@ -300,7 +300,8 @@ example in comments.
 >     where
 >       s' = defaultSession { sAllottedT = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
->       w' = defaultWindow { wDuration = 7, wPeriodId = peId p' }
+>       wr = [(defaultStartTime, addMinutes' 7 defaultStartTime)]
+>       w' = defaultWindow { wRanges = wr, wPeriodId = peId p' }
 
 > test_getWindows = TestCase $ do
 >   cnn <- connect

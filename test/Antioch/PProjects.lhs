@@ -227,14 +227,14 @@
 >       , sName = "TestWindowed1"
 >       , windows = [
 >             defaultWindow {
->                 wStart = fromGregorian' 2006 10 1
->               , wDuration = 7*24*60
+>                 wRanges = [(fromGregorian' 2006 10 1
+>                           , fromGregorian' 2006 10 8)]
 >               , wPeriodId = 100
 >               , wTotalTime = 4*60
 >                }
 >           , defaultWindow {
->                 wStart = fromGregorian' 2006 10 22
->               , wDuration = 7*24*60
+>                 wRanges = [(fromGregorian' 2006 10 22
+>                           , fromGregorian' 2006 10 27)]
 >               , wPeriodId = 101
 >               , wTotalTime = 4*60
 >                }
@@ -268,14 +268,14 @@
 >       , sName = "TestWindowed2"
 >       , windows = [
 >             defaultWindow {
->                 wStart = fromGregorian' 2006 9 22
->               , wDuration = 7*24*60
+>                 wRanges = [(fromGregorian' 2006 9 22
+>                           , fromGregorian' 2006 9 29)]
 >               , wPeriodId = 200
 >               , wTotalTime = 3*60
 >                }
 >           , defaultWindow {
->                 wStart = fromGregorian' 2006 10 15
->               , wDuration = 7*24*60
+>                 wRanges = [(fromGregorian' 2006 10 15
+>                           , fromGregorian' 2006 10 22)]
 >               , wPeriodId = 201
 >               , wTotalTime = 15 -- complete, but not all time consumed
 >               , wComplete = True
