@@ -599,9 +599,9 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >                        , duration = 60*2 
 >                        , session = s'
 >                        , pForecast = scheduled}
+>     wr = [(winStart, addMinutes' winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
->                        , wStart = winStart
->                        , wDuration = winDur }
+>                        , wRanges = wr }
 
 > getTestWindowSession2 :: Session
 > getTestWindowSession2 = makeSession s' [w'] [p']
@@ -613,7 +613,7 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >     p' = defaultPeriod { startTime = pStart
 >                        , duration = 60*2 
 >                        , session = s' }
+>     wr = [(winStart, addMinutes' winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
->                        , wStart = winStart
->                        , wDuration = winDur }
+>                        , wRanges = wr }
 

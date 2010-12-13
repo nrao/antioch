@@ -168,6 +168,16 @@
 >         sep = fromGregorian 2006  9 20  0 0 0 -- incomplete window
 >         oct = fromGregorian 2006 10 13  0 0 0 --   complete window
 
+> test_stuff = TestCase $ do
+>     print ""
+>     print win1s
+>     assertEqual "test_activeWindows_1" True True
+>       where
+>         dt1 = fromGregorian 2006  9 29  0 0 0
+>         dt2 = fromGregorian 2006  9 20  0 0 0
+>         win1s = windows tw1
+>         win2s = windows tw2
+
 > test_activeWindows = TestCase $ do
 >     -- no overlap
 >     let wins' = activeWindows dt1 (2*24*60) win1s

@@ -687,8 +687,14 @@ up, all the time.
 >       | sType s == Elective       = 1.0
 >       | any (inWindow dt) $ f s   = 1.0
 >       | otherwise                 = 0.0
->   where
->     inWindow dt w = inTimeRange dt (wStart w) (wDuration w)
+
+A single window can have multiple date ranges associated with, all of
+which we need to check.
+
+> inWindow :: DateTime -> Window -> Bool
+> inWindow dt w = any (==True) $ map (inTimeRange' dt) $ wRanges w
+>   where 
+>     inTimeRange' dt (start, end) = inTimeRange dt start (diffMinutes' end start)
 
 > availWindows :: Session -> [Window]
 > availWindows = filter (not . wComplete) . windows

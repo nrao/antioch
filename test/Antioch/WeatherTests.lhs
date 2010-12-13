@@ -205,8 +205,8 @@ to 2006 date.
 >   assertEqual "test_data36_47Day_w2_wind" 2.259703 (fromMaybe 0.0 w2_wind')
 
 > test_correctWindSpeed = TestCase $ do
->   assertEqual "test_correctWindSpeed night" (Just 8.774445) (correctWindSpeed night 17.66975)
->   assertEqual "test_correctWindSpeed day" (Just 8.605942) (correctWindSpeed day 16.19775)
+>   assertEqual "test_correctWindSpeed night" 8.774445 (correctWindSpeed night . mph2mps $ 17.66975)
+>   assertEqual "test_correctWindSpeed day" 8.605942 (correctWindSpeed day . mph2mps $ 16.19775)
 >     where
 >       night = fromGregorian 2006 12 10 10 15 0
 >       day = fromGregorian 2006 12 10 19 30 0

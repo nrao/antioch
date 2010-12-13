@@ -243,11 +243,15 @@ given query (by forecast id), try again (getting most recent forecast).
 >       [[value]] -> return $ fromSql' value
 >       _        -> if try then fetchAnyForecastValue cnn dt ftype column else return Nothing
 
+Code changes for non-correction when wind is greater than 11 meters per second:
+
 > fetchWindData :: Connection -> DateTime -> Int -> String -> IO (Maybe Float)
 > fetchWindData cnn dt ftype column = do
 >   jmph <- fetchForecastData' cnn dt ftype query xs column True
 >   let jmps = do
->       jmph >>= correctWindSpeed dt
+>       mph <- jmph
+>       let mps = mph2mps mph
+>       return $ if mps > 11.0 then mps else correctWindSpeed dt mps
 >   return jmps
 >     where
 >       query = getForecastDataQuery column
@@ -305,13 +309,14 @@ Note: only applicable for columns in the Forecasts table
 Changes wind miles per hour to PTCS meters to second
 with day/night correction
 
-> correctWindSpeed :: DateTime -> Float -> Maybe Float
-> correctWindSpeed dt w = return $ correctWindSpeed' cfs w'
+Forecasted wind (mps) to measured wind (mps)
+
+> correctWindSpeed :: DateTime -> Float -> Float
+> correctWindSpeed dt w = correctWindSpeed' cfs w
 >   where
 >     cfs
 >         | isPTCSDayTime id dt = windDayCoeff
->         | otherwise           = windNightCoeff
->     w' = mph2mps w
+>         | otherwise           = windNightCoeff 
 
 Miles per hour to meters per second conversion
 

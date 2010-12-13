@@ -102,7 +102,8 @@ An active window:
 >     where
 >   dtEnd = dur `addMinutes` dt
 >   schedulableWindow w = all ($ w) [intersect, withNoDefault, hasTime, isNotComplete]
->   intersect w     = wStart w < dtEnd && dt < wEnd w
+>   intersect  w    = any (==True) $ map intersect' $ wRanges w
+>   intersect' (start, end) = start < dtEnd && dt < end
 >   withNoDefault w = not $ overlie dt dur (maybe defaultPeriod id . wPeriod $ w)
 >   hasTime w       = (wTotalTime w) >= quarter
 >   isNotComplete w = not . wComplete $ w
