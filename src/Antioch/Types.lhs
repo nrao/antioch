@@ -100,7 +100,7 @@ use a single data structure for all sessions.
 >     wId          :: Int
 >   , wSession     :: Session    -- assigned for simulations only
 >   , wRanges      :: [DateRange]
->   , wPeriodId    :: Int        -- default period id
+>   , wPeriodId    :: Maybe Int  -- default period id  
 >   , wComplete    :: Bool       -- requires more observing or not
 >   , wTotalTime   :: Minutes    -- time allotted
 >    }
@@ -134,7 +134,7 @@ Relies on wPeriodId, and therefore only works for real data (simulated
 data does not have periods with unique ids).
 
 > wPeriod :: Window -> Maybe Period
-> wPeriod w = find (\p -> (wPeriodId w) == (peId p)) (periods . wSession $ w)
+> wPeriod w = find (\p -> (wPeriodId w) == Just (peId p)) (periods . wSession $ w)
 
 > hasWindows :: Session -> Bool
 > hasWindows s = (sType s) == Windowed && (windows s) /= []
@@ -344,7 +344,7 @@ Simple Functions for Periods:
 >     wId          = 0
 >   , wSession     = defaultSession
 >   , wRanges      = []
->   , wPeriodId    = 0
+>   , wPeriodId    = Nothing
 >   , wComplete    = False
 >   , wTotalTime   = 0
 >    }

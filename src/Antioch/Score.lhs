@@ -306,6 +306,7 @@ the elective group.
 >     dur = duration p
 >     s = session p
 
+
 The last periods in a group of periods (Electives) needs special 
 consideration: if it's session is NOT gauranteed time, then there's
 a chance even the last periods won't observe.
@@ -322,6 +323,31 @@ a chance even the last periods won't observe.
 > isLastPeriod :: Period -> Maybe Electives -> Bool
 > isLastPeriod p me | isNothing me = False
 >                   | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
+
+Default Periods of Windows from non-guaranteed Sessions should not
+run if they don't pass MOC.  So we must enforce this matrix:
+
+|             |  *guaranteed*                    | *non-guaranteed* |
+| has default |	The default period is scheduled. | The default period is scheduled if it meets minimum observing conditions |
+| no default | NA                                | As previosuly in the window, the session must compete for a time slot. |
+
+> goodDefaultPeriod :: Period -> Scoring (Bool)
+> goodDefaultPeriod p | isNotWindowed p = return True
+>                     | isScheduledWindow p = return True
+>                     | isGuaranteedWindow p = return True
+>                     | otherwise = do
+>   moc <- minimumObservingConditions dt dur s
+>   case moc of
+>     Nothing -> return False
+>     Just moc'  -> return moc'
+>   where
+>     isNotWindowed p = (sType . session $ p) /= Windowed
+>     isWindowed p = (sType . session $ p) == Windowed
+>     isScheduledWindow p = (isWindowed p) && (pState p == Scheduled)
+>     isGuaranteedWindow p = (isWindowed p) && (guaranteed . session $ p) 
+>     dt = startTime p
+>     dur = duration p
+>     s = session p
 
 3.2 Stringency
 

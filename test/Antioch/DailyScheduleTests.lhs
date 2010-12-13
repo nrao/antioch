@@ -208,7 +208,7 @@ more constraints.
 >   winStart1 = fromGregorian' 2006 10 12
 >   wr = [(winStart1, addMinutes' (7*24*60) winStart1)]
 >   w =       defaultWindow {
->                 wPeriodId = 100
+>                 wPeriodId = Just 100
 >               , wTotalTime =  wtime
 >               , wRanges =  wr
 >                }

@@ -36,7 +36,10 @@ and outputs:
 >     -- TBF: Really, this should be done inside dailySchedule so that electives
 >     -- can be covered by simualtions as well, but it's so much simpler to do
 >     -- it here, and I doubt sims will need to cover electives.  so there.
->     history <- filterElectives w rs rt history''
+>     history''' <- filterElectives w rs rt history''
+>     -- similarly, default periods of non-guaranteed, windowed sessions
+>     -- only run if they pass MOC
+>     history <- filterDefaultPeriods w rs rt history'''
 >     print "scheduling around periods: "
 >     printList history
 >     schd <- runScoring w rs rt $ do
@@ -49,8 +52,8 @@ and outputs:
 >     print "writing new periods to DB: " 
 >     printList newPeriods
 >     putPeriods newPeriods
->     -- do we need to remove any failed electives?
->     movePeriodsToDeleted $ history'' \\ history 
+>     -- do we need to remove any failed electives or default periods?
+>     movePeriodsToDeleted $ history''' \\ history 
 
 TBF: HACK HACK - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.
@@ -62,6 +65,21 @@ stay on the schedule.
 >   where
 >     goodElective' p = do
 >       r <- runScoring w rs rt $ goodElective p
+>       case r of
+>         True -> return $ [p]
+>         False -> return []
+
+TBF: HACK HACK - this really should be in Filters, but it requires
+Score, which would cause cyclical imports.
+Filter out of the history any default periods that:
+   * belong to non-guaranteed sessions
+   * and don't pass their MOC
+
+> filterDefaultPeriods :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period] -> IO ([Period])
+> filterDefaultPeriods w rs rt ps =  concatMapM goodDefaultPeriod' ps --runScoring w rs rt $ filter goodElective ps
+>   where
+>     goodDefaultPeriod' p = do
+>       r <- runScoring w rs rt $ goodDefaultPeriod p
 >       case r of
 >         True -> return $ [p]
 >         False -> return []

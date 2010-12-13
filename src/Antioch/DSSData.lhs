@@ -569,8 +569,16 @@ it an exclusion range.
 > getWindows cnn s = do
 >     dbWindows'' <- fetchWindows cnn s 
 >     dbWindows' <- mapM (fetchWindowRanges cnn) dbWindows''
->     dbWindows <- mapM (adjustTotalTime cnn) dbWindows'
+>     dbWindows <- mapM (adjustTotalTime cnn) $ filterCompleteWindows dbWindows'
 >     return $ sort $ dbWindows
+
+Remove any windows here that aren't setup properly.  Right now
+we are only checking for existence of start and end times of window.
+
+> filterCompleteWindows :: [Window] -> [Window]
+> filterCompleteWindows ws = filter complete ws
+>   where
+>     complete w = (length . wRanges $ w) > 0
 
 > adjustTotalTime :: Connection -> Window -> IO Window
 > adjustTotalTime cnn w = do
@@ -587,10 +595,17 @@ it an exclusion range.
 >     toWindowList = map toWindow
 >     toWindow(id:dpid:c:tt:[]) =
 >       defaultWindow { wId        = fromSql id
->                     , wPeriodId  = fromSql dpid
+>                     , wPeriodId  = sqlToDefaultPeriodId dpid
 >                     , wComplete  = fromSql c
 >                     , wTotalTime = fromSqlMinutes tt
 >                     }
+
+Non-Guaranteed Sessions don't have to have default periods for their
+Windows.  So, really, wPeriodId should be of type Maybe Int.  
+
+> sqlToDefaultPeriodId :: SqlValue -> Maybe Int
+> sqlToDefaultPeriodId SqlNull = Nothing 
+> sqlToDefaultPeirodId id      = fromSql id
 
 A single Window can have mutliple date ranges associated with it.
 
