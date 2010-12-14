@@ -604,8 +604,10 @@ Non-Guaranteed Sessions don't have to have default periods for their
 Windows.  So, really, wPeriodId should be of type Maybe Int.  
 
 > sqlToDefaultPeriodId :: SqlValue -> Maybe Int
-> sqlToDefaultPeriodId SqlNull = Nothing 
-> sqlToDefaultPeirodId id      = fromSql id
+> sqlToDefaultPeriodId id | id == SqlNull = Nothing 
+>                         | otherwise     = Just . fromSql $ id
+> --toElLimit v | v == SqlNull = Nothing
+> --            | otherwise    = Just $ deg2rad . fromSql $ v
 
 A single Window can have mutliple date ranges associated with it.
 
