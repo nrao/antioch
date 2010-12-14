@@ -53,7 +53,9 @@ and outputs:
 >     printList newPeriods
 >     putPeriods newPeriods
 >     -- do we need to remove any failed electives or default periods?
->     movePeriodsToDeleted $ history''' \\ history 
+>     print "moving to deleted: "
+>     printList $ history'' \\ history 
+>     movePeriodsToDeleted $ history'' \\ history 
 
 TBF: HACK HACK - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.
