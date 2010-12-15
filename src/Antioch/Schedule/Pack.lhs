@@ -15,7 +15,7 @@
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
 
-> epsilon  =  1.0e-4 :: Score
+> epsilon = 1.0e-4 :: Score
 
 > numSteps :: Minutes -> Int
 > numSteps = (`div` quarter)
@@ -129,12 +129,13 @@ Convert an open session `s` into a schedulable item by scoring it with
 > toItem          :: DateTime -> Minutes -> ScoreFunc -> [Maybe DateTime] -> Session -> Scoring (Item Session)
 > toItem dt dur sf dts s = do
 >     scores <- mapM (fromMaybe (return 0.0) . fmap (fmap eval . flip sf s)) dts
->     let force = if sum scores >= 0.0 then True else False
+>     let force = if sum scores > 0.0 then True else False
 >     return $! force `seq` Item {
 >         iId      = s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (sAvailT s)
+>       , iOvhdDur = getOverhead s
 >       , iSTimAv  = numSteps $ sAvailT s
 >       , iPTimAv  = numSteps $ pAvailT (project s)
 >       , iTimeBt  = numSteps $ timeBetween s
@@ -159,7 +160,6 @@ Generate a session's transit times over the time slice dt/dur
 Convert candidates to telescope periods relative to a given startime.
 Remember: Candidates have unitless times, and their scores are cumulative.
 Our Periods need to have Minutes, and average scores.
-
 
 > toPeriod              :: DateTime -> DateTime -> Candidate Session -> Period
 > toPeriod dt dtw candidate = defaultPeriod {
@@ -233,6 +233,7 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iProj    :: !Int
 >   , iMinDur  :: !Int
 >   , iMaxDur  :: !Int
+>   , iOvhdDur :: !Int
 >   , iSTimAv  :: !Int
 >   , iPTimAv  :: !Int
 >   , iTimeBt  :: !Int
@@ -242,24 +243,97 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iPast    :: ![Score]
 >   } deriving (Eq, Show)
 
-Generate a series of candidates representing the possibilities for
-scheduling an item at each of a sequence of durations: 15 minutes, 30
-minutes, etc. Note the first quarter of a session is always scored 0.0
-to account for overhead.
-Example: pass in Item sId = 1, min = 2, max = 4, past = [1,1,0,0]
-past' becomes only [1,2] because: 1) take just the first 4 (max) 2) take 
-only the first two because of the zeros being < epsilon, then 3) do a
-running accumulate (scanl1 (+)).
-Next in our example, we call toCandidate 1 [Nothing, Just 2].
+The function *candidates*, defined below, generates a series of candidates
+representing all the possible periods which end at a specified time
+(t(n)) and start at incrementally times earlier, i.e., if the scheduling
+time starts at t(0) then we need the accumulated scores for periods
+covering times:
+[t(n), t(n-1) to t(n), t(n-2) to t(n), ..., t(0) to t(n)]
+Actually, because sessions have a maximum length, the problem is
+simpler. So in the above case, if the session has a maximum length of 4
+quarters then we need the accumulated scores for periods covering times:
+[t(n), t(n-1) to t(n), t(n-2) to t(n), t(n-3) to t(n)]
+
+The value past in *candidates* contains the individual quarterly scores
+reversed, i.e., the score for t(n), then the score for t(n-1), the score
+for t(n-2), ..., finally the score for t(0).
+
+So, let past = [a, b, c, d .. x, y, z] where z is the score for the first
+15 minutes after t(0), y is the score the second 15 minutes, ..., and
+a is the score for t(n).  Also, let the max/min be 4/8,
+then past' containing the accumulated scores from past is:
+              [a,        sum(a,b), sum(a,c), sum(a,d),
+               sum(a,e), sum(a,f), sum(a,g), sum(a,h)]
+where, for example, sum(a,c) = a + b + c
+
+The first accumulation, a, represents the raw score at t(n).  Likewise,
+the last accumulation, sum(a,h), represents the earliest accumulation,
+i.e., 2:00 hours before t(n) and 4:30 after t(0).  Therefore, these
+accumulations represent the last 15 minutes, the last 30 minutes,
+etc. before t(n) respectively.
+
+These accumulations are backward because we need to find the score for
+possible periods from a specified time to an earlier times to allow the
+dynamic scheduling needed by the Knapsack Algorithm.
+
+To accomodate overhead, we can force the accumulations to act as if
+the first quarter or two of each possible period is zero by dropping
+the last accumulation(s) and prefixing zero(s) to past' causing the
+accumulations to be offset.  If the overhead offset is one then the
+accumulation used for the last 15 minutes (earliest chronologically)
+is zero, the accumulation previously used for the last 15 minutes get
+used for the last 30 minutes, 30 minutes get used for 45 minutes, etc.;
+past'' is:
+             [0,        a,        sum(a,b), sum(a,c),
+              sum(a,d), sum(a,e), sum(a,f), sum(a,g)]
+
+Now we need to tag each accumulation as to whether or not it is viable
+or not using the Maybe monad.  The first min - 1 accumulations are
+represented by Nothing since they represent periods of length less than
+minimum allowed, and the remaining are represented by Just values, i.e.,
+
+[Nothing,       Nothing,       Nothing,       Just sum(a,c),
+ Just sum(a,d), Just sum(a,e), Just sum(a,f), Just sum(a,g)]
+
+The is list contains only 8 items because any following items would
+be Nothing since the maximum length is 8.
+
+Analyzing the fourth score, Just sum(a,c): it represents 4 quarters
+starting at t(n) - 1:00 whose raw quarterly scores were
+d, c, b, and a.  But we need to score the first quarter as 0,
+so essentially the quarterly scores are c, b, a which are indeed
+the scores being summed in Just sum(a,c).
+
+This result is passed to toCandidate to create a list of candidates
+with the appropriate scores and durations.  (Note the code itself is
+a bit shorter.)
 
 > candidates               :: Item a -> [Maybe (Candidate a)]
-> candidates Item { iId = id, iMinDur = min, iMaxDur = max, iPast = past }
+> candidates Item { iId = id, iMinDur = min, iMaxDur = max
+>                 , iOvhdDur = ovhd, iPast = past }
 >     | max == 0           = []
->     | length past' < min = []
->     | otherwise          = toCandidate id $ replicate (min-1) Nothing ++ (map Just . drop (min-1) $ 0.0 : (init past'))
+>     | lpast' < min       = []
+>     | otherwise          = toCandidate id $ replicate min' Nothing ++ (map Just $ drop min' past'')
 >   where
->     past' = acc . takeWhile (>= epsilon) . take max $ past
->     acc   = scanl1 (+)
+>     min'   = min - 1
+>     past'  = accScores ovhd . take max $ past
+>     lpast' = length past'
+>     past'' = (replicate ovhd 0.0) ++ (take (lpast'-ovhd) past')
+
+> accScores :: Int -> [Score] -> [Score]
+> accScores ovhd = scanl1 (+) . takeWhilen ovhd (>= epsilon)
+
+Take from a list while the predicate is true and then include n more
+
+> takeWhilen :: Int -> (a -> Bool) -> [a] -> [a]
+> takeWhilen _ _ []       =  []
+> takeWhilen n p (x:xs) 
+>             | p x       =  if n == 0
+>                            then []
+>                            else x : takeWhilen n p xs
+>             | otherwise = if n == 2
+>                           then x : takeWhilen 0 p xs
+>                           else [x]
 
 Given a proposed 'item' for a slot and a list of candidates representing
 all the previous slots ('past'), return the count of previously 'sUsed' time

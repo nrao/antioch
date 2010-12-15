@@ -23,10 +23,14 @@
 >   , test_Unwind2
 >   , test_Unwind3
 >   -- , test_Unwind4 -- TBF: scoring pre-scheduled periods wrong!
+>   , test_takeWhilen
 >   , test_candidates1
 >   , test_candidates2
 >   , test_candidates3
 >   , test_candidates4
+>   , test_candidates5
+>   , test_candidates6
+>   , test_candidates7
 >   , test_Candidates1
 >   , test_Candidates2
 >   , test_Best
@@ -50,6 +54,7 @@
 >   , test_step
 >   , test_Pack_overlapped_fixed
 >   , test_Pack1
+>   , test_Pack1'
 >   , test_PackTransit1
 >   , test_PackTransit2
 >   --, test_PackBt
@@ -101,13 +106,14 @@ Simplified interfaces to Item data struct:
 
 > enoughTime = 10000
 
-> item id min max future past = Item id 0 min max enoughTime enoughTime 0 Optional [] future past
+> item id min max future past = Item id 0 min max 1 enoughTime enoughTime 0 Optional [] future past
 
 > dItem = Item {
 >     iId = 0
 >   , iProj = 0
 >   , iMinDur = 0
 >   , iMaxDur = 0
+>   , iOvhdDur = 1
 >   , iSTimAv = enoughTime 
 >   , iPTimAv = enoughTime
 >   , iTimeBt = 0
@@ -272,7 +278,7 @@ negative score.
 
 > test_GetBest3' = TestCase . assertEqual "test_getBest3'" xs . getBest 0 past $ sessions 
 >   where
->     xs = Just (Candidate 1 0 0 3 2.0)
+>     xs = Just (Candidate 2 0 0 2 2.0)
 >     past = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step) testItems
 
@@ -284,7 +290,7 @@ negative score.
 
 > test_GetBest4' = TestCase . assertEqual "test_getBest4'" xs . getBest 0 past $ sessions 
 >   where
->     xs = Just (Candidate 2 0 0 2 4.0)
+>     xs = Just (Candidate 2 0 0 3 4.0)
 >     past = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) testItems
 
@@ -496,7 +502,7 @@ Test against python unit tests from beta test code:
 >   where
 >     -- result, list of best solutions starting for 60 minutes, then 45,
 >     -- 30, and then 15 (none) followed by the sentinel.
->     xs = [Just (Candidate 2 0 0 2 3.0), Just (Candidate 1 0 0 3 2.0)
+>     xs = [Just (Candidate 2 0 0 3 4.0), Just (Candidate 2 0 0 2 2.0)
 >          ,Just (Candidate 1 0 0 2 1.0), Nothing, Nothing]
 >     -- future, i.e., nothing pre-scheduled
 >     ys = replicate 4 Nothing
@@ -508,7 +514,7 @@ Test against python unit tests from beta test code:
 
 > test_PackWorker'6_1 = TestCase . assertEqual "test_PackWorker'6_1" xs . packWorker' 0 ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 0 2 3.0), Just (Candidate 1 0 0 3 2.0)
+>     xs = [Just (Candidate 2 0 0 3 4.0), Just (Candidate 2 0 0 2 2.0)
 >          ,Just (Candidate 1 0 0 2 1.0), Nothing, Nothing]
 >     ys = replicate 3 Nothing
 >     zs = [Nothing, Nothing]
@@ -517,7 +523,7 @@ Test against python unit tests from beta test code:
 
 > test_PackWorker'6_2 = TestCase . assertEqual "test_PackWorker'6_2" xs . packWorker' 0 ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 0 2 4.0), Just (Candidate 1 0 0 3 2.0)
+>     xs = [Just (Candidate 2 0 0 3 4.0), Just (Candidate 2 0 0 2 2.0)
 >          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 2 Nothing
 >     zs = [Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
@@ -526,7 +532,7 @@ Test against python unit tests from beta test code:
 
 > test_PackWorker'6_3 = TestCase . assertEqual "test_PackWorker'6_3" xs . packWorker' 0 ys zs $ ws
 >   where
->     xs = [Just (Candidate 2 0 0 2 4.0), Just (Candidate 1 0 0 3 3.0)
+>     xs = [Just (Candidate 2 0 0 3 4.0), Just (Candidate 1 0 0 3 3.0)
 >          ,Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     ys = replicate 1 Nothing
 >     zs = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0)
@@ -536,7 +542,7 @@ Test against python unit tests from beta test code:
 
 > test_getBest_for_PackWorker'6_3 = TestCase . assertEqual "test_best_for_PackWorker'6_3" result . getBest 0 zs $ ws
 >   where
->     result = Just (Candidate {cId = 2, cProj = 0, cStart = 0, cDuration = 2, cScore = 4.0})
+>     result = Just (Candidate {cId = 2, cProj = 0, cStart = 0, cDuration = 3, cScore = 4.0})
 >     zs = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0)
 >          ,Nothing, Nothing]
 >     ws = map step [item 1 2 4 [1.0, 1.0, 1.0] [1.0, 1.0, 1.0]
@@ -742,13 +748,36 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                 | d <- [1..]
 >                 | s <- ss]
 
+> test_takeWhilen = TestCase $ do
+>     assertEqual "test_takeWhile_1"  []      (takeWhilen 1 odd [])
+>     assertEqual "test_takeWhile_2"  [2]     (takeWhilen 1 odd [2])
+>     assertEqual "test_takeWhile_3"  [2]     (takeWhilen 1 odd [2,3,4,5])
+>     assertEqual "test_takeWhile_4"  [1,3,4] (takeWhilen 1 odd [1,3,4,5])
+>     assertEqual "test_takeWhile_5"  [1,3]   (takeWhilen 1 odd [1,3])
+>     assertEqual "test_takeWhile_6"  [1,3,4] (takeWhilen 1 odd [1,3,4])
+>     assertEqual "test_takeWhile_7"  []      (takeWhilen 2 odd [])
+>     assertEqual "test_takeWhile_8"  [2]     (takeWhilen 2 odd [2])
+>     assertEqual "test_takeWhile_9"  [2]     (takeWhilen 2 odd [2,3,4,5])
+>     assertEqual "test_takeWhile_10" [1,3,4] (takeWhilen 2 odd [1,3,4,5])
+>     assertEqual "test_takeWhile_11" [1,3]   (takeWhilen 2 odd [1,3])
+>     assertEqual "test_takeWhile_12" [3,4]   (takeWhilen 2 odd [3,4])
+>     assertEqual "test_takeWhile_13" [3,4,6] (takeWhilen 2 odd [3,4,6])
+>     assertEqual "test_takeWhile_14" [3,4]   (takeWhilen 2 odd [3,4,5])
+>     assertEqual "test_takeWhile_15" [3,4,6] (takeWhilen 2 odd [3,4,6,5])
+
 > test_candidates1 = candidate_tests "test_candidates1" [0.5, 1.0 .. ] [0.0,0.0,0.0,3.0,5.0,7.5,10.5,14.0]
 
-> test_candidates2 = candidate_tests "test_candidates2" [4.0,3.5,3.0,2.5,2.0,0.00001,1.0,0.5] [0.0,0.0,0.0,10.5,13.0]
+> test_candidates2 = candidate_tests "test_candidates2" [4.0,3.5,3.0,2.5,2.0,0.00001,1.0,0.5] [0.0,0.0,0.0,10.5,13.0,15.0]
 
 > test_candidates3 = candidate_tests "test_candidates3" [4.0] []
 
 > test_candidates4 = candidate_tests "test_candidates4" [] []
+
+> test_candidates5 = candidate_tests "test_candidates5" [0.0, 0.5 .. ] []
+
+> test_candidates6 = candidate_tests "test_candidates6" [3.5,3.0,2.5,2.0,0.00001,1.0,0.5,0.0] [0.0,0.0,0.0,9.0,11.0]
+
+> test_candidates7 = candidate_tests "test_candidates7" [3.0,2.5,2.0,0.00001,1.0,0.5,0.0,0.0] [0.0,0.0,0.0,7.5]
 
 > candidate_tests name iPast expected = TestCase $ do
 >     assertEqual name expected (map getCScore result)
@@ -835,8 +864,32 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >                                , receivers = [[Rcvr1_2]]
 >                                , project = testProject
 >                                }
->     expStartTime = fromGregorian 2006 11 8 22 0 0
->     expPeriod = Period 0 candidate expStartTime 120 2.5292797 Pending expStartTime False 120
+>     expStartTime = fromGregorian 2006 11 8 21 45 0
+>     expPeriod = Period 0 candidate expStartTime 135 2.609496 Pending expStartTime False 135
+
+> test_Pack1' = TestCase $ do
+>     w <- getWeatherTest . Just $ starttime 
+>     rt <- getRT
+>     periods' <- runScoring w [] rt $ do
+>         fs <- genScore starttime [candidate]
+>         pack fs starttime duration [] [candidate]
+>     assertEqual "test_Pack1'_1" 1 (length periods')
+>     assertEqual "test_Pack1'_2" expPeriod (head periods')
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     duration = 12*60
+>     candidate = defaultSession { sName = "singleton"
+>                                , sAllottedT = 24*60
+>                                , sAllottedS = 24*60
+>                                , minDuration = 2*60
+>                                , maxDuration = 6*60
+>                                , frequency = 2.0
+>                                , receivers = [[Rcvr1_2]]
+>                                , project = testProject
+>                                , oType = Vlbi
+>                                }
+>     expStartTime = fromGregorian 2006 11 8 21 30 0
+>     expPeriod = Period 0 candidate expStartTime 150 2.609496 Pending expStartTime False 150
 
 > test_PackTransit1 = TestCase $ do
 >     w <- getWeatherTest . Just $ starttime 
@@ -977,12 +1030,11 @@ produce changes in the final result.
 >         names = ["CV", "AS", "CV"]
 >         ids = map getPSessionId names
 >         ss  = map (\i -> defaultSession {sId = i}) ids
->         durs = [210,390,195]
+>         durs = [210,390,210]
 >         times = [ starttime
 >                 , fromGregorian 2006 11 8  15 30 0
->                 , fromGregorian 2006 11 9   8 45 0 ]
->         --scores = [2.9165013, 3.2747638, 3.2450633]
->         scores = [2.9471364, 3.260362, 3.232128]
+>                 , fromGregorian 2006 11 9   8 30 0 ]
+>         scores = [2.9446945, 3.260362, 3.2440414]
 
 Same test, but this time, stick some fixed periods in there.
 TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
@@ -1134,13 +1186,13 @@ around fixed periods.
 >         ids' = map getPSessionId names
 >         ids  = [head ids']++[1000]++[head . tail $ ids']++[1001]++[last ids']
 >         ss  = map (\i -> ds {sId = i}) ids
->         durs = [240, dur1, 135, dur2, 195]
+>         durs = [240, dur1, 135, dur2, 210]
 >         times = [starttime
 >                , ft1
 >                , fromGregorian 2006 11 8 18 0 0
 >                , ft2
->                , fromGregorian 2006 11 9 8 45 0] 
->         scores = [3.0069895, 0.0, 1.5187624, 0.0, 3.2450633]
+>                , fromGregorian 2006 11 9 8 30 0] 
+>         scores = [2.9998863, 0.0, 1.5633384, 0.0, 3.2440414]
 
 Same as above, but with even more fixed periods
 

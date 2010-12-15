@@ -115,7 +115,7 @@ use a single data structure for all sessions.
 > wStart w = minimum $ map fst $ wRanges w
 
 > wEnd :: Window -> DateTime
-> wEnd w = maximum $ map snd $ wRanges w 
+> wEnd w = maximum $ map snd $ wRanges w
 
 > wDuration :: Window -> Minutes
 > wDuration w = diffMinutes' (wEnd w) (wStart w)
@@ -129,6 +129,13 @@ use a single data structure for all sessions.
 > instance Eq Window where
 >     (==) = windowsEqual
 
+> isVlbi :: Session -> Bool
+> isVlbi s = (oType s) == Vlbi
+
+> getOverhead :: Session -> Int
+> getOverhead s = if isVlbi s
+>                 then 2
+>                 else 1
 
 Relies on wPeriodId, and therefore only works for real data (simulated
 data does not have periods with unique ids).

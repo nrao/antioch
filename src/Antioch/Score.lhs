@@ -863,7 +863,7 @@ Compute the average score for a given session over an interval:
    * reject sessions that have quarters of score zero
 This is for use when determining best backups to run in simulations.
 Note: because this is not used in real scheduling then the fact
-that it does not assume zero for the first quarter does not matter.
+that it does not assume zero for the overhead quarters does not matter.
 
 > avgScoreForTimeRealWind  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
 > avgScoreForTimeRealWind sf dt dur s = do
@@ -875,7 +875,7 @@ that it does not assume zero for the first quarter does not matter.
 >       otherwise -> return $ sumScores scores / (fromIntegral . length $ scores)
 >   where
 >     -- TBF:  Using the measured wind speed for scoring in the future
->     -- is unrealistic, but damn convient!
+>     -- is unrealistic, but damn convenient!
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
 >     sumScores scores = case dropWhile (>0.0) scores of
@@ -887,18 +887,33 @@ Computes the mean score of a range of non-zero quarterly scores where
 the first score is ignored, e.g., if a sessions quarterly scores across
 an hour are [a, b, c, d] then:
 
-minutes              weighted mean score
--------              -------------------
-0:15                   0
-0:30                   b/2
-0:45                   (b + c)/3
-1:00                   (b + c + d)/4
+minutes              weighted mean score              weighted mean score (VLB)
+-------              -------------------              -------------------------
+0:15                   0                                0
+0:30                   b/2                              0
+0:45                   (b + c)/3                        c/3
+1:00                   (b + c + d)/4                    (c + d)/4
 
-> weightedMeanScore:: [Score] -> Score
-> weightedMeanScore ss = case ss of
+> weightedMeanScore:: ObservingType -> [Score] -> Score
+> weightedMeanScore ot ss = case ot of
+>                   Vlbi      ->  weightedMeanScoreTail2 ss
+>                   otherwise ->  weightedMeanScoreTail  ss
+
+> weightedMeanScoreTail:: [Score] -> Score
+> weightedMeanScoreTail ss = case ss of
 >                   []      ->  0.0
 >                   (_:[])  ->  0.0
 >                   (_:rem) ->  (sum rem) / (fromIntegral . length $ ss)
+
+> weightedMeanScoreTail2:: [Score] -> Score
+> weightedMeanScoreTail2 ss = case ss of
+>                   []        ->  0.0
+>                   (_:[])    ->  0.0
+>                   (_:_:[])  ->  0.0
+>                   (_:_:rem) ->  (sum rem) / (fromIntegral . length $ ss)
+
+> activeScores :: Session -> [Score] -> [Score]
+> activeScores s ss = drop (getOverhead s) ss
 
 TBF The fact that we have to pass in session is a kluge resulting from the
 fact that we have not tied the knots properly among projects, sessions,
@@ -907,9 +922,9 @@ and periods.
 > scorePeriod :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO Score
 > scorePeriod p s ss w rs rt = do
 >   scores <- mapM scorePeriod' $ dts
->   let retval = if 0.0 `elem` scores
+>   let retval = if 0.0 `elem` (activeScores s scores)
 >                then 0.0
->                else weightedMeanScore scores
+>                else weightedMeanScore (oType s) scores
 >   return retval
 >     where
 >   st = startTime p
@@ -918,12 +933,15 @@ and periods.
 >     return $ eval fs
 >   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
+FYI, this function has no unit tests, possibly because it is never used!
+
 > scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO Score
 > scoreSession st dur s ss w rs rt = do
 >   scores <- mapM scoreSession' $ dts
->   let retval = if elem 0.0 scores
+>   -- TBF should this check only be done on that tail?
+>   let retval = if 0.0 `elem` (activeScores s scores)
 >                then 0.0
->                else weightedMeanScore scores
+>                else weightedMeanScore (oType s) scores
 >   return retval
 >     where
 >   scoreSession' dt = do
@@ -954,7 +972,7 @@ that it does not assume zero for the first quarter does not matter.
 
 Compute the total score for a given session over an interval.
 Note: because this is not used in scheduling with Pack then the fact
-that it does not assume zero for the first quarter does not matter.
+that it does not assume zero for the overhead quarters does not matter.
 
 > totalScore :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score
 > totalScore sf dt dur s = do
@@ -981,11 +999,12 @@ the provided duration and the session's duration is used.
 
 > bestDuration :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> Session -> Scoring Nominee
 > bestDuration sf dt lower upper session = do
->     scores <- mapM (liftM eval . flip sf session) times
->     let sums = case scores of
->                     []     -> []
->                     (x:[]) -> [0.0::Score]
->                     (x:xs) -> (0.0:(scanl1 (+) . takeWhile (> 0.0) $ xs))
+>     -- scores' :: [Score]         -- all quarterly scores
+>     scores' <- mapM (liftM eval . flip sf session) times
+>     let ovhd = getOverhead session
+>     -- scores :: [Score]          -- initial non-zero scores skipping overhead
+>     let scores = (replicate ovhd 0.0) ++ (takeWhile (>0.0) . drop ovhd $ scores')
+>     let sums = scanl1 (+) scores
 >     --  sds :: [(Score, Minutes)] -- period sums and durations
 >     let sds = dropWhile (\sd -> (snd sd) < shortest) [(s, d) | (s, d) <- zip sums durs]
 >     --  mds :: [(Score, Minutes)] -- period means and durations
