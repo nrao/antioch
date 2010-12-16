@@ -425,13 +425,14 @@ class CleoDBImport:
                  , 'dbalser@nrao.edu'
                  , 'rmaddale@nrao.edu'
                  ]
+        timeStr = datetime.strftime(self.import_time, "%Y_%m_%d_%H_%M_%S")
         # TBF: more detailed comments here?
         subject = "Weather Forecasts have been imported."
         body = """
         Weather Forecasts have been imported at %s UTC.\n
         For details see most recent report at:\n
-        /home/dss/release/antioch/admin/CleoDBImport_<timestamp>.txt\n
-        """ % self.import_time
+        /home/dss/release/antioch/admin/CleoDBImport_%s.txt\n
+        """ % (self.import_time, timeStr)
     
         emailer = emailNotifier(smtp = "smtp.gb.nrao.edu"
                               , frm  = "dss@gb.nrao.edu")
