@@ -258,27 +258,39 @@ Base of exponential Equation 12
 > calculateTE f = 1.0 + 4.0 * log lff * f ^ 2
 
 
+Minium Observing Conditions (MOC).  Note that what weather data is used is
+up to the client calling this function.  For instance, in simulations we
+set the origin of the weather to one hour before the start of the period, 
+ensure that subsequent Scoring calls will use this weather, *then* call 
+this function.
+
+TBF: equation ? in Memo 5.?
+
+The final boolean value is a comparison of the average of the non-overhead
+quarter factors compared to the adjusted Min. Obs. Efficiency.  Those
+factors are observing efficiency (factors) and tracking error limit.
+
 > minimumObservingConditions  :: DateTime -> Minutes -> Session -> Scoring (Maybe Bool)
-> minimumObservingConditions dt dur s = do
+> minimumObservingConditions dt dur s | numQtrs <= getOverhead s = return Nothing
+>                                     | otherwise = do
 >     let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
->     fcts <- mapM (minObsFactors s) dts
+>     fcts <- mapM (minObsFactors s) $ drop (getOverhead s) dts
 >     let effProducts = map (\(fs, tr) -> ((eval fs) * tr)) fcts
->     let meanEff = if (length effProducts) > 0 then (sum effProducts) / (fromIntegral . length $ effProducts) else 0.0
+>     let meanEff = (sum effProducts) / (fromIntegral . length $ effProducts) 
 >     return $ Just (meanEff >= minObs)
 >   where
 >     dts = [(15 * m) `addMinutes` dt | m <- [0 .. (dur `div` 15) - 1]]
+>     numQtrs = dur `div` 15
+
+Calculate the factors that make up the moc at the given time (quarter).
+Note that we return part of the tuple as factors instead of evaluating here
+to ease the debugging process.
 
 > minObsFactors :: Session -> DateTime -> Scoring (Factors, Float)
 > minObsFactors s dt = do
->    w  <- weather
->    w' <- liftIO $ newWeather w (Just dt)
->    local (\env -> env { envWeather = w', envMeasuredWind = True}) $ do
 >      fss <- observingEfficiency dt s
->      trkErrLimit <- mocTrackingErrorLimit dt s
->      let trkErrLimit' = case trkErrLimit of
->                             Nothing -> 0.0
->                             Just x  -> if x then 1.0 else 0.0
->      return (fss, trkErrLimit')
+>      trkErrLimit <- trackingErrorLimit dt s 
+>      return (fss, eval trkErrLimit)
 
 > adjustedMinObservingEff :: Float -> Float
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
@@ -551,24 +563,16 @@ For scheduling, use the specified tracking errors below.
 Use different constants for MOC.
 
 > trackingErrorLimit dt s = do
+>     -- If it is decided to *always* attempt to use W2 wind (like in sims)
+>     -- here is the code to toggle
+>     -- w <- weather
+>     -- wind' <- liftIO $ gbt_wind w dt
 >     wind' <- getRealOrForecastedWind dt
 >     boolean "trackingErrorLimit" $ calculateTRELimit maxTrackErr maxTrackErrArray wind' dt s 
 >       where
 >         maxTrackErr      = 0.2  -- Equation 25
 >         maxTrackErrArray = 0.4  -- Equation 26
 >     
-
-For MOC, use different tracking errors then what we used for scheduling.
-
-> mocTrackingErrorLimit :: DateTime -> Session -> Scoring (Maybe Bool)
-> mocTrackingErrorLimit dt s = do 
->   w <- weather
->   -- don't muck around, just get the weather station 2 winds.
->   realWind <- liftIO $ gbt_wind w dt
->   return $ calculateTRELimit maxTrackErr maxTrackErrArray realWind dt s  
->       where
->         maxTrackErr      = 0.2  -- Equation ? 
->         maxTrackErrArray = 0.4  -- Equation ?
 
 Equation 13
 
@@ -969,6 +973,14 @@ that it does not assume zero for the first quarter does not matter.
 >     return $! score / fromIntegral (dur `div` quarter)
 >   where
 >     dur = minDuration s
+
+TBF: reverse the names of these two averageScore functions.
+This is the more generic one, using dur that is passed in.
+
+> averageScore' :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
+> averageScore' sf dt dur s = do
+>     score <- totalScore sf dt dur s
+>     return $! score / fromIntegral (dur `div` quarter)
 
 Compute the total score for a given session over an interval.
 Note: because this is not used in scheduling with Pack then the fact
