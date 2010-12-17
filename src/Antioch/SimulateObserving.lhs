@@ -10,6 +10,7 @@
 > import Antioch.Filters
 > import Antioch.Schedule
 > import Control.Monad.Writer
+> import Control.Monad.RWS.Strict
 > import Data.List
 > import Data.Maybe           (fromMaybe, mapMaybe, isJust)
 > import System.CPUTime
@@ -59,7 +60,7 @@ We only we want to be scheduling backups during the specified time range,
 > scheduleBackup :: ScoreFunc -> StrategyName -> [Session] -> Period -> DateTime -> Minutes -> Scoring (Maybe Period) 
 > scheduleBackup sf sn ss p dt dur | cantBeCancelled p dt dur = return $ Just p
 >                                  | otherwise = do
->   moc <- minimumObservingConditions (startTime p) (duration p) (session p)
+>   moc <- evalSimPeriodMOC p
 >   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
 >   where
 >     backupSessions  = filterBackups sn ss p 
@@ -98,11 +99,11 @@ Find the best backup for a given period according to the strategy being used.
 > findBestBackup :: StrategyName -> ScoreFunc -> [Session] -> Period -> Scoring (Session, Score)
 > findBestBackup sn sf backups p =
 >   case sn of
->     Pack ->  best (avgScoreForTimeRealWind sf (startTime p) (duration p)) backups
+>     Pack -> best (evalSimBackup sf p) backups
 >     ScheduleMinDuration ->  best (avgScoreForTimeRealWind sf (startTime p) (duration p)) backups
 >     ScheduleLittleNell ->  best (scoreForTime sf (startTime p) True) backups
 >     
-
+   
 Find the best backup for a given period.  The backups are scored using the
 best forecast and *not* rejecting zero scored quarters.  If the backup in turn
 fails it's MOC, then, since it is likely all the others will as well, then 
@@ -111,9 +112,39 @@ schedule deadtime.
 > replaceWithBackup :: BackupStrategy
 > replaceWithBackup sn sf backups p = do
 >   (s, score) <- findBestBackup sn sf backups p
->   moc        <- minimumObservingConditions (startTime p) (duration p) s 
+>   -- A little trick here: the passed in period can be used to test the
+>   -- new replacement period.
+>   moc <- evalSimPeriodMOC $ p { session = s }  
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
 >     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p)
 >     else return Nothing -- no decent backups, must be bad weather -> Deadtime
     
+Utilities:
+
+TBF: w/ a lot of work, we could get evalSim* functions generalized.
+They both evaluate a function with the weather set to an hour
+before the evaluation duration starts.
+
+Evaluates the MOC for the given period, w/ weather placed an hour before the period.
+
+> evalSimPeriodMOC :: Period -> Scoring (Maybe Bool)
+> evalSimPeriodMOC p = do
+>   -- reset the weather origin to one hour before the period
+>   w <- weather
+>   let wDt = addMinutes' (-60) (startTime p) -- 1 hr before period starts
+>   w' <- liftIO $ newWeather w (Just wDt)
+>   -- make sure all subsequent calls use this weather
+>   local (\env -> env { envWeather = w' }) $ minimumObservingConditions (startTime p) (duration p) (session p)
+
+Returns the average score (no overhead) of the passed in backup Session,
+using the weather placed an hour before the period we wish to replace.
+
+> evalSimBackup :: ScoreFunc -> Period -> Session -> Scoring Score
+> evalSimBackup sf p s = do
+>   -- reset the weather origin to one hour before the period
+>   w <- weather
+>   let wDt = addMinutes' (-60) (startTime p) -- 1 hr before period starts
+>   w' <- liftIO $ newWeather w (Just wDt)
+>   local (\env -> env { envWeather = w' }) $ averageScore' sf (startTime p) (duration p) s  
+
