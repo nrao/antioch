@@ -578,7 +578,7 @@ we are only checking for existence of start and end times of window.
 > filterCompleteWindows :: [Window] -> [Window]
 > filterCompleteWindows ws = filter complete ws
 >   where
->     complete w = ((length . wRanges $ w) > 0 && ((wPeriodId w) /= 0))
+>     complete w = (length . wRanges $ w) > 0
 
 > adjustTotalTime :: Connection -> Window -> IO Window
 > adjustTotalTime cnn w = do
@@ -600,12 +600,12 @@ we are only checking for existence of start and end times of window.
 >                     , wTotalTime = fromSqlMinutes tt
 >                     }
 
-The default period is really a PK, which is 1-based.  So, if there is 
-NO default period, set this 0.
+Non-Guaranteed Sessions don't have to have default periods for their
+Windows.  So, really, wPeriodId should be of type Maybe Int.  
 
-> sqlToDefaultPeriodId :: SqlValue -> Int
-> sqlToDefaultPeriodId id | id == SqlNull = 0 
->                         | otherwise     = fromSql id
+> sqlToDefaultPeriodId :: SqlValue -> Maybe Int
+> sqlToDefaultPeriodId id | id == SqlNull = Nothing 
+>                         | otherwise     = Just . fromSql $ id
 
 A single Window can have mutliple date ranges associated with it.
 

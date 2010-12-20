@@ -727,6 +727,42 @@ weather (gbt or forecasted) is being used:
 >   goodElective' w rs rt p = runScoring w rs rt $ goodElective p
 >   
 
+> test_goodDefaultPeriod = TestCase $ do
+>   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
+>   let rs = []
+>   rt <- getReceiverTemperatures
+>   -- easy case - all open sessions
+>   result <- mapM (goodDefaultPeriod' w rs rt) ps1
+>   assertEqual "test_goodDefaultPeriod_1" [True, True] result
+>   -- now do it again, but with a guaranteed session
+>   result <- mapM (goodDefaultPeriod' w rs rt) ps2
+>   assertEqual "test_goodDefaultPeriod_2" [True, True, True] result
+>   -- now try a non-guaranteed session, and see what happens
+>   result <- mapM (goodDefaultPeriod' w rs rt) ps3
+>   assertEqual "test_goodDefaultPeriod_3" [True, True, True, False] result
+>     where
+>   mkPeriod s dt dur id = defaultPeriod { session   = s
+>                                        , startTime = dt
+>                                        , duration  = dur
+>                                        , peId      = id
+>                                        }
+>   gb = head $ findPSessionsByName "GB"
+>   cv = head $ findPSessionsByName "CV"
+>   goodDefaultPeriod' w rs rt p = runScoring w rs rt $ goodDefaultPeriod p
+>   dt = fromGregorian 2006 10 13 16 0 0
+>   ps1 = [mkPeriod gb dt 60 1, mkPeriod cv dt 60 2]
+>   ranges = [(fromGregorian' 2006 10 22, fromGregorian' 2006 10 27)]
+>   dpId = 100
+>   dpId2 = 200
+>   win = defaultWindow { wRanges = ranges, wPeriodId = Just dpId, wTotalTime = 60 }
+>   ws = gb { sType = Windowed, windows = [win], sId = 200, guaranteed = True }
+>   defaultPd = mkPeriod ws dt 60 dpId
+>   ps2 = ps1 ++ [defaultPd]
+>   ws2 = gb { sType = Windowed, windows = [win], sId = 300, guaranteed = False }
+>   defaultPd2 = mkPeriod ws2 dt 60 dpId2
+>   ps3 = ps2 ++ [defaultPd2]
+>   
+
 > test_isLastPeriodOfElective = TestCase $ do
 >     assertEqual "test_isLastPeriodOfElective_1" False (isLastPeriodOfElective p1) 
 >     assertEqual "test_isLastPeriodOfElective_2" True (isLastPeriodOfElective p2) 
