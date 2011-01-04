@@ -82,23 +82,11 @@ Variables:
 >     rt <- liftIO $ getReceiverTemperatures
 
 >     -- compute scores
->     --scores <- sequence $ map (liftIO . scorePeriod' ss w rt rs) tsps
 >     scores <- sequence $ map (\(p, s) -> scorePeriod p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
 >     -- match the scores backup w/ their period Ids
 >     return $ zip (map (peId . fst) tsps) scores
 
-> {-
-> scorePeriod' :: [Session] -> Weather -> ReceiverTemperatures -> ReceiverSchedule -> (Period, Session) -> IO Score
-> scorePeriod' ss w rt rs psp = do
->     let p = fst psp
->     let s = snd psp
->     let dt = startTime p
->     let sss = scoringSessions dt undefined ss
->     --rs <- liftIO $ getReceiverSchedule . Just $ dt
->     --let rs = []
->     print ("scorePeriod: ", p) --, rs)
->     scorePeriod p s sss w rs rt
-> -}
+
 
 Computes the current score of a given Session (identified by ID) over
 the given time range, to be found in the given list of Projects.  Example usage: a period is changed or newly created (?) via the Nell server.
@@ -115,7 +103,6 @@ Variables:
 >     let s = head $ filter (\s -> (sId s) == id) ss
 >
 >     -- setup the scoring enviornment (check for unit tests)
->     --w <- liftIO $ getWeatherTest $ if test then (Just dt) else Nothing
 >     w <- if test then liftIO $ getWeatherTest $ Just dt else getWeather Nothing
 >     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
 >     rt <- liftIO $ getReceiverTemperatures
@@ -135,7 +122,22 @@ Variables:
    * Scoring Factors - genPeriodScore
    * Session Pool - scoringSessions
 
-> --runFactors :: Int -> DateTime -> Minutes -> [Project] -> IO ([Factors])
+> runFactors :: Int -> DateTime -> Minutes -> [Project] -> Bool -> IO ((Session, [Factors]))
+> runFactors id dt dur projs test = do
+>     -- find the session in the projects
+>     let ss = concatMap sessions projs
+>     let sss = scoringSessions dt undefined ss
+>     let s = head $ filter (\s -> (sId s) == id) ss
+>     -- setup the environment; watch for tests
+>     w <- liftIO $ if test then getWeatherTest $ Just dt else getWeather Nothing
+>     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
+>     rt <- liftIO $ getReceiverTemperatures
+>     factors' <- liftIO $ scoreFactors s w sss dt dur rs
+>     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
+>     factors <- liftIO $ scoreElements s w rt sss dt dur rs
+>     --let scoresNfactors = zipWith (++) scores factors
+>     return $ (s, zipWith (++) scores factors)
+>
 
 This is probably the the outlier among this group of functions.  Used for finding candidate periods to fill in a given hole in the schedule.  The variables are different, but note that overhead is handled consistently with the way runScorePeriods and runScoreSessions does it.
 

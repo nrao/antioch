@@ -13,11 +13,13 @@
 
 > import Test.HUnit
 > import Data.List
+> import Data.Maybe
 > import Control.Monad.Trans  (lift, liftIO)
 
 > tests = TestList [ 
 >     test_runScorePeriods
 >   , test_runScoreSession
+>   , test_runFactors
 >     ]
 
 > test_runScorePeriods = TestCase $ do
@@ -70,6 +72,54 @@
 >   proj = defaultProject
 >   projs = [makeProject proj 0 0 pSessions]
 
+> test_runFactors = TestCase $ do
+>   let dt = fromGregorian 2006 9 2 14 30 0
+>   let s' = findPSessionByName "CV"
+>   let s = s' { sId = 555 }
+>   let dur = 15::Minutes
+>   let proj = defaultProject
+>   let projs = [makeProject proj 1000 1000 ([s] ++ pSessions)]
+>   -- Here we try to get the same results as ScoreTests.test_scoreFactors & test_scoreElements
+>   -- and we can, except for pressures and some project info
+>   (sess, factors) <- runFactors 555 dt dur projs True
+>   assertEqual "test_runFactors 0" 1 (length factors)
+>   assertEqual "test_runFactors 1" 32 (length . head $ factors)
+>   assertEqual "test_runFactors 2" sess s
+>   mapM_ (assertFactor factors) exp 
+>       where
+>     lookup' factors name = fromJust . fromJust . lookup name . head $ factors
+>     assertFactor factors (key, value) = assertEqual ("test_scoreFactors " ++ key) value (lookup' factors key)
+>     exp = [("stringency",1.0954108)
+>           ,("atmosphericEfficiency",0.9439829)
+>           ,("surfaceObservingEfficiency",0.9982148)
+>           ,("trackingEfficiency",0.99917835)
+>           -- Pressures differ due to diff in session pool
+>           --,("rightAscensionPressure",1.0) 
+>           --,("frequencyPressure",1.9724026)
+>           ,("observingEfficiencyLimit",1.0)
+>           ,("hourAngleLimit",1.0)
+>           ,("zenithAngleLimit",1.0)
+>           ,("trackingErrorLimit",1.0)
+>           ,("atmosphericStabilityLimit",1.0)
+>           ,("scienceGrade",1.0)
+>           ,("thesisProject",1.0)
+>           -- this tests' project isn't identical 
+>           --,("projectCompletion",1.0024)
+>           ,("observerOnSite",1.0)
+>           ,("receiver",1.0)
+>           ,("needsLowRFI",1.0)
+>           ,("lstExcepted",1.0)
+>           ,("observerAvailable",1.0)
+>           ,("projectBlackout",1.0)
+>           ,("inWindows",1.0)
+>           -- scoreElements
+>           , ("opacity", 8.786574e-3)
+>           , ("elevation", 36.60029)
+>           , ("sysNoiseTemp", 23.294113)
+>           ]
+
+
+Utilities:
 
 > pSessions = zipWith6 genPSess tots useds ras bands grades ids
 >   where tots   = [12*60, 18*60, 10*60, 20*60]

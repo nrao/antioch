@@ -1130,11 +1130,33 @@ Equation 16
 >     let dur = 15::Minutes
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
+>     printList factors
 >     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
->     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
->     assertEqual "test_scoreFactors 2" 1.0 haLimit
->     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
->     assertEqual "test_scoreFactors 3" 1.9724026 fPress
+>     mapM_ (assertFactor factors) exp 
+>   where
+>     lookup' factors name = fromJust . fromJust . lookup name . head $ factors
+>     assertFactor factors (key, value) = assertEqual ("test_scoreFactors " ++ key) value (lookup' factors key)
+>     exp = [("stringency",1.0954108)
+>           ,("atmosphericEfficiency",0.9439829)
+>           ,("surfaceObservingEfficiency",0.9982148)
+>           ,("trackingEfficiency",0.99917835)
+>           ,("rightAscensionPressure",1.0) 
+>           ,("frequencyPressure",1.9724026)
+>           ,("observingEfficiencyLimit",1.0)
+>           ,("hourAngleLimit",1.0)
+>           ,("zenithAngleLimit",1.0)
+>           ,("trackingErrorLimit",1.0)
+>           ,("atmosphericStabilityLimit",1.0)
+>           ,("scienceGrade",1.0)
+>           ,("thesisProject",1.0)
+>           ,("projectCompletion",1.0024)
+>           ,("observerOnSite",1.0)
+>           ,("receiver",1.0)
+>           ,("needsLowRFI",1.0)
+>           ,("lstExcepted",1.0)
+>           ,("observerAvailable",1.0)
+>           ,("projectBlackout",1.0)
+>           ,("inWindows",1.0)]
 
 > test_availWindows = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 20 1 0 0
