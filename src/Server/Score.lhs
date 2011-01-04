@@ -33,38 +33,30 @@
 > import Antioch.Types
 > import Antioch.Weather                       (getWeather, Weather)
 > import Antioch.ReceiverTemperatures
+> import Antioch.RunScores
+
+Example URL:
+http://trent.gb.nrao.edu:9051/score/periods?pids=6957&pids=6931&pids=6939
 
 > getPScore :: Connection -> StateT Context IO ()
 > getPScore cnn = do
 >     params <- hParameters
->     -- liftIO $ print params
+>     liftIO $ print params
 >
 >     -- Interpret options: pids
 >     let spids = (catMaybes . map snd $ params)::[String]
 >     let pids = urlToPids spids
+>     liftIO $ print pids
 >
->     -- get target period, start time, and scoring sessions
+>     -- compute the scores 
 >     projs <- liftIO getProjects
->     let ss = concatMap sessions projs
->     let ps = concatMap periods ss
->
->     -- target periods
->     let tps = filter (\p -> (peId p) `elem` pids) ps
->     -- associated target sessions
->     let tss = map (\p -> (find (\s -> (sId . session $ p) == (sId s)) ss)) tps
->     -- target (period, session) sets
->     let tsps = catMaybes . map raise . zip tps $ tss
->
->     -- set up invariant part of the scoring environment
->     w <- liftIO $ getWeather Nothing
->     rt <- liftIO $ getReceiverTemperatures
->
->     -- compute scores
->     scores <- sequence $ map (liftIO . scorePeriod' ss w rt) tsps
->     let retvals = zip (map (peId . fst) tsps) scores
+>     retvals <- liftIO $ runScorePeriods pids projs False
 >     liftIO $ print retvals
+
+>     -- send them back
 >     jsonHandler $ makeObj [("scores", scoresListToJSValue retvals)]
 
+Example URL:
 http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A45%3A00&sid=666
 
 > getSScore :: Connection -> StateT Context IO ()
@@ -80,16 +72,12 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     -- duration
 >     let dur = read . fromJust . fromJust . lookup "duration" $ params
 >
->     -- get target session, and scoring sessions
+>     -- compute the score
 >     projs <- liftIO getProjects
->     let ss = concatMap sessions projs
->     let sss = scoringSessions dt undefined ss
->     let s = head $ filter (\s -> (sId s) == id) ss
->     w <- liftIO $ getWeather Nothing
->     rt <- liftIO $ getReceiverTemperatures
->     rs <- liftIO $ getReceiverSchedule $ Just dt
->
->     score <- liftIO $ scoreSession dt dur s sss w rs rt
+>     score <- liftIO $ runScoreSession id dt dur projs False
+>     liftIO $ print ("getSScore score: ", score)
+>     
+>      -- send it back
 >     jsonHandler $ makeObj [("score", showJSON score)]
 
 > scoresListToJSValue :: [(Int, Score)] -> JSValue
@@ -102,15 +90,6 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >         , ("score", showJSON  . snd $ pid_score)
 >       ]
 
-> scorePeriod' :: [Session] -> Weather -> ReceiverTemperatures -> (Period, Session) -> IO Score
-> scorePeriod' ss w rt psp = do
->     let p = fst psp
->     let s = snd psp
->     let dt = startTime p
->     let sss = scoringSessions dt undefined ss
->     rs <- liftIO $ getReceiverSchedule . Just $ dt
->     scorePeriod p s sss w rs rt
-
 > scoreHandler cnn = do
 >     hPrefixRouter [
 >           ("/periods",  getPScore cnn) 
@@ -119,8 +98,3 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 
 > urlToPids :: [String] -> [Int]
 > urlToPids ss = map read ss
-
-> raise :: (Period, Maybe Session) -> Maybe (Period, Session)
-> raise (p, ms)
->     | ms == Nothing   = Nothing
->     | otherwise       = Just (p, fromJust ms)

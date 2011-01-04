@@ -934,6 +934,9 @@ and periods.
 >   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
 FYI, this function has no unit tests, possibly because it is never used!
+TBF WTF OMG BBQ: scorePeriod & scoreSession look like they could really 
+share a lot of code, simply by passing in the Score ScoreFunc (genScore 
+vs. genPeriodScore).
 
 > scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO Score
 > scoreSession st dur s ss w rs rt = do

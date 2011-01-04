@@ -12,6 +12,7 @@
 > import qualified Antioch.ReportsTests as ReportT
 > import qualified Antioch.ReservationsTests as ReservationsT
 > import qualified Antioch.RunHistWeatherOptTests as RunHistWeatherOptT
+> import qualified Antioch.RunScoresTests as RunScoresT
 > import qualified Antioch.ScoreTests as ScoreT
 > import qualified Antioch.SLAlibTests as SLAlibT
 > import qualified Antioch.StatisticsTests as StatsT
@@ -30,6 +31,7 @@
 >   , FilterTestT.tests
 >   , HardwareScheduleT.tests
 >   , ScoreT.tests
+>   , RunScoresT.tests
 >   , SLAlibT.tests
 >   , StatsT.tests
 >   , PackT.tests
