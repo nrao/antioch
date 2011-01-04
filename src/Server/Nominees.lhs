@@ -37,12 +37,16 @@
 > import Antioch.Utilities                     (readMinutes)
 > import Antioch.Weather                       (getWeather)
 > import Antioch.ReceiverTemperatures
+> import Antioch.RunScores
 
 > getNomineesHandler :: Handler()
 > getNomineesHandler = hMethodRouter [
 >       (GET,  getNominees)
 >     --, (POST, getNominees)
 >     ] $ hError NotFound
+
+Example URL:
+/nominees?start=2011-01-04+03%3A45%3A00&duration=165&timeBetween=false&minimum=false&blackout=false&backup=false&completed=false&rfi=false&tz=UTC&sortField=null&sortDir=NONE
 
 > getNominees :: StateT Context IO ()
 > getNominees = do
@@ -62,41 +66,24 @@
 >     let upper = fmap readMinutes . fromJust . lookup "duration" $ params
 >     -- ignore minimum duration limit?
 >     let lower = maybe Nothing (\v -> if v == "true" then Just 0 else Nothing) . fromJust . lookup "minimum" $ params
->     let rfi         = fromJust . fromJust . lookup "rfi" $ params
->     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
->     let blackout    = fromJust . fromJust . lookup "blackout" $ params
->     let sfs = catMaybes [if rfi == "true" then Nothing else Just needsLowRFI
->                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
->                        , if blackout == "true" then Nothing else Just observerAvailable
->                         ]
->     -- use only backup sessions?
->     let backup = fromJust . fromJust . lookup "backup" $ params
->     -- include completed sessions?
->     let completed = fromJust . fromJust . lookup "completed" $ params
->     let filter = catMaybes . concat $ [
->             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
->           , [Just isNotMaintenance]
->           , [Just isNotTypeFixed]
->           , [Just isApproved]
->           , [Just hasObservers]
->           , if backup == "true" then [Just isBackup] else [Nothing]
->                                       ]
->     let schedSessions = filterSessions dt undefined filter
->
->     -- This is kind of awkward, the various selections the user may
->     -- specify must be implemented by sessions selection, scoring
->     -- factors, and/or period selection.
+
+>     -- compute the best durations (nominees)
 >     projs <- liftIO getProjects
->     let ss = concatMap sessions projs
->     w <- liftIO $ getWeather Nothing
->     rt <- liftIO $ getReceiverTemperatures
->     rs <- liftIO $ getReceiverSchedule $ Just dt
->     nominees <- liftIO $ runScoring w rs rt $ do
->         sf <- genPartScore dt sfs . scoringSessions dt undefined $ ss
->         genNominees sf dt lower upper . schedSessions $ ss
->     liftIO $ print nominees
+>     nominees' <- liftIO $ runNominees dt lower upper params projs False
+>     let nominees = map toJNominee . take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ nominees'
 >     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
->     --liftIO $ print "finished getNominees"
+>   where
+>     jNomOrder (_, v, _) (_, v', _) = compare v' v
+>     toJNominee (s, v, m) = defaultJNominee {
+>                                 nSessName = Just . sName $ s
+>                               , nSessType = Just . take 1 . show . sType $ s
+>                               , nProjName = Just . pName . project $ s
+>                               , nScore    = Just v
+>                               , nScoreStr = Just . scoreStr $ v
+>                               , nDuration = Just m
+>                               , nDurStr   = Just . durationStr hr $ mn
+>                                            }
+>       where (hr, mn) = divMod m 60
 
 > genNominees :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> [Session] -> Scoring [JNominee]
 > genNominees sf dt lower upper ss = do

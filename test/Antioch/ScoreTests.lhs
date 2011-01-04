@@ -6,6 +6,7 @@
 > import Antioch.Weather      (Weather, getWeatherTest, minTSysPrime)
 > import Antioch.Utilities
 > import Antioch.PProjects
+> import Antioch.Filters
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Control.Monad.Trans  (lift, liftIO)
@@ -1130,7 +1131,6 @@ Equation 16
 >     let dur = 15::Minutes
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     printList factors
 >     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
 >     mapM_ (assertFactor factors) exp 
 >   where
@@ -1511,6 +1511,22 @@ plus 40 quarters.
 >     assertEqual "test_bestDurations 3 n" "AS" (sName s)
 >     assertEqual "test_bestDurations 3 v" 3.3165581 v
 >     assertEqual "test_bestDurations 3 d" 450 d
+>     -- now test it the way it gets used with Nominees:
+>     -- reuse the same weather that is an hour earlier ... 
+>     bestDurs <- runScoring w [] rt $ do
+>         sf <- genPartScore starttime [] $ scoringSessions starttime undefined ss
+>         bestDurations sf starttime Nothing Nothing ss
+>     -- ... and nothing changes
+>     assertEqual "test_bestDurations 1" 12 (length bestDurs)
+>     let (s, v, d) = bestDurs !! 1
+>     assertEqual "test_bestDurations 2 n" "CV" (sName s)
+>     assertEqual "test_bestDurations 2 v" 3.9800308 v
+>     assertEqual "test_bestDurations 2 d" 360 d
+>     let (s, v, d) = bestDurs !! 6
+>     assertEqual "test_bestDurations 3 n" "AS" (sName s)
+>     assertEqual "test_bestDurations 3 v" 3.3165581 v
+>     assertEqual "test_bestDurations 3 d" 450 d  
+
 >   where
 >     starttime = fromGregorian 2006 10 1 17 0 0
 

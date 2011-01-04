@@ -147,7 +147,52 @@ Variables:
    * Scoring Factors - genPartScore
    * Session Pool - scoringSessions
 
-> --runNominees :: DateTime -> Minutes -> [Project] -> IO ([Period])
+Example params:
+[("start",Just "2011-01-04 03A45A00"),("duration",Just "165"),("timeBetween",Just "false"),("minimum",Just "false"),("blackout",Just "false"),("backup",Just "false"),("completed",Just "false"),("rfi",Just "false"),("tz",Just "UTC"),("sortField",Just "null"),("sortDir",Just "NONE")]
+
+
+> runNominees :: DateTime -> Maybe Minutes -> Maybe Minutes -> [(String, Maybe String)] -> [Project] -> Bool -> IO ([Nominee])
+> runNominees dt lower upper params projs test = do
+>     -- interpret all the different knobs for finding nominees
+>     let rfi         = fromJust . fromJust . lookup "rfi" $ params
+>     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
+>     let blackout    = fromJust . fromJust . lookup "blackout" $ params
+>     -- TBF: filer #1
+>     let sfs = catMaybes [if rfi == "true" then Nothing else Just needsLowRFI
+>                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
+>                        , if blackout == "true" then Nothing else Just observerAvailable
+>                         ]
+>     -- use only backup sessions?
+>     let backup = fromJust . fromJust . lookup "backup" $ params
+>     -- include completed sessions?
+>     let completed = fromJust . fromJust . lookup "completed" $ params
+>     -- TBF: filter #2
+>     let filter = catMaybes . concat $ [
+>             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
+>           , [Just isNotMaintenance]
+>           , [Just isNotTypeFixed]
+>           , [Just isApproved]
+>           , [Just hasObservers]
+>           , if backup == "true" then [Just isBackup] else [Nothing]
+>                                       ]
+>     let schedSessions = filterSessions dt undefined filter
+>
+>     -- our original pool of sessions
+>     let ss = concatMap sessions projs
+>
+>     -- setup the enviornment; watch for tests
+>     w <- liftIO $ if test then getWeatherTest $ Just (addMinutes' (-60) dt) else getWeather Nothing
+>     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
+>     rt <- liftIO $ getReceiverTemperatures
+> 
+>     -- find the nominees
+>     nominees <- liftIO $ runScoring w rs rt $ do
+>         -- TBF: apply filter #1
+>         sf <- genPartScore dt sfs . scoringSessions dt undefined $ ss
+>         -- TBF: apply filter #2
+>         durations <- bestDurations sf dt lower upper $ schedSessions ss
+>         return durations
+>     return nominees
 
 MOC - this is done so simply, that maybe we don't need it here.
 

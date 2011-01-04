@@ -20,6 +20,7 @@
 >     test_runScorePeriods
 >   , test_runScoreSession
 >   , test_runFactors
+>   , test_runNominees
 >     ]
 
 > test_runScorePeriods = TestCase $ do
@@ -118,6 +119,41 @@
 >           , ("sysNoiseTemp", 23.294113)
 >           ]
 
+> test_runNominees = TestCase $ do
+>     let dt = fromGregorian 2006 10 1 17 0 0
+>     bestDurs <- runNominees dt Nothing Nothing params pTestProjects True
+>     --print $ map (\(n, v, d) -> (sName n, v, d)) bestDurs
+>     assertEqual "test_bestDurations 1" 12 (length bestDurs)
+>     let (s, v, d) = bestDurs !! 1
+>     assertEqual "test_runNominees 2 n" "CV" (sName s)
+>     assertEqual "test_runNominees 2 v" 3.9800308 v
+>     assertEqual "test_runNominees 2 d" 360 d
+>     let (s, v, d) = bestDurs !! 6
+>     assertEqual "test_runNominees 3 n" "AS" (sName s)
+>     assertEqual "test_runNominees 3 v" 3.3165581 v
+>     assertEqual "test_runNominees 3 d" 450 d
+>     -- what the hell, test them all
+>     assertEqual "test_runNominees_1" exp $ map (\(n, v, d) -> (sName n, v, d)) bestDurs
+>     -- change the params
+>     bestDurs <- runNominees dt Nothing Nothing params2 pTestProjects True
+>     assertEqual "test_runNominees_2" exp $ map (\(n, v, d) -> (sName n, v, d)) bestDurs
+>     -- change the params again
+>     bestDurs <- runNominees dt Nothing Nothing params3 pTestProjects True
+>     -- there's no backup sessions!
+>     assertEqual "test_runNominees_3" [] $ map (\(n, v, d) -> (sName n, v, d)) bestDurs
+>     -- alter the min/max
+>     bestDurs <- runNominees dt (Just 360) (Just 360) params pTestProjects True
+>     assertEqual "test_runNominees_4" exp2 $ map (\(n, v, d) -> (sName n, v, d)) bestDurs
+>   where
+>     -- all false
+>     params = [("timeBetween",Just "false"),("minimum",Just "false"),("blackout",Just "false"),("backup",Just "false"),("completed",Just "false"),("rfi",Just "false")]
+>     exp = [("GB",0.0,0),("CV",3.9800308,360),("LP",5.345904,270),("TX",0.0,0),("VA",0.0,0),("WV",0.0,0),("AS",3.3165581,450),("MH",0.0,0),("TestWindowed1",0.0,0),("TestWindowed2",0.0,0),("GB_thesis",0.0,0),("WV_thesis",0.0,0)]
+>     -- now all true, except backup
+>     params2 = [("timeBetween",Just "true"),("minimum",Just "true"),("blackout",Just "true"),("backup",Just "false"),("completed",Just "true"),("rfi",Just "true")]
+>     -- differs by exp: AS 450 -> 360
+>     exp2 = [("GB",0.0,0),("CV",3.9800308,360),("LP",5.345904,270),("TX",0.0,0),("VA",0.0,0),("WV",0.0,0),("AS",3.2961845,360),("MH",0.0,0),("TestWindowed1",0.0,0),("TestWindowed2",0.0,0),("GB_thesis",0.0,0),("WV_thesis",0.0,0)]
+>     -- all false, except backup
+>     params3 = [("timeBetween",Just "false"),("minimum",Just "false"),("blackout",Just "false"),("backup",Just "true"),("completed",Just "false"),("rfi",Just "false")]
 
 Utilities:
 
