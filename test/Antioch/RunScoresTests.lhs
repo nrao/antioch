@@ -157,6 +157,9 @@
 >     params3 = [("timeBetween",Just "false"),("minimum",Just "false"),("blackout",Just "false"),("backup",Just "true"),("completed",Just "false"),("rfi",Just "false")]
 
 > test_runMOC = TestCase $ do
+>     -- this test is identical to ScoreTests.test_minObsCond's
+>     -- second assert, since in test mode, we set the weather
+>     -- origin to be an hour earlier then the passed in time.
 >     let dt = fromGregorian 2006 10 13 16 0 0
 >     mocs <- mapM (runMOC' dt) sess
 >     assertEqual "test_minimumObservingConditions" expected mocs
@@ -166,7 +169,7 @@
 >       return moc
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
->     expected = [False,True,True,False,False,False,True]
+>     expected = [False,True,True,True,True,False,True]
 
 Utilities:
 

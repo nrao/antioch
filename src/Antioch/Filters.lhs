@@ -4,6 +4,7 @@
 > import Antioch.Types
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (showList', dt2semester, overlie)
+> import Maybe
 
 
 Pass on to the simulation only the history of pre-scheduled periods that 
@@ -17,7 +18,7 @@ be confused and raise false alarams.
 >     overlie' p = overlie start (daysDur*24*60) p
 
 > typeOpen , typeWindowed , typeFixed, typeElective :: Session -> Bool
-> typeOpen s = sType s == Open
+> typeOpen s = sType s == Open 
 > typeWindowed s = sType s == Windowed
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
@@ -170,6 +171,8 @@ scheduled.
 > schedulableSessions :: DateTime -> Minutes -> [Session] -> [Session]
 > schedulableSessions dt dur = filterSessions dt dur schedulableCriteria
 
+TBF, WTF: this isn't being called anywhere, but has a working unit test
+
 > clearWindowedTimeBilled :: Session -> Session
 > clearWindowedTimeBilled s
 >   | (windows s) == [] = s
@@ -179,7 +182,7 @@ scheduled.
 >         clear p
 >           | elem (peId p) pIds = p { pDuration = 0 }
 >           | otherwise          = p
->         pIds = [wPeriodId w | w <- (windows s)]
+>         pIds = concatMap maybeToList $ [wPeriodId w | w <- (windows s)]
 
 > schedulableSession :: DateTime -> Minutes -> Session -> Bool
 > schedulableSession dt dur s = meetsCriteria dt dur s schedulableCriteria

@@ -301,7 +301,7 @@ example in comments.
 >       s' = defaultSession { sAllottedT = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
 >       wr = [(defaultStartTime, addMinutes' 7 defaultStartTime)]
->       w' = defaultWindow { wRanges = wr, wPeriodId = peId p' }
+>       w' = defaultWindow { wRanges = wr, wPeriodId = Just . peId $ p' }
 
 > test_getWindows = TestCase $ do
 >   cnn <- connect

@@ -259,7 +259,7 @@ get on, it has a high chance of being canceled.
 >     --    session's windows have not changed
 >     assertEqual "test_updateSessions_7" (windows tw1) (windows tw1')
 >     --    session's default periods have not changed
->     assertEqual "test_updateSessions_8" [100, 101] (map wPeriodId $ windows tw1')
+>     assertEqual "test_updateSessions_8" [Just 100, Just 101] (map wPeriodId $ windows tw1')
 >     --    session's first period's is defaulted
 >     assertEqual "test_updateSessions_9" [0, 101] (map peId $ periods tw1')
 >     --    session's periods are referencing the session

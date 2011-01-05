@@ -94,6 +94,7 @@
 >   , test_bestDurations
 >   , test_averageScore
 >   , test_averageScore2
+>   , test_averageScore'
 >   , test_obsAvailable
 >   , test_obsAvailable2
 >   , test_obsAvailable3
@@ -628,19 +629,63 @@ Equation 5
 >     r3 <- runScoring w [] rt (getRealOrForecastedWind dt3)
 >     assertEqual "test_getRealOrForecastedWind 3" (Just 3.8565624) r3
 
+Here we change the origin of the weather and watch it's affects on the
+results of MOC (we also test VLBI sessions).  To make sure the correct
+weather (gbt or forecasted) is being used:
+   * comment out asserts
+   * test only one session
+   * use printouts in Weather.lhs
+
 > test_minimumObservingConditions = TestCase $ do
 >     let dt = fromGregorian 2006 10 13 16 0 0
 >     w <- getWeatherTest . Just $ dt
 >     rt <- getReceiverTemperatures
->     mocs <- mapM (moc w rt dt) sess
->     assertEqual "test_minimumObservingConditions" expected mocs
+>     -- compute moc w/ origin of weather == start of period (gives W2 winds)
+>     mocs <- mapM (moc w rt dt dur) sess
+>     assertEqual "test_minimumObservingConditions_1" expected mocs
+>     -- now see how setting the weather origin differently makes *NO* difference
+>     -- now set origin of weather to be one hour before periods
+>     --print "2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+>     w <- getWeatherTest . Just $ addMinutes' (-60) dt
+>     mocs <- mapM (moc w rt dt dur) sess
+>     assertEqual "test_minimumObservingConditions_2" exp2 mocs
+>     -- now set origin of weather to be one hour after periods
+>     --print "3!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+>     w <- getWeatherTest . Just $ addMinutes' 60 dt
+>     mocs <- mapM (moc w rt dt dur) sess
+>     assertEqual "test_minimumObservingConditions_3" expected mocs
+>     -- now set the origina of weather way in the past
+>     --print "4!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+>     w <- getWeatherTest . Just $ addMinutes' (-60*24*2) dt
+>     mocs <- mapM (moc w rt dt dur) sess
+>     assertEqual "test_minimumObservingConditions_4" exp2 mocs
+>     -- back to weather dt == start of period, but w/ 45 min periods
+>     -- see how the result doesn't change
+>     --print "4_1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+>     w <- getWeatherTest . Just $ dt
+>     mocs <- mapM (moc w rt dt 45) sess
+>     assertEqual "test_minimumObservingConditions_4_1" expected mocs
+>     -- back to weather dt == start of period, but w/ VLBI sessions
+>     --print "5!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+>     w <- getWeatherTest . Just $ dt
+>     mocs <- mapM (moc w rt dt 45) vlbis
+>     assertEqual "test_minimumObservingConditions_5" exp2 mocs
+>     -- now watch how making the period to short for VLBI is handled
+>     --print "6!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+>     mocResult <- runScoring w [] rt $ minimumObservingConditions dt 30 (head vlbis)
+>     assertEqual "test_minimumObservingConditions_6" Nothing mocResult
 >   where
->     moc w rt dt s = do
->       Just result <- runScoring w [] rt (minimumObservingConditions dt 15 s)
+>     moc w rt dt dur s = do
+>       Just result <- runScoring w [] rt (minimumObservingConditions dt dur s)
 >       return result
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
+>     dur = 30
+>     vlbis = map (\s -> s {oType = Vlbi}) sess
 >     expected = [False,True,True,False,False,False,True]
+>     exp2     = [False,True,True,True,True,False,True]
+
+
 
 > test_goodElective = TestCase $ do
 >   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
@@ -681,6 +726,42 @@ Equation 5
 >       , mkPeriod es2 dt 60 6 -- last
 >        ]
 >   goodElective' w rs rt p = runScoring w rs rt $ goodElective p
+>   
+
+> test_goodDefaultPeriod = TestCase $ do
+>   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
+>   let rs = []
+>   rt <- getReceiverTemperatures
+>   -- easy case - all open sessions
+>   result <- mapM (goodDefaultPeriod' w rs rt) ps1
+>   assertEqual "test_goodDefaultPeriod_1" [True, True] result
+>   -- now do it again, but with a guaranteed session
+>   result <- mapM (goodDefaultPeriod' w rs rt) ps2
+>   assertEqual "test_goodDefaultPeriod_2" [True, True, True] result
+>   -- now try a non-guaranteed session, and see what happens
+>   result <- mapM (goodDefaultPeriod' w rs rt) ps3
+>   assertEqual "test_goodDefaultPeriod_3" [True, True, True, False] result
+>     where
+>   mkPeriod s dt dur id = defaultPeriod { session   = s
+>                                        , startTime = dt
+>                                        , duration  = dur
+>                                        , peId      = id
+>                                        }
+>   gb = head $ findPSessionsByName "GB"
+>   cv = head $ findPSessionsByName "CV"
+>   goodDefaultPeriod' w rs rt p = runScoring w rs rt $ goodDefaultPeriod p
+>   dt = fromGregorian 2006 10 13 16 0 0
+>   ps1 = [mkPeriod gb dt 60 1, mkPeriod cv dt 60 2]
+>   ranges = [(fromGregorian' 2006 10 22, fromGregorian' 2006 10 27)]
+>   dpId = 100
+>   dpId2 = 200
+>   win = defaultWindow { wRanges = ranges, wPeriodId = Just dpId, wTotalTime = 60 }
+>   ws = gb { sType = Windowed, windows = [win], sId = 200, guaranteed = True }
+>   defaultPd = mkPeriod ws dt 60 dpId
+>   ps2 = ps1 ++ [defaultPd]
+>   ws2 = gb { sType = Windowed, windows = [win], sId = 300, guaranteed = False }
+>   defaultPd2 = mkPeriod ws2 dt 60 dpId2
+>   ps3 = ps2 ++ [defaultPd2]
 >   
 
 > test_isLastPeriodOfElective = TestCase $ do
@@ -1588,6 +1669,31 @@ Look at the scores over a range where none are zero.
 >     expectedTotal = 3.8158395 
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
+> test_averageScore' = TestCase $ do
+>     w <- getWeatherTest . Just $ starttime 
+>     rt <- getReceiverTemperatures
+>     let score' w dt = runScoring w [] rt $ do
+>         fs <- genScore dt [sess]
+>         s <- fs dt sess
+>         return $ eval s
+>     scores <- mapM (score' w) times
+>     let scoreTotal = addScores scores
+>     let expected = 0.0
+>     assertEqual "test_averageScore'_1" expected scoreTotal
+>     avgScore <- runScoring w [] rt $ do
+>         fs <- genScore starttime [sess]
+>         averageScore' fs starttime dur sess
+>     assertEqual "test_averageScore'_2" expected avgScore
+>   where
+>     starttime = fromGregorian 2006 11 8 12 0 0
+>     dur = 2*60
+>     sess = defaultSession { sAllottedT = 24*60 
+>                           , minDuration = dur 
+>                           , maxDuration = 6*60
+>                           , receivers = [[Rcvr12_18]]
+>                           , frequency = 12.8
+>                           }
+>     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
 > test_obsAvailable = TestCase $ do
 >   assertEqual "test_obsAvailable_1" True (obsAvailable dt s)
 >   assertEqual "test_obsAvailable_2" False (obsAvailable dt s2)
