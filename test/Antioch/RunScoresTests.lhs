@@ -21,6 +21,7 @@
 >   , test_runScoreSession
 >   , test_runFactors
 >   , test_runNominees
+>   , test_runMOC
 >     ]
 
 > test_runScorePeriods = TestCase $ do
@@ -155,7 +156,21 @@
 >     -- all false, except backup
 >     params3 = [("timeBetween",Just "false"),("minimum",Just "false"),("blackout",Just "false"),("backup",Just "true"),("completed",Just "false"),("rfi",Just "false")]
 
+> test_runMOC = TestCase $ do
+>     let dt = fromGregorian 2006 10 13 16 0 0
+>     mocs <- mapM (runMOC' dt) sess
+>     assertEqual "test_minimumObservingConditions" expected mocs
+>   where
+>     runMOC' dt s = do
+>       Just moc <- runMOC dt 30 s True -- test param == True!
+>       return moc
+>     names = ["GB","CV","LP","TX","VA","WV","AS"]
+>     sess = concatMap (\name -> findPSessionsByName name) names
+>     expected = [False,True,True,False,False,False,True]
+
 Utilities:
+
+TBF: *almost* identical to ScoreTests's pSessions.
 
 > pSessions = zipWith6 genPSess tots useds ras bands grades ids
 >   where tots   = [12*60, 18*60, 10*60, 20*60]

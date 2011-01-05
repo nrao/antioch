@@ -36,6 +36,7 @@ for the given date range.
 
 > runSchedule :: StateT Context IO ()
 > runSchedule = do
+>     -- parse params; TBF: why does this look different from others?
 >     bytes <- contents
 >     let params   = maybe [] id $ bytes >>= parseQueryParams . L.unpack
 >     let params'  = getKeyValuePairs params
@@ -53,6 +54,7 @@ for the given date range.
 >     liftIO $ print utc
 >     let start = toSeconds utc
 >     liftIO $ print start
+>
 >     -- schedule something! 
 >     liftIO $ print (fromSeconds start)
 >     liftIO $ runDailySchedulePack start days

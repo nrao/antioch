@@ -9,6 +9,7 @@
 > import Antioch.Score
 > import Antioch.Weather                      (getWeather)
 > import Antioch.ReceiverTemperatures
+> import Antioch.RunScores
 > import Control.Monad.State.Lazy             (StateT)
 > import Control.Monad.Trans                  (liftIO)
 > import Data.Maybe                           (maybeToList)
@@ -29,17 +30,16 @@
 
 > getMOC :: Connection -> StateT Context IO ()
 > getMOC cnn = do
+>     -- parse params
 >     params <- hParameters
 >     liftIO $ print ("getMOC: ", params)
 >     let start     = fromJust . fromHttpString $ getParam "start" params
 >     let dur = read $ getParam "duration" params
 >     let sessionId = read $ getParam "session_id" params
+>     -- compute MOC
 >     session <- liftIO $ getSession sessionId cnn
->     w <- liftIO $ getWeather Nothing
->     rs <- liftIO $ getReceiverSchedule $ Just start
->     rt <- liftIO $ getReceiverTemperatures
->     moc <- liftIO $ runScoring w rs rt $ do
->         minimumObservingConditions start dur session
+>     moc <- liftIO $ runMOC start dur session False
+>     -- send result back
 >     jsonHandler $ makeObj [("moc", showJSON . fromJust $ moc)]
 >   where
 >     getParam p ps = fromJust . fromJust . lookup p $ ps

@@ -15,6 +15,9 @@
 > import Network.Salvia.Httpd
 > import qualified Data.ByteString.Lazy.Char8 as L
 
+This module is no longer used.  TBF: what was the original intent of this
+module?  We should get rid of it, but it's also a good demo.
+
 > data Session = Session {
 >     session_id   :: Int
 >   , name         :: Maybe String

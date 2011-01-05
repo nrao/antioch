@@ -132,10 +132,10 @@ Variables:
 >     w <- liftIO $ if test then getWeatherTest $ Just dt else getWeather Nothing
 >     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
 >     rt <- liftIO $ getReceiverTemperatures
+>     -- compute and combine different factors
 >     factors' <- liftIO $ scoreFactors s w sss dt dur rs
 >     let scores = map (\x -> [x]) . zip (repeat "score") . map Just . map eval $ factors'
 >     factors <- liftIO $ scoreElements s w rt sss dt dur rs
->     --let scoresNfactors = zipWith (++) scores factors
 >     return $ (s, zipWith (++) scores factors)
 >
 
@@ -194,8 +194,24 @@ Example params:
 >         return durations
 >     return nominees
 
-MOC - this is done so simply, that maybe we don't need it here.
+MinimumObservingCondition (MOC) - here is the simplest case. What's
+different (and simpler) is that MOC only uses a few scoring factors,
+so the Scoring Factors and Session Pool variables don't apply here.
 
+Variables:
+   * Weather - weather for NOW.
+   * Scoring Factors - N/A
+   * Session Pool - N/A
+
+> runMOC :: DateTime -> Minutes -> Session -> Bool -> IO (Maybe Bool)
+> runMOC dt dur s test = do
+>   w <- if test then getWeatherTest $ Just hrEarlyDt else getWeather Nothing
+>   rs <- if test then return [] else getReceiverSchedule $ Just dt
+>   rt <- getReceiverTemperatures
+>   moc <- runScoring w rs rt $ minimumObservingConditions dt dur s
+>   return moc
+>     where
+>   hrEarlyDt = addMinutes' (-60) dt
 
 Utilities:
 
