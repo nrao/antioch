@@ -20,7 +20,6 @@
 > import Server.MinObsConditions
 > import Server.RunScheduler
 > import Server.Nominees
-> import Server.Scores
 > import Server.Score
 > import Server.Factors
 > import Maybe
@@ -56,7 +55,6 @@
 >     hPrefixRouter [
 >           ("/runscheduler",  runSchedulerHandler)  
 >         , ("/nominees",      getNomineesHandler)  
->         , ("/scores",        getScoresHandler cnn)  
 >         , ("/score",         scoreHandler cnn)  
 >         , ("/factors",       getFactorsHandler cnn)  
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
