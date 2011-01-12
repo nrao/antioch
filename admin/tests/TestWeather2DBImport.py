@@ -40,12 +40,12 @@ class TestWeather2DBImport(unittest.TestCase):
 
     def testGetNeededWeatherDates(self):
         needed = self.wdb.getNeededWeatherDates()
-        self.assertEquals(73, len(needed))
-        self.assertEquals((12998, '2009-12-08 12:00:00'), needed[0])
+        self.assertEquals(868, len(needed))
+        self.assertEquals((114, '2006-01-05 17:00:00'), needed[0])
 
     def testFindNullValues(self):    
         nulls =  self.wdb.findNullValues("wind_speed")
-        self.assertEquals([(10962, "2009-09-14 17:00:00")], nulls)
+        self.assertEquals([], nulls)
 
     def testBackfillWind(self):
 

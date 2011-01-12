@@ -76,8 +76,6 @@ class WeatherData(SamplerData):
         See DSPN6.1.  Data is assumed to be at 1 Hz.
         """
 
-        if data.size == 0:
-            return None
         # TBF: a real pythonista would use list-comprehension
         # and could spell it too.
         stepSize = 20
