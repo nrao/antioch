@@ -83,7 +83,12 @@ class Weather2DBImport:
         """
         
         results = []
-        dts = self.getNeededWeatherDates()
+
+        # look for any missing data within the last year
+        end   = datetime.utcnow()
+        start = end - timedelta(days = 365)
+        dts = self.getNeededWeatherDatesInRange(start, end)
+
         for dtId, dtStr in dts:
             dt = datetime.strptime(dtStr, "%Y-%m-%d %H:%M:%S")
             try:
