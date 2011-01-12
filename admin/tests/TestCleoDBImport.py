@@ -45,10 +45,10 @@ class TestCleoDBImport(unittest.TestCase):
 
         # make sure the command lines are properly formatted
         #atmo = "/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 -elevTsys 90"
-        atmo = '/home/dss/bin/forecastsCmdLine -readCaches -sites HotSprings -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90 '
+        atmo = '/home/dss/bin/forecastsCmdLine -sites Elkins HotSprings Lewisburg -average -calculate OpacityTime TsysTime TatmTime -freqList 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 54 56 58 60 62 64 66 68 70 72 74 76 78 80 82 84 86 88 90 92 94 96 98 100 102 104 106 108 110 112 114 116 118 120 -elevTsys 90 '
         self.assertEquals(atmo, self.cleo.atmoCmdLine)
 
-        wind = '/home/dss/bin/forecastsCmdLine -readCaches -sites Elkins Lewisburg -average -calculate GroundTime CloudsPrecipTime '
+        wind = '/home/dss/bin/forecastsCmdLine -sites Elkins HotSprings Lewisburg -average -calculate GroundTime CloudsPrecipTime '
         self.assertEquals(wind, self.cleo.windCmdLine)
 
     def testGetForecatTypeId(self):
@@ -81,7 +81,7 @@ class TestCleoDBImport(unittest.TestCase):
         self.cleo = CleoDBImport(self.forecast, self.dbname, "tests")
 
         files = self.cleo.findForecastFiles()        
-        exp = ('tests/Forecasts_09_12_07_11h40m52s/time_HotSprings_09_12_07_11h40m52s.txt'
+        exp = ('tests/Forecasts_09_12_07_11h40m52s/time_avrg_09_12_07_11h40m52s.txt'
              , 'tests/Forecasts_09_12_07_11h40m57s/time_avrg_09_12_07_11h40m57s.txt')
         self.assertEquals(exp, files)        
 
