@@ -94,7 +94,7 @@ class Weather2DBImport:
             try:
                 wind = self.weatherData.getHourDanaMedianSpeeds(dt)
             except:
-                pass
+                continue
             di   = self.pyrgeometerData.getHourMedianDownwardIrradiance(dt)
             results.append((dtId, wind, di))
             self.insert(dtId, wind, di)
