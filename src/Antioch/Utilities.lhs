@@ -253,6 +253,9 @@ Get all the session periods that are within the given window
 >         val :: Double <- safeConvert x
 >         return $ realToFrac val
 
+> concatMapM   :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
+> concatMapM f = fmap concat . mapM f
+
 QuickCheck Properties:
 
 > genDate :: Gen DateTime
