@@ -29,19 +29,43 @@
 >                  ]
 
 > test_dt2semester = TestCase $ do
->   assertEqual "test_dt2semester_1" "06B"  (dt2semester dt06B)
->   assertEqual "test_dt2semester_1" "09A"  (dt2semester dt09A)
->   assertEqual "test_dt2semester_1" "05C"  (dt2semester dt05C)
->   assertEqual "test_dt2semester_1" "06C"  (dt2semester dt06C)
->   assertEqual "test_dt2semester_1" "12C"  (dt2semester dt12C)
->   assertEqual "test_dt2semester_1" "12C"  (dt2semester dt12C')
+>   assertEqual "test_dt2semester_10a1" "10A" (dt2semester dt10a1)
+>   assertEqual "test_dt2semester_10b1" "10B" (dt2semester dt10b1)
+>   assertEqual "test_dt2semester_10b2" "10B" (dt2semester dt10b2)
+>   assertEqual "test_dt2semester_10c1" "10C" (dt2semester dt10c1)
+>   assertEqual "test_dt2semester_10c2" "10C" (dt2semester dt10c2)
+>   assertEqual "test_dt2semester_10c3" "10C" (dt2semester dt10c3)
+>   assertEqual "test_dt2semester_11a1" "11A" (dt2semester dt11a1)
+>   assertEqual "test_dt2semester_11a2" "11A" (dt2semester dt11a2)
+>   assertEqual "test_dt2semester_11b1" "11B" (dt2semester dt11b1)
+>   assertEqual "test_dt2semester_11b2" "11B" (dt2semester dt11b2)
+>   assertEqual "test_dt2semester_11b3" "11B" (dt2semester dt11b3)
+>   assertEqual "test_dt2semester_12a1" "12A" (dt2semester dt12a1)
+>   assertEqual "test_dt2semester_12a2" "12A" (dt2semester dt12a2)
+>   assertEqual "test_dt2semester_12a3" "12A" (dt2semester dt12a3)
+>   assertEqual "test_dt2semester_12b1" "12B" (dt2semester dt12b1)
+>   assertEqual "test_dt2semester_12b2" "12B" (dt2semester dt12b2)
+>   assertEqual "test_dt2semester_12b3" "12B" (dt2semester dt12b3)
+>   assertEqual "test_dt2semester_13a1" "13A" (dt2semester dt13a1)
 >     where
->   dt06B = fromGregorian 2006 6  10 0 0 0
->   dt06C = fromGregorian 2006 10 10 0 0 0
->   dt05C = fromGregorian 2006 1  10 0 0 0
->   dt09A = fromGregorian 2009 2  10 0 0 0
->   dt12C = fromGregorian 2013 1  31 0 0 0
->   dt12C' = fromGregorian 2012 10  1 0 0 0
+>   dt10a1 = fromGregorian 2010  5 31 23 59 59
+>   dt10b1 = fromGregorian 2010  6  1  0  0  0
+>   dt10b2 = fromGregorian 2010  9 30 23 59 59
+>   dt10c1 = fromGregorian 2010 10  1  0  0  0
+>   dt10c2 = fromGregorian 2010 12 15 12  0  0
+>   dt10c3 = fromGregorian 2011  1 31 23 59 59
+>   dt11a1 = fromGregorian 2011  2  1  0  0  0
+>   dt11a2 = fromGregorian 2011  6 30 23 59 59
+>   dt11b1 = fromGregorian 2011  7  1  0  0  0
+>   dt11b2 = fromGregorian 2011 12 15 12  0  0
+>   dt11b3 = fromGregorian 2012  1 31 23 59 59
+>   dt12a1 = fromGregorian 2012  2  1  0  0  0
+>   dt12a2 = fromGregorian 2012  3  1  0  0  0
+>   dt12a3 = fromGregorian 2012  7 31 23 59 59
+>   dt12b1 = fromGregorian 2012  8  1  0  0  0
+>   dt12b2 = fromGregorian 2012 12 15 12  0  0
+>   dt12b3 = fromGregorian 2013  1 31 23 59 59
+>   dt13a1 = fromGregorian 2013  2  1  0  0  0
 
 BETA: compare against TimeAgent.Absolute2RelativeLST
 from antioch.util import TimeAgent

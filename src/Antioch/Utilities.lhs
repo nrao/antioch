@@ -10,6 +10,7 @@
 > import Data.Maybe             (isJust, fromJust)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
+> import Text.Printf            (printf)
 
                               GBT data
 --------------------------------------------------------------------
@@ -226,16 +227,25 @@ Get all the session periods that are within the given window
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
 
+Warning this code produces a 3.1YK problem!
+
 > dt2semester :: DateTime -> SemesterName
-> dt2semester dt = yearStr ++ (drop 1 sem)
+> dt2semester dt
+>     | dt >= sem_bndry = printf "%02d%s" (year - 2000) (sms !! month)
+>     | dt >= tr1_bndry = "11B"
+>     | dt >= tr2_bndry = "11A"
+>     | otherwise       = printf "%02d%s" (year - 2000) (tms !! month)
 >   where
->     (year, month, _) = toGregorian' dt
->     sem   | month <   2 = "0C"
->           | month <   6 = "1A"
->           | month <  10 = "1B"
->           | month <= 12 = "1C"
->     year' = if (take 1 sem) == "0" then year - 1 else year
->     yearStr = drop 2 $ show year'
+>     --         jan feb mar apr may jun jul aug sep oct nov dec
+>     tms = ["?","C","A","A","A","A","B","B","B","B","C","C","C"]
+>     sms = ["?","B","A","A","A","A","A","A","B","B","B","B","B"]
+>     sem_bndry = fromGregorian 2011  8  1  0  0  0
+>     tr1_bndry = fromGregorian 2011  7  1  0  0  0
+>     tr2_bndry = fromGregorian 2011  6  1  0  0  0
+>     (year', month, _, _, _, _) = toGregorian dt
+>     year = if month == 1
+>            then year' - 1
+>            else year'
 
 > readMinutes :: String -> Minutes
 > readMinutes = read

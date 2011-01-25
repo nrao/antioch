@@ -65,7 +65,7 @@ accounting without taking state into account.  For example, deleted
 periods *must* have their time accounting set such that time billed
 is zero.  In contrast, in Antioch we need to take more things into
 account.  For example, the various computations need to know about state,
-schedule start time, planned duration vs. billed duration, and trimester
+schedule start time, planned duration vs. billed duration, and semester
 boundaries; but not why some observing time is not billed.
 
 > pComplete :: Project -> Bool

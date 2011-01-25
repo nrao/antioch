@@ -4,7 +4,7 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Filters        (filterHistory)
-> import Antioch.Utilities      (periodInWindow)
+> import Antioch.Utilities      (periodInWindow, dt2semester)
 > import Data.List 
 > import Test.QuickCheck hiding (frequency)
 
@@ -136,14 +136,6 @@ Generate a period that starts with the given time range.
 >                          }
 >     where
 >   start' day hour = addMinutes' ((day*24*60)+(hour*60)) start
-
-This is *not* an all purpose utility, but simply: DateTime -> "YYA"
-TBF: this should be in utilities?
-
-> dt2semester :: DateTime -> String
-> dt2semester dt = (drop 2 $ show year) ++ "A"
->   where
->     (year, _, _, _, _, _) = toGregorian dt
 
 Very much like genFixedSchedule, here we create a list of list of periods: that is, 
 each sub-list of periods should belong to a single windowed session, and should be

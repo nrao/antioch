@@ -1266,7 +1266,7 @@ The standard list of plots (that need no extra input).
 >   where
 >     heading = "Simulation By Semester: \n"
 >     hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "Total" "Backup" "ObsInSem" "ObsBpIn" "ObsFrSem" "ObsBpFr" 
->     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
+>     semesters = ["0" ++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterHrs ss ps) semesters
 
 > reportSemesterBandTimes :: [Session] -> [Period] -> String 
@@ -1277,7 +1277,7 @@ The standard list of plots (that need no extra input).
 >     bands = concatMap (flip (++) "         ") $ map show bandRange
 >     hdr = printf "%s      %s\n" "Type" bands
 >     --hdr = printf "%-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s %-9s\n" "Sem  " "L" "S" "C" "X" "U" "K" "A" "Q" 
->     semesters = ["0"++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
+>     semesters = ["0" ++ show x ++ y | x <- [4..9], y <- ["A","B","C"]]
 >     lines = map (reportSemesterBandHrs ss ps) semesters
 
 > reportSessionTypes :: [Session] -> [Period] -> String
