@@ -423,7 +423,6 @@ class CleoDBImport:
                  , 'koneil@nrao.edu'
                  , 'tminter@nrao.edu'
                  , 'dbalser@nrao.edu'
-                 , 'rmaddale@nrao.edu'
                  ]
         timeStr = datetime.strftime(self.import_time, "%Y_%m_%d_%H_%M_%S")
         # TBF: more detailed comments here?
