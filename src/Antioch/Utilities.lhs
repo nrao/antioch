@@ -263,6 +263,9 @@ Warning this code produces a 3.1YK problem!
 >         val :: Double <- safeConvert x
 >         return $ realToFrac val
 
+> concatMapM   :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
+> concatMapM f = fmap concat . mapM f
+
 QuickCheck Properties:
 
 > genDate :: Gen DateTime

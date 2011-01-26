@@ -1150,9 +1150,6 @@ Sub-class of scoring actions that return a list of factors
 > instance Show (a -> b) where
 >     show _ = "ScoreFunc"
 
-> concatMapM   :: (Functor m, Monad m) => (a -> m [b]) -> [a] -> m [b]
-> concatMapM f = fmap concat . mapM f
-
 Composite pattern on subpartitions ofscoring functions, e.g., political factors.
 
 > score         :: [ScoreFunc] -> ScoreFunc

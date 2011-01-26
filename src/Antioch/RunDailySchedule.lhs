@@ -39,7 +39,8 @@ and outputs:
 >     history''' <- filterElectives w rs rt history''
 >     -- similarly, default periods of non-guaranteed, windowed sessions
 >     -- only run if they pass MOC
->     history <- filterDefaultPeriods w rs rt history'''
+>     history'''' <- filterDefaultPeriods w rs rt history'''
+>     history <- filterDisabledPeriods history''''
 >     print "scheduling around periods: "
 >     printList history
 >     schd <- runScoring w rs rt $ do
@@ -54,8 +55,9 @@ and outputs:
 >     putPeriods newPeriods
 >     -- do we need to remove any failed electives or default periods?
 >     print "moving to deleted: "
->     printList $ history'' \\ history 
->     movePeriodsToDeleted $ history'' \\ history 
+>     let periodsToDelete = history'' \\ history
+>     printList periodsToDelete
+>     movePeriodsToDeleted periodsToDelete
 
 TBF: HACK HACK - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.

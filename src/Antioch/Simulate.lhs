@@ -65,7 +65,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         -- make sure sessions from future semesters are unauthorized
 >         -- TBF: how does this affect windowed sessions?
 >         let sessions'' = authorizeBySemester sessions start
-
+>
 >         -- make sure default periods that are in this scheduling range
 >         -- get scheduled; cast a large net: any windowed periods in this
 >         -- schedule range mean those windows won't get scheduled here.
@@ -178,14 +178,16 @@ Note: window reconciliation does NOT happen here.
 
 During simulations, we want to be realistic about sessions from projects
 from future trimesters.  So, we will simply unauthorize any sessions beloning
-to future trimesters.
+to future trimesters EXCEPT WINDOWS!!!.  In the case of windows, they only
+get scheduled in their window ranges anyways, so who cares if a window range
+is in 09A but the project is for 09B?
 
 > authorizeBySemester :: [Session] -> DateTime -> [Session]
 > authorizeBySemester ss dt = map (authorizeBySemester' dt) ss
->   --where
->   --  ss' = filter (\s -> (sType s) == Open) ss
 
-> authorizeBySemester' dt s = s { authorized = a }
+
+> authorizeBySemester' dt s | sType s == Windowed = s
+>                           | otherwise           = s { authorized = a }
 >   where
 >     a = (semester . project $ s) <= currentSemester 
 >     currentSemester = dt2semester dt

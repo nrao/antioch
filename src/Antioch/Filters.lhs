@@ -3,8 +3,9 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (showList', dt2semester, overlie)
+> import Antioch.Utilities    (showList', dt2semester, overlie, concatMapM)
 > import Maybe
+> import Data.List ((\\), sort)
 
 
 Pass on to the simulation only the history of pre-scheduled periods that 
@@ -22,6 +23,15 @@ be confused and raise false alarams.
 > typeWindowed s = sType s == Windowed
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
+
+> filterDisabledPeriods :: [Period] -> IO([Period])
+> filterDisabledPeriods ps = concatMapM enabledPeriod ps
+>   where
+>     enabledPeriod p = do
+>       let state = not (not (enabled $ session p ) && (pState p == Pending))
+>       case state of
+>         True -> return $ [p]
+>         False -> return []
 
 Not all sessions should be considered for scheduling.  We may not one to pass
 Sessions that:
