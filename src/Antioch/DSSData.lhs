@@ -56,10 +56,13 @@ separate query, to deal with multiple allotments (different grades)
 >     -- project observers (will include observer blackouts!)
 >     observers <- getProjectObservers (pId project) cnn
 >     let project'' = setProjectObservers project' observers
+>     -- project required friends (includes their blackouts too)
+>     reqFriends <- getProjectRequiredFriends (pId project) cnn
+>     let project''' = project'' { requiredFriends = reqFriends }
 >     -- project blackouts
 >     blackouts <- getProjectBlackouts cnn (pId project)
->     let project''' = project'' { pBlackouts = blackouts }
->     return $ makeProject project''' (pAllottedT project''') (pAllottedS project''') sessions'
+>     let project'''' = project''' { pBlackouts = blackouts }
+>     return $ makeProject project'''' (pAllottedT project'''') (pAllottedS project'''') sessions'
 
 The scheduling algorithm does not need to know all the details about the observers
 on a project - it only needs a few key facts, which are defined in the Observer
@@ -131,6 +134,34 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 >       query = "SELECT b.start_date, b.end_date, r.repeat, b.until FROM blackouts AS b, repeats AS r WHERE r.id = b.repeat_id AND user_id = ?"
 >       toBlackoutDatesList = concatMap toBlackoutDates
 >       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
+
+
+
+Required Friends need to be available for observing, they are
+subtely different then our list of observers, though use the same
+data type.
+
+> getProjectRequiredFriends :: Int -> Connection -> IO [Observer]
+> getProjectRequiredFriends projId cnn = handleSqlError $ do
+>     friends' <- getRequiredFriends projId cnn
+>     friends <- mapM (populateObserver cnn) friends'
+>     return friends 
+
+> getRequiredFriends :: Int -> Connection -> IO [Observer]
+> getRequiredFriends projId cnn = do
+>   result <- quickQuery' cnn query xs 
+>   return $ toObserverList result 
+>     where
+>       xs = [toSql projId]
+>       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id FROM friends AS f, users AS u WHERE u.id = f.user_id AND f.required AND f.project_id = ?"
+>       toObserverList = map toObserver
+>       toObserver (id:first:last:sanc:pid:[]) = 
+>         defaultObserver 
+>           { oId = fromSql id
+>           , firstName = fromSql first
+>           , lastName = fromSql last
+>           , sanctioned = fromSql sanc
+>           , pstId = fromSqlInt pid }
 
 For a given project Id, if that project allows blackouts, reads in these
 blackouts just like blackouts are read in for an observer.

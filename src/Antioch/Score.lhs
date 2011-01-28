@@ -738,7 +738,7 @@ which we need to check.
 Returns list of receivers that will be up at the given time.
 
 > getReceivers :: DateTime -> ReceiverSchedule -> [Receiver]
-> getReceivers dt rsched =
+> getReceivers dt rsched = 
 >     case takeWhile (\(x, _) -> x <= dt) rsched of
 >         [] -> []
 >         xs -> snd $ last xs 
@@ -766,7 +766,7 @@ Rules (observer available if):
 > observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
 
 > obsAvailable :: DateTime -> Session -> Bool
-> obsAvailable dt s = (obsOnSite dt s) || (remoteObsAvailable dt s)
+> obsAvailable dt s = ((obsOnSite dt s) || (remoteObsAvailable dt s)) && (requiredFriendsAvailable dt s)
 
 > remoteObsAvailable :: DateTime -> Session -> Bool
 > remoteObsAvailable dt s = not $ allObsBlackedOut dt obs
@@ -780,6 +780,19 @@ is handled by previously filtering out observerless sessions.
 > allObsBlackedOut dt obs = all (isBlackedOut dt) obs
 >   where 
 >     isBlackedOut dt obs = any (inDateRange dt) (blackouts obs)
+
+> requiredFriendsAvailable :: DateTime -> Session -> Bool
+> requiredFriendsAvailable dt s = not $ anyObsBlackedOut dt friends
+>   where
+>     friends = requiredFriends . project $ s
+
+Is anyone (of type Observer) blacked out for this time?
+
+> anyObsBlackedOut :: DateTime -> [Observer] -> Bool
+> anyObsBlackedOut dt obs | obs == [] = False
+>                         | otherwise = any (isBlackedOut dt) obs
+>   where 
+>     isBlackedOut dt observer = any (inDateRange dt) (blackouts observer)
 
 Project Blackouts are a simple version of user blackouts: if the 
 datetime lands in any one of them, you score zero.

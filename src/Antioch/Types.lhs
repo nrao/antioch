@@ -192,6 +192,7 @@ Tying the knot.
 >   , sessions        :: [Session]
 >   , thesis          :: !Bool
 >   , observers       :: [Observer]
+>   , requiredFriends :: [Observer]
 >   , pBlackouts      :: [DateRange]
 >   } deriving Eq
 
@@ -329,7 +330,8 @@ Simple Functions for Periods:
 >   , pAllottedT      = 0
 >   , pAllottedS      = 0
 >   , observers       = [defaultObserver]
->   , pBlackouts       = []
+>   , requiredFriends = []
+>   , pBlackouts      = []
 >   , pClosed         = False
 >   }
 

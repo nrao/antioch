@@ -63,10 +63,17 @@ instructions in admin/genDssTestDatagase.py.
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
 >     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 6 (length allPeriods)    
->     assertEqual "test_getProject99" [[Rcvr8_10]] (receivers . head $ ss)
->     assertEqual "test_getProject99" True (guaranteed . head $ ss)
->     assertEqual "test_getProject99" 1 (length . electives . last $ ss)
->     assertEqual "test_getProject99" [5,6] (ePeriodIds . head . electives . last $ ss)
+>     assertEqual "test_getProjects11" [[Rcvr8_10]] (receivers . head $ ss)
+>     assertEqual "test_getProjects12" True (guaranteed . head $ ss)
+>     assertEqual "test_getProjects13" 1 (length . electives . last $ ss)
+>     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives . last $ ss)
+>     assertEqual "test_getProjects15" 1 (length . observers . head $ ps)
+>     assertEqual "test_getProjects16" 1 (length . requiredFriends . head $ ps)
+>     assertEqual "test_getProjects17" obsBlackouts ( blackouts . head . observers . head $ ps) 
+>     assertEqual "test_getProjects18" frdBlackouts ( blackouts . head . requiredFriends . head $ ps) 
+>   where
+>     obsBlackouts = [(fromGregorian 2009 4 1 0 0 0,fromGregorian 2009 4 3 0 0 0)]    
+>     frdBlackouts = [(fromGregorian 2009 4 7 0 0 0,fromGregorian 2009 4 10 0 0 0)]    
 
 TBF: cant' run this one automatically because it doesn't clean up yet, 
 so, clean up by hand for now.
@@ -111,13 +118,9 @@ session scores zero through out a 24 hr period.
 >     ps <- getProjects
 >     let ss = concatMap sessions ps
 >     let sess' = fromJust . find (\s -> (sType s) == Open) $ ss
->     -- give it an observer
->     let p' = project sess'
->     let p = p' { observers = [defaultObserver] }
->     let sess = sess' { project = p }
 >     let score' w dt = runScoring w [] rt $ do
 >         fs <- genScore starttime ss 
->         s <- fs dt sess
+>         s <- fs dt sess'
 >         return $ eval s
 >     scores <- mapM (score' w) times
 >     let nonZeros = filter (/= 0.0) scores

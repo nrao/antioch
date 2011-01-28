@@ -98,6 +98,7 @@
 >   , test_obsAvailable
 >   , test_obsAvailable2
 >   , test_obsAvailable3
+>   , test_obsAvailable4
 >   , test_observerAvailable
 >   , test_projectBlackout
 >   , test_needsLowRFI
@@ -1694,6 +1695,7 @@ Look at the scores over a range where none are zero.
 >                           , frequency = 12.8
 >                           }
 >     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+
 > test_obsAvailable = TestCase $ do
 >   assertEqual "test_obsAvailable_1" True (obsAvailable dt s)
 >   assertEqual "test_obsAvailable_2" False (obsAvailable dt s2)
@@ -1745,6 +1747,26 @@ If none is sanctioned, then there should never be an observer available
 >       p   = defaultProject { observers = [o] }
 >       s   = defaultSession { project = p}
 >       expFalse = 0.0
+
+Like test_obsAvailbe, but with required friends
+
+> test_obsAvailable4 = TestCase $ do
+>   assertEqual "test_obsAvailable4_1" True  (obsAvailable dt s)
+>   assertEqual "test_obsAvailable4_2" False (obsAvailable dt s2)
+>   assertEqual "test_obsAvailable4_3" True  (obsAvailable dt2 s2)
+>   assertEqual "test_obsAvailable4_4" False (obsAvailable dt3 s2)
+>     where
+>       dt  = fromGregorian 2006 2 1 0 0 0
+>       dt2 = fromGregorian 2006 2 7 0 0 0
+>       dt3 = fromGregorian 2006 2 3 3 0 0
+>       s   = defaultSession
+>       s2  = defaultSession { project = p }
+>       p   = defaultProject { observers = [o], requiredFriends = [f1, f2] }
+>       o   = defaultObserver { blackouts = bs }
+>       bs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
+>       f1 = defaultObserver {blackouts = fbs1}
+>       fbs1 = [(fromGregorian 2006 2 3 0 0 0, fromGregorian 2006 2 4 0 0 0)]
+>       f2 = defaultObserver
 
 > test_observerAvailable = TestCase $ do
 >   w <- getWeatherTest Nothing
