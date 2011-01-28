@@ -254,6 +254,49 @@ def create_receiver_schedule():
     for rs in receiver_schedule:
         rs.save()
 
+def create_user(fdata):
+
+    u = User()
+    u.first_name = fdata.get("first_name", "first_name")
+    u.last_name  = fdata.get("last_name", "last_name")
+    u.pst_id     = fdata.get("pst_id", None)
+    u.role       = Role.objects.get(role = "Observer")
+    u.save()
+    return u
+
+def create_investigator(fdata):
+
+    inv = Investigator()
+    inv.user_id = fdata.get("user_id", None)
+    inv.project_id = fdata.get("project_id", None)
+    inv.observer = fdata.get("observer", False)
+    inv.principal_investigator = fdata.get("pi", False)
+    inv.principal_contact = fdata.get("pc", False)
+    inv.sanctioned = fdata.get("sanctioned", False)
+    inv.save()
+    return inv
+
+
+def create_friend(fdata):
+
+    f = Friend()
+    f.user_id = fdata.get("user_id", None)
+    f.project_id = fdata.get("project_id", None)
+    f.required = fdata.get("required", False)
+    f.principal_investigator = fdata.get("pi", False)
+    f.save()
+    return f
+
+def create_user_blackout(fdata):
+
+    b = Blackout()
+    b.user_id = fdata.get("user_id", None)
+    b.start_date = fdata.get("start", None)
+    b.end_date = fdata.get("end", None)
+    b.repeat = Repeat.objects.get(repeat = "Once")
+    b.save()
+    return b
+
 def populate_project1():
 
     #fdata = dict(
@@ -399,6 +442,71 @@ def populate_project1():
       , elective   = elective
       )
     create_period(sess, fdata)
+
+    # create some observers and friends for this project
+    fdata = dict(
+        first_name = "First"
+      , last_name  = "User"
+                )
+    u1 = create_user(fdata)
+    fdata = dict(
+        first_name = "Second"
+      , last_name  = "User"
+                )
+    u2 = create_user(fdata)
+    fdata = dict(
+        first_name = "Third"
+      , last_name  = "User"
+                )
+    u3 = create_user(fdata)
+    fdata = dict(
+        first_name = "Fourth"
+      , last_name  = "User"
+                )
+    u4 = create_user(fdata)
+
+    # first two users are investigators
+    fdata = dict(
+        user_id = u1.id
+      , project_id = proj.id
+      , observer = True
+                )
+    inv1 = create_investigator(fdata)
+    fdata = dict(
+        user_id = u2.id
+      , project_id = proj.id
+      , observer = False
+      , principal_investigator = True
+                )
+    inv2 = create_investigator(fdata)
+
+    # last two users are friends
+    fdata = dict(
+        user_id = u3.id
+      , project_id = proj.id
+      , required = False
+                )
+    friend1 = create_friend(fdata)
+    fdata = dict(
+        user_id = u4.id
+      , project_id = proj.id
+      , required = True
+                )
+    friend2 = create_friend(fdata)
+
+    # create blackouts for users
+    fdata = dict(
+        user_id = u1.id
+      , start = datetime(2009, 4, 1, 0, 0, 0)  
+      , end = datetime(2009, 4, 3, 0, 0, 0)  
+                )
+    b1 = create_user_blackout(fdata)            
+    fdata = dict(
+        user_id = u4.id
+      , start = datetime(2009, 4, 7, 0, 0, 0)  
+      , end   = datetime(2009, 4, 10, 0, 0, 0)  
+                )
+    b2 = create_user_blackout(fdata)            
 
 if __name__ == "__main__":
     create_receiver_schedule()
