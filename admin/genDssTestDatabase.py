@@ -261,6 +261,7 @@ def create_user(fdata):
     u.last_name  = fdata.get("last_name", "last_name")
     u.pst_id     = fdata.get("pst_id", None)
     u.role       = Role.objects.get(role = "Observer")
+    u.sanctioned = fdata.get("sanctioned", False)
     u.save()
     return u
 
@@ -272,7 +273,6 @@ def create_investigator(fdata):
     inv.observer = fdata.get("observer", False)
     inv.principal_investigator = fdata.get("pi", False)
     inv.principal_contact = fdata.get("pc", False)
-    inv.sanctioned = fdata.get("sanctioned", False)
     inv.save()
     return inv
 
@@ -447,6 +447,7 @@ def populate_project1():
     fdata = dict(
         first_name = "First"
       , last_name  = "User"
+      , sanctioned = True
                 )
     u1 = create_user(fdata)
     fdata = dict(
