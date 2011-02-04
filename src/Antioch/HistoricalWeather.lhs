@@ -15,7 +15,7 @@
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Antioch.Score
-> import Antioch.Settings     (weatherDB, databasePort)
+> import Antioch.Settings     (weatherDB, weatherHost, databasePort)
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Weather
@@ -239,7 +239,7 @@ at the specified time.
 
 -------------Database----------------------------
 
-> connectDB = connectPostgreSQL $ "dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
+> connectDB = connectPostgreSQL $ "host=" ++ weatherHost ++ " dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > truncateTable cnn table = do
 >     run cnn ("TRUNCATE TABLE " ++ table) []

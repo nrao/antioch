@@ -4,7 +4,7 @@
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Reservations
-> import Antioch.Settings                (dssDataDB, databasePort)
+> import Antioch.Settings                (dssDataDB, dssHost, databasePort)
 > import Antioch.DSSReversion            (putPeriodReversion)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
@@ -18,7 +18,7 @@
 > connect :: IO Connection
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
+>     cnnStr = "host=" ++ dssHost ++ " dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > getProjects :: IO [Project]
 > getProjects = do

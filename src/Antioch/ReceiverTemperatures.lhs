@@ -4,7 +4,7 @@
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Settings                (dssDataDB, databasePort)
+> import Antioch.Settings                (dssDataDB, dssHost, databasePort)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
 > import Data.Convertible
@@ -55,7 +55,7 @@ I'm really getting tired of typing that long-ass name:
 > connect :: IO Connection 
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
+>     cnnStr = "host=" ++ dssHost ++ " dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > getRcvrTemps' ::  IORef (M.Map (String) ([(Float,Float)])) -> Connection -> Receiver -> IO ([(Float, Float)])
 > getRcvrTemps' cache cnn rcvr = withCache key cache $ fetchRcvrTemps cnn rcvr 

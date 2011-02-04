@@ -9,10 +9,12 @@ Databases:
 > weatherUnitTestDB = "weather_unit_tests"
 > -- used for EVERYTHING else
 > weatherDB = "weather"      --MODIFY--
+> weatherHost = "trent"      --MODIFY--
 
 > -- used for everything
 > hardwareScheduleDB = "dss_unit_tests" --MODIFY--
 > dssDataDB          = "dss_unit_tests" --MODIFY--
+> dssHost            = "trent"        --MODIFY--
 
 Ports:
 
