@@ -61,7 +61,10 @@ We only we want to be scheduling backups during the specified time range,
 > scheduleBackup sf sn ss p dt dur | cantBeCancelled p dt dur = return $ Just p
 >                                  | otherwise = do
 >   moc <- evalSimPeriodMOC p
->   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p
+>   -- For Dana: uncomment this if you want to know what's going on w/ canceled periods.
+>   -- liftIO $ if not $ fromMaybe False moc then print $ "Canceled: " ++ ( show . session $ p ) else print "" 
+>   -- liftIO $ if not $ fromMaybe False moc then print . show $ p else print "" 
+>   if fromMaybe False moc then return $ Just p else cancelPeriod sn sf backupSessions p 
 >   where
 >     backupSessions  = filterBackups sn ss p 
 >     cantBeCancelled p dt dur = (not $ inCancelRange p dt dur) || (not $ isTypeOpen dt dur  (session p))
