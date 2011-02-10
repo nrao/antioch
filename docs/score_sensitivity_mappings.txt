@@ -1,0 +1,12 @@
+Ron                 5.3         Equation    Score.lhs
+---------           -------     --------    -------------
+Nu(Track)           Nu(tr)      12,17       trackingObservingEfficiency
+Nu(Surf)            Nu(sur)     9           surfaceObservingEfficiency
+Nu(Atm)             Nu(atm)     3           calcEfficiency*
+Tau(0)              Tau(<)      6           zenithOpacity,zenithAngleAtTransit
+T(Atm)              T(k)        in 7        kineticTemperature
+T(BG)Gal            -           -           -
+T(Rcvr)             T(rcvr)     in 7        getRcvrTemperature*
+
+
+* computation not cleanly parsed from weather and session data

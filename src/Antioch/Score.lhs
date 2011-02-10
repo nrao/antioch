@@ -273,8 +273,12 @@ factors are observing efficiency (factors) and tracking error limit.
 > minimumObservingConditions  :: DateTime -> Minutes -> Session -> Scoring (Maybe Bool)
 > minimumObservingConditions dt dur s | numQtrs <= getOverhead s = return Nothing
 >                                     | otherwise = do
+>   -- For Dana: uncomment this if you want to know what's going on w/ canceled periods.
+>     -- liftIO $ print $ "minObsCond: " ++ (toSqlString dt) ++ " for " ++ (show dur)
+>     -- liftIO $ print . show $ s
 >     let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
 >     fcts <- mapM (minObsFactors s) $ drop (getOverhead s) dts
+>     -- liftIO $ printList fcts
 >     let effProducts = map (\(fs, tr) -> ((eval fs) * tr)) fcts
 >     let meanEff = (sum effProducts) / (fromIntegral . length $ effProducts) 
 >     return $ Just (meanEff >= minObs)
