@@ -8,13 +8,14 @@
 This is the main entry point for our 'poor man's parallel' code for 
 updating the stringency table (part of historical weather).
 
+./genhists "2008-01-01 00:00:00"  "2011-01-01 00:00:00"
+
 > main = do
->   -- get the args: from when to when are we running this?
 >   args <- getArgs
 >   let start = fromJust . fromSqlString . head $ args
 >   let end   = fromJust . fromSqlString . last $ args
 >   let numCores = 2
 >   runHistWeatherOpt start end numCores
->   --runFillStringencyOpt start end numCores
+>   runFillStringencyOpt start end numCores
 
 

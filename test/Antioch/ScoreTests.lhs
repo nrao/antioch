@@ -2168,7 +2168,7 @@ Assumes the Rcvr getting boosted is Rcvr_1070.
 
 > test_calculateAtmStabilityLimit = TestCase $ do
 >     assertEqual "test_calculateAtmStabilityLimit 1" (Just False) (calculateAtmStabilityLimit (Just 330) Continuum 2.1)
->     assertEqual "test_calculateAtmStabilityLimit 2" (Just True) (calculateAtmStabilityLimit (Just 329) Continuum 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 2" (Just False) (calculateAtmStabilityLimit (Just 329) Continuum 2.1)
 >     assertEqual "test_calculateAtmStabilityLimit 3" (Just True) (calculateAtmStabilityLimit (Just 330) SpectralLine 2.1)
 >     assertEqual "test_calculateAtmStabilityLimit 4" (Just True) (calculateAtmStabilityLimit (Just 330) Continuum 1.9)
 

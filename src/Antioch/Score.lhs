@@ -650,7 +650,7 @@ Scale the wind speed by 1.5 to account for weather differences between
 >   di' <- di
 >   return $ if ot == Continuum &&
 >               f > 2.0 &&
->               di' >= 330 then False
+>               di' >= 300 then False
 >                          else True
 
 3.5 Other factors
