@@ -16,6 +16,5 @@ updating the stringency table (part of historical weather).
 >   let end   = fromJust . fromSqlString . last $ args
 >   let numCores = 2
 >   runHistWeatherOpt start end numCores
->   runFillStringencyOpt start end numCores
 
 
