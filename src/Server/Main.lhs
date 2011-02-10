@@ -23,12 +23,12 @@
 > import Server.Score
 > import Server.Factors
 > import Maybe
-> import Antioch.Settings                    (salviaListenerPort, dssDataDB)
+> import Antioch.Settings                    (salviaListenerPort, dssDataDB, dssHost)
 
 > connect :: IO Connection
 > connect = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dssDataDB ++ " user=dss"
+>     cnnStr = "host=" ++ dssHost ++ " dbname=" ++ dssDataDB ++ " user=dss"
 
 > main = do
 >     print "starting server"

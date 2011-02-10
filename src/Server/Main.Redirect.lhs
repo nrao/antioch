@@ -18,8 +18,9 @@
 > import Network.Socket                      (inet_addr)
 > import Server.JPeriods
 > import Server.RunScheduler
+> import Antioch.Settings  (dssHost)
 
-> connect = handleSqlError $ connectPostgreSQL "dbname=dss_pmargani2 user=dss"
+> connect = handleSqlError $ connectPostgreSQL "host=" ++ dssHost ++ " dbname=dss_pmargani2 user=dss"
 
 > main = do
 >     print "starting server"
