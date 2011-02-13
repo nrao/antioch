@@ -355,7 +355,10 @@ Returns True if given period's session has 'lowRFI' flag set, but is observing
 during the day.
 
 > disobeyLowRFI' :: Period -> Bool
-> disobeyLowRFI' p = if (not . lowRFI . session $ p) then False else (isHighRFITime . startTime $ p)
+> disobeyLowRFI' p = unsafePerformIO $ do
+>     if (not . lowRFI . session $ p)
+>       then return False
+>       else (isHighRFITime . startTime $ p)
 
 Returns the list of periods that shouldn't be observing when they are due
 to LST exclusion ranges.  Note that we don't count the last 15 minutes of a 

@@ -17,13 +17,42 @@
 > import Control.Monad.Trans  (lift, liftIO) -- debug
 
 > tests = TestList [
->       test_removeBuffer
+>       test_getEndTime
+>     , test_removeBuffer
 >     , test_removeBuffer_2
 >     , test_runDailySchedule_1
 >     , test_runDailySchedule_2
 >     , test_runDailySchedule_3
 >     , test_scheduleWindows
 >      ]
+
+> test_getEndTime = TestCase $ do
+>   -- only the day matters in the dt argument
+>   let expected = fromGregorian 2011 2 6 13 0 0
+>   let dt = fromGregorian 2011 2 4 0 0 0
+>   endTime <- liftIO $ getEndTime dt days workStartMinutes
+>   assertEqual "test_getEndTime_1" expected endTime
+>   let dt = fromGregorian 2011 2 4 5 0 0
+>   endTime <- liftIO $ getEndTime dt days workStartMinutes
+>   assertEqual "test_getEndTime_2" expected endTime
+>   -- DST boundaries
+>   -- Spring forward
+>   let dt = fromGregorian 2011 3 10 0 0 0
+>   endTime <- liftIO $ getEndTime dt days workStartMinutes
+>   assertEqual "test_getEndTime_3" (fromGregorian 2011 3 12 13 0 0) endTime
+>   let dt = fromGregorian 2011 3 11 0 0 0
+>   endTime <- liftIO $ getEndTime dt days workStartMinutes
+>   assertEqual "test_getEndTime_4" (fromGregorian 2011 3 13 12 0 0) endTime
+>   -- Fall back
+>   let dt = fromGregorian 2011 11 3 0 0 0
+>   endTime <- liftIO $ getEndTime dt days workStartMinutes
+>   assertEqual "test_getEndTime_5" (fromGregorian 2011 11 5 12 0 0) endTime
+>   let dt = fromGregorian 2011 11 4 0 0 0
+>   endTime <- liftIO $ getEndTime dt days workStartMinutes
+>   assertEqual "test_getEndTime_6" (fromGregorian 2011 11 6 13 0 0) endTime
+>     where
+>       days = 2
+>       workStartMinutes = 8*60
 
 > test_removeBuffer = TestCase $ do
 >   -- simplest case

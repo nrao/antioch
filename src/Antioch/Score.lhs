@@ -809,10 +809,15 @@ datetime lands in any one of them, you score zero.
 The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 
 > needsLowRFI :: ScoreFunc
-> needsLowRFI dt s = boolean "needsLowRFI" . Just $ needsLowRFI' dt s
+> needsLowRFI dt s = do
+>     isLow <- liftIO $ needsLowRFI' dt s
+>     boolean "needsLowRFI" . Just $ isLow
 
-> needsLowRFI' :: DateTime -> Session -> Bool
-> needsLowRFI' dt s = if lowRFI s then (not . isHighRFITime $ dt) else True
+> needsLowRFI' :: DateTime -> Session -> IO Bool
+> needsLowRFI' dt s = do
+>     if lowRFI s
+>         then isHighRFITime dt
+>         else return True
 
 Sessions can specify any number of LST ranges in which they do not want
 to observe at.

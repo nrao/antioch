@@ -14,7 +14,7 @@
 > --import Antioch.DSSData
 > import Antioch.Settings (dssDataDB)
 > --import Antioch.Reports
-> import Data.Time           (getCurrentTimeZone, localTimeToUTC)
+> import Data.Time           (getTimeZone, localTimeToUTC)
 > import Data.Time.LocalTime (timeZoneMinutes)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, (\\), find)
@@ -86,11 +86,23 @@ scheduling of multiple periods
 Computes the scheduling period finish in UTC on the last day at the
 start hour of the work day in ET.
 
-> getEndTime :: DateTime -> Int -> Minutes -> IO Minutes
-> getEndTime dt days workStart = do
->     edt <- getCurrentTimeZone
+> getEndTime :: DateTime -> Int -> Minutes -> IO DateTime
+> getEndTime start days workStart = do
+>     edt <- getTimeZone . fromSeconds . addMinutes pastDstMinutes $ lastDay
 >     let endTimeMinutes = workStart - (timeZoneMinutes edt) 
->     return $ getEndTime' dt days endTimeMinutes
+>     return $ getEndTime' lastDay endTimeMinutes
+>   where
+>     daysMinutes    = 24*60*days -- lastdays in minutes 
+>     lastDay        = daysMinutes `addMinutes'` start
+>     pastDstMinutes = 8*60 -- DST takes place at about 06:00:00 UT
+
+Given the end of the scheduling period and the offset on the last day,
+returns the time in UTC of the end of the scheduling period.
+
+> getEndTime' :: DateTime -> Minutes -> DateTime
+> getEndTime' lastDay endMinutes = setHour endHour lastDay
+>   where
+>     endHour = endMinutes `div` 60
 
 Actually calls the strategy (ex: Pack) for the days we are interested in, 
 including the 'buffer' that will be removed in dailySchedule.
@@ -105,17 +117,6 @@ the necessary adjustments to windowed sessions.
 >     where
 >       bufferHrs = 12*60 -- length of buffer in minutes
 >       ss' = map (adjustWindowSessionDuration dt dur) $ schedulableSessions dt dur $ ss
-
-Given the start of the scheduling period, number of days plus the
-offset on the last day, returns the time in UTC of the end of the
-scheduling period.
-
-> getEndTime' :: DateTime -> Int -> Minutes -> DateTime
-> getEndTime' start days endMinutes = setHour endHour lastDay
->   where
->     endHour = endMinutes `div` 60
->     daysMins = 24*60*days -- lastdays in minutes 
->     lastDay = daysMins `addMinutes'` start 
 
 Remove those periods that are outside the given time range, if they *aren't*
 part of the history of pre-scheduled periods

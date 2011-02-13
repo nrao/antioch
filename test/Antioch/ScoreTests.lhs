@@ -1840,19 +1840,20 @@ Like test_obsAvailbe, but with required friends
 > test_needsLowRFI = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
->   assertEqual "test_needsLowRFI" True (isDayTime day)
->   assertEqual "test_needsLowRFI" False (isDayTime night)
+>   assertEqual "test_needsLowRFI_1" True (isDayTime day)
+>   assertEqual "test_needsLowRFI_2" False (isDayTime night)
+>   --
 >   fs <- runScoring w [] rt (needsLowRFI day sAnyTime)
->   assertEqual "test_needsLowRFI" 1.0 (eval fs)
+>   assertEqual "test_needsLowRFI_3" 1.0 (eval fs)
 >   fs <- runScoring w [] rt (needsLowRFI night sAnyTime)
->   assertEqual "test_needsLowRFI" 1.0 (eval fs)
+>   assertEqual "test_needsLowRFI_4" 1.0 (eval fs)
 >   fs <- runScoring w [] rt (needsLowRFI night sNightTime)
->   assertEqual "test_needsLowRFI" 1.0 (eval fs)
+>   assertEqual "test_needsLowRFI_5" 0.0 (eval fs)
 >   fs <- runScoring w [] rt (needsLowRFI day sNightTime)
->   assertEqual "test_needsLowRFI" 0.0 (eval fs)
+>   assertEqual "test_needsLowRFI_6" 1.0 (eval fs)
 >     where
->       day   = fromGregorian 2008 1 1 15 0 0 -- rfi day starts at 12:00 UT 
->       night = fromGregorian 2008 1 2 1 30 0 -- rfi night starts at 24:00 UT 
+>       day   = fromGregorian 2008 1 1 15 0 0 -- rfi day starts at 13:00 UT 
+>       night = fromGregorian 2008 1 2 1 30 0 -- rfi day ends at 01:00 UT 
 >       sAnyTime = findPSessionByName "CV"
 >       sNightTime = sAnyTime { lowRFI = True }
 

@@ -8,6 +8,8 @@
 > import Data.Time.LocalTime
 > import Database.HDBC
 > import Numeric                    (fromRat)
+> import Maybe
+> import Control.Monad.Trans        (liftIO)
 > import System.Locale
 > import System.Time hiding         (toClockTime)
 > import Test.QuickCheck
@@ -17,8 +19,6 @@
 > import qualified Data.Time.Clock as Clock
 
 > type DateTime = Int
-
-> -- edt <- getCurrentTimeZone     -- if running in Green Bank then EDT
 
 > instance Arbitrary UTCTime where
 >     arbitrary       = do
@@ -140,15 +140,13 @@ Getting closer to the machine: Not all the functionality of
 System.Time is available in Data.Time, and the only way we can convert
 back and forth is to go through seconds.
 
-> toSeconds    :: UTCTime -> Int
+> toSeconds    :: UTCTime -> DateTime
 > toSeconds dt = floor $
 >     86400.0 * fromRational (toMJD dt - startOfTimeMJD)
 
-> fromSeconds   :: Int -> UTCTime
+> fromSeconds   :: DateTime -> UTCTime
 > fromSeconds s = fromMJD $
 >     fromIntegral s / 86400 + startOfTimeMJD
-
-TBF never used
 
 > toClockTime    :: UTCTime -> ClockTime
 > toClockTime dt = TOD (fromIntegral . toSeconds $ dt) 0
@@ -161,6 +159,22 @@ TBF never used
 
 > startOfTimeMJD :: Rational
 > startOfTimeMJD = toMJD $ UTCTime (Calendar.fromGregorian 1970 1 1) 0
+
+Parsing from a UTC or ET http string to DateTime while handling DST
+
+> httpTzToDt :: String -> String -> IO DateTime
+> httpTzToDt s tz = do
+>     -- UTCTime (or not)
+>     let utc'' = fromJust . parseUTCTime httpFormat $ s
+>     -- UTCTime approximate
+>     let utc'  | tz == "ET" = fromMJD . (+) (5.0/24.0) . toMJD $ utc''
+>               | otherwise  = utc''
+>     edt <- liftIO $ getTimeZone utc'
+>     -- UTCTime correct
+>     let utc  | tz == "ET" = localTimeToUTC edt . fromJust . parseLocalTime httpFormat $ s
+>              | otherwise        = utc''
+>     -- DateTime
+>     return $ toSeconds utc
 
 Formatting and parsing, with special attention to the format used by
 ODBC and MySQL.
@@ -182,8 +196,7 @@ ODBC and MySQL.
 > fromHttpString :: String -> Maybe DateTime
 > fromHttpString = fmap toSeconds . parseUTCTime httpFormat
 
-The string conversions may loss precision at the level of a second.  This is
-close enough for our purposes (TBF)?
+The string conversions may loss precision at the level of a second.
 
 > prop_SqlString dt = diffSeconds dt dt' <= 1
 >   where
@@ -207,7 +220,7 @@ close enough for our purposes (TBF)?
 
 > sqlDateFormat = iso8601DateFormat (Just "")
 
-> httpFormat = iso8601DateFormat (Just " %HA%MA%S") -- TBF space needed?
+> httpFormat = iso8601DateFormat (Just "%HA%MA%S") -- TBF space needed?
 
 Simple arithmetic.
 
@@ -256,13 +269,26 @@ PTCS solar warming boundaries
 > isPTCSDayTime :: (DateTime -> DateTime) -> DateTime -> Bool
 > isPTCSDayTime rnd dt = isDayTime' rnd dt 0 (3600 * 3)
 
-TBF use ET and translate to UT
+High RFI business times
 
-> isHighRFITime :: DateTime -> Bool
-> isHighRFITime dt = badRFIStart dt <= dt && dt <= badRFIEnd dt
+> isHighRFITime :: DateTime -> IO Bool
+> isHighRFITime dt = do
+>     edt <- getTimeZone . fromSeconds $ dt
+>     -- should be 240 (EDT) or 300 (EST)
+>     let offset = timeZoneMinutes edt
+>     let (eightAM, eightPM) = getRange offset
+>     return $ eightAM <= minutes && minutes < eightPM
 >   where
->     badRFIStart dt = 86400 * (dt `div` 86400) + 12 * 3600  -- 8 AM ET
->     badRFIEnd dt   = 86400 * (dt `div` 86400) + 24 * 3600  -- 8 PM ET
+>     dtStart = 86400 * (dt `div` 86400)
+>     -- minutes after midnight overlapping a little into the next day
+>     minutes' = (dt - dtStart) `div` 60
+>     minutes = if minutes' < (2*60)
+>                 then minutes' + (24*60)
+>                 else minutes'
+>     -- high RFI range in minutes
+>     getRange offset = if offset == (-240)
+>                         then (12*60, 24*60)
+>                         else (13*60, 25*60)
 
 Accurate to about 12 min. Only works for Green Bank.
 
