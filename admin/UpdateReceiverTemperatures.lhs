@@ -7,6 +7,7 @@
 > import Database.HDBC.PostgreSQL
 > import Maybe
 > import Data.List
+> import Antioch.Settings                (dssHost)
 
 Given the name of the database containing the receiver_temperatures'
 table, the receiver's name, and a sql date string (YYYY-MM-DD),
@@ -146,7 +147,7 @@ Strip out all rows for the specified receiver in *receiver_temperatures*.
 > pconnect :: String -> IO Connection
 > pconnect dbname = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
->     cnnStr = "dbname=" ++ dbname ++ " user=dss"
+>     cnnStr = "host=" ++ dssHost ++ " dbname=" ++ dbname ++ " user=dss"
 
 > fromSqlInt :: SqlValue -> Int
 > fromSqlInt i = fromSql i

@@ -3,7 +3,7 @@
 > import Antioch.DateTime
 > import Antioch.HistoricalWeather
 > import Antioch.HistWeatherOpt
-> import Antioch.Settings     (weatherDB)
+> import Antioch.Settings     (weatherDB, weatherHost)
 > import System.Cmd
 > import System.Environment
 > import System.Directory
@@ -175,7 +175,7 @@ partialStr = numHrsInPartition / numTrueInPartition
 
 ------- DB Stuff ----------------
 
-> --connectDB = connectPostgreSQL $ "dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
+> --connectDB = connectPostgreSQL $ "host=" ++ weatherHost ++ " dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > putStringencies :: [(Int, Int, Int, Int, Float)] -> IO ()
 > putStringencies strs = do
