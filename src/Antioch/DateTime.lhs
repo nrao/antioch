@@ -230,14 +230,8 @@ Simple arithmetic.
 > diffHours :: Int -> DateTime -> DateTime
 > diffHours x = (`div` 60) . diffMinutes x
 
-> addMinutes' :: Int -> DateTime -> DateTime
-> addMinutes' = addMinutes
-  
 > addMinutes :: Int -> DateTime -> DateTime
 > addMinutes = addSeconds . (60 *)
-
-> diffMinutes' :: DateTime -> DateTime -> Int
-> diffMinutes' = diffMinutes
 
 > diffMinutes   :: DateTime -> DateTime -> Int
 > diffMinutes x = (`div` 60) . diffSeconds x

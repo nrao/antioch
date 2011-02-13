@@ -477,8 +477,8 @@ what bin it shows up in.
 >   dt2 = fromGregorian 2006 2 1 5 30 0 -- gap p1-p2 of 1 hr
 >   dur1 = 120
 >   dur2 = 240
->   end1 = dur1 `addMinutes'` dt1
->   end2 = dur2 `addMinutes'` dt2
+>   end1 = dur1 `addMinutes` dt1
+>   end2 = dur2 `addMinutes` dt2
 >   p1 = Period 0 defaultSession dt1 dur1 0.0 Pending undefined False dur1
 >   p2 = Period 0 defaultSession dt2 dur2 0.0 Pending undefined False dur2
 >   ps = [p1, p2]
@@ -520,11 +520,11 @@ Test utilities
 >   where
 >   start = fromGregorian 2006 2 1 0 0 0
 >   dur = 60
->   dts = [(2*i*60) `addMinutes'` start | i <- [1..5]]
+>   dts = [(2*i*60) `addMinutes` start | i <- [1..5]]
 >   observed = zipWith mkPeriod dts [True, True, True, False, False] 
 >   mkPeriod dt backup = Period 0 defaultSession dt dur 0.0 Pending undefined backup dur
 >   canceled' = take 3 observed
->   canceledDts = [start, (5*60) `addMinutes'` start]
+>   canceledDts = [start, (5*60) `addMinutes` start]
 >   failedBackups = zipWith mkPeriod canceledDts [False, False]
 >   canceled = sort $ failedBackups ++ canceled'
 >   
@@ -599,7 +599,7 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >                        , duration = 60*2 
 >                        , session = s'
 >                        , pForecast = scheduled}
->     wr = [(winStart, addMinutes' winDur winStart)]
+>     wr = [(winStart, addMinutes winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
 >                        , wRanges = wr }
 
@@ -613,7 +613,7 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >     p' = defaultPeriod { startTime = pStart
 >                        , duration = 60*2 
 >                        , session = s' }
->     wr = [(winStart, addMinutes' winDur winStart)]
+>     wr = [(winStart, addMinutes winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
 >                        , wRanges = wr }
 

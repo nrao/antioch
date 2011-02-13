@@ -63,10 +63,10 @@ Session for scheduling w/ different methods.
 >             w <- weather
 >             let d = minDuration s
 >             let p = Period 0 s dt d score Pending (forecast w) False d
->             rest <- scheduleMinDurationWorker sf (d `addMinutes'` dt) (dur - d) (p : history) sessions bestScorer
+>             rest <- scheduleMinDurationWorker sf (d `addMinutes` dt) (dur - d) (p : history) sessions bestScorer
 >             return $ p : rest
 >           else
->             scheduleMinDurationWorker sf (quarter `addMinutes'` dt) (dur - quarter) history sessions bestScorer
+>             scheduleMinDurationWorker sf (quarter `addMinutes` dt) (dur - quarter) history sessions bestScorer
 >   where
 >     candidates = constrain history . filter (\s -> minDuration s <= dur) $ sessions
 
@@ -83,10 +83,10 @@ Always schedules a session at a given fixed duration.
 >           then do
 >             w <- weather
 >             let p = Period 0 s dt len score Pending (forecast w) False len
->             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
+>             rest <- scheduleFixedDuration len sf (len `addMinutes` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
->             scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) history sessions
+>             scheduleFixedDuration len sf (len `addMinutes` dt) (dur - len) history sessions
 >   where
 >     candidates = constrain history sessions
 
@@ -103,10 +103,10 @@ A really dumb scheduler that just looks at the first score for a session.
 >           then do
 >             w <- weather
 >             let p = Period 0 s dt len score Pending (forecast w) False len
->             rest <- scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) (p : history) sessions
+>             rest <- scheduleFixedDuration len sf (len `addMinutes` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
->             scheduleFixedDuration len sf (len `addMinutes'` dt) (dur - len) history sessions
+>             scheduleFixedDuration len sf (len `addMinutes` dt) (dur - len) history sessions
 >   where
 >     candidates = constrain history sessions
 

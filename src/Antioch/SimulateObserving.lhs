@@ -82,7 +82,7 @@ Specifically, we want to include any period that overlaps with the start, but
 >                           | pStart < start && pEnd > start = True
 >                           | otherwise                      = False
 >   where
->     end = dur `addMinutes'` start
+>     end = dur `addMinutes` start
 >     pStart = startTime p
 >     pEnd   = periodEndTime p
 
@@ -132,7 +132,7 @@ Evaluates the MOC for the given period, w/ weather placed an hour before the per
 > evalSimPeriodMOC p = do
 >   -- reset the weather origin to one hour before the period
 >   w <- weather
->   let wDt = addMinutes' (-60) (startTime p) -- 1 hr before period starts
+>   let wDt = addMinutes (-60) (startTime p) -- 1 hr before period starts
 >   w' <- liftIO $ newWeather w (Just wDt)
 >   -- make sure all subsequent calls use this weather
 >   local (\env -> env { envWeather = w' }) $ minimumObservingConditions (startTime p) (duration p) (session p)
@@ -144,7 +144,7 @@ using the weather placed an hour before the period we wish to replace.
 > evalSimBackup sf p s = do
 >   -- reset the weather origin to one hour before the period
 >   w <- weather
->   let wDt = addMinutes' (-60) (startTime p) -- 1 hr before period starts
+>   let wDt = addMinutes (-60) (startTime p) -- 1 hr before period starts
 >   w' <- liftIO $ newWeather w (Just wDt)
 >   local (\env -> env { envWeather = w' }) $ averageScore' sf (startTime p) (duration p) s  
 

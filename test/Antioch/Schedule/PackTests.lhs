@@ -678,7 +678,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     duration = 12 * 60
 >     dts' = quarterDateTimes starttime duration 
 >     fixed1 = Period 0 defaultSession starttime 30 0.0 Pending starttime False 30
->     ft2 = (11*60) `addMinutes'` starttime
+>     ft2 = (11*60) `addMinutes` starttime
 >     fixed2 = Period 0 defaultSession ft2 30 0.0 Pending starttime False 30
 >     dts = mask dts' (toSchedule dts' [fixed1, fixed2])
 >     sess = testSession
@@ -795,7 +795,7 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >     assertEqual "test_ToPeriod" expected result
 >   where
 >     dt = fromGregorian 2006 11 8 12 0 0
->     dt1 = (8*quarter) `addMinutes'` dt
+>     dt1 = (8*quarter) `addMinutes` dt
 >     c = defaultCandidate { cId = defaultSession
 >                           , cStart = 8 -- quarters
 >                           , cDuration = 12 -- quarters
@@ -816,7 +816,7 @@ TBF: are the candidate values for cStart & cDur correct?
 >     assertEqual "test_ToSchedule" expected result
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft = 120 `addMinutes'` starttime
+>     ft = 120 `addMinutes` starttime
 >     fixed = Period 0 defaultSession ft 30 0.0 Pending ft False 30
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed]
@@ -830,9 +830,9 @@ Same test, >1 fixed
 >     assertEqual "test_ToSchedule" expected result
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft = 120 `addMinutes'` starttime
+>     ft = 120 `addMinutes` starttime
 >     fixed1 = Period 0 defaultSession ft 30 0.0 Pending ft False 30
->     ft2 = 270 `addMinutes'` starttime
+>     ft2 = 270 `addMinutes` starttime
 >     fixed2 = Period 0 defaultSession ft2 30 0.0 Pending ft2 False 30
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed1,fixed2]
@@ -1152,7 +1152,7 @@ TBF: Scores not right due to negative score for F1 !!!
 >   where
 >     sess = concatMap sessions pTestProjects
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = (4*60)  `addMinutes'` starttime
+>     ft1 = (4*60)  `addMinutes` starttime
 >     fixed = Period 0 defaultSession {sId = 0} ft1 60 0.0 Pending ft1 False 60
 >     duration = 5*60
 >     p1 = Period 0 defaultSession {sId = getPSessionId "CV"} starttime (4*60) 62.88887 Pending starttime False (4*60)
@@ -1172,8 +1172,8 @@ around fixed periods.
 >     sess = getOpenPSessions --concatMap sessions pTestProjects 
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = (4*60)  `addMinutes'` starttime
->     ft2 = (10*60) `addMinutes'` starttime
+>     ft1 = (4*60)  `addMinutes` starttime
+>     ft2 = (10*60) `addMinutes` starttime
 >     dur1 = 2*60
 >     dur2 = 4*60
 >     fixed1 = Period 0 ds {sId = 1000, sName = "1000"} ft1 dur1 0.0 Pending ft1 False dur1
@@ -1221,9 +1221,9 @@ Same as above, but with even more fixed periods
 >     sess = getOpenPSessions 
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     ft1 = (4*60)  `addMinutes'` starttime
->     ft2 = (10*60) `addMinutes'` starttime
->     ft3 = (22*60) `addMinutes'` starttime
+>     ft1 = (4*60)  `addMinutes` starttime
+>     ft2 = (10*60) `addMinutes` starttime
+>     ft3 = (22*60) `addMinutes` starttime
 >     d1 = (2*60)
 >     d2 = (4*60)
 >     d3 = (2*60)
@@ -1237,7 +1237,7 @@ Same as above, but with even more fixed periods
 >     open2 = Period 0 (ds {sId = getPSessionId "WV"}) (fromGregorian 2006 11 9 3 45 0) 360 10.263064 Pending starttime False 360
 >     expPeriods = [open1, fixed1, fixed2, open2, fixed3]
 >     sCV = findPSessionByName "CV"
->     dts = [(i*quarter) `addMinutes'` starttime | i <- [0..((240 `div` quarter)-1)]]
+>     dts = [(i*quarter) `addMinutes` starttime | i <- [0..((240 `div` quarter)-1)]]
 
 revealed a bug where scores are turning negative in pact.
 
@@ -1384,10 +1384,10 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     ds = defaultSession
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     dur = 24*60
->     ft1 = ((-4)*60)  `addMinutes'` starttime -- -outside range
->     ft2 = (10*60) `addMinutes'` starttime -- inside range
->     ft3 = (22*60) `addMinutes'` starttime -- overlaps end boundary
->     ft4 = (24*60*3) `addMinutes'` starttime -- outside range
+>     ft1 = ((-4)*60)  `addMinutes` starttime -- -outside range
+>     ft2 = (10*60) `addMinutes` starttime -- inside range
+>     ft3 = (22*60) `addMinutes` starttime -- overlaps end boundary
+>     ft4 = (24*60*3) `addMinutes` starttime -- outside range
 >     d = (4*60)
 >     fixed1 = Period 0 ds {sId = 1000, sName = "1000"} ft1 d 0.0 Pending starttime False d
 >     fixed2 = Period 0 ds {sId = 1001, sName = "1001"} ft2 d 0.0 Pending starttime False d
@@ -1439,9 +1439,9 @@ Now we can use it in a test:
 >     assertEqual "test_RandomScore" hr3Score result
 >   where
 >     dt = pythonTestStarttime 
->     dt1 = 59 `addMinutes'` dt
->     dt2 = 61 `addMinutes'` dt
->     dt3 = 121 `addMinutes'` dt
+>     dt1 = 59 `addMinutes` dt
+>     dt2 = 61 `addMinutes` dt
+>     dt3 = 121 `addMinutes` dt
 >     hr1Score = 7.1331340485018409
 >     hr2Score = 2.4934096782883213 
 >     hr3Score = 7.6572318406256947 
@@ -1456,7 +1456,7 @@ and test again:
 >     assertEqual "test_RandomScore2" expScores scores
 >   where
 >     dt = pythonTestStarttime
->     times = [(15*q) `addMinutes'` dt | q <- [0..23]]
+>     times = [(15*q) `addMinutes` dt | q <- [0..23]]
 >     score' w rt dt = do
 >         [(_, Just result)] <- runScoring w [] rt (randomScoreFactor dt defaultSession)
 >         return result
@@ -1490,7 +1490,7 @@ Here, packing duration (6 hrs) == session maxDur (6 hrs)
 >     duration = 6*60
 >     fixedSession = defaultSession {sId = 1001}
 >     fixed = Period 0 fixedSession starttime (3*60) 0.0 Pending starttime False (3*60)
->     p2 = Period 0 testSession ((3*60) `addMinutes'` starttime) (3*60) 0.0 Pending starttime False (3*60)
+>     p2 = Period 0 testSession ((3*60) `addMinutes` starttime) (3*60) 0.0 Pending starttime False (3*60)
 >     expScore = 133.01317 -- 5.542216 * (6*4) python: mean, here: sum
 
 
@@ -1504,7 +1504,7 @@ Here, packing duration (9 hrs) > session maxDur (6 hrs)
 >     assertEqual "test_TestPack_pack2" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
->     starttime2 = (6*60) `addMinutes'` pythonTestStarttime 
+>     starttime2 = (6*60) `addMinutes` pythonTestStarttime 
 >     duration = 9*60
 >     expScore1 = 5.2450013
 >     expScore2 = 4.7073417
@@ -1522,7 +1522,7 @@ Here, packing duration (7 hrs) > session maxDur (6 hrs)
 >     assertEqual "test_TestPack_pack3" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
->     starttime2 = (5*60) `addMinutes'` pythonTestStarttime 
+>     starttime2 = (5*60) `addMinutes` pythonTestStarttime 
 >     duration = 7*60
 >     expScore1 = 5.478371 -- 4.8132718634 * (2 * 4) python: mean, here: sum
 >     expScore2 = 2.891944 -- 5.2704045983 * (5 * 4) 
@@ -1546,7 +1546,7 @@ epsilon, and so is "correct".
 >     assertEqual "test_TestPack_pack8" expPeriods periods'
 >   where
 >     starttime = pythonTestStarttime
->     starttime2 = (6*60) `addMinutes'` pythonTestStarttime 
+>     starttime2 = (6*60) `addMinutes` pythonTestStarttime 
 >     duration = 12*60
 >     sessions = [testSession, testSession2]
 >     expPeriod1 = Period 0 testSession2 starttime  (6*60) 5.2450013 Pending starttime False (6*60)

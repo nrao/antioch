@@ -215,7 +215,7 @@ get on, it has a high chance of being canceled.
 >     assertEqual "test_updateHistory_2" r1 (updateHistory h1 s2 []) 
 >     assertEqual "test_updateHistory_3" r3 (updateHistory h1 s3 c3) 
 >   where
->     mkDts start num = map (\i->(i*dur) `addMinutes'` start) [0 .. (num-1)] 
+>     mkDts start num = map (\i->(i*dur) `addMinutes` start) [0 .. (num-1)] 
 >     mkPeriod dt = defaultPeriod { startTime = dt, duration = dur }
 >     dur = 120 -- two hours
 >     -- first test 

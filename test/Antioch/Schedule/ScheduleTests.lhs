@@ -160,7 +160,7 @@ TBF: constrain has not been fully implemented yet
 >     p1 = Period 0 cv dt (minDuration cv) 0.0 Pending dt False (minDuration cv)
 >     maxNumTPs = (sAllottedT cv) `div` (minDuration cv)
 >     maxTPs' = replicate maxNumTPs p1
->     dts = [(hr*60) `addMinutes'` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 
+>     dts = [(hr*60) `addMinutes` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 
 >     maxTPs = zipWith adjustPeriod maxTPs' dts
 >       where
 >         adjustPeriod p dt = p {startTime = dt}

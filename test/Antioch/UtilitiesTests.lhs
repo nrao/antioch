@@ -80,7 +80,7 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >   dt = fromGregorian 2006 10 15 11 0 0
 >   lst1 = hrs2rad' $ utc2lstHours' dt
 >   start = fromGregorian 2006 10 16 0 0 0
->   dts = [(i*60) `addMinutes'` start | i <- [0..23]]
+>   dts = [(i*60) `addMinutes` start | i <- [0..23]]
 >   lsts = map (hrs2rad' . utc2lstHours') dts
 >   expLsts = [5.315110946351022,5.577627117127827,5.840143287950469,6.102659458727275,8.199032232449549e-2,0.3445064931471453,0.6070226639239512,0.8695388347007567,1.1320550055233998,1.3945711763002058,1.657087347077011,1.9196035178996615,2.182119688676474,2.4446358594532875,2.7071520302759304,2.9696682010527287,3.2321843718295353,3.4947005426521778,3.7572167134289827,4.01973288420579,4.282249055028439,4.544765225805245,4.8072813965820504,5.069797567404693]
 
@@ -216,7 +216,7 @@ TimeAgent.hr2rad(TimeAgent.Absolute2RelativeLST(dt))
 >   assertEqual "test_periodInWindow_4"  False (periodInWindow p4 w)
 >   assertEqual "test_periodInWindow_5"  True  (periodInWindow p5 w)
 >     where
->   wr = [(defaultStartTime, addMinutes' (6*60) defaultStartTime)]
+>   wr = [(defaultStartTime, addMinutes (6*60) defaultStartTime)]
 >   w = defaultWindow { wRanges = wr }
 >   p1 = defaultPeriod {duration = 6*60-1}
 >   p2 = defaultPeriod {duration = 6*60}

@@ -127,7 +127,7 @@ session scores zero through out a 24 hr period.
 >     assertEqual "test_scoreDSSData" True ((length nonZeros) /= 0)
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
->     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     times = [(15*q) `addMinutes` starttime | q <- [0..96]]
 
 How a session scores can also reveal errors in how it was imported
 from the database.
@@ -152,7 +152,7 @@ from the database.
 >       name = "GBT09A-001-02"
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
->       times = [(15*q) `addMinutes'` start | q <- [0..16]]
+>       times = [(15*q) `addMinutes` start | q <- [0..16]]
 >       expScores = [0.0,0.71830034,0.723035,0.72897196,0.7306815,0.73508745,0.7376189,0.73988056,0.7450153,0.7467272,0.7482739,0.74967504,0.74223655,0.74284345,0.74342054,0.74397194,0.7436074]
 
 Test a specific session's attributes:
@@ -303,7 +303,7 @@ example in comments.
 >     where
 >       s' = defaultSession { sAllottedT = (8*60) }
 >       p' = defaultPeriod { duration = (4*60) }
->       wr = [(defaultStartTime, addMinutes' 7 defaultStartTime)]
+>       wr = [(defaultStartTime, addMinutes 7 defaultStartTime)]
 >       w' = defaultWindow { wRanges = wr, wPeriodId = Just . peId $ p' }
 
 > test_getWindows = TestCase $ do

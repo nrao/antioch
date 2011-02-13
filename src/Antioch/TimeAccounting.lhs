@@ -120,7 +120,7 @@ How much time has this session used up in periods?
 > isPast :: DateTime -> Period -> Bool
 > isPast dt p = isUsed p && (endTime p) < dt
 >   where
->     endTime pd = (duration pd) `addMinutes'` (startTime pd)
+>     endTime pd = (duration pd) `addMinutes` (startTime pd)
 
 How much time has this project used up in periods?
 

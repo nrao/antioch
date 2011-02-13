@@ -181,7 +181,7 @@ Example params:
 >     let ss = concatMap sessions projs
 >
 >     -- setup the enviornment; watch for tests
->     w <- liftIO $ if test then getWeatherTest $ Just (addMinutes' (-60) dt) else getWeather Nothing
+>     w <- liftIO $ if test then getWeatherTest $ Just (addMinutes (-60) dt) else getWeather Nothing
 >     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
 >     rt <- liftIO $ getReceiverTemperatures
 > 
@@ -211,7 +211,7 @@ Variables:
 >   moc <- runScoring w rs rt $ minimumObservingConditions dt dur s
 >   return moc
 >     where
->   hrEarlyDt = addMinutes' (-60) dt
+>   hrEarlyDt = addMinutes (-60) dt
 
 Utilities:
 

@@ -305,6 +305,6 @@ Scores the named session for the interval spanned.
 >     scores <- mapM (score' s) times
 >     return scores
 >   where
->     times = [(15*q) `addMinutes'` dt | q <- [0..(dur `div` 15)]]
+>     times = [(15*q) `addMinutes` dt | q <- [0..(dur `div` 15)]]
 > 
 

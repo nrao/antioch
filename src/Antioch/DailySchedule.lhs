@@ -54,7 +54,7 @@ hour scheduling period.
 >     -- figure out the time period to schedule for
 >     let workStartMinutes = 8*60  -- TBF when do they get to work?
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
->     let dur = endTime `diffMinutes'` dt 
+>     let dur = endTime `diffMinutes` dt 
 >     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
 >     let history' = filterHistory history dt (days + 1)
 >     liftIO $ pr quiet $ "scheduling around periods: "
@@ -93,7 +93,7 @@ start hour of the work day in ET.
 >     return $ getEndTime' lastDay endTimeMinutes
 >   where
 >     daysMinutes    = 24*60*days -- lastdays in minutes 
->     lastDay        = daysMinutes `addMinutes'` start
+>     lastDay        = daysMinutes `addMinutes` start
 >     pastDstMinutes = 8*60 -- DST takes place at about 06:00:00 UT
 
 Given the end of the scheduling period and the offset on the last day,

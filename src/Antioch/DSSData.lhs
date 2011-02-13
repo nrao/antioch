@@ -650,7 +650,7 @@ A single Window can have mutliple date ranges associated with it.
 >     query = "SELECT start_date, duration FROM window_ranges WHERE window_id = ?"
 >     toDateRangeList = map toDateRange
 >     toDateRange (start:dur:[]) = (sqlToDate start, toEnd (sqlToDate start) (fromSql dur))
->     toEnd start days = addMinutes' (days*24*60) start 
+>     toEnd start days = addMinutes (days*24*60) start 
 
 > getWindowTimeBilled :: Connection -> Window -> IO Minutes
 > getWindowTimeBilled cnn w = do

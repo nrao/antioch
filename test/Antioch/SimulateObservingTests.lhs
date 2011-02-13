@@ -54,7 +54,7 @@
 >       sf <- genScore (startTime p) ss
 >       -- replaceWithBackup gets called from scheduleBackup, which
 >       -- resets the weather to use:
->       let wDt = addMinutes' (-60) (startTime p)
+>       let wDt = addMinutes (-60) (startTime p)
 >       w' <- liftIO $ newWeather w (Just wDt)
 >       local (\env -> env { envWeather = w', envMeasuredWind = True}) $ replaceWithBackup Pack sf ss p   
 > 

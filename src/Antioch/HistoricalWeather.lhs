@@ -73,7 +73,7 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 > start = fromGregorian 2006 1 1 0 0 0
 > end   = fromGregorian 2007 1 1 0 0 0
-> hours = (end `diffMinutes'` start) `div` 60
+> hours = (end `diffMinutes` start) `div` 60
 
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
@@ -99,7 +99,7 @@ also call it from the parrallel version ('genhists').
 >     rts <- getReceiverTemperatures
 >     forM_ (getWeatherDates' startDt endDt) $ \dt -> do
 >       -- dt offset insures that we get forecasts & not real wind
->       w <- getWeather . Just $ (addMinutes' (-60) dt)
+>       w <- getWeather . Just $ (addMinutes (-60) dt)
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
@@ -116,7 +116,7 @@ also call it from the parrallel version ('genhists').
 >     rts <- getReceiverTemperatures
 >     forM_ getWeatherDates $ \dt -> do
 >       -- dt offset insures that we get forecasts & not real wind
->       w <- getWeather . Just $ (addMinutes' (-60) dt)
+>       w <- getWeather . Just $ (addMinutes (-60) dt)
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
@@ -130,11 +130,11 @@ also call it from the parrallel version ('genhists').
 >       putStringency cnn strs rcvr freq elev Continuum
 >       putStringency cnn strs rcvr freq elev SpectralLine
 
-> getWeatherDates = [(h * 60) `addMinutes'` start | h <- [0 .. (hours - 1)]]
+> getWeatherDates = [(h * 60) `addMinutes` start | h <- [0 .. (hours - 1)]]
 
-> getWeatherDates' startDt endDt = [(h * 60) `addMinutes'` startDt | h <- [0 .. (hours' - 1)]]
+> getWeatherDates' startDt endDt = [(h * 60) `addMinutes` startDt | h <- [0 .. (hours' - 1)]]
 >   where
->     hours' = (endDt `diffMinutes'` startDt) `div` 60
+>     hours' = (endDt `diffMinutes` startDt) `div` 60
 
 > allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 

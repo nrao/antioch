@@ -63,7 +63,7 @@ Introduced in rev 1028; no difference from rev 959
 >       starttime = fromGregorian 2006 11 8 12 0 0
 >       days = 7
 >       numQtrs = days * 24 * 4
->       times = [(15*q) `addMinutes'` starttime | q <- [0..numQtrs]]
+>       times = [(15*q) `addMinutes` starttime | q <- [0..numQtrs]]
 >       getWeatherData freq w dt = tsys w dt freq
 >       
 
@@ -103,7 +103,7 @@ Reintroducing static isDayTime code brings it back to almost same time as 959!
 >       sess = getOpenPSessions 
 >       s = head $ sess
 >       starttime = fromGregorian 2006 11 8 12 0 0
->       times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>       times = [(15*q) `addMinutes` starttime | q <- [0..96]]
 
 
 > benchmark_pack_1 :: IO ()

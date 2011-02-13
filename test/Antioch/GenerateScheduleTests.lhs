@@ -341,7 +341,7 @@
 >     days = 30
 >     psWidth = 30*24*60 -- days in minutes
 >     numPs = 5
->     dts = [ addMinutes' (i*psWidth) start | i <- [0..numPs]]
+>     dts = [ addMinutes (i*psWidth) start | i <- [0..numPs]]
 >     mkPeriod dt = defaultPeriod { startTime = dt, duration = 60 }
 >     inJustOneWindow ws p = 1 == (length $ filter (==True) $ map (periodInWindow p) ws)
 
@@ -357,18 +357,18 @@
 >     p  = defaultPeriod { session = s, startTime = start,  duration = 4*60 }
 >     p2 = defaultPeriod { session = s, startTime = start2, duration = 4*60 }
 >     wstart1 = fromGregorian 2006 2 8 0 0 0
->     wr1 = [(wstart1, addMinutes' (3*24*60) wstart1)]
+>     wr1 = [(wstart1, addMinutes (3*24*60) wstart1)]
 >     validW = defaultWindow { wSession = s
 >                            , wRanges = wr1 }
->     wr2 = [(wstart1, addMinutes' (1*24*60) wstart1)]
+>     wr2 = [(wstart1, addMinutes (1*24*60) wstart1)]
 >     invalidW = defaultWindow { wSession = s
 >                              , wRanges = wr2 }
 >     wstart3 = fromGregorian 2006 2 13 0 0 0
->     wr3 = [(wstart3, addMinutes' (3*24*60) wstart3)]
+>     wr3 = [(wstart3, addMinutes (3*24*60) wstart3)]
 >     w2 = defaultWindow { wSession = s
 >                        , wRanges = wr3 }
 >     wstart4 = fromGregorian 2006 2 10 0 0 0
->     wr4 = [(wstart4, addMinutes' (7*24*60) wstart4)]
+>     wr4 = [(wstart4, addMinutes (7*24*60) wstart4)]
 >     w3 = defaultWindow { wSession = s
 >                        , wRanges = wr4 }
 >     validSess    = makeSession s [validW] [p]

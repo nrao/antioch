@@ -237,7 +237,7 @@ more constraints.
 >   -- TBF: anything more then 2 days causes an exception!!!! WTF!!!!
 >   wtime = (2*24*60)
 >   winStart1 = fromGregorian' 2006 10 12
->   wr = [(winStart1, addMinutes' (7*24*60) winStart1)]
+>   wr = [(winStart1, addMinutes (7*24*60) winStart1)]
 >   w =       defaultWindow {
 >                 wPeriodId = Just 100
 >               , wTotalTime =  wtime

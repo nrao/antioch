@@ -223,7 +223,7 @@ hours offset vs. raw wind speed
 >   yl = "wind (mph)"
 >   fn = "wind_mph.png"
 >   hours = dur `div` 60 
->   times = [(i*60) `addMinutes'` dt | i <- [0 .. hours]]
+>   times = [(i*60) `addMinutes` dt | i <- [0 .. hours]]
 >   deltas = [0 .. hours]
 >   getWindsMPH' w dt = wind_mph w dt 
 
@@ -648,8 +648,8 @@ simFreqSchTime (circles, dt on x-axis)
 >       canceled = getCanceledPeriods trace
 >       start = startTime . head $ ps
 >       lastPs = last ps
->       end   = (duration lastPs) `addMinutes'` (startTime lastPs)
->       deadtime = getScheduledDeadTime start (end `diffMinutes'` start) ps trace 
+>       end   = (duration lastPs) `addMinutes` (startTime lastPs)
+>       deadtime = getScheduledDeadTime start (end `diffMinutes` start) ps trace 
 >       pl1 = zip (historicalExactTime' ps' Nothing) (historicalFreq ps')
 >       pl2 = zip (historicalExactTime' canceled (Just start)) (historicalFreq canceled)
 >       pl3 = zip (historicalExactTime' backups (Just start)) (historicalFreq backups)

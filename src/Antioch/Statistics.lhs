@@ -1,8 +1,8 @@
 > module Antioch.Statistics where
 
 > import Antioch.DateTime   (fromGregorian, toGregorian, DateTime
->                          , addMinutes, addMinutes'
->                          , diffMinutes, diffMinutes', toSqlString, getCurrentTime)
+>                          , addMinutes, diffMinutes, toSqlString
+>                          , getCurrentTime)
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.Score
@@ -72,7 +72,7 @@ To Do List (port from Statistics.py):
 > fracObservedTimeByDays ss ps = map fracObservedTime days
 >   where
 >     days = [0 .. (numDays + 1)]
->     --numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
+>     --numDays = ((diffMinutes lastDt firstDt) `div` (60 * 24)) 
 >     --firstDt = startTime $ head ps
 >     --lastDt  = startTime $ last ps
 >     firstDt = fst $ getPeriodRange ps
@@ -81,7 +81,7 @@ To Do List (port from Statistics.py):
 >     fracObservedTime day = (fromIntegral day,(total - (observed day)) / total)
 >     observed day = getTotalHours $ observedPeriods day
 >     observedPeriods day = takeWhile (\p -> startTime p < (toDt day)) ps
->     toDt day = (day * 24 * 60) `addMinutes'` firstDt
+>     toDt day = (day * 24 * 60) `addMinutes` firstDt
 
 > fracObservedTimeByDays' :: [Session] -> [Period] -> DateTime -> Int -> [(Float, Float)]
 > fracObservedTimeByDays' _  [] _ _ = []
@@ -89,19 +89,19 @@ To Do List (port from Statistics.py):
 > fracObservedTimeByDays' ss ps start numDays = map fracObservedTime days
 >   where
 >     days = [0 .. (numDays + 1)]
->     --numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
+>     --numDays = ((diffMinutes lastDt firstDt) `div` (60 * 24)) 
 >     --firstDt = startTime $ head ps
 >     --lastDt  = startTime $ last ps
 >     total = totalSessionHrs ss
 >     fracObservedTime day = (fromIntegral day,(total - (observed day)) / total)
 >     observed day = getTotalHours $ observedPeriods day
 >     observedPeriods day = takeWhile (\p -> startTime p < (toDt day)) ps
->     toDt day = (day * 24 * 60) `addMinutes'` start
+>     toDt day = (day * 24 * 60) `addMinutes` start
 
 > getPeriodRange :: [Period] -> (DateTime, Int)
 > getPeriodRange ps = (firstDt, numDays)
 >   where
->     numDays = ((diffMinutes' lastDt firstDt) `div` (60 * 24)) 
+>     numDays = ((diffMinutes lastDt firstDt) `div` (60 * 24)) 
 >     firstDt = startTime $ head ps
 >     lastDt  = startTime $ last ps
 
@@ -121,7 +121,7 @@ need to use the trace to do this correctly.
 >     fracRemainingTime day = (fromIntegral day, totalRemaining day)
 >     --totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
 >     totalRemaining day = fractionalHours . sum $ map (remaining (toDt day)) $ ss 
->     toDt day = (day * 24 * 60) `addMinutes'` start
+>     toDt day = (day * 24 * 60) `addMinutes` start
 >     remaining dt s = (rho dt s) + (sPastS dt s)
 >     -- this is simply cut and paste from Score.initBins'
 >     rho dt s
@@ -145,7 +145,7 @@ See Also Score.initBins'.
 >     days = [0 .. (numDays + 1)]
 >     fracSemesterTime day = (fromIntegral day, totalSemester day)
 >     totalSemester day = fractionalHours . sum $ map (sPastS (toDt day)) $ ss 
->     toDt day = (day * 24 * 60) `addMinutes'` start
+>     toDt day = (day * 24 * 60) `addMinutes` start
 
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
 > historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericEfficiency
@@ -235,7 +235,7 @@ factor at each quarter of the period *for the time it observed*.
 >   fs <- mapM (periodObsFactors' p sf w rt) dts 
 >   return $ map eval fs
 >     where
->   dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
+>   dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
 > periodObsFactors' :: Period -> ScoreFunc -> Weather -> ReceiverTemperatures -> DateTime -> IO Factors
 > periodObsFactors' p sf w rt dt = do
@@ -430,7 +430,7 @@ Compare allocated hours by frequency to observed hours by frequency.
 > historicalTime = map startTime
 >
 > historicalTime' :: [Period] -> [Int]
-> historicalTime' ps = map (minutesToDays . flip diffMinutes' tzero) times
+> historicalTime' ps = map (minutesToDays . flip diffMinutes tzero) times
 >   where
 >     times = sort . map startTime $ ps
 >     tzero = head times
@@ -439,25 +439,25 @@ Compare allocated hours by frequency to observed hours by frequency.
 > fractionalDays min = fromIntegral min / (24.0 * 60.0)
 
 > historicalExactTime' :: [Period] -> Maybe DateTime -> [Float]
-> historicalExactTime' ps start = map (fractionalDays . flip diffMinutes' tzero) times
+> historicalExactTime' ps start = map (fractionalDays . flip diffMinutes tzero) times
 >   where
 >     times = sort . map startTime $ ps
 >     tzero = fromMaybe (head times) start
 
 > historicalTime'' :: [DateTime] -> [Int]
-> historicalTime'' dts = map (minutesToDays . flip diffMinutes' tzero) times
+> historicalTime'' dts = map (minutesToDays . flip diffMinutes tzero) times
 >   where
 >     times = sort dts 
 >     tzero = head times
 
 > historicalExactTime'' :: [DateTime] -> Maybe DateTime -> [Float]
-> historicalExactTime'' dts start = map (fractionalDays . flip diffMinutes' tzero) times
+> historicalExactTime'' dts start = map (fractionalDays . flip diffMinutes tzero) times
 >   where
 >     times = sort dts 
 >     tzero = fromMaybe (head times) start
 
 > historicalLST    :: [Period] -> [Float]
-> historicalLST ps = [utc2lstHours . addMinutes' (duration p `div` 2) . startTime $ p | p <- ps]
+> historicalLST ps = [utc2lstHours . addMinutes (duration p `div` 2) . startTime $ p | p <- ps]
 
 Produces a tuple of (satisfaction ratio, sigma) for each frequency bin scheduled.
 
@@ -597,8 +597,8 @@ each quarter so that we pick up gbt_weather and latest forecast.
 > getPeriodObsEffFactors w rt rs p = mapM (getObsEffScoringFactors w rt rs (session p)) dts
 >   where
 >     dts = [(startTime p)
->         ,  (addMinutes' 15 (startTime p))
->         .. (addMinutes' (duration p) (startTime p))]
+>         ,  (addMinutes 15 (startTime p))
+>         .. (addMinutes (duration p) (startTime p))]
 > 
 
 > getPeriodSchdEffFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO [Factors]
@@ -608,8 +608,8 @@ each quarter so that we pick up gbt_weather and latest forecast.
 >   runScoring w' rs rt $ mapM (flip getEfficiencyScoringFactors' (session p)) dts
 >   where
 >     dts = [(startTime p)
->         ,  (addMinutes' 15 (startTime p))
->         .. (addMinutes' (duration p) (startTime p))]
+>         ,  (addMinutes 15 (startTime p))
+>         .. (addMinutes (duration p) (startTime p))]
 
 > getPeriodsObsEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) 
 > getPeriodsObsEffs w rt rs ps = do
@@ -773,10 +773,10 @@ original slot (this will be overwritting a backup period, or a blank).
 >     begin : [(startTime p, duration p) | p <- ps] ++ [end]
 >   where
 >     begin = (start, 0)
->     end   = (dur `addMinutes'` start, 0)
+>     end   = (dur `addMinutes` start, 0)
 
-> findScheduleGaps' ps = [(d1 `addMinutes'` s1, gap) |
->     ((s1,d1), (s2,d2)) <- zip ps (tail ps), gap <- [(s2 `diffMinutes'` s1) - d1], gap > 0]
+> findScheduleGaps' ps = [(d1 `addMinutes` s1, gap) |
+>     ((s1,d1), (s2,d2)) <- zip ps (tail ps), gap <- [(s2 `diffMinutes` s1) - d1], gap > 0]
 
 > getTotalHours :: [Period] -> Float
 > getTotalHours = fractionalHours . sum . map duration

@@ -59,7 +59,7 @@ we are packing must be restored.
 > restoreFixedBoundraies fs dt dur ps = restoreBnd end False fs $ restoreBnd start True fs ps
 >   where
 >     start = dt
->     end = dur `addMinutes'` dt
+>     end = dur `addMinutes` dt
 
 Checks the boundry of the time range that we are packing for 
 ('hd' == True is for the start of the packing time range) to see if one of the
@@ -117,10 +117,10 @@ function assumes its inputs are sorted.
 >     | dt  <  begin = Nothing : toSchedule dts' ps
 >     | end <= dt    = toSchedule dts ps'
 >     | otherwise    =
->         Just (Candidate (session p) (pId . project . session $ p) 0 (1 + (numSteps $ dt `diffMinutes'` begin)) (pScore p)) : toSchedule dts' ps
+>         Just (Candidate (session p) (pId . project . session $ p) 0 (1 + (numSteps $ dt `diffMinutes` begin)) (pScore p)) : toSchedule dts' ps
 >   where
 >     begin = startTime p
->     end   = addMinutes' (duration p) begin
+>     end   = addMinutes (duration p) begin
 >     id   = pId . project . session $ p
 
 Convert an open session `s` into a schedulable item by scoring it with

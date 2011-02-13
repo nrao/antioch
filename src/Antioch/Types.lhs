@@ -118,7 +118,7 @@ use a single data structure for all sessions.
 > wEnd w = maximum $ map snd $ wRanges w
 
 > wDuration :: Window -> Minutes
-> wDuration w = diffMinutes' (wEnd w) (wStart w)
+> wDuration w = diffMinutes (wEnd w) (wStart w)
 
 > instance Ord Window where
 >     (<) = (<) `on` wStart
@@ -274,10 +274,10 @@ is slightly arbitrary.
 Simple Functions for Periods:
 
 > periodHalfTime :: Period -> DateTime
-> periodHalfTime p = addMinutes' (duration p `div` 2) $ startTime p
+> periodHalfTime p = addMinutes (duration p `div` 2) $ startTime p
 
 > periodEndTime :: Period -> DateTime
-> periodEndTime p = addMinutes' (duration p) $ startTime p
+> periodEndTime p = addMinutes (duration p) $ startTime p
 
 > defaultSession = Session {
 >     sId         = 0

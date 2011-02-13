@@ -204,7 +204,7 @@ antioch/admin/tests/TestSolarHeating.testIsDayTime
 >     assertEqual "test_isDayTime_2_1" (exp) (isDayTimes)
 >   where
 >     start = fromGregorian 2010 1 1 0 0 0
->     dts = [ (qtr*15) `addMinutes'` start | qtr <- [0 .. (4*24 - 1)]]
+>     dts = [ (qtr*15) `addMinutes` start | qtr <- [0 .. (4*24 - 1)]]
 >     isDayTimes = map isDayTime dts
 >     exp = (take (12*4 + 2) $ repeat False) ++ (take (9*4 + 2) $ repeat True) ++ (take (1*4 + 4) $ repeat False)
 

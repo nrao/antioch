@@ -135,7 +135,7 @@ Generate a period that starts with the given time range.
 >                          , pForecast = start -- ??? TBF
 >                          }
 >     where
->   start' day hour = addMinutes' ((day*24*60)+(hour*60)) start
+>   start' day hour = addMinutes ((day*24*60)+(hour*60)) start
 
 Very much like genFixedSchedule, here we create a list of list of periods: that is, 
 each sub-list of periods should belong to a single windowed session, and should be
@@ -170,11 +170,11 @@ fit into the given time range.
 >   hour <- choose (0, 23)
 >   duration <- choose (1, 8) -- hours
 >   let firstStart = getStart day hour
->   let dts = filter (<end) $ [addMinutes' (d*24*60) firstStart | d <- [0, intervalDays .. (numWindows * intervalDays)]]
+>   let dts = filter (<end) $ [addMinutes (d*24*60) firstStart | d <- [0, intervalDays .. (numWindows * intervalDays)]]
 >   return $! map (mkPeriod duration) dts 
 >     where
->   end = addMinutes' (days*24*60) start
->   getStart day hour = addMinutes' ((day*24*60)+(hour*60)) start
+>   end = addMinutes (days*24*60) start
+>   getStart day hour = addMinutes ((day*24*60)+(hour*60)) start
 >   mkPeriod dur dt = defaultPeriod { startTime = dt
 >                                   , duration  = dur*60
 >                                   , pForecast = dt -- TBF, WTF??? 
@@ -223,15 +223,15 @@ From an evenly spaced list of periods, create the list of windows
 >     let dur = 24*60*durDays
 >     let (phYear, phMonth, phDay, _, _, _) = toGregorian . startTime $ ph
 >     let dayStart = fromGregorian phYear phMonth phDay 0 0 0
->     let dts = [addMinutes' (-dur) $ addMinutes' (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
+>     let dts = [addMinutes (-dur) $ addMinutes (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
 >     return $ map (mkWindow dur) dts
 >   where
 >     days = (*(24*60))
->     pDiff = if pt == [] then days 10 else diffMinutes' (startTime . head $ pt) (startTime ph)
+>     pDiff = if pt == [] then days 10 else diffMinutes (startTime . head $ pt) (startTime ph)
 >     -- a window can't be more then one day less then the separation between
 >     maxWidthDays = (pDiff - days 2) `div` (24*60)
 >     numPs = length ps
->     mkWindow dur dt = defaultWindow {wRanges = [(dt, addMinutes' (dur + days 2) dt)]}
+>     mkWindow dur dt = defaultWindow {wRanges = [(dt, addMinutes (dur + days 2) dt)]}
 
 Self-test to be called in unit tests and simulations
 
@@ -267,7 +267,7 @@ that falls in the time range, and filtering out what's not needed.
 
 > genMaintenancePeriods :: DateTime -> Int -> Session -> Gen [Period]
 > genMaintenancePeriods start days s = do
->   let end = addMinutes' (days*24*60) start
+>   let end = addMinutes (days*24*60) start
 >   let (lastYear, _, _, _, _, _) = toGregorian end
 >   let (firstYear, _, _, _, _, _) = toGregorian start
 >   ps <- mapM (genMaintenancePeriodsByYear s) [firstYear .. lastYear]
@@ -319,7 +319,7 @@ to be randomly placed in the middle 5 days of each week.
 > genWeeklyMaintPeriods start end s = return $ filter (\p -> (startTime p) < end) $ map (mkMaintPeriod s (8*60)) $ dts numWeeks
 >   where
 >     numWeeks = round $ (fromIntegral $ end - start) / (60*60*24*7)
->     dts numWeeks = [(week*7*24*60) `addMinutes'` start | week <- [0 .. numWeeks]]
+>     dts numWeeks = [(week*7*24*60) `addMinutes` start | week <- [0 .. numWeeks]]
 
 We don't care about getting the days of the week correclty, as long
 as we have:
@@ -334,8 +334,8 @@ as we have:
 >     summerStart = fromGregorian year 6 1 0 0 0 
 >     summerEnd   = fromGregorian year 9 1 0 0 0 
 >     numWeeks = round $ (fromIntegral $ summerEnd - summerStart) / (60*60*24*7)
->     weekDts start numWeeks = [(week*7*24*60) `addMinutes'` start | week <- [0 .. numWeeks]]
->     dayDts start = [(day*24*60) `addMinutes'` start | day <- [1 .. 4]]
+>     weekDts start numWeeks = [(week*7*24*60) `addMinutes` start | week <- [0 .. numWeeks]]
+>     dayDts start = [(day*24*60) `addMinutes` start | day <- [1 .. 4]]
 >     mkMaintWeek start = map (mkMaintPeriod s (10*60)) $ dayDts start
 
 > mkMaintPeriod :: Session -> Minutes -> DateTime -> Period

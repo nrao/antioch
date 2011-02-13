@@ -75,14 +75,14 @@ can calculate stringencies over a year in just 5.5 hours (an improvement over
 >   print $ "overall execution time (secs): " ++ (show $ endTime - startTime)
 >   print $ "parsing execution time (secs): " ++ (show $ endTime - startTime2)
 >     where
->       hrs = (end `diffMinutes'` start) `div` 60
+>       hrs = (end `diffMinutes` start) `div` 60
 
 Split up the given time range by n.
 
 > getDateRanges :: DateTime -> DateTime -> Int -> [(DateTime, DateTime)]
-> getDateRanges start end numRanges = [(addMinutes' (i*intervalMins) start,addMinutes' ((i+1)*intervalMins) start) | i <- [0 .. numRanges - 1]]
+> getDateRanges start end numRanges = [(addMinutes (i*intervalMins) start,addMinutes ((i+1)*intervalMins) start) | i <- [0 .. numRanges - 1]]
 >   where
->     intervalMins = (diffMinutes' end start) `div` numRanges
+>     intervalMins = (diffMinutes end start) `div` numRanges
 
 Fire off a process for filling stringincies using the given time range by
 making a system call.

@@ -482,7 +482,7 @@ TBF: we can make this more sophisticated.
 >     -- make sure that max & min session durations are obeyed, and that
 >     -- we don't create1 any dead space from holes < smalles min. session
 >     let schedDurs = round2quarter $ schedDur `div` n 
->     let dts = [ (schedDurs * i) `addMinutes'` starttime | i <- [0 .. (n-1)]]
+>     let dts = [ (schedDurs * i) `addMinutes` starttime | i <- [0 .. (n-1)]]
 >     -- TBF: randomly select which sessions to generate periods for
 >     mapM (genSchedulePeriod (head sessions) schedDurs) dts 
 
@@ -553,7 +553,7 @@ TBF: is there a better way to generalize internalConflicts to work w/ Windows?
 > minutesBetween :: [Period] -> [Minutes]
 > minutesBetween []     = []
 > minutesBetween (p:[]) = []
-> minutesBetween (p:ps) = diffMinutes' (startTime (head ps)) (endTime p) : minutesBetween ps
+> minutesBetween (p:ps) = diffMinutes (startTime (head ps)) (endTime p) : minutesBetween ps
 
 
 > type Semester = Char

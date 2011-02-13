@@ -211,6 +211,6 @@ time range, then this is true.
 >   where
 >     bs = pBlackouts . project $ s
 >     start = dt
->     end = addMinutes' dur dt
+>     end = addMinutes dur dt
 >     cover s1 e1 (s2, e2) = (s2 <= s1) && (e1 <= e2)  
 

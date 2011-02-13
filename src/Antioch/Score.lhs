@@ -724,7 +724,7 @@ which we need to check.
 > inWindow :: DateTime -> Window -> Bool
 > inWindow dt w = any (==True) $ map (inTimeRange' dt) $ wRanges w
 >   where 
->     inTimeRange' dt (start, end) = inTimeRange dt start (diffMinutes' end start)
+>     inTimeRange' dt (start, end) = inTimeRange dt start (diffMinutes end start)
 
 > availWindows :: Session -> [Window]
 > availWindows = filter (not . wComplete) . windows
@@ -925,7 +925,7 @@ that it does not assume zero for the overhead quarters does not matter.
 >     -- TBF:  Using the measured wind speed for scoring in the future
 >     -- is unrealistic, but damn convenient!
 >     numQtrs = dur `div` quarter
->     times = [(q*quarter) `addMinutes'` dt | q <- [0..(numQtrs-1)]]
+>     times = [(q*quarter) `addMinutes` dt | q <- [0..(numQtrs-1)]]
 >     sumScores scores = case dropWhile (>0.0) scores of
 >         [] -> sum scores
 >         otherwise -> 0.0 -- don't allow zero-scored quarters
@@ -979,7 +979,7 @@ and periods.
 >   scorePeriod' dt = do
 >     fs <- runScoring w rs rt $ genPeriodScore st ss >>= \f -> f dt s
 >     return $ eval fs
->   dts = [(i*quarter) `addMinutes'` st | i <- [0..(((duration p) `div` quarter)-1)]]
+>   dts = [(i*quarter) `addMinutes` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
 FYI, this function has no unit tests, possibly because it is never used!
 TBF WTF OMG BBQ: scorePeriod & scoreSession look like they could really 
@@ -998,7 +998,7 @@ vs. genPeriodScore).
 >   scoreSession' dt = do
 >     fs <- runScoring w rs rt $ genScore st ss >>= \f -> f dt s
 >     return $ eval fs
->   dts = [(i*quarter) `addMinutes'` st | i <- [0..((dur `div` quarter)-1)]]
+>   dts = [(i*quarter) `addMinutes` st | i <- [0..((dur `div` quarter)-1)]]
 
 These methods for scoring a session are to be used in conjunction with
 Schedule's 'best' function.
@@ -1038,7 +1038,7 @@ that it does not assume zero for the overhead quarters does not matter.
 >     scores <- mapM (liftM eval . flip sf s) times
 >     return $! addScores scores
 >   where
->     times  = map (`addMinutes'` dt) [0, quarter .. dur-1]
+>     times  = map (`addMinutes` dt) [0, quarter .. dur-1]
 
 Add a set of scores, with the added complication that if any
 individual score is zero then the end result must also be zero.
@@ -1075,7 +1075,7 @@ the provided duration and the session's duration is used.
 >     timeLeft = min (pAvailT . project $ session) (sAvailT session)
 >     longest = min timeLeft $ maybe (maxDuration session) (min . maxDuration $ session) upper
 >     durs   = [quarter, 2*quarter .. longest]
->     times  = map (`addMinutes'` dt) [0, quarter .. (longest - quarter)]
+>     times  = map (`addMinutes` dt) [0, quarter .. (longest - quarter)]
 >     findBest x y = if (fst x) > (fst y) then x else y
 
 For a start time, optional minimum/maximum durations, and a list
@@ -1236,7 +1236,7 @@ Need to translate a session's factors into the final product score.
 >   factors <- mapM (score' w) times
 >   return factors
 >     where
->       times = [(15*q) `addMinutes'` st | q <- [0..(numQtrs-1)]]
+>       times = [(15*q) `addMinutes` st | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
 
 > scoreElements :: Session -> Weather -> ReceiverTemperatures -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO [Factors]
@@ -1251,7 +1251,7 @@ Need to translate a session's factors into the final product score.
 >   sfactors <- mapM (score' w) times
 >   return $ zipWith4 (\a b c d -> a ++ b ++ c ++ d) pfactors wfactors ffactors sfactors
 >     where
->       times = [(15*q) `addMinutes'` st | q <- [0..(numQtrs-1)]]
+>       times = [(15*q) `addMinutes` st | q <- [0..(numQtrs-1)]]
 >       numQtrs = dur `div` 15
 
 sfactors :: Maybe (Float, Float) -> ScoreFunc -> ScoreFunc -> [ScoreFunc]
@@ -1401,7 +1401,7 @@ for, pForecast).
 > factorPeriod p sf = mapM (factorPeriod' sf) dts
 >   where
 >     factorPeriod' sf dt = sf dt (session p)
->     dts = [(i*quarter) `addMinutes'` (startTime p) | i <- [0..((duration p) `div` quarter)]]
+>     dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
 Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 
@@ -1417,7 +1417,7 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 >   putStrLn report
 >   writeFile "scoringInfo.txt" report
 >     where
->       times = [(15*q) `addMinutes'` dt | q <- [0..numQtrs]]
+>       times = [(15*q) `addMinutes` dt | q <- [0..numQtrs]]
 >       numQtrs = dur `div` 15
 
 > printFactors :: [(DateTime, (Score, Factors))] -> String

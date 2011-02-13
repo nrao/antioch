@@ -38,7 +38,7 @@ in a temporary file.
 >     rts <- getReceiverTemperatures
 >     forM_ (getWeatherDates' startDt endDt) $ \dt -> do
 >       -- dt offset insures that we get forecasts & not real wind
->       w <- getWeather . Just $ (addMinutes' (-60) dt)
+>       w <- getWeather . Just $ (addMinutes (-60) dt)
 >       runScoring w [] rts $ do
 >         forM_ allRcvrs' $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
@@ -51,7 +51,7 @@ in a temporary file.
 >     writeFile filename $ concat . concat . concat . concat $ lns 
 >     print $ "Update of Stringency table complete."
 >   where
->     hrs = (endDt `diffMinutes'` startDt) `div` 60
+>     hrs = (endDt `diffMinutes` startDt) `div` 60
 
 > getStringencyLines stringencies hrs cnn = do
 >     strs <- readIORef stringencies
@@ -78,9 +78,9 @@ stringency2006-01-01.txt
 > getFileName :: DateTime -> String
 > getFileName dt =  "stringency" ++ (take 10 $ toSqlString dt) ++ ".txt"
 
-> getWeatherDates' s e = [(h * 60) `addMinutes'` s | h <- [0 .. (hrs - 1)]]
+> getWeatherDates' s e = [(h * 60) `addMinutes` s | h <- [0 .. (hrs - 1)]]
 >   where
->     hrs = (e `diffMinutes'` s) `div` 60
+>     hrs = (e `diffMinutes` s) `div` 60
 
 > allRcvrs' = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 

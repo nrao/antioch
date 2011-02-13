@@ -56,7 +56,7 @@ because of dateSafe should they all not return the 2006 value?
 >     where
 >       test_year dt val = do
 >          w <- getWeatherTest $ Just dt
->          wind' <- wind w (60 `addMinutes'` dt)
+>          wind' <- wind w (60 `addMinutes` dt)
 >          assertEqual ("test_years_" ++ (toSqlString dt)) val (fromMaybe (-1.0) wind')
 >       val06 = 5.8049664
 >       n     = (-1.0) 
@@ -220,7 +220,7 @@ to 2006 date.
 >   winds <- mapM (getGbtWind w) (dts dt)
 >   assertEqual "test_gbt_wind_2" exp winds
 >     where
->       dts start = map (\q -> (q*15) `addMinutes'` start) [0..8]
+>       dts start = map (\q -> (q*15) `addMinutes` start) [0..8]
 >       getGbtWind w d = gbt_wind w d
 >       exp = [Just 1.5640465,Just 1.5640465,Just 0.834291,Just 0.834291,Just 0.834291,Just 0.834291,Just 0.6365064,Just 0.6365064,Just 0.6365064]
 
@@ -233,7 +233,7 @@ to 2006 date.
 >   winds <- mapM (getWind w) (dts dt)
 >   assertEqual "test_wind_2"  exp winds
 >     where
->       dts start = map (\q -> (q*15) `addMinutes'` start) [0..8]
+>       dts start = map (\q -> (q*15) `addMinutes` start) [0..8]
 >       getWind w d = wind w d
 >       exp = [Just 2.3770752,Just 2.3770752,Just 3.725532,Just 3.725532,Just 3.725532,Just 3.725532,Just 3.4385333,Just 3.4385333,Just 3.4385333]
 
@@ -242,13 +242,13 @@ to 2006 date.
 >   assertEqual "" True True 
 >     where
 >       start = fromGregorian 2004 6 10 0 0 0
->       dts  start = map (\days -> (days*24*60) `addMinutes'` start) $ take 8 $ [0,30 ..]  
+>       dts  start = map (\days -> (days*24*60) `addMinutes` start) $ take 8 $ [0,30 ..]  
 >       print_weather dt = do
 >          w <- getWeatherTest $ Just dt
->          wind' <- wind w dt --(60 `addMinutes'` dt)
+>          wind' <- wind w dt --(60 `addMinutes` dt)
 >          wind_mph' <- wind_mph w dt
 >          ir <- irradiance w dt
->          --gbt_wind' <- gbt_wind w dt --(60 `addMinutes'` dt)
+>          --gbt_wind' <- gbt_wind w dt --(60 `addMinutes` dt)
 >          --gbt_ir <- gbt_irradiance w dt
 >          op2 <- opacity w dt 2
 >          tsys2 <- tsys w dt 2

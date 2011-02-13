@@ -131,7 +131,7 @@
 >     score' w rt dt = do
 >         [(_, Just s)] <- runScoring w [] rt (hourAngleLimit dt sess)
 >         return s
->     times = [(60*h) `addMinutes'` dtLP | h <- [0..23]]
+>     times = [(60*h) `addMinutes` dtLP | h <- [0..23]]
 >     expected = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0,
 >                 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
@@ -647,17 +647,17 @@ weather (gbt or forecasted) is being used:
 >     -- now see how setting the weather origin differently makes *NO* difference
 >     -- now set origin of weather to be one hour before periods
 >     --print "2!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
->     w <- getWeatherTest . Just $ addMinutes' (-60) dt
+>     w <- getWeatherTest . Just $ addMinutes (-60) dt
 >     mocs <- mapM (moc w rt dt dur) sess
 >     assertEqual "test_minimumObservingConditions_2" exp2 mocs
 >     -- now set origin of weather to be one hour after periods
 >     --print "3!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
->     w <- getWeatherTest . Just $ addMinutes' 60 dt
+>     w <- getWeatherTest . Just $ addMinutes 60 dt
 >     mocs <- mapM (moc w rt dt dur) sess
 >     assertEqual "test_minimumObservingConditions_3" expected mocs
 >     -- now set the origina of weather way in the past
 >     --print "4!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
->     w <- getWeatherTest . Just $ addMinutes' (-60*24*2) dt
+>     w <- getWeatherTest . Just $ addMinutes (-60*24*2) dt
 >     mocs <- mapM (moc w rt dt dur) sess
 >     assertEqual "test_minimumObservingConditions_4" exp2 mocs
 >     -- back to weather dt == start of period, but w/ 45 min periods
@@ -1489,7 +1489,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         fs <- genScore dt [sess]
 >         s  <- fs dt sess
 >         return $ eval s
->     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     times = [(15*q) `addMinutes` starttime | q <- [0..96]]
 >     sess = defaultSession { sName = "singleton"
 >                           , sAllottedT = 24*60
 >                           , minDuration = 2*60
@@ -1530,7 +1530,7 @@ Test the 24-hour scoring profile of the default session, per quarter.
 >         fs <- genScore dt [sess]
 >         s  <- fs dt sess
 >         return $ eval s
->     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     times = [(15*q) `addMinutes` starttime | q <- [0..96]]
 >     sess = findPSessionByName "TestWindowed2"
 >     expected = [2.3009086,2.2980537,2.2946627,2.292648,2.2878835] ++ (replicate 92 0.0)
 
@@ -1635,7 +1635,7 @@ plus 40 quarters.
 >                           , receivers = [[Rcvr12_18]]
 >                           , frequency = 12.8
 >                           }
->     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     times = [(15*q) `addMinutes` starttime | q <- [0..96]]
 
 Look at the scores over a range where none are zero.
 
@@ -1664,9 +1664,9 @@ Look at the scores over a range where none are zero.
 >     score' w rt sf dt = do
 >         fs <- runScoring w [] rt (sf dt sess)
 >         return $ eval fs
->     dt = (40*quarter) `addMinutes'` starttime -- start where scores /= 0
+>     dt = (40*quarter) `addMinutes` starttime -- start where scores /= 0
 >     numQtrs = dur `div` quarter
->     times = [(q*quarter) `addMinutes'` dt | q <- [0..numQtrs-1]]
+>     times = [(q*quarter) `addMinutes` dt | q <- [0..numQtrs-1]]
 >     expectedTotal = 3.8158395 
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
@@ -1694,7 +1694,7 @@ Look at the scores over a range where none are zero.
 >                           , receivers = [[Rcvr12_18]]
 >                           , frequency = 12.8
 >                           }
->     times = [(15*q) `addMinutes'` starttime | q <- [0..96]]
+>     times = [(15*q) `addMinutes` starttime | q <- [0..96]]
 
 > test_obsAvailable = TestCase $ do
 >   assertEqual "test_obsAvailable_1" True (obsAvailable dt s)
