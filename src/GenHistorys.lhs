@@ -1,7 +1,7 @@
 > module Main where
 
 > import Antioch.DateTime
-> import Antioch.RunHistWeatherOpt (runHistWeatherOpt, runFillStringencyOpt)
+> import Antioch.RunHistWeatherOpt (runHistWeatherOpt)
 > import System.Environment
 > import Data.Maybe
 
