@@ -72,8 +72,7 @@ hour scheduling period.
 >     tell [Timestamp dt] -- for trace plots
 >     return results
 
-Make a windowed session's allotted time equal to one period to prevent
-scheduling of multiple periods
+Convenience funtions for printing stuff.
 
 > pr :: Bool -> String -> IO ()
 > pr quiet str = do
