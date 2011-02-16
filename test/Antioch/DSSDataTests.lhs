@@ -28,7 +28,6 @@ instructions in admin/genDssTestDatagase.py.
 >     -- , test_getProjectsProperties
 >     -- , test_putPeriods
 >     -- , test_movePeriodsToDeleted
->     -- , test_populateSession
 >     -- , test_populateWindowedSession
 >     , test_makeSession
 >     , test_scoreDSSData
@@ -244,30 +243,6 @@ generated: it's the input we want to test, really.
 
 Kluge, data base has to be prepped manually for test to work, see
 example in comments.
-
-> test_populateSession = TestCase $ do
->   -- using session 194 GBT09B-028-02
->   -- insert into periods_accounting (scheduled, not_billable, other_session_weather, other_session_rfi, other_session_other, lost_time_weather, lost_time_rfi, lost_time_other, short_notice) values (4.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
->   -- 86 = select MAX(id) from periods_accounting;
->   -- INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, state_id, moc_ack) VALUES (194, "2009-06-15 12:00:00", 4.0, 3.1, "2009-06-13 00:08:00", false, 86, 1, false);
->   -- 1760 = select MAX(id) from periods;
->   -- insert into windows (session_id, default_period_id, start_date, duration) values (194, 1760, '2009-06-10 00:00:00', 7);
->   -- 1 = select MAX(elect MAX(id) from windows;
->   cnn <- connect
->   s <- getSession sId cnn
->   ios <- populateSession cnn s
->   assertEqual "test_populateSession 1" s ios
->   assertEqual "test_populateSession 2" ios (session . head . periods $ ios)
->   p <- fetchPeriod pId cnn
->   assertEqual "test_populateSession 3" (fromGregorian 2009 6 15 12 0 0) (startTime p)
->   assertEqual "test_populateSession 4" (4*60) (duration . head . periods $ ios)
->   assertEqual "test_populateSession 5" (4*60) (pDuration . head . periods $ ios)
->   assertEqual "test_populateSession 7" Nothing (wPeriod . head . windows $ ios)
->   assertEqual "test_populateSession 8" (Just . head . periods $ ios) (wPeriod . head . windows $ ios)
->   assertEqual "test_populateSession 9" (fromGregorian 2009 6 10 0 0 0) (wStart . head . windows $ ios)
->     where
->       sId =  194
->       pId = 1760
 
 > test_populateWindowedSession = TestCase $ do
 >   cnn <- connect

@@ -696,34 +696,10 @@ A single Window can have mutliple date ranges associated with it.
 >                     -- default periods in pending, whose time should not
 >                     -- be counted.
 >                     , pDuration = 
->                        if (deriveState . fromSql $ state) == Pending  && (st /= Windowed)
+>                        if (deriveState . fromSql $ state) == Pending  && (st /= Windowed) && (st /= Elective)
 >                        then fromSqlMinutes durHrs
 >                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 >                     }
-
-fetchPeriod is used in unit tests only.
-
-> fetchPeriod :: Int -> Connection -> IO Period
-> fetchPeriod id cnn = do
->   result <- quickQuery' cnn query xs
->   return . toPeriod . head $ result
->   where
->     xs = [toSql id]
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.not_billable, pa.other_session_weather, pa.other_session_rfi, other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other FROM periods AS p, periods_accounting AS pa WHERE pa.id = p.accounting_id AND p.id = ?"
->     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:nb:osw:osr:oso:ltw:ltr:lto:[]) =
->       defaultPeriod { peId = fromSql id
->                     , startTime = sqlToDateTime start --fromSql start
->                     , duration = fromSqlMinutes durHrs
->                     , pScore = fromSql score
->                     , pState = deriveState . fromSql $ state
->                     , pForecast = sqlToDateTime forecast
->                     , pBackup = fromSql backup
->                     , pDuration = 
->                        if (deriveState . fromSql $ state) == Pending
->                        then fromSqlMinutes durHrs
->                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
->                     }
-
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
