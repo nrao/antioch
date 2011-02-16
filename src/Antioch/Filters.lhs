@@ -100,7 +100,7 @@ Filter candidate sessions dependent on its type.
 >   -- Open
 >   | isTypeOpen dt dur s = True
 >   | typeWindowed s      = (activeWindows dt dur (windows s)) /= []
->   | otherwise           = False -- must be Fixed.
+>   | otherwise           = False -- must be Fixed, or Elective.
 
 An active window:
     - overlaps the scheduling range
