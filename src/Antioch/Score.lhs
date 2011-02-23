@@ -820,7 +820,7 @@ The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 > needsLowRFI' :: DateTime -> Session -> IO Bool
 > needsLowRFI' dt s = do
 >     if lowRFI s
->         then isHighRFITime dt
+>         then fmap not . isHighRFITime $ dt
 >         else return True
 
 Sessions can specify any number of LST ranges in which they do not want
