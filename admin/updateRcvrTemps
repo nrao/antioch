@@ -17,6 +17,7 @@ runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr40_52      2008-11-01
 runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_PAR       2010-01-01 
 runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr_RRI       2010-01-01 
 runhaskell UpdateReceiverTemperatures.lhs $1 Holography     2010-01-01 
+runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr68_92     2010-01-01 
 
 # Notes:        TBF what does this table signify?
 
