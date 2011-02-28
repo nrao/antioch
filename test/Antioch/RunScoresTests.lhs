@@ -77,7 +77,7 @@
 > test_runFactors = TestCase $ do
 >   let dt = fromGregorian 2006 9 2 14 30 0
 >   let s' = findPSessionByName "CV"
->   let s = s' { sId = 555 }
+>   let s = s' { sId = 555}
 >   let dur = 15::Minutes
 >   let proj = defaultProject
 >   let projs = [makeProject proj 1000 1000 ([s] ++ pSessions)]
@@ -88,6 +88,14 @@
 >   assertEqual "test_runFactors 1" 32 (length . head $ factors)
 >   assertEqual "test_runFactors 2" sess s
 >   mapM_ (assertFactor factors) exp 
+>   -- now make sure wband doesn't blow this up
+>   let sw = s { sId = 556, receivers = [[Rcvr68_92]] }
+>   let proj = defaultProject
+>   let projs = [makeProject proj 1000 1000 ([sw] ++ pSessions)]
+>   (sess, factors) <- runFactors 556 dt dur projs True
+>   assertEqual "test_runFactors 3" 1 (length factors)
+>   assertEqual "test_runFactors 4" 32 (length . head $ factors)
+>   assertEqual "test_runFactors 5" sess sw
 >       where
 >     lookup' factors name = fromJust . fromJust . lookup name . head $ factors
 >     assertFactor factors (key, value) = assertEqual ("test_scoreFactors " ++ key) value (lookup' factors key)

@@ -83,6 +83,7 @@
 >   , test_surfaceObservingEfficiency
 >   , test_scoreCV
 >   , test_scoreCV2
+>   , test_scoreWBand
 >   , test_scoreForTime
 >   , test_avgScoreForTime
 >   , test_avgScoreForTime2
@@ -1382,6 +1383,20 @@ to use in conjunction with Pack tests.
 >     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
 >     let result = eval fs
 >     assertEqual "test_scoreCV2" 4.1611986 result  
+
+Making sure the new WBand receiver can get scored w/ out crashing,
+even though it may not have basic info like rcvr temps.
+
+> test_scoreWBand = TestCase $ do
+>     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
+>     rt <- getReceiverTemperatures
+>     let dt = fromGregorian 2006 9 2 14 30 0
+>     let ss = concatMap sessions pTestProjects
+>     let s' = head $ filter (\s -> "CV" == (sName s)) ss
+>     let s = s' {receivers = [[Rcvr68_92]]}
+>     fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
+>     let result = eval fs
+>     assertEqual "test_scoreWband" 0.0 result
 
 > test_scoreForTime = TestCase $ do
 >     -- score on top of weather

@@ -58,7 +58,8 @@ Ranges for all receivers: copied from the DSS database.
 >     (Rcvr_PAR,       (80.0,100.0)),
 >     (Zpectrometer,   ( 0.0,  0.0)),
 >     (Holography,     (11.7, 12.2)),
->     (RcvrArray18_26, (17.0, 27.5))]
+>     (RcvrArray18_26, (17.0, 27.5)),
+>     (Rcvr68_92,      (66.0, 94.0))]
 
 --------------------------------------------------------------------
 
