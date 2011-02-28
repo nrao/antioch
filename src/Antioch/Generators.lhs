@@ -284,9 +284,9 @@ differ from Open ones is TBD.
 >     --maxD       <- choose (11*60, 12*60)
 >     otype      <- genOType r Fixed
 >     tb         <- genTimeBetween bk
->     lstEx      <- genLSTExclusion
+>     --lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
->     trans      <- genTransitFlag bk
+>     --trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []
@@ -300,10 +300,10 @@ differ from Open ones is TBD.
 >                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
 >                , sAllottedT      = round2quarter sAllottedT
 >                , sAllottedS      = round2quarter sAllottedT
->                , timeBetween    = round2quarter tb
->                , lstExclude     = lstEx
->                , lowRFI         = lowRFIFlag
->                , transit        = trans
+>                , timeBetween    = 0
+>                , lstExclude     = []
+>                , lowRFI         = False
+>                , transit        = Optional
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
@@ -334,9 +334,9 @@ differ from Open ones is TBD.
 >     --maxD       <- choose (11*60, 12*60)
 >     otype      <- genOType r Windowed
 >     tb         <- genTimeBetween bk
->     lstEx      <- genLSTExclusion
+>     --lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
->     trans      <- genTransitFlag bk
+>     --trans      <- genTransitFlag bk
 >     return $ defaultSession {
 >                  project        = project
 >                , periods        = []
@@ -350,10 +350,10 @@ differ from Open ones is TBD.
 >                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
 >                , sAllottedT      = round2quarter sAllottedT
 >                , sAllottedS      = round2quarter sAllottedT
->                , timeBetween    = round2quarter tb
->                , lstExclude     = lstEx
->                , lowRFI         = lowRFIFlag
->                , transit        = trans
+>                , timeBetween    = 0
+>                , lstExclude     = []
+>                , lowRFI         = False
+>                , transit        = Optional
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
