@@ -79,9 +79,10 @@ The id is passed along to give the session a unique id.
 
 > genFixedProject :: Period -> Int -> Gen Project
 > genFixedProject p id = do
->   -- TBF: should this proj. be from the same semester as the period?
+>   -- this proj. should be from the same semester as the period
 >   let (year, _, _, _, _, _) = toGregorian . startTime $ p
->   proj' <- genProjectForYear year
+>   proj'' <- genProjectForYear year
+>   let proj' = proj'' { semester = dt2semester . startTime $ p }
 >   let total = duration p
 >   -- TBF: genSessionFixed will figure things like sAllottedT, but we
 >   -- really want these based off the periods that are pre-generated
@@ -193,10 +194,11 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 
 > genWindowedProject :: [Period] -> Int -> Gen Project
 > genWindowedProject wp id = do
->   -- TBF: should the project be from the same semester as the periods?
+>   -- the project should be from the same semester as the first periods
 >   let (year, _, _, _, _, _) = toGregorian . startTime . head $ wp
 >   proj'' <- genProjectForYear year
->   let proj' = proj'' { pName = "WinP" }
+>   let sem = dt2semester . startTime . head $ wp
+>   let proj' = proj'' { pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
 >   s'' <- genSessionWindowed
 >   let s' = s'' { sName = "WinS(" ++ (show id) ++ ")"

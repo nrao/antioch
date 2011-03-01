@@ -23,7 +23,7 @@
 >                 , test_genMaintenancePeriodsByYear
 >                 , test_genMaintenancePeriods
 >                 , test_genSimTime
->                 , test_genSimTime2
+>                 , test_genSimTime_semesters
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
 >                 , test_genWindows
@@ -117,7 +117,20 @@
 >     --print ("openMins", openMins)
 >     --print ("expMins", expMinsLower, expMinsUpper)
 >     assertEqual "test_genSimYear_10" True (expMinsLower < openMins' && openMins' < expMinsUpper) 
->
+>     
+>     -- check this year's simulation's semesters:
+>     let op = filterProjs projs Open
+>     let wp = filterProjs projs Windowed
+>     let fp = filterProjs projs Fixed
+>     assertEqual "test_genSimYear2_10" allSems (getProjectSems fp)
+>     assertEqual "test_genSimYear2_11" allSems (getSessionSems fp)
+>     assertEqual "test_genSimYear2_12" allSems (getPeriodSems  fp)
+>     assertEqual "test_genSimYear2_13" allSems (getProjectSems op)
+>     assertEqual "test_genSimYear2_14" allSems (getSessionSems op)
+>     assertEqual "test_genSimYear2_15" []      (getPeriodSems  op)
+>     assertEqual "test_genSimYear2_16" allSems (getProjectSems wp)
+>     assertEqual "test_genSimYear2_17" allSems (getSessionSems wp)
+>     assertEqual "test_genSimYear2_18" allSems (getPeriodSems  wp)
 >
 >     
 >     --let maintMins = sum $ map sAllottedT $ sessions $ last projs
@@ -141,21 +154,70 @@
 >     shi  = fromIntegral $ (simHrs + tolerance)
 >     slow = fromIntegral $ (simHrs - tolerance)
 >     projTime projs = sum $ map sAllottedT $ concatMap sessions projs
+>     -- TBF: cut & paste from below
+>     getProjectSems projs = nub . sort $ map semester projs
+>     getSessionSems projs = nub . sort $ map (semester . project) $ concatMap sessions projs
+>     getPeriodSems  projs = nub . sort $ map (semester . project . session) $ concatMap periods $ concatMap sessions projs
+>     allSems = ["05C", "06A", "06B", "06C"]
+>     filterProjs projs ptype = filter (\p -> (sType . head . sessions $ p) == ptype) projs
 
 
-> test_genSimTime2 = TestCase $ do
+> test_genSimTime_semesters = TestCase $ do
 >     let g = mkStdGen 1
 >     let simMins = days*24*60
->     let projs = generate 0 g $ genSimTime start days True (6.0, 0.1, 0.3) 0 
+>     --let projs = generate 0 g $ genSimTime start days True (1.0, 0.0, 0.0) 0  --(0.6, 0.1, 0.3) 0 
+>     -- First all open
+>     let projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 0  --(0.6, 0.1, 0.3) 0 
 >     -- projects from appropriate semesters?
->     let sems = nub . sort $ map semester projs
->     assertEqual "test_genSimYear2_0" ["07C", "08A", "08B", "08C"] sems
+>     let sems = getProjectSems projs 
+>     assertEqual "test_genSimYear2_0" allSems sems
+>     -- sessions' projects from appropriate semesters?
+>     let sems = getSessionSems projs 
+>     assertEqual "test_genSimYear2_1" allSems sems
 >     -- periods' sessions' projects from appropriate semesters?
->     let sems = nub . sort $ map (semester . project . session) $ concatMap periods $ concatMap sessions projs
->     assertEqual "test_genSimYear2_1" ["07C", "08A", "08B", "08C"] sems
+>     let sems = getPeriodSems projs 
+>     assertEqual "test_genSimYear2_2" [] (concatMap periods $ concatMap sessions projs)
+>     assertEqual "test_genSimYear2_3" [] sems
+>
+>     -- now what about fixed periods?  You have to create the fixed
+>     -- projects alonside open ones so that the algorithm can finish,
+>     -- but then filter out the open
+>     let projs' = generate 0 g $ genSimTime start days False (0.7, 0.3, 0.0) 0  --(0.6, 0.1, 0.3) 0 
+>     -- in simulations, projects' sessions are all of the same type
+>     let projs = filterProjs projs' Fixed 
+>     let oprojs = filterProjs projs' Open 
+>     -- since we are only simulating in the Feb. of 2008, all fixed projs
+>     -- will be in 08A;  also make sure open projects aren't affected
+>     assertEqual "test_genSimYear2_4" ["08A"] (getProjectSems projs)
+>     assertEqual "test_genSimYear2_5" ["08A"] (getSessionSems projs)
+>     assertEqual "test_genSimYear2_6" ["08A"] (getPeriodSems  projs)
+>     assertEqual "test_genSimYear2_7" allSems (getProjectSems oprojs)
+>     assertEqual "test_genSimYear2_8" allSems (getSessionSems oprojs)
+>     assertEqual "test_genSimYear2_9" []      (getPeriodSems  oprojs)
+>     
+>     -- now throw open into the mix
+>     let projs' = generate 0 g $ genSimTime start days False (0.6, 0.1, 0.3) 0 
+>     let wprojs = filterProjs projs' Windowed 
+>     let fprojs = filterProjs projs' Fixed 
+>     let oprojs = filterProjs projs' Open 
+>     assertEqual "test_genSimYear2_10" ["08A"] (getProjectSems fprojs)
+>     assertEqual "test_genSimYear2_11" ["08A"] (getSessionSems fprojs)
+>     assertEqual "test_genSimYear2_12" ["08A"] (getPeriodSems  fprojs)
+>     assertEqual "test_genSimYear2_13" allSems (getProjectSems oprojs)
+>     assertEqual "test_genSimYear2_14" allSems (getSessionSems oprojs)
+>     assertEqual "test_genSimYear2_15" []      (getPeriodSems  oprojs)
+>     assertEqual "test_genSimYear2_16" ["08A"] (getProjectSems wprojs)
+>     assertEqual "test_genSimYear2_17" ["08A"] (getSessionSems wprojs)
+>     assertEqual "test_genSimYear2_18" ["08A"] (getPeriodSems  wprojs)
+>
 >   where
 >     start = fromGregorian 2008 2 2 0 0 0
 >     days  = 35
+>     getProjectSems projs = nub . sort $ map semester projs
+>     getSessionSems projs = nub . sort $ map (semester . project) $ concatMap sessions projs
+>     getPeriodSems  projs = nub . sort $ map (semester . project . session) $ concatMap periods $ concatMap sessions projs
+>     allSems = ["07C", "08A", "08B", "08C"]
+>     filterProjs projs ptype = filter (\p -> (sType . head . sessions $ p) == ptype) projs
 
 > test_genMaintenanceProject = TestCase $ do
 >     let g = mkStdGen 1
