@@ -13,7 +13,7 @@
 > import Control.Monad     (liftM)
 > import Data.Foldable     (foldlM, foldr')
 > import Data.List         
-> import Data.Maybe        (maybe, maybeToList, isJust)
+> import Data.Maybe        (maybe, maybeToList, isJust, fromJust, isNothing)
 > import qualified Antioch.Schedule.Pack as P
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
@@ -270,6 +270,17 @@ have used up more then their alloted time.
 >   where
 >     disobeysPAlloted p = if ((pAvailT (pr p)) < 0) then [pr p] else []
 >     pr p = project . session $ p
+
+which, if any, periods start before their project's semester?
+
+> disobeySemesterStart :: [Period] -> [Period]
+> disobeySemesterStart ps = filter disobeySemesterStart' ps
+
+> disobeySemesterStart' :: Period -> Bool
+> disobeySemesterStart' p | isNothing semStart = True 
+>                         | otherwise = (startTime p) < fromJust semStart 
+>   where
+>     semStart = trimester2startDT $ semester . project . session $ p
 
 which, if any, pairs of periods in the given schedule, are separated
 by a duration greater then their session's timebetween.
