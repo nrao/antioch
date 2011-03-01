@@ -190,19 +190,19 @@ Only 20 percent of the low freq. sessions are backups
 Backup sessions should not use a time between
 
 > genTimeBetween :: Bool -> Gen Minutes
-> genTimeBetween backup = if backup then return 0 else T.frequency [(100, return 0)
->                             , (0, return (8 *60))
->                             , (0, return (12*60))]
+> genTimeBetween backup = if backup then return 0 else T.frequency [(98, return 0)
+>                             , (1, return (12*60))
+>                             , (1, return (48*60))]
 
 > genLowRFIFlag :: Gen Bool
-> genLowRFIFlag = T.frequency [(100, return False), (0, return True)]
+> genLowRFIFlag = T.frequency [(96, return False), (4, return True)]
 
 Backup sessions should not use a transit flag 
 
 > genTransitFlag :: Bool -> Gen TransitType
-> genTransitFlag backup = if backup then return Optional else T.frequency [(100, return Optional)
->                             , (0, return Partial)
->                             , (0, return Center)]
+> genTransitFlag backup = if backup then return Optional else T.frequency [(98, return Optional)
+>                             , (1, return Partial)
+>                             , (1, return Center)]
 
 > genLSTExclusion :: Gen [(Float, Float)]
 > genLSTExclusion = T.frequency [(100, return []), (0, lsts)]
@@ -658,18 +658,18 @@ all frequencies for demo purposes only.  Dana needs to specify this.
 >   where
 >     band = fromJust . lookup (sType, sem) $ bands
 >     -- (session type, trimester)
->     bands = [ ((Open,'b'),      "338WKKQQAAXUCCSLLLLL")
->             , ((Open,'A'),      "338WKKKQQAAXUCCSSLLL")
->             , ((Open,'B'),      "338WKQQAXUCSLLLLLLLL")
->             , ((Open,'C'),      "338WKKQQAAAXXUCCSLLL")
->             , ((Fixed,'b'),     "338WKKQQAAXUCCSLLLLL")
->             , ((Fixed,'A'),     "338WKKKQQAAXUCCSSLLL")
->             , ((Fixed,'B'),     "338WKQQAXUCSLLLLLLLL")
->             , ((Fixed,'C'),     "338WKKQQAAAXXUCCSLLL")
->             , ((Windowed,'b'),  "338WKKQQAAXUCCSLLLLL")
->             , ((Windowed,'A'),  "338WKKKQQAAXUCCSSLLL")
->             , ((Windowed,'B'),  "338WKQQAXUCSLLLLLLLL")
->             , ((Windowed,'C'),  "338WKKQQAAAXXUCCSLLL")
+>     bands = [ ((Open,'b'),      "38WKKKQQAAXUUCCSLLLL")
+>             , ((Open,'A'),      "38WKKKQQAAAXXUCCSSLL")
+>             , ((Open,'B'),      "38WKQQAXXUUCSLLLLLLL")
+>             , ((Open,'C'),      "38WWKKQQQAAAXXUCCSLL")
+>             , ((Fixed,'b'),     "333388KAXXXUCSSSLLLL")
+>             , ((Fixed,'A'),     "333388KAXXXUCSSSLLLL")
+>             , ((Fixed,'B'),     "333388XXXUCSSSSLLLLL")
+>             , ((Fixed,'C'),     "333388KAXXXUCSSSLLLL")
+>             , ((Windowed,'b'),  "333388KAXXXUCSSSLLLL")
+>             , ((Windowed,'A'),  "333388KAXXXUCSSSLLLL")
+>             , ((Windowed,'B'),  "333388XXXUCSSSSLLLLL")
+>             , ((Windowed,'C'),  "333388KAXXXUCSSSLLLL")
 >             ]
 
 > genOType :: Receiver -> SessionType -> Gen ObservingType
@@ -695,7 +695,7 @@ all frequencies for demo purposes only.  Dana needs to specify this.
 >      , ((Rcvr8_10,   o),100), ((Rcvr8_10,   f),100), ((Rcvr8_10,   w),100)
 >      , ((Rcvr12_18,  o),100), ((Rcvr12_18,  f),100), ((Rcvr12_18,  w),100)
 >      , ((Rcvr18_26,  o),100), ((Rcvr18_26,  f),100), ((Rcvr18_26,  w),100)
->      , ((Rcvr26_40,  o),100), ((Rcvr26_40,  f),100), ((Rcvr26_40,  w),100)
+>      , ((Rcvr26_40,  o), 75), ((Rcvr26_40,  f), 75), ((Rcvr26_40,  w), 75)
 >      , ((Rcvr40_52,  o),100), ((Rcvr40_52,  f),100), ((Rcvr40_52,  w),100)
 >      , ((Rcvr_PAR,   o),  0), ((Rcvr_PAR,   f),  0), ((Rcvr_PAR,   w),  0)
 >      , ((Holography, o),100), ((Holography, f),100), ((Holography, w),100)
