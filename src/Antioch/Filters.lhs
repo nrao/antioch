@@ -72,6 +72,9 @@ Possible factors:
 > isNotTypeFixed :: SelectionCriteria
 > isNotTypeFixed _ _ s = sType s /= Fixed
 
+> isNotTypeElective :: SelectionCriteria
+> isNotTypeElective _ _ s = sType s /= Elective
+
 > isTypeOpen :: SelectionCriteria
 > isTypeOpen _ _ s = sType s == Open
 

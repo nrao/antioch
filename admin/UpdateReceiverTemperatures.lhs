@@ -7,7 +7,8 @@
 > import Database.HDBC.PostgreSQL
 > import Maybe
 > import Data.List
-> import Antioch.Settings                (dssHost)
+> -- TBF: can't import this right now?
+> --import Antioch.Settings                (dssHost)
 
 Given the name of the database containing the receiver_temperatures'
 table, the receiver's name, and a sql date string (YYYY-MM-DD),
@@ -60,8 +61,13 @@ Some receivers do not have calibrations, so fake a constant temperature
 >    | r == "Rcvr_PAR"   = return $ [(80.0,120.0),(100.0,120.0)] 
 >    | r == "Rcvr_RRI"   = return $ [(0.1,300.0),(1.6,300.0)] 
 >    | r == "Holography" = return $ [(11.7,1e6),(12.2,1e6)] 
+>    | r == "Rcvr68_92"  = return getWbandTemps
 >    | otherwise = collectNewTemps' cnn r chn dt
 
+> --getWbandTemps :: [(Float,Float)]
+> getWbandTemps = [(66.0, 150.0), (68.0, 90.0)] ++ (mkTemps 70.0 92.0 2.0 60.0) ++ [(92.0, 90.0), (94.0, 150.0)]
+>   where
+>     mkTemps start end step temp = map (\f -> (f, temp)) [start, (start+step) .. end]
 
 > -- collectNewTemps :: Database.HDBC.MySQL.Connection.Connection -> String -> String -> IO [(Double, Double)]
 > collectNewTemps' cnn r chn dt = do
@@ -147,6 +153,8 @@ Strip out all rows for the specified receiver in *receiver_temperatures*.
 > pconnect :: String -> IO Connection
 > pconnect dbname = handleSqlError $ connectPostgreSQL cnnStr 
 >   where
+>     -- TBF: read this in from Settings.lhs
+>     dssHost = "trent"
 >     cnnStr = "host=" ++ dssHost ++ " dbname=" ++ dbname ++ " user=dss"
 
 > fromSqlInt :: SqlValue -> Int

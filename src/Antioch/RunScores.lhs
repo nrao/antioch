@@ -171,6 +171,7 @@ Example params:
 >             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
 >           , [Just isNotMaintenance]
 >           , [Just isNotTypeFixed]
+>           , [Just isNotTypeElective]
 >           , [Just isApproved]
 >           , [Just hasObservers]
 >           , if backup == "true" then [Just isBackup] else [Nothing]
