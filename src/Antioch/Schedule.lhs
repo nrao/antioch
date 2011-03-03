@@ -140,6 +140,7 @@ sessions' periods list.
 Select the highest scoring element of a list.
 
 > best          :: (Monad m, Ord b) => (a -> m b) -> [a] -> m (a, b)
+> --best _ [] = not handled, macht nicht so far
 > best f (x:xs) = do
 >     s <- f x
 >     foldlM f' (x, s) xs
@@ -362,27 +363,30 @@ to the 'lowRFI' flag.
 > disobeyLowRFI :: [Period] -> [Period]
 > disobeyLowRFI ps = filter disobeyLowRFI' ps
 
-Returns True if given period's session has 'lowRFI' flag set, but is observing
-during the day.
+Returns True if given period's session has 'lowRFI' flag set, but is
+observing during the day.
 
 > disobeyLowRFI' :: Period -> Bool
 > disobeyLowRFI' p = unsafePerformIO $ do
+>     bs <- sequence [isHighRFITime dt | dt <- dts]
 >     if (not . lowRFI . session $ p)
 >       then return False
->       else (isHighRFITime . startTime $ p)
+>       else fmap (any id) . sequence . map isHighRFITime $ dts
+>   where
+>     duration' = (duration p) - quarter 
+>     dts = [d `addMinutes` (startTime p) | d <- [quarter, 2*quarter .. duration']]
+
 
 Returns the list of periods that shouldn't be observing when they are due
-to LST exclusion ranges.  Note that we don't count the last 15 minutes of a 
-period, since pack deals with scores at the start of each 15 minute interval.
+to LST exclusion ranges.
 
 > disobeyLSTExclusion :: [Period] -> [Period]
 > disobeyLSTExclusion ps = filter disobeyLSTExclusion' ps 
 
 > disobeyLSTExclusion' :: Period -> Bool
-> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (anyOverlappingLSTs (startTime p, endTime' p) (lstExclude . session $ p))
+> disobeyLSTExclusion' p = if (lstExclude . session $ p) == [] then False else (anyOverlappingLSTs (addMinutes quarter . startTime $ p, endTime' p) (lstExclude . session $ p))
 >   where
->     endTime' p = ((duration p) - step) `addMinutes` startTime p 
->     step = 15 -- don't count the last 15 minutes of the period!
+>     endTime' p = (duration p) `addMinutes` startTime p 
 
 Does the given time range specify an LST range that overlaps with any of
 the given LST exclusion ranges?
@@ -412,7 +416,7 @@ with wrap around (ex: 23 to 2 Hours) by converting it to two ranges (ex:
 >     checkTransit' rng = (fst rng) <= transit && transit < (snd rng)
 >     unwrap rng = if ((fst rng) <= (snd rng)) then [rng] else [(0.0, snd rng), (fst rng, 24.0)]
 >     transit = rad2hrs . ra . session $ p
->     lstStart = utc2lstHours . startTime $ p
+>     lstStart = utc2lstHours . addMinutes quarter . startTime $ p
 >     lstEnd = utc2lstHours . periodEndTime $ p
 
 > disobeyRcvrSchedule :: ReceiverSchedule -> [Period] -> [Period]
