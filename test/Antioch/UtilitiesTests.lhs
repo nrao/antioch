@@ -15,6 +15,7 @@
 > tests = TestList [ 
 >             test_utc2lstHours
 >           , test_dt2semester
+>           , test_trimester2startDT
 >           , test_LST1
 >           , test_LST2
 >           , test_LST3
@@ -27,6 +28,21 @@
 >           , test_freq2HistoryIndex
 >           , test_approximate
 >                  ]
+
+> test_trimester2startDT = TestCase $ do
+>   assertEqual "test_trimester2startDT_1" dt06A (trimester2startDT "06A")
+>   assertEqual "test_trimester2startDT_2" dt06B (trimester2startDT "06B")
+>   assertEqual "test_trimester2startDT_3" dt06C (trimester2startDT "06C")
+>   assertEqual "test_trimester2startDT_4" dt07A (trimester2startDT "07A")
+>   assertEqual "test_trimester2startDT_5" dt10A (trimester2startDT "10A")
+>   assertEqual "test_trimester2startDT_5" Nothing (trimester2startDT "")
+>   assertEqual "test_trimester2startDT_5" Nothing (trimester2startDT "11A")
+>     where
+>   dt06A = Just $ fromGregorian 2006 2  1 0 0 0 
+>   dt06B = Just $ fromGregorian 2006 6  1 0 0 0 
+>   dt06C = Just $ fromGregorian 2006 10 1 0 0 0 
+>   dt07A = Just $ fromGregorian 2007 2  1 0 0 0 
+>   dt10A = Just $ fromGregorian 2010 2  1 0 0 0 
 
 > test_dt2semester = TestCase $ do
 >   assertEqual "test_dt2semester_10a1" "10A" (dt2semester dt10a1)

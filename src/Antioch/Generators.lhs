@@ -43,12 +43,16 @@ TBF: Currently, the idea of semester is very limited.
 >             , "06C", "06C", "06C"
 >            ]
 > -}
-> genSemesterName year = elements $ [ s (year-1) "C"] ++ sA ++ sB ++ sC
+> genSemesterName year = elements $ semesterChoices year
+
+> semesterChoices :: Int -> [String]
+> semesterChoices year = [ s (year-1) "C"] ++ sA ++ sB ++ sC
 >   where
 >     s y a = (drop 2 $ show y) ++ a
 >     sA = take 4 $ repeat (s year "A") --"06A", "06A", "06A", "06A"
 >     sB = take 4 $ repeat (s year "B") --"06B", "06B", "06B", "06B"
 >     sC = take 3 $ repeat (s year "C") --"06C", "06C", "06C"
+
 
 trimesterMonth = [C,A,A,A,A,B,B,B,B,3,3,3] 
 

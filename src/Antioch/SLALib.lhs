@@ -1,5 +1,5 @@
 > {-# LANGUAGE ForeignFunctionInterface #-}
-> module Antioch.SLALib (gmst, gmst', slaGaleq) where
+> module Antioch.SLALib (gmst, gmst', slaGaleq, d2pi, slaDrange) where
 
 > import Antioch.DateTime
 
@@ -166,16 +166,16 @@ Direction cosines to spherical coordinates (rads)
 >           | otherwise = abs a
 
 Normalize angle into range +/- pi       
-TBF: why did we have to make the above change for this to work?
 
 > slaDrange :: Double -> Double
 > slaDrange a | abs w < pi = w
->             | otherwise = w - d2pi -- dsign d2pi x
+>             | w > 0 = w - d2pi 
+>             | w < 0 = w + d2pi
 >   where w = realToFrac $ c_fmod (realToFrac a) (realToFrac d2pi)
 
 > prop_slaDrange = 
 >     forAll genAngleRad $ \a ->
->     let x = slaDrange a in inPiRng x 
+>     let x = slaDrange a in inPiRng x -- between -pi and pi 
 
 > slaGaleq dl db = ((,) `on` realToFrac) dr dd
 >   where

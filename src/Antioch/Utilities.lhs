@@ -8,6 +8,7 @@
 > import Test.QuickCheck hiding (frequency)
 > import Data.Convertible
 > import Data.Maybe             (isJust, fromJust)
+> import Data.List              (elemIndex)
 > import Database.HDBC
 > import Database.HDBC.PostgreSQL
 > import Text.Printf            (printf)
@@ -227,6 +228,27 @@ Get all the session periods that are within the given window
 
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
+
+TBF: this is called *trimester2startDT* because it only handles dates
+before 2011, before we switched to *semesters*, so don't change the
+name till we can get this right.
+
+Here we make any year > 2010 return Nothing as a reminder that this is
+NOT semester2startDT - that still needs to be coded.
+
+> trimester2startDT :: SemesterName -> Maybe DateTime
+> trimester2startDT sn | sn == "" = Nothing 
+>                      | 2000 + (read $ take 2 sn) > 2010 = Nothing 
+>                      | otherwise = Just $ fromGregorian year month 1 0 0 0
+>   where
+>     year' = 2000 + (read $ take 2 sn)
+>     sem = [last sn] -- [Char]
+>     --         jan feb mar apr may jun jul aug sep oct nov dec
+>     tms = ["?","?","A","A","A","A","B","B","B","B","C","C","C"]
+>     month = fromJust $ elemIndex sem tms
+>     year = if month == 1
+>            then year' - 1
+>            else year'
 
 Warning this code produces a 3.1YK problem!
 

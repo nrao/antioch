@@ -1467,7 +1467,7 @@ Quick Check properties:
 >     calcEff = getScoringResult trackingEfficiency
 
 > prop_stringency = forAll genProject $ \p ->
->   let es = map getStringency (sessions p) in greaterThenOne es  
+>   let es = map getStringency (sessions p) in greaterThenOrEqualOne es  
 >   where
 >     getStringency = getScoringResult stringency
 
@@ -1529,3 +1529,6 @@ Used for checking that some scoring factors are 0 <= && <= 1, etc.
 
 > greaterThenOne :: [Float] -> Bool 
 > greaterThenOne xs = dropWhile (>1) xs == []
+
+> greaterThenOrEqualOne :: [Float] -> Bool 
+> greaterThenOrEqualOne xs = dropWhile (>=1) xs == []

@@ -18,9 +18,8 @@ The user can specify:
    * how much extra time to give to Open sessions as 'backlog'
 
 > genSimTime :: DateTime -> Int -> Bool -> (Float, Float, Float) -> Int -> Gen [Project]
-> genSimTime start days useMaint (open, fixed, windowed) backlogHrs = do
->     -- TBF: assert that open + fixed + windowed == 1.0 ?
->     -- TBF: assert that backlog < 1.0 ?
+> genSimTime start days useMaint (open, fixed, windowed) backlogHrs | (open + fixed + windowed) > 1.01 = return [] 
+>                                                                   | otherwise = do
 >     -- create the maintenance schedule first to see how much time it is
 >     maint <- genMaintenanceProj start days
 >     let schedule = if useMaint then concatMap periods $ sessions maint else []
@@ -40,13 +39,14 @@ The user can specify:
 >     -- Becasuse we must build a schedule that has no overlaps,
 >     -- it's easiest to first assign the periods to the schedule,
 >     -- then assign sessions & projects to these periods
->     -- First, the windowed periods
->     -- TBF: for now, we can treat windowed like fixed
+>     -- First, the windowed periods; Note that we start off with
+>     -- a Session Id of 1.
 >     winPeriods <- genWindowedSchedule start days schedule windowedHrs
 >     wProjs <- genWindowedProjects  winPeriods 1 --genWindowedProjects winPeriods
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
 >     -- Now, the fixed periods
 >     fixedPeriods <- genFixedSchedule start days schedule' fixedHrs
+>     -- Where are we at in terms of the session id?
 >     let maxId = if length wProjs == 0 then 1 else maximum $ map sId $ concatMap sessions wProjs
 >     fProjs <- genFixedProjects fixedPeriods (maxId+1)
 >     -- Finally, put all the projects togethor
@@ -65,7 +65,7 @@ our greater then the specified amount.
 
 For a given list of periods, create appropriate projects & sessions for them.
 The id is passed along so that each session can have a unique id.
-TBF: for now keep it real simple - a single proj & sess for each period
+For now keep it real simple - a single proj & sess for each period
 
 > genFixedProjects :: [Period] -> Int -> Gen [Project]
 > genFixedProjects [] _ = return []
@@ -79,9 +79,10 @@ The id is passed along to give the session a unique id.
 
 > genFixedProject :: Period -> Int -> Gen Project
 > genFixedProject p id = do
->   -- TBF: should this proj. be from the same semester as the period?
+>   -- this proj. should be from the same semester as the period
 >   let (year, _, _, _, _, _) = toGregorian . startTime $ p
->   proj' <- genProjectForYear year
+>   proj'' <- genProjectForYear year
+>   let proj' = proj'' { semester = dt2semester . startTime $ p }
 >   let total = duration p
 >   -- TBF: genSessionFixed will figure things like sAllottedT, but we
 >   -- really want these based off the periods that are pre-generated
@@ -92,7 +93,7 @@ The id is passed along to give the session a unique id.
 >                , sAllottedS = total
 >                , sAllottedT = total
 >                , ra = 0.0
->                , dec = 1.5 -- TBF: this is just always up
+>                , dec = 1.5 -- this is just always up
 >                }
 >   let s = makeSession s' [] [p]
 >   return $ makeProject proj' total total [s]
@@ -132,7 +133,7 @@ Generate a period that starts with the given time range.
 >                          , duration  = duration*60
 >                          , pState    = Scheduled
 >                          , session   = sess -- just to get the sem right
->                          , pForecast = start -- ??? TBF
+>                          , pForecast = start 
 >                          }
 >     where
 >   start' day hour = addMinutes ((day*24*60)+(hour*60)) start
@@ -177,12 +178,12 @@ fit into the given time range.
 >   getStart day hour = addMinutes ((day*24*60)+(hour*60)) start
 >   mkPeriod dur dt = defaultPeriod { startTime = dt
 >                                   , duration  = dur*60
->                                   , pForecast = dt -- TBF, WTF??? 
+>                                   , pForecast = dt 
 >                                   , pState    = Pending }
 
 Each sub-list of periods needs to get assigned a windowed session & project.
 In addition, each single period needs to be within a newly created window.
-TBF: for now keep it real simple - a single proj & sess for each set of periods
+For now keep it real simple - a single proj & sess for each set of periods
 
 > genWindowedProjects :: [[Period]] -> Int -> Gen [Project]
 > genWindowedProjects [] _ = return []
@@ -193,10 +194,11 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 
 > genWindowedProject :: [Period] -> Int -> Gen Project
 > genWindowedProject wp id = do
->   -- TBF: should the project be from the same semester as the periods?
+>   -- the project should be from the same semester as the first periods
 >   let (year, _, _, _, _, _) = toGregorian . startTime . head $ wp
 >   proj'' <- genProjectForYear year
->   let proj' = proj'' { pName = "WinP" }
+>   let sem = dt2semester . startTime . head $ wp
+>   let proj' = proj'' { pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
 >   s'' <- genSessionWindowed
 >   let s' = s'' { sName = "WinS(" ++ (show id) ++ ")"
@@ -208,7 +210,7 @@ TBF: for now keep it real simple - a single proj & sess for each set of periods
 >                , minDuration = duration . head $ wp
 >                , maxDuration = duration . head $ wp
 >                , ra = 0.0
->                , dec = 1.5 -- TBF: this is just always up
+>                , dec = 1.5 -- NOTE: this is just always up
 >                }
 >   ws <- genWindows wp
 >   let s = makeSession s' ws wp 
@@ -307,13 +309,13 @@ Generate all the periods for maintenance in a given year.
 >                                   , band = L
 >                                   , ra = 0.0
 >                                   , periods = []
->                                   , dec = 1.5 -- TBF: this is just always up
+>                                   , dec = 1.5 -- this is just always up
 >                                   , receivers = [[Rcvr1_2]]
 >                                   , sType = Fixed }
 
 For non-summer months, generate weekly maintenance periods.
-TBF: this will make an 8 hour maintenance day every 7 days - but we want it 
-to be randomly placed in the middle 5 days of each week.
+NOTE: this will make an 8 hour maintenance day every 7 days - but ideally 
+we want it to be randomly placed in the middle 5 days of each week.
 
 > genWeeklyMaintPeriods :: DateTime -> DateTime -> Session -> Gen [Period]
 > genWeeklyMaintPeriods start end s = return $ filter (\p -> (startTime p) < end) $ map (mkMaintPeriod s (8*60)) $ dts numWeeks
@@ -342,7 +344,7 @@ as we have:
 > mkMaintPeriod s dur date = defaultPeriod {startTime = start
 >                                         , session = s
 >                                         , duration = dur
->                                         , pForecast = start -- TBF?
+>                                         , pForecast = start 
 >                                         , pState = Scheduled 
 >                                          }
 >   where

@@ -1,7 +1,8 @@
-> module Antioch.Schedule.ScheduleTests where
+> module Antioch.ScheduleTests where
 
 > import Antioch.DateTime
 > import Antioch.PProjects
+> import Antioch.ReceiverTemperatures
 > import Antioch.Schedule
 > import Antioch.Score
 > import Antioch.Types
@@ -9,20 +10,21 @@
 > import Antioch.Weather
 > import Antioch.Utilities
 > import Data.List            
-> import Control.Monad.Trans  (lift)
+> import Control.Monad.Trans  (lift, liftIO)
 > import Control.Monad        (liftM)
 > import Test.HUnit
 
 > tests = TestList [
 >     test_best
 >   , test_constrain
->   -- , test_schedule_open
+>   , test_schedule_open
 >   , test_schedMinDuration
 >   , test_schedMinDuration_starvation
 >   , test_disobeyLSTExclusion
 >   , test_disobeySessionAlloted
 >   , test_disobeyTimeBetween
 >   , test_disobeyTransit
+>   , test_disobeyLowRFI'
 >   ]
 
 This test of this strategy should have results that are a subset of the
@@ -30,7 +32,8 @@ similar test in SimulationTests.
 
 > test_schedMinDuration = TestCase $ do
 >     w <- getWeatherTest $ Just wdt
->     result <- runScoring w rs $ do
+>     rt <- getReceiverTemperatures
+>     result <- runScoring w rs rt $ do
 >         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
 >     assertEqual "ScheduleTests_test_schedMinDuration" exp result
@@ -43,27 +46,26 @@ similar test in SimulationTests.
 >     ss' = filter (\s -> (sName s) /= "MH") getOpenPSessions
 >     ss = filter timeLeft ss'
 >     timeLeft s = ((sAllottedT s) - (sCommittedT s)) > (minDuration s)
->     gb = findPSessionByName "GB"
+>     cv = findPSessionByName "CV"
+>     lp = findPSessionByName "LP"
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
->     expSs = [gb, va, va, tx, tx] 
->     dts = [ fromGregorian 2006 2 1 2 30 0
->           , fromGregorian 2006 2 1 4 30 0
->           , fromGregorian 2006 2 1 8 30 0
->           , fromGregorian 2006 2 1 12 30 0
->           , fromGregorian 2006 2 1 16 30 0]
+>     expSs = [cv, lp, va, tx, tx]
+>     dts = [ fromGregorian 2006 2 1 3 15 0
+>           , fromGregorian 2006 2 1 5 15 0
+>           , fromGregorian 2006 2 1 9 15 0
+>           , fromGregorian 2006 2 1 13 15 0
+>           , fromGregorian 2006 2 1 17 15 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) (repeat undefined) (repeat False) durs
+>     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 
-TBF: don't run as a test yet - it fails, but we don't know its status.
-
-> schedMinDurationWithHistory = TestCase $ do
+> test_schedMinDurationWithHistory = TestCase $ do
 >     w <- getWeatherTest $ Just wdt
->     result <- runScoring w rs $ do
+>     rt <- getReceiverTemperatures
+>     result <- runScoring w rs rt $ do
 >         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
->     print result
 >     assertEqual "ScheduleTests_test_schedMinDuration_with_history" exp result
 >   where
 >     rs  = []
@@ -74,26 +76,24 @@ TBF: don't run as a test yet - it fails, but we don't know its status.
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
 >     timeLeft s = ((sAllottedT s) - (sCommittedT s)) > (minDuration s)
->     gb = findPSessionByName "GB"
+>     cv = findPSessionByName "CV"
+>     lp = findPSessionByName "LP"
 >     va = findPSessionByName "VA"
 >     tx = findPSessionByName "TX"
->     expSs = [tx, va, va, tx, tx] 
->     dts = [ fromGregorian 2006 2 1 2 30 0
->           , fromGregorian 2006 2 1 4 30 0
->           , fromGregorian 2006 2 1 8 30 0
->           , fromGregorian 2006 2 1 12 30 0
->           , fromGregorian 2006 2 1 16 30 0]
+>     expSs = [cv, lp, va, tx, tx] 
+>     dts = [ fromGregorian 2006 2 1 3 15 0
+>           , fromGregorian 2006 2 1 5 15 0
+>           , fromGregorian 2006 2 1 9 15 0
+>           , fromGregorian 2006 2 1 13 15 0
+>           , fromGregorian 2006 2 1 17 15 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 
-This test ensures that the scheduleMinDuratin strategy can handle running
-out of stuff to schedule, and doesn't over schedule sessions.
-TBF: reveils bug.
-
 > test_schedMinDuration_starvation = TestCase $ do
+>     rt <- getReceiverTemperatures
 >     w <- getWeatherTest $ Just wdt
->     result <- runScoring w rs $ do
+>     result <- runScoring w rs rt $ do
 >         sf <- genScore dt ss
 >         scheduleMinDuration sf dt dur history ss
 >     assertEqual "ScheduleTests_test_schedMinDuration_starvation" exp result
@@ -103,32 +103,36 @@ TBF: reveils bug.
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 2
 >     history = []
->     s = defaultSession {minDuration = 120, sAllottedT = 240}
+>     s = (findPSessionByName "CV") {minDuration = 120, sAllottedT = 240}
 >     ss = [s]
->     exp = [Period 0 s (fromGregorian 2006 2 1 16 15 0) 120 0.0 Pending dt False 120
->          , Period 0 s (fromGregorian 2006 2 1 18 15 0) 120 0.0 Pending dt False 120]
+>     exp = [Period 0 s (fromGregorian 2006 2 1 3 15 0) 120 0.0 Pending dt False 120
+>          , Period 0 s (fromGregorian 2006 2 1 5 15 0) 120 0.0 Pending dt False 120]
 
 > test_best = TestCase $ do
+>       rt <- getReceiverTemperatures
 >       w      <- getWeatherTest . Just $ dt
->       (s, score) <- runScoring w [] $ do
+>       (s, score) <- runScoring w [] rt $ do
 >           sf <- genScore dt sess
 >           best (averageScore sf dt2) sess 
->       assertEqual "ScheduleTests_test_best1" expSession s
->       assertEqual "ScheduleTests_test_best2" expScore score
+>       assertEqual "ScheduleTests_test_best1" expSession1 s
+>       assertEqual "ScheduleTests_test_best2" expScore1 score
 >       -- make sure it can handle just one session
->       (s, score) <- runScoring w [] $ do
+>       (s, score) <- runScoring w [] rt $ do
 >           sf <- genScore dt sess
 >           best (averageScore sf dt2) [(head sess)] 
->       assertEqual "ScheduleTests_test_best3" expSession s
->       assertEqual "ScheduleTests_test_best4" expScore score
->       -- make sure it can handle just no sessions
->       -- TBF: we're letting this fail so that other bugs will be caught.
->       --(s, score) <- runScoring w [] (best (averageScore sf dt2) []) 
+>       assertEqual "ScheduleTests_test_best3" expSession2 s
+>       assertEqual "ScheduleTests_test_best4" expScore2 score
+>       -- does not handle no sessions, this produces and error
+>       --(s, score) <- runScoring w [] rt $ do
+>       --    sf <- genScore dt sess
+>       --    (best (averageScore sf dt2) []) 
 >       --assertEqual "ScheduleTests_test_best" True True
 >   where
 >     sess = getOpenPSessions
->     expSession = head sess
->     expScore = 10.596095
+>     expSession1 = sess !! 1
+>     expScore1 = 4.102497
+>     expSession2 = sess !! 0
+>     expScore2 = 0.0
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 
@@ -165,12 +169,10 @@ TBF: constrain has not been fully implemented yet
 >       where
 >         adjustPeriod p dt = p {startTime = dt}
 
-
-TBF: this is not passing - but was it meant to copy a python test?
-
 > test_schedule_open = TestCase $ do
 >       w      <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
->       result <- runScoring w rs $ do
+>       rt <- getReceiverTemperatures
+>       result <- runScoring w rs rt $ do
 >           sf <- genScore dt ss
 >           pack sf dt dur history ss
 >       assertEqual "test_schedule_open" expected result
@@ -182,16 +184,22 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       history  = []
 >       expected = [
 >           defaultPeriod {
->               session = head $ filter (\s -> "CV" == (sName s)) ss
->             , startTime = fromGregorian 2006 9 2 14 30 0
->             , duration = 225
->             , pDuration = 225
+>               session = findPSessionByName "CV"
+>             , startTime = fromGregorian 2006 9 2 13 0 0
+>             , duration = 195
+>             , pDuration = 195
 >             }
 >         , defaultPeriod {
->               session = head $ filter (\s -> "AS" == (sName s)) ss
->             , startTime = fromGregorian 2006 9 2 18 15 0
->             , duration = 480
->             , pDuration = 480
+>               session = findPSessionByName "LP"
+>             , startTime = fromGregorian 2006 9 2 16 15 0
+>             , duration = 240
+>             , pDuration = 240
+>           }
+>         , defaultPeriod {
+>               session = findPSessionByName "AS"
+>             , startTime = fromGregorian 2006 9 2 20 15 0
+>             , duration = 360
+>             , pDuration = 360
 >           }
 >         ]
 
@@ -204,6 +212,8 @@ TBF: this is not passing - but was it meant to copy a python test?
 >   assertEqual "test_disobeyLSTExclusion_5" True $ disobeyLSTExclusion' p3  
 >   assertEqual "test_disobeyLSTExclusion_6" False $ anyOverlappingLSTs (dt4, dt5) [lstRange2]  
 >   assertEqual "test_disobeyLSTExclusion_7" False $ anyOverlappingLSTs (dt6, dt7) [lstRange3]  
+>   assertEqual "test_disobeyLSTExclusion_8" True $ disobeyLSTExclusion' p4  
+>   assertEqual "test_disobeyLSTExclusion_9" False $ disobeyLSTExclusion' p5  
 >     where
 >       dt1 = fromGregorian 2009 6 5 17 0 0
 >       dt2 = fromGregorian 2009 6 5 17 3 0
@@ -212,6 +222,8 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       dt5 = fromGregorian 2006 3 24 21 30 0 
 >       dt6 = fromGregorian 2006 3 28 17 0  0 
 >       dt7 = fromGregorian 2006 3 28 21 15 0 
+>       dt8 = fromGregorian 2009 6 5 17 45 0
+>       dt9 = fromGregorian 2009 6 5 18 0 0
 >       lst1 = utc2lstHours dt1
 >       lst2 = utc2lstHours dt2
 >       badLSTrange = (lst1 - 1.0, lst2 + 1.0)
@@ -226,6 +238,8 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       p2 = defaultPeriod { session = s2, startTime = dt1, duration = 180, pDuration = 180 }
 >       s3 = defaultSession { lstExclude = [reverseLSTRange] }
 >       p3 = defaultPeriod { session = s3, startTime = dt3, duration = 120, pDuration = 120 }
+>       p4 = defaultPeriod { session = s2, startTime = dt8, duration = 180, pDuration = 180 }
+>       p5 = defaultPeriod { session = s2, startTime = dt9, duration = 180, pDuration = 180 }
 
 > test_disobeyTransit = TestCase $ do
 >   {-
@@ -246,11 +260,15 @@ TBF: this is not passing - but was it meant to copy a python test?
 >   assertEqual "test_disobeyTransit_5" False $ disobeyTransit' p5  
 >   assertEqual "test_disobeyTransit_6" True  $ disobeyTransit' p6  
 >   assertEqual "test_disobeyTransit_7" True  $ disobeyTransit' p7  
+>   assertEqual "test_disobeyTransit_8" False $ disobeyTransit' p8  
+>   assertEqual "test_disobeyTransit_9" True  $ disobeyTransit' p9  
 >     where
 >       dt1 = fromGregorian 2009 6 5 17 0 0
 >       dt2 = fromGregorian 2009 6 6  8 30 0
 >       dt3 = fromGregorian 2006 2 4  0 30 0 
 >       dt4 = fromGregorian 2006 2 20 3 30 0 
+>       dt5 = fromGregorian 2006 2 20 1 15 0 
+>       dt6 = fromGregorian 2006 2 20 1 30 0 
 >       p1 = defaultPeriod -- session: transit == Optional
 >       s1 = defaultSession { ra = 3.14, transit = Partial }
 >       p2 = p1 { session = s1, startTime = dt1, duration = 2 *60 } 
@@ -261,7 +279,35 @@ TBF: this is not passing - but was it meant to copy a python test?
 >       p6 = p1 { session = s2, startTime = dt3, duration = 2 *60 } 
 >       s3 = defaultSession { ra = 1.6393563 , transit = Partial }
 >       p7 = p1 { session = s3, startTime = dt4, duration = 3 *60 } 
+>       p8 = p1 { session = s3, startTime = dt5, duration = 3 *60 } 
+>       p9 = p1 { session = s3, startTime = dt6, duration = 3 *60 } 
 
+> test_disobeyLowRFI' = TestCase $ do
+>   -- Note that rfi day starts at 13:00 UT and ends at 01:00 UT 
+>   -- period starts inside RFI day's end
+>   let p = testPeriod {session = sNightTime
+>                     , startTime = fromGregorian 2008 1 1 0 30 0}
+>   assertEqual "test_disobeyLowRFI_1" True (disobeyLowRFI' p)
+>   -- period starts only 15 minutes inside RFI day's end
+>   let p = testPeriod {session = sNightTime
+>                     , startTime = fromGregorian 2008 1 1 0 45 0}
+>   assertEqual "test_disobeyLowRFI_2" False (disobeyLowRFI' p)
+>   -- period overlaps RFI day's start
+>   let p = testPeriod {session = sNightTime
+>                     , startTime = fromGregorian 2008 1 1 9 15 0}
+>   assertEqual "test_disobeyLowRFI_3" True (disobeyLowRFI' p)
+>   -- period ends just at RFI day's start
+>   let p = testPeriod {session = sNightTime
+>                     , startTime = fromGregorian 2008 1 1 9 0 0}
+>   assertEqual "test_disobeyLowRFI_4" False (disobeyLowRFI' p)
+>   -- period starts inside RFI day's end but don't care
+>   let p = testPeriod {session = sAnyTime
+>                     , startTime = fromGregorian 2008 1 1 0 30 0}
+>   assertEqual "test_disobeyLowRFI_5" False (disobeyLowRFI' p)
+>     where
+>       sAnyTime = findPSessionByName "CV"
+>       sNightTime = sAnyTime { lowRFI = True }
+>       testPeriod = defaultPeriod { duration = 4*60 }
 
 > test_disobeyTimeBetween = TestCase $ do
 >   assertEqual "test_disobeyTimeBetween_1" 0 $ length . disobeyTimeBetween $ []
