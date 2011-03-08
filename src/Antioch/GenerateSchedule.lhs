@@ -4,7 +4,9 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Filters        (filterHistory)
-> import Antioch.Utilities      (periodInWindow, dt2semester)
+> import Antioch.Utilities      (periodInWindow, dt2semester, deg2rad)
+> import Antioch.Score          (elevation)
+> import Maybe                  (isNothing, fromJust)
 > import Data.List 
 > import Test.QuickCheck hiding (frequency)
 
@@ -63,6 +65,52 @@ our greater then the specified amount.
 >   pp <- genProjectsByHrs year $ hrs - ((`div` 60) . pAllottedS $ p)
 >   return $ p : pp
 
+When we create periods first, then assign Sessions/Projects to them,
+as we do when creating the pre-scheduled periods (Fixed,Windowed), we 
+need to make sure that those Sessions have valid ra/decs for the periods
+that we've already created.
+Here our strategy is to have a go at creating a randomly assigned ra/dec
+to the given period - if we fail too many times, just make the source
+always up and use that.
+
+> genRaDecFromPeriod :: Period -> Gen (Radians, Radians)
+> genRaDecFromPeriod p = do
+>   (ra, dec) <- tryGenRaDecFromPeriod p 0
+>   (cra, cdec) <- genCircumpolarRaDec
+>   return $ if (isNothing ra) || (isNothing dec) then (cra, cdec) else (fromJust ra, fromJust dec)
+
+> genCircumpolarRaDec :: Gen (Float, Float)
+> genCircumpolarRaDec = do
+>   ra  <- choose (0.0, 2*pi)
+>   dec <- choose (60.0, 85.0)
+>   return $ (ra, deg2rad dec)
+
+Once attempts hits the tolerance level, return a failure.
+
+> tryGenRaDecFromPeriod :: Period -> Int -> Gen (Maybe Float, Maybe Float)
+> tryGenRaDecFromPeriod p attempts | attempts > 100 = return $ (Nothing, Nothing)
+>                                  | otherwise = do
+>     s <- skyType
+>     (ra, dec) <- genRaDec s
+>     if validRaDec ra dec p then return $ (Just ra, Just dec) else tryGenRaDecFromPeriod p (attempts+1)
+
+> validRaDec :: Float -> Float -> Period -> Bool
+> validRaDec ra dec p = all (==True) $ map (validRaDecTime ra dec) dts
+>   where
+>     dts = [(startTime p)
+>         ,  (addMinutes 15 (startTime p))
+>         .. (addMinutes (duration p) (startTime p))]
+
+> validRaDecTime :: Float -> Float -> DateTime -> Bool
+> validRaDecTime ra dec dt = validElev $ elevation dt s'
+>   where
+>     s' = defaultSession {ra = ra, dec = dec}
+
+> validElev :: Radians -> Bool
+> validElev el | ((deg2rad 5.0) <= el) && (el <= (deg2rad 90.0)) = True
+>              | otherwise = False
+
+
 For a given list of periods, create appropriate projects & sessions for them.
 The id is passed along so that each session can have a unique id.
 For now keep it real simple - a single proj & sess for each period
@@ -87,13 +135,16 @@ The id is passed along to give the session a unique id.
 >   -- TBF: genSessionFixed will figure things like sAllottedT, but we
 >   -- really want these based off the periods that are pre-generated
 >   s'' <- genSessionFixed
+>   (ra', dec') <- genRaDecFromPeriod p
 >   let s' = s'' { sName = "FixedS(" ++ (show id) ++ ")"
 >                , sId = id
 >                , project = proj'
 >                , sAllottedS = total
 >                , sAllottedT = total
->                , ra = 0.0
->                , dec = 1.5 -- this is just always up
+>                --, ra = 0.0
+>                --, dec = 1.5 -- this is just always up
+>                , ra = ra' 
+>                , dec = dec' -- this is just always up
 >                }
 >   let s = makeSession s' [] [p]
 >   return $ makeProject proj' total total [s]
@@ -201,6 +252,9 @@ For now keep it real simple - a single proj & sess for each set of periods
 >   let proj' = proj'' { pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
 >   s'' <- genSessionWindowed
+>   -- TBF: technically, we need to find an ra/dec that is valid for 
+>   -- all periods, but I hope the LST drift doesn't get us off too bad.
+>   (ra', dec') <- genRaDecFromPeriod (head wp)
 >   let s' = s'' { sName = "WinS(" ++ (show id) ++ ")"
 >                , sId   = id
 >                , project = proj'
@@ -209,8 +263,10 @@ For now keep it real simple - a single proj & sess for each set of periods
 >                -- TBF: does Dana agree to fixed durations?
 >                , minDuration = duration . head $ wp
 >                , maxDuration = duration . head $ wp
->                , ra = 0.0
->                , dec = 1.5 -- NOTE: this is just always up
+>                --, ra = 0.0
+>                --, dec = 1.5 -- NOTE: this is just always up
+>                , ra = ra' 
+>                , dec = dec'
 >                }
 >   ws <- genWindows wp
 >   let s = makeSession s' ws wp 
@@ -307,7 +363,7 @@ Generate all the periods for maintenance in a given year.
 >                                   , project = p
 >                                   , frequency = 2.0
 >                                   , band = L
->                                   , ra = 0.0
+>                                   , ra = 0.1
 >                                   , periods = []
 >                                   , dec = 1.5 -- this is just always up
 >                                   , receivers = [[Rcvr1_2]]

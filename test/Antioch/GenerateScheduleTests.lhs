@@ -5,12 +5,12 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Statistics
-> import Antioch.Utilities    (printList, periodInWindow, validWindow)
+> import Antioch.Utilities    (printList, periodInWindow, validWindow, rad2deg)
+> import Antioch.Score        (elevation)
+> import Antioch.PProjects    (findPSessionByName)
 > {-
-> import Antioch.Score
 > import Antioch.Weather
 > import Antioch.Utilities
-> import Antioch.PProjects
 > import Control.Monad.Trans  (lift, liftIO)
 > -}
 > import Test.HUnit
@@ -28,6 +28,8 @@
 >                 , test_genWindowedSchedule
 >                 , test_genWindows
 >                 , test_validSimulatedWindows
+>                 , test_validRaDec
+>                 , test_genRaDecFromPeriod
 >                 , test_genWeeklyMaintPeriods]
 
 > test_genSimTime = TestCase $ do
@@ -438,3 +440,46 @@
 >     validSess2   = makeSession s [validW, w2] [p, p2]
 >     invalidSess2 = makeSession s [validW, w3] [p, p2] -- overlapping windows
 > 
+
+> test_validRaDec = TestCase $ do
+>     -- based off ScoreTest's test_positionFactors
+>     assertEqual "test_validRaDec_0" 36.60029 (rad2deg $ elevation dt s)
+>     assertEqual "test_validRaDec_1" True (validRaDec ra' dec' p) 
+>     -- twelve hours earlier, look how low the eleveation is
+>     assertEqual "test_validRaDec_2" 1.9727771 (rad2deg $ elevation dt2 s)
+>     -- with elevations like that, a period won't pass
+>     assertEqual "test_validRaDec_3" False (validRaDec ra' dec' p2) 
+> 
+>   where
+>     dt  = fromGregorian 2006 9 2 14 30 0
+>     dt2 = fromGregorian 2006 9 2  2 30 0
+>     s = findPSessionByName "CV"
+>     ra' = ra s
+>     dec' = dec s
+>     p = defaultPeriod { session = s
+>                       , startTime = dt
+>                       , duration = 60
+>                       }
+>     p2 = p {startTime = dt2}
+
+How to test that we are producing legal ra & decs without resorting
+to the circumpolar rad/dec?  don't know, but I do know that what
+ever ra/decs we come out with should be valid.
+Also, simply be calling it we can see if it blows up or not ...
+
+> test_genRaDecFromPeriod = TestCase $ do
+>     let g = mkStdGen 1
+>     let (ra', dec') = generate 0 g $ genRaDecFromPeriod p 
+>     assertEqual "test_genRaDecFromPeriod_1" True (validRaDec ra' dec' p)
+>     let g' = mkStdGen 2
+>     let (ra', dec') = generate 1 g' $ genRaDecFromPeriod p 
+>     assertEqual "test_genRaDecFromPeriod_2" True (validRaDec ra' dec' p)
+>   where
+>     dt  = fromGregorian 2006 9 2 14 30 0
+>     s = findPSessionByName "CV"
+>     ra' = ra s
+>     dec' = dec s
+>     p = defaultPeriod { session = s
+>                       , startTime = dt
+>                       , duration = 60
+>                       }
