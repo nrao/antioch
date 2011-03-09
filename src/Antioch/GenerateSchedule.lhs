@@ -184,13 +184,14 @@ Generate a period that starts with the given time range.
 > genFixedPeriod start days = do
 >   day <- choose (1, days)
 >   hour <- choose (0, 23)
->   duration <- choose (1, 8)
+>   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs 
+>   let dur = qtrs * 15
 >   let start = start' day hour
 >   -- just to get the sem right
 >   let proj = defaultProject { semester = dt2semester start }
 >   let sess = defaultSession { project = proj }
 >   return $ defaultPeriod { startTime = start
->                          , duration  = duration*60
+>                          , duration  = dur
 >                          , pState    = Scheduled
 >                          , session   = sess -- just to get the sem right
 >                          , pForecast = start 
@@ -229,7 +230,8 @@ fit into the given time range.
 >   let sizeDays = if (sizeDays' >= days) then days - 3 else sizeDays'
 >   day <- choose (1, days - 1) --sizeDays)
 >   hour <- choose (0, 23)
->   duration <- choose (1, 8) -- hours
+>   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs
+>   let duration = qtrs * 15
 >   let firstStart = getStart day hour
 >   let dts = filter (<end) $ [addMinutes (d*24*60) firstStart | d <- [0, intervalDays .. (numWindows * intervalDays)]]
 >   return $! map (mkPeriod duration) dts 
@@ -237,7 +239,7 @@ fit into the given time range.
 >   end = addMinutes (days*24*60) start
 >   getStart day hour = addMinutes ((day*24*60)+(hour*60)) start
 >   mkPeriod dur dt = defaultPeriod { startTime = dt
->                                   , duration  = dur*60
+>                                   , duration  = dur
 >                                   , pForecast = dt 
 >                                   , pState    = Pending }
 
