@@ -136,13 +136,22 @@ The id is passed along to give the session a unique id.
 >   -- really want these based off the periods that are pre-generated
 >   s'' <- genSessionFixed
 >   (ra', dec') <- genRaDecFromPeriod p
+>   -- min/max duration is randomly created for fixed sessions
+>   let minDur = minDuration s''
+>   let maxDur = maxDuration s''
+>   let dur = duration p
 >   let s' = s'' { sName = "FixedS(" ++ (show id) ++ ")"
 >                , sId = id
 >                , project = proj'
 >                , sAllottedS = total
 >                , sAllottedT = total
->                --, ra = 0.0
->                --, dec = 1.5 -- this is just always up
+>                -- NOTE: here is where Dana can vary the min/max dur
+>                -- but keep the period length legal
+>                --, minDuration = min dur minDur
+>                --, maxDuration = max dur maxDur
+>                -- otherwise, min/max matches the period length
+>                , minDuration = dur
+>                , maxDuration = dur
 >                , ra = ra' 
 >                , dec = dec' -- this is just always up
 >                }
@@ -252,6 +261,10 @@ For now keep it real simple - a single proj & sess for each set of periods
 >   let proj' = proj'' { pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
 >   s'' <- genSessionWindowed
+>   -- randomly generated min/max durations for windowed session
+>   let minDur = minDuration s''
+>   let maxDur = maxDuration s''
+>   let dur = duration . head $ wp -- they all have the same length
 >   -- TBF: technically, we need to find an ra/dec that is valid for 
 >   -- all periods, but I hope the LST drift doesn't get us off too bad.
 >   (ra', dec') <- genRaDecFromPeriod (head wp)
@@ -260,11 +273,13 @@ For now keep it real simple - a single proj & sess for each set of periods
 >                , project = proj'
 >                , sAllottedS = total
 >                , sAllottedT = total
->                -- TBF: does Dana agree to fixed durations?
->                , minDuration = duration . head $ wp
->                , maxDuration = duration . head $ wp
->                --, ra = 0.0
->                --, dec = 1.5 -- NOTE: this is just always up
+>                -- NOTE: here is where Dana can choose to vary the durations 
+>                --, make sure the period length is still legal
+>                --, minDuration = min dur minDur 
+>                --, maxDuration = max dur maxDur
+>                -- otherwise, min/max matches the period length
+>                , minDuration = dur
+>                , maxDuration = dur
 >                , ra = ra' 
 >                , dec = dec'
 >                }
