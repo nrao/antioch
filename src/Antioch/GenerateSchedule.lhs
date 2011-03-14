@@ -4,9 +4,9 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Filters        (filterHistory)
-> import Antioch.Utilities      (periodInWindow, dt2semester, deg2rad)
+> import Antioch.Utilities      (periodInWindow, dt2semester, deg2rad, lstHours2utc, rad2hrs)
 > import Antioch.Score          (elevation)
-> import Maybe                  (isNothing, fromJust)
+> import Maybe                  (isNothing, fromJust, isJust)
 > import Data.List 
 > import Test.QuickCheck hiding (frequency)
 
@@ -153,7 +153,7 @@ The id is passed along to give the session a unique id.
 >                , minDuration = dur
 >                , maxDuration = dur
 >                , ra = ra' 
->                , dec = dec' -- this is just always up
+>                , dec = dec' 
 >                }
 >   let s = makeSession s' [] [p]
 >   return $ makeProject proj' total total [s]
@@ -220,7 +220,8 @@ overlaps, then repeat the process until we've run out of time.
 >     hrs' wp = hrs - ((`div` 60) . sum $ map duration wp)
 
 Randomly generate a list of periods that are separated by a regular interval, that
-fit into the given time range.
+fit into the given time range.  Also make sure that these periods have
+valid elevations for the randomly generated ra/decs of their session.
 
 > genWindowedPeriods :: DateTime -> Int -> Gen [Period]
 > genWindowedPeriods start days = do
@@ -229,19 +230,79 @@ fit into the given time range.
 >   let sizeDays' = numWindows * intervalDays
 >   let sizeDays = if (sizeDays' >= days) then days - 3 else sizeDays'
 >   day <- choose (1, days - 1) --sizeDays)
->   hour <- choose (0, 23)
 >   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs
->   let duration = qtrs * 15
->   let firstStart = getStart day hour
->   let dts = filter (<end) $ [addMinutes (d*24*60) firstStart | d <- [0, intervalDays .. (numWindows * intervalDays)]]
->   return $! map (mkPeriod duration) dts 
+>   let duration' = qtrs * 15
+>   let dayStart = addMinutes (day*24*60) start
+>   -- instead of creating the random ra/dec directly, create a whole
+>   -- windowed session (w/ ra/dec) that will then get attached 
+>   -- to this period
+>   s <- genSessionWindowed
+>   let (ra', dec') = (ra s, dec s)
+>   -- for the ra/dec, produce period starttimes & durations that are
+>   -- valid (produce valid elevations)
+>   let trs = getValidTransitRanges dayStart duration' intervalDays numWindows end (ra', dec')
+>   return $! map (mkPeriod s) trs 
 >     where
 >   end = addMinutes (days*24*60) start
 >   getStart day hour = addMinutes ((day*24*60)+(hour*60)) start
->   mkPeriod dur dt = defaultPeriod { startTime = dt
+>   mkPeriod sess (dt, dur) = defaultPeriod { startTime = dt
 >                                   , duration  = dur
+>                                   , session   = sess
 >                                   , pForecast = dt 
 >                                   , pState    = Pending }
+
+For the given ra/dec, produce period starttimes & durations that are valid
+(that is, they produce valid elevations), from the given number of periods
+needed, and their spacing.
+
+> getValidTransitRanges :: DateTime -> Minutes -> Int -> Int -> DateTime -> (Radians, Radians) -> [(DateTime, Minutes)]
+> getValidTransitRanges startDay dur intervalDays numWindows endDay (ra,dec) = map (getValidTransitRange dur (ra, dec)) $ filter (<endDay) days
+>   where
+>      days = [addMinutes (d*24*60) startDay | d <- [0, intervalDays .. ((numWindows-1) * intervalDays)]]
+
+NOTE: finish checking a property of the transit ranges
+
+> prop_getValidTransitRanges = forAll (genRaDec 'g') $ \(ra', dec') -> let trs = getValidTransitRanges dt dur int num end (ra', dec') in (length trs) > 1
+>   where 
+>     dt = fromGregorian 2010 2 2 0 0 0
+>     dur = (8*60)
+>     int = 15
+>     num = 5
+>     end = fromGregorian 2011 2 2 0 0 0
+
+For the given ra/dec, return a time period that surronds the transit
+for this ra/dec, preferibly of the given duration, but possibly trimmed
+to keep the elevations valid (source above the horizon).
+
+> getValidTransitRange :: Minutes -> (Radians, Radians) -> DateTime -> (DateTime, Minutes)
+> getValidTransitRange dur (ra,dec) day = fitValidPeriodToTransit dtTransit dur (ra, dec) 
+>   where
+>     dtTransit = roundToQuarter $ lstHours2utc day (rad2hrs ra)
+>     
+
+Given a certain Ra & Dec and their transit time, will the given time range
+(indicated by the given duration surronding the transit) be valid?  If not, can we shrink this
+time range until it is?
+
+> fitValidPeriodToTransit :: DateTime -> Minutes -> (Radians, Radians) -> (DateTime, Minutes)
+> fitValidPeriodToTransit dtTransit trialDuration (ra, dec) = (dtStart, duration) 
+>   where
+>     startOffset = trialDuration `div` 2
+>     trialStart = roundToQuarter $ addMinutes (-startOffset) dtTransit
+>     dts = [trialStart, (addMinutes quarter trialStart) .. dtTransit]
+>     dtStart' = find (validEl (ra, dec)) dts 
+>     validEl (ra', dec') dt = validElev $ elevation dt defaultSession {ra = ra', dec = dec'}
+>     dtStart = if isJust dtStart' then fromJust dtStart' else dtTransit
+>     duration = if isJust dtStart' then round2quarter $ (diffMinutes dtTransit dtStart) * 2 else 0
+
+> prop_fitValidPeriodToTransit = forAll (genRaDec 'g') $ \(ra', dec') -> 
+>   let (dtStart, dur) = fitValidPeriodToTransit (lstHours2utc dt (rad2hrs ra')) (8*60) (ra', dec') in dur /= 0
+>     where
+>       dt = fromGregorian 2010 2 2 0 0 0
+
+> prop_raDecTransitsGiveValidElevations = forAll (genRaDec 'g') $ \(ra', dec') -> (validElev $  elevation (lstHours2utc dt (rad2hrs ra')) defaultSession {ra = ra', dec = dec'}) 
+>     where
+>       dt = fromGregorian 2010 2 2 0 0 0
 
 Each sub-list of periods needs to get assigned a windowed session & project.
 In addition, each single period needs to be within a newly created window.
@@ -262,14 +323,17 @@ For now keep it real simple - a single proj & sess for each set of periods
 >   let sem = dt2semester . startTime . head $ wp
 >   let proj' = proj'' { pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
->   s'' <- genSessionWindowed
+>   -- grab the session that was used to create the periods, since
+>   -- we used it's ra/dec to determine the periods
+>   let s'' = session . head $ wp
+>   let (ra', dec') = (ra s'', dec s'')
 >   -- randomly generated min/max durations for windowed session
 >   let minDur = minDuration s''
 >   let maxDur = maxDuration s''
->   let dur = duration . head $ wp -- they all have the same length
->   -- TBF: technically, we need to find an ra/dec that is valid for 
->   -- all periods, but I hope the LST drift doesn't get us off too bad.
->   (ra', dec') <- genRaDecFromPeriod (head wp)
+>   -- default period durations may vary slightly, since we need
+>   -- to have them always tracking a source above the horizon
+>   let pMinDur = minimum $ map duration wp
+>   let pMaxDur = maximum $ map duration wp
 >   let s' = s'' { sName = "WinS(" ++ (show id) ++ ")"
 >                , sId   = id
 >                , project = proj'
@@ -279,9 +343,9 @@ For now keep it real simple - a single proj & sess for each set of periods
 >                --, make sure the period length is still legal
 >                --, minDuration = min dur minDur 
 >                --, maxDuration = max dur maxDur
->                -- otherwise, min/max matches the period length
->                , minDuration = dur
->                , maxDuration = dur
+>                -- otherwise, min/max matches the period lengths
+>                , minDuration = pMinDur
+>                , maxDuration = pMaxDur
 >                , ra = ra' 
 >                , dec = dec'
 >                }
@@ -299,23 +363,32 @@ From an evenly spaced list of periods, create the list of windows
 >     let (phYear, phMonth, phDay, _, _, _) = toGregorian . startTime $ ph
 >     let dayStart = fromGregorian phYear phMonth phDay 0 0 0
 >     let dts = [addMinutes (-dur) $ addMinutes (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
->     return $ map (mkWindow dur) dts
+>     let pDurs = map duration ps
+>     return $ map (mkWindow dur) $ zip dts pDurs
 >   where
 >     days = (*(24*60))
 >     pDiff = if pt == [] then days 10 else diffMinutes (startTime . head $ pt) (startTime ph)
 >     -- a window can't be more then one day less then the separation between
 >     maxWidthDays = (pDiff - days 2) `div` (24*60)
 >     numPs = length ps
->     mkWindow dur dt = defaultWindow {wRanges = [(dt, addMinutes (dur + days 2) dt)]}
+>     mkWindow dur (dt, time) = defaultWindow {wRanges = [(dt, addMinutes (dur + days 2) dt)], wTotalTime = time}
 
-Self-test to be called in unit tests and simulations
+Self-test to be called in unit tests and simulations.
+As a general guideline, these windows should also get past 
+many of the criteria in Filters.lhs: activeWindows:
+   - hasTime
+   - iNotComplete
 
 > validSimulatedWindows :: Session -> Bool
-> validSimulatedWindows s = onePeriodEach && (not . windowConflicts $ windows s)
+> validSimulatedWindows s = all (==True) [onePeriodEach, (not . windowConflicts $ windows s), haveTime, areNotComplete]
 >   where
 >     onePeriodEach = all (==True) $ map (windowHasOnePeriod ps) ws   
+>     hasTime w = (wTotalTime w) >= quarter
+>     haveTime = all (==True) $ map hasTime ws
 >     ps = periods s
 >     ws = windows s
+>     isNotComplete w = not . wComplete $ w
+>     areNotComplete = all (==True) $ map isNotComplete ws
 
 > windowHasOnePeriod :: [Period] -> Window -> Bool
 > windowHasOnePeriod ps w = 1 == (length $ filter (==True) $ map (flip periodInWindow w) ps)
