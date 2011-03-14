@@ -64,6 +64,8 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     let badWinSessions = filter (not . validSimulatedWindows) wss
 >     if (length badWinSessions == 0) then print "Simulated Windows OK" else do
 >       print "Invalid Windows Detected; exiting simulation."
+>       printList badWinSessions
+>       printList $ concatMap windows badWinSessions
 >       return ()
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime

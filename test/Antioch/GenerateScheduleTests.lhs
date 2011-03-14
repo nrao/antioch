@@ -23,6 +23,7 @@
 >                 , test_genSimTime_windows
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
+>                 , test_makePeriod
 >                 , test_genWindows
 >                 , test_validSimulatedWindows
 >                 , test_validRaDec
@@ -392,21 +393,34 @@
 >     hrs = 100
 >     schd = createSummerMaintenance 2006 defaultSession
 
+> test_makePeriod = TestCase $ do
+>     let dp = defaultPeriod { startTime = fromGregorian 2010 2 12 12 30 0
+>                            , duration = 120
+>                            }
+>     let win = makeWindow 10 dp
+>     let start = fromGregorian 2010 2 4  0 0 0
+>     let end   = fromGregorian 2010 2 14 0 0 0
+>     let win' = defaultWindow { wRanges = [(start, end)]
+>                              , wTotalTime = 120
+>                              }
+>     assertEqual "test_makePeriod_1" win' win
+
 > test_genWindows = TestCase $ do
+>     -- create a list of default periods
 >     let g = mkStdGen 1
 >     let ps = map mkPeriod dts
->     --printList ps
+>     -- make windows for them
 >     let wins = generate 0 g $ genWindows ps
->     --print ("wins: ", wins)
 >     let allPsInAWin = all (\(w, p) -> periodInWindow p w) $ zip wins ps
 >     assertEqual "test_genWindows_1" True allPsInAWin
 >     -- make sure each period is only in one window
 >     let allInOne = all (==True) $ map (inJustOneWindow wins) ps
 >     assertEqual "test_genWindows_2" True allInOne
+>     -- ensure we can handle the null case
 >     let wins2 = generate 0 g $ genWindows []
 >     assertEqual "test_genWindows_3" [] wins2 
+>     -- ensure we can handle just one default period
 >     let wins3 = generate 0 g $ genWindows [head ps] 
->     --print wins3
 >     assertEqual "test_genWindows_4" 1 (length wins3) 
 >     -- see how it fares with randomly generated periods
 >     let wps  = generate 0 g $ genWindowedSchedule start days [] (10*24)

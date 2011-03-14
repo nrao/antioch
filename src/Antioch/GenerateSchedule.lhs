@@ -353,25 +353,47 @@ For now keep it real simple - a single proj & sess for each set of periods
 >   let s = makeSession s' ws wp 
 >   return $ makeProject proj' total total [s]
 
-From an evenly spaced list of periods, create the list of windows
+From an (almost) evenly spaced list of periods, create the list of windows.
+The periods are *not* separated by an integer number of days because
+they are adjusted to cover the session's source's transit.
+So, get an idea of what the spacing is between periods, use that to choose
+(randomly) the gap between windows, and then use this info to create 
+the window ranges surround each window.
+We, by default, place each default period right near the end of it's win.
+
 
 > genWindows :: [Period] -> Gen [Window]
 > genWindows [] = return $ []
 > genWindows ps@(ph:pt) = do
->     durDays <- choose (div maxWidthDays 2, maxWidthDays)
->     let dur = 24*60*durDays
->     let (phYear, phMonth, phDay, _, _, _) = toGregorian . startTime $ ph
->     let dayStart = fromGregorian phYear phMonth phDay 0 0 0
->     let dts = [addMinutes (-dur) $ addMinutes (pDiff*pi) dayStart | pi <- [0..numPs - 1]] 
->     let pDurs = map duration ps
->     return $ map (mkWindow dur) $ zip dts pDurs
+>     -- randomly choose the width of the windows (in days), somewhere
+>     -- between its max. width, and something smaller.
+>     winWidth <- choose (maxWinWidthDays `div` 2, maxWinWidthDays)
+>     return $ map (makeWindow winWidth) ps
 >   where
->     days = (*(24*60))
->     pDiff = if pt == [] then days 10 else diffMinutes (startTime . head $ pt) (startTime ph)
->     -- a window can't be more then one day less then the separation between
->     maxWidthDays = (pDiff - days 2) `div` (24*60)
->     numPs = length ps
->     mkWindow dur (dt, time) = defaultWindow {wRanges = [(dt, addMinutes (dur + days 2) dt)], wTotalTime = time}
+>     minsPerDay = 24*60
+>     days = (*minsPerDay)
+>     -- if there happens to be only one period, then just make the window
+>     -- arbitrarrily of any size
+>     psDiffDays = if pt == [] then 10 else (diffMinutes (startTime . head $ pt) (startTime ph)) `div` minsPerDay
+>     -- build in a saftey buffer of two days between windows
+>     maxWinWidthDays = psDiffDays - 2
+>     --maxWinWidthDays = psDiffDays 
+
+Given the default period and the window's width (in days), returns the
+Window object appropriate.
+
+> makeWindow :: Int -> Period -> Window
+> makeWindow winWidth defaultPeriod = defaultWindow { wRanges = [(start, end)]
+>                                                   , wTotalTime = duration defaultPeriod
+>                                                   } 
+>   where
+>     minsPerDay = 24*60
+>     days = (*minsPerDay)
+>     -- give the window day more days after the period ends
+>     (y, m, d) = toGregorian' $ addMinutes (days 2) (periodEndTime defaultPeriod)  
+>     -- but make sure window ranges fall on integer days
+>     end = fromGregorian' y m d
+>     start = addMinutes (-(days winWidth)) end
 
 Self-test to be called in unit tests and simulations.
 As a general guideline, these windows should also get past 
