@@ -240,7 +240,7 @@
 >     let g = mkStdGen 1
 >     let dt = fromGregorian 2006 1 1 0 0 0
 >     let proj = generate 0 g $ genMaintenanceProj dt 365
->     assertEqual "test_genMaintProj_1" "06A" (semester proj)
+>     assertEqual "test_genMaintProj_1" "05C" (semester proj)
 >     assertEqual "test_genMaintProj_1" "Maintenance" (pName proj)
 >     -- test that we tied the knots
 >     let ss = sessions proj
