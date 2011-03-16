@@ -125,6 +125,11 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 >     res <- getObserverReservations cnn observer
 >     return observer { blackouts = bs, reservations = res }
 
+Note that start_date and end_date refer respectively to the check-in
+and check-out dates, e.g., a person with a start_date of 03/13/2011
+and an end_date of 03/15/2011 would spend two nights in Green Bank,
+the nights of 03/13/2011 and 03/14/2011. 
+
 > getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
 > getObserverBlackouts cnn obs = do
 >   result <- quickQuery' cnn query xs

@@ -300,7 +300,7 @@ to ease the debugging process.
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
 
 Periods from Elective Sessions should not run if they don't pass
-MOC, unless they are gauranteed, and this is the last period in 
+MOC, unless they are guaranteed, and this is the last period in 
 the elective group.
 
 > goodElective :: Period -> Scoring (Bool)
@@ -337,15 +337,21 @@ a chance even the last periods won't observe.
 >     elec = if (length elecs') == 1 then Just . head $ elecs' else Nothing
 
 > isLastPeriod :: Period -> Maybe Electives -> Bool
-> isLastPeriod p me | isNothing me = False
->                   | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
+> isLastPeriod p me
+>     | isNothing me = False
+>     | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
 
 Default Periods of Windows from non-guaranteed Sessions should not
 run if they don't pass MOC.  So we must enforce this matrix:
-
-|             |  *guaranteed*                    | *non-guaranteed* |
-| has default |	The default period is scheduled. | The default period is scheduled if it meets minimum observing conditions |
-| no default | NA                                | As previosuly in the window, the session must compete for a time slot. |
+_____________________________________________________________________________
+|             |  *guaranteed*      | *non-guaranteed*                       |
+_____________________________________________________________________________
+| has default |	The default period | The default period is scheduled if     |
+|             | is scheduled.      | it meets minimum observing conditions. |
+_____________________________________________________________________________
+| no default  | NA                 | As previosuly in the window, the       |
+|             |                    | session must compete for a time slot.  |
+|___________________________________________________________________________|
 
 > goodDefaultPeriod :: Period -> Scoring (Bool)
 > goodDefaultPeriod p | isNotWindowed p = return True

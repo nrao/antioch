@@ -39,8 +39,8 @@ artificial boundaries (as we see with calling a strategy multiple times for
 each day, as in simulations).
 
 An additional attempt at avoiding artificial boundaries is the way in which 
-the endpoint for our scheduling is determined: we run the strategy from 7 AM
-EST to 7 AM EST + some overhead, then ignore the periods scheduled into the 
+the endpoint for our scheduling is determined: we run the strategy from 8 AM
+EST to 8 AM EST + some overhead, then ignore the periods scheduled into the 
 overhead until we have a reasonable boundary condition at the end of the 24
 hour scheduling period.
 
@@ -52,7 +52,7 @@ hour scheduling period.
 > dailySchedule :: ScoreFunc -> StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
 > dailySchedule sf strategyName dt days history ss quiet = do
 >     -- figure out the time period to schedule for
->     let workStartMinutes = 8*60  -- TBF when do they get to work?
+>     let workStartMinutes = 8*60
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
 >     let dur = endTime `diffMinutes` dt 
 >     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
