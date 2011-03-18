@@ -178,16 +178,12 @@ Note: window reconciliation does NOT happen here.
 
 During simulations, we want to be realistic about sessions from projects
 from future trimesters.  So, we will simply unauthorize any sessions beloning
-to future trimesters EXCEPT WINDOWS!!!.  In the case of windows, they only
-get scheduled in their window ranges anyways, so who cares if a window range
-is in 09A but the project is for 09B?
+to future trimesters. 
 
 > authorizeBySemester :: [Session] -> DateTime -> [Session]
 > authorizeBySemester ss dt = map (authorizeBySemester' dt) ss
 
-
-> authorizeBySemester' dt s | sType s == Windowed = s
->                           | otherwise           = s { authorized = a }
+> authorizeBySemester' dt s = s { authorized = a }
 >   where
 >     a = (semester . project $ s) <= currentSemester 
 >     currentSemester = dt2semester dt
