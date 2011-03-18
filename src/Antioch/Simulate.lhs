@@ -63,7 +63,6 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         w <- if test then getWeatherTest $ Just start else getWeather $ Just start
 >         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
->         -- TBF: how does this affect windowed sessions?
 >         let sessions'' = authorizeBySemester sessions start
 >
 >         -- make sure default periods that are in this scheduling range
@@ -189,21 +188,25 @@ to future trimesters.
 >     currentSemester = dt2semester dt
 
 We must combine the output of the scheduling algorithm with the history from
-before the algorithm was called, but there's two complications:
+before the algorithm was called, but there's some complications:
    * the output from the algo. is a combination of parts of the history and
      the newly scheduled periods
    * this same output is then modified: cancellations and replacements
      (backups) may occur.
+   * Also, periods from the history may have been published.  We need
+   to update the final history to reflect this: that amounts to replacing the unpublished periods in the history w/ their publised equivalents.
 So, we need to intelligently combine the previous history and the algo. output.
 What we do is we simply combine the history and the newly scheduled periods, 
-remove any redundancies (periods that were in both lists), then remove any 
+remove any redundancies (keeping scheduled periods), then remove any 
 periods that we know just got condemned.  Condemned periods include both canceled 
 periods, and default periods whose windows got scheduled earlier.
 
 > updateHistory :: [Period] -> [Period] -> [Period] -> [Period]
-> updateHistory history newSched condemned = filter notCondemned $ nub . sort $ history ++ newSched 
+> updateHistory history newSched condemned = filter notCondemned schd 
 >   where
 >     notCondemned p = not $ any (==p) condemned
+>     -- make sure published periods replace their unpulished originals
+>     schd = filterDupUnpubPeriods . sort $ history ++ newSched
 
 > debugSimulation :: [Period] -> [Period] -> [Trace] -> String
 > debugSimulation schdPs obsPs trace = concat [schd, obs, bcks, "\n"]
@@ -263,6 +266,18 @@ so must get filtered properly.
 
 > removeCanceled :: Session -> [Period] -> [Period]
 > removeCanceled s canceled =  (periods s) \\ canceled
+
+This filters out duplicate, unpublished periods.
+
+> filterDupUnpubPeriods :: [Period] -> [Period]
+> filterDupUnpubPeriods ps = fop ps []
+>   where
+>     isPub p q = if (pState p == Scheduled) then p else q
+>     fop []       ls           = ls
+>     fop (p:[])   ls           = p : fop [] ls
+>     fop (p:q:ps) ls
+>         | p == q              = isPub p q : fop ps ls
+>         | otherwise           = p : fop (q:ps) ls
 
 Utilities:
 
