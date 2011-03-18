@@ -71,7 +71,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         let h = filterHistory history start (packDays+1) 
 >         let ws' = getWindows sessions'' h 
 >         let ws = map (\w -> w {wComplete = True}) ws'
->         let sessions' = updateSessions sessions'' [] [] ws
+>         let sessions' = updateSessions sessions'' [] [] [] ws
 >
 >         -- now we pack, and look for backups
 >         (newSchedPending, newTrace) <- runScoring' w rs rt $ do
@@ -99,6 +99,10 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         -- here's how we get the new periods:
 >         -- ex: [1,2,3,4,5] \\ [1,2,3,5] -> [4]
 >         let newlyScheduledPeriods = newSched \\ history
+>         -- now get the just published periods: that is, periods that
+>         -- were already in the history, but have just gone from 
+>         -- Pending to Scheduled
+>         let newlyPublishedPeriods = filter (newlyPublished history) newSched
 >         -- now get the canceled periods so we can make sure they aren't 
 >         -- still in their sessions
 >         let cs = getCanceledPeriods $ trace ++ newTrace 
@@ -111,7 +115,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         let dps = getDefaultPeriods sessions ws
 >         let defaultsToDelete = dps \\ wps
 >         let condemned = cs ++ defaultsToDelete
->         let sessions'' = updateSessions sessions' newlyScheduledPeriods condemned (ws)
+>         let sessions'' = updateSessions sessions' newlyScheduledPeriods newlyPublishedPeriods condemned ws
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
 >         let newHistory = updateHistory history newSched condemned 
@@ -187,6 +191,15 @@ to future trimesters.
 >     a = (semester . project $ s) <= currentSemester 
 >     currentSemester = dt2semester dt
 
+If the given period is found in the given list of periods, compare
+their states.  Used for finding what periods just got published.
+TBF: needs unit test
+
+> newlyPublished :: [Period] -> Period -> Bool 
+> newlyPublished history p = case find (==p) history of
+>     Nothing -> False
+>     Just ph -> (pState ph) == Pending && (pState p) == Scheduled
+
 We must combine the output of the scheduling algorithm with the history from
 before the algorithm was called, but there's some complications:
    * the output from the algo. is a combination of parts of the history and
@@ -233,14 +246,15 @@ sessions =
 Note that in this function, we appropriately group together periods that all belong
 to the same session.  But this does not happen to the windows.
 
-> updateSessions :: [Session] -> [Period] -> [Period] -> [Window] -> [Session]
-> updateSessions sessions periods condemned windows = map update sessions
+> updateSessions :: [Session] -> [Period] -> [Period] -> [Period] -> [Window] -> [Session]
+> updateSessions sessions periods published condemned windows = map update sessions
 >   where
 >     pss      = partitionWith session periods
 >     update s =
 >         case find (\(p:_) -> session p == s) pss of
->           Nothing -> updateSession' s [] condemned windows -- condemned go anyways
->           Just ps -> updateSession' s ps condemned windows
+>           -- published & condemned get passed on anyways
+>           Nothing -> updateSession' s [] published condemned windows 
+>           Just ps -> updateSession' s ps published condemned windows
 
 > partitionWith            :: Eq b => (a -> b) -> [a] -> [[a]]
 > partitionWith _ []       = []
@@ -252,11 +266,13 @@ Ties the knots between a session and it's periods & windows.
 But it also:
    * removes condemend periods
    * updates any scheduled windows
+   * updates any pre-existing periods that have been published
 Note that the windows passed in may not all belong to this given session,
 so must get filtered properly.
+Note that this is also true of the published periods passed in.
 
-> updateSession' :: Session -> [Period] -> [Period] -> [Window] -> Session
-> updateSession' s ps canceled ws = makeSession s ws' $ sort $ (removeCanceled s canceled) ++ ps
+> updateSession' :: Session -> [Period] -> [Period] -> [Period] -> [Window] -> Session
+> updateSession' s newPs published canceled ws = makeSession s ws' $ updateSessionPeriods s published canceled newPs 
 >   where
 >     -- any windows that belong to this session need to be marked as 
 >     -- scheduled
@@ -266,6 +282,30 @@ so must get filtered properly.
 
 > removeCanceled :: Session -> [Period] -> [Period]
 > removeCanceled s canceled =  (periods s) \\ canceled
+
+For a given session, and it's:
+   * new periods to add
+   * existing periods to publish
+   * canceled periods to remove
+Returns the sessions new periods (ready for makeSession).
+TBF: needs unit test
+
+> updateSessionPeriods :: Session -> [Period] -> [Period] -> [Period] -> [Period]
+> updateSessionPeriods s published canceled newPs = sort $ updatePublishedPeriods published $ (removeCanceled s canceled) ++ newPs
+
+Given a list of published periods, return the second list of given
+periods, with periods that appear in the published list updated (published)
+Note: the given list of published periods do not have to be for the same
+session as the other periods, since identity for periods depends on 
+the parent session.
+TBF: needs unit test
+
+> updatePublishedPeriods :: [Period] -> [Period] -> [Period]
+> updatePublishedPeriods published ps = map (publish published) ps
+>   where
+>     -- if the period is in the list of published, update it
+>     publish pub p = if p `elem` pub then publish' p else p
+>     publish' p = p {pState = Scheduled, pDuration = duration p}
 
 This filters out duplicate, unpublished periods.
 

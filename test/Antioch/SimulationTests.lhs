@@ -304,19 +304,19 @@ get on, it has a high chance of being canceled.
 >     let psIds = getPeriodIds ss 
 >     assertEqual "test_updateSessions_1" [1] psIds
 >     -- test an update w/ out canceled periods
->     let updatedSess = updateSessions ss new_ps [] []
+>     let updatedSess = updateSessions ss new_ps [] [] []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_2" [1,2,3] newPsIds
 >     -- test an update *with* canceled periods
->     let updatedSess = updateSessions ss new_ps canceled [] 
+>     let updatedSess = updateSessions ss new_ps [] canceled [] 
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_3" [2,3] newPsIds
 >     -- test an update *with* canceled periods, but no new periods
->     let updatedSess = updateSessions ss [] canceled []
+>     let updatedSess = updateSessions ss [] [] canceled []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_4" [] newPsIds
 >     -- try a non-empty windows argument
->     let updatedSess = updateSessions (tw1:ss) [chosen] [condemned] [w1]
+>     let updatedSess = updateSessions (tw1:ss) [chosen] [] [condemned] [w1]
 >     -- get the windowed session from the results
 >     let tw1' = head $ filter (==tw1) updatedSess
 >     --    session's first period has changed
@@ -333,13 +333,25 @@ get on, it has a high chance of being canceled.
 >     assertEqual "test_updateSessions_10" [tw1', tw1'] (map session $ periods tw1')
 >     --    session's windows are referencing the session
 >     assertEqual "test_updateSessions_11" [tw1', tw1'] (map wSession $ windows tw1')
+>     -- test an update w/ out canceled periods but with some published
+>     assertEqual "test_updateSessions_12" [Pending] (map pState (concatMap periods ss))
+>     let updatedSess = updateSessions ss new_ps [lp_p_pub] [] []
+>     let newPsIds = getPeriodIds updatedSess 
+>     assertEqual "test_updateSessions_13" [1,2,3] newPsIds
+>     assertEqual "test_updateSessions_14" [Scheduled,Scheduled,Scheduled] (map pState (concatMap periods updatedSess))
 >   where
->     lp_ps = [defaultPeriod { peId = 1, session = lp }]
+>     lp_p = defaultPeriod { peId = 1, session = lp }
+>     lp_ps = [lp_p]
+>     lp_p_pub = lp_p {pState = Scheduled, pDuration = duration lp_p}
 >     canceled = lp_ps
 >     lp' = makeSession lp [] lp_ps
 >     ss = [lp', cv]
->     new_lp_period = defaultPeriod { peId = 2, session = lp }
->     new_cv_period = defaultPeriod { peId = 3, session = cv }
+>     dp = defaultPeriod {duration  = 15
+>                       , pState = Scheduled
+>                       , pDuration = 15
+>                        }
+>     new_lp_period = dp { peId = 2, session = lp }
+>     new_cv_period = dp { peId = 3, session = cv }
 >     new_ps = [new_lp_period, new_cv_period]
 >     getPeriodIds sess = sort $ map peId $ concatMap periods sess
 >     w1 = (head . windows $ tw1) {wComplete = True}
@@ -348,6 +360,7 @@ get on, it has a high chance of being canceled.
 >                 session = tw1
 >               , startTime = fromGregorian 2006 10 2 12 15 0
 >               , duration = 4*60
+>               , pState = Scheduled
 >               , pDuration = 4*60
 >                }
 >     tw1_newPs = [chosen, last . periods $ tw1]
