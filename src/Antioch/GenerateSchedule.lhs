@@ -4,7 +4,8 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Filters        (filterHistory)
-> import Antioch.Utilities      (periodInWindow, dt2semester, deg2rad, lstHours2utc, rad2hrs)
+> --import Antioch.Utilities      (periodInWindow, dt2semester, deg2rad, lstHours2utc, rad2hrs)
+> import Antioch.Utilities
 > import Antioch.Score          (elevation)
 > import Maybe                  (isNothing, fromJust, isJust)
 > import Data.List 
@@ -192,7 +193,9 @@ Generate a period that starts with the given time range.
 >   let sess = defaultSession { project = proj }
 >   return $ defaultPeriod { startTime = start
 >                          , duration  = dur
->                          , pState    = Scheduled
+>                          --, pState    = Scheduled
+>                          , pState    = Pending
+>                          , pDuration = 0
 >                          , session   = sess -- just to get the sem right
 >                          , pForecast = start 
 >                          }
@@ -219,17 +222,42 @@ overlaps, then repeat the process until we've run out of time.
 >   where
 >     hrs' wp = hrs - ((`div` 60) . sum $ map duration wp)
 
+Generates the number of windows, and the spacing between their start
+dates.  Scales appropriately for how long our simulation is.
+Always make sure that you don't return intervalDays larger then 
+the given number of days.
+
+> genWindowSpacing :: Int -> Gen (Int, Int)
+> genWindowSpacing days | days > 65 = do
+>   numWindows <- choose (3,10)
+>   intervalDays <- choose (15, 60)
+>   return (numWindows, intervalDays)
+>                       | days > 30 && days <= 65 = do
+>   numWindows <- choose (3,10)
+>   intervalDays <- choose (15, days)
+>   return (numWindows, intervalDays)
+>                       | days > 10 && days <= 30 = do -- days < 30
+>   let minDays = days `div` 4 
+>   numWindows <- choose (3,10)
+>   intervalDays <- choose (minDays, days)
+>   return (numWindows, intervalDays)
+>                       | otherwise = return (1,days) -- days < 10
+
+
 Randomly generate a list of periods that are separated by a regular interval, that
-fit into the given time range.  Also make sure that these periods have
+fit into the given time range.  These will become the default periods
+for a Windowed Session's Windows, and those windows will be built around
+these periods.  
+Also make sure that these periods have
 valid elevations for the randomly generated ra/decs of their session.
 
 > genWindowedPeriods :: DateTime -> Int -> Gen [Period]
 > genWindowedPeriods start days = do
->   numWindows <- choose (3,10)
->   intervalDays <- choose (15, 60)
->   let sizeDays' = numWindows * intervalDays
->   let sizeDays = if (sizeDays' >= days) then days - 3 else sizeDays'
->   day <- choose (1, days - 1) --sizeDays)
+>   -- scale the windows appropriately
+>   (numWindows, intervalDays) <- genWindowSpacing days
+>   -- what day number, since 'start' should the list of default periods
+>   -- start on?  
+>   day <- choose (2, days - 1) 
 >   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs
 >   let duration' = qtrs * 15
 >   let dayStart = addMinutes (day*24*60) start
@@ -249,6 +277,7 @@ valid elevations for the randomly generated ra/decs of their session.
 >                                   , duration  = dur
 >                                   , session   = sess
 >                                   , pForecast = dt 
+>                                   , pDuration = 0
 >                                   , pState    = Pending }
 
 For the given ra/dec, produce period starttimes & durations that are valid
@@ -317,10 +346,14 @@ For now keep it real simple - a single proj & sess for each set of periods
 
 > genWindowedProject :: [Period] -> Int -> Gen Project
 > genWindowedProject wp id = do
->   -- the project should be from the same semester as the first periods
->   let (year, _, _, _, _, _) = toGregorian . startTime . head $ wp
+>   -- first generate the windows that encompass each default period
+>   ws <- genWindows wp
+>   -- now get the project & session all setup
+>   -- the project should be from the same semester as the first window 
+>   let wstart = fst . head . wRanges . head $ ws
+>   let (year, _, _, _, _, _) = toGregorian wstart
 >   proj'' <- genProjectForYear year
->   let sem = dt2semester . startTime . head $ wp
+>   let sem = dt2semester wstart
 >   let proj' = proj'' { pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
 >   -- grab the session that was used to create the periods, since
@@ -349,7 +382,6 @@ For now keep it real simple - a single proj & sess for each set of periods
 >                , ra = ra' 
 >                , dec = dec'
 >                }
->   ws <- genWindows wp
 >   let s = makeSession s' ws wp 
 >   return $ makeProject proj' total total [s]
 
@@ -393,7 +425,10 @@ Window object appropriate.
 >     (y, m, d) = toGregorian' $ addMinutes (days 2) (periodEndTime defaultPeriod)  
 >     -- but make sure window ranges fall on integer days
 >     end = fromGregorian' y m d
->     start = addMinutes (-(days winWidth)) end
+>     start' = addMinutes (-(days winWidth)) end
+>     -- make sure window starts in same semester as period
+>     start = max trimesterStartDt start'
+>     trimesterStartDt = fromJust . trimester2startDT . dt2semester . startTime $ defaultPeriod
 
 Self-test to be called in unit tests and simulations.
 As a general guideline, these windows should also get past 
@@ -461,13 +496,8 @@ Generate all the periods for maintenance in a given year.
 
 > mkMaintProject :: DateTime -> Project
 > mkMaintProject start = defaultProject { pName = "Maintenance"
->                                      , semester = sem sem'
+>                                      , semester = dt2semester start 
 >                                      , sessions = []}
->   where
->     (year, _, _, _, _, _) = toGregorian start 
->     sem' = (show $ year - 2000) ++ "A"
->     sem s = if (length s) == 2 then "0" ++ s else s
->      
 
 > mkMaintSession :: Project -> Session
 > mkMaintSession p = defaultSession { sName = "Maintenance"

@@ -55,7 +55,7 @@ TBF this is SO broken, Mike fix it
 >   yl = "Remaining Time Used In Pressures"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] []
+>   ss = updateSessions ss' ps [] [] []
 >   ssBands = sessionsByBand ss
 >   titles = map (\b -> (Just (show b))) bandRange
 
@@ -77,7 +77,7 @@ See notes for simRemainingTime.
 >   yl = "Past Semester Time Used In Pressures"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] []
+>   ss = updateSessions ss' ps [] [] []
 >   ssBands = sessionsByBand ss
 >   titles = map (\b -> (Just (show b))) bandRange 
 
@@ -1439,15 +1439,26 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
 >     -- calculate scheduled and observed efficiencies
->     begin <- getCurrentTime
 >     w <- if test then getWeatherTest Nothing else getWeather Nothing
 >     rt <- getReceiverTemperatures
+>     print "Calculating Period Observed Efficiences: "
+>     begin <- getCurrentTime
 >     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
+>     end <- getCurrentTime
+>     print $ "Calc Period Efficiencies Observed Time: " ++ (show $ end - begin)
+>     print "Calculating Period Scheduled Efficiences: "
+>     begin <- getCurrentTime
 >     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
+>     end <- getCurrentTime
+>     print $ "Calc Period Scheduled Efficiencies Time: " ++ (show $ end - begin)
+>     print "Calculating Canceled Period Efficiences: "
+>     begin <- getCurrentTime
 >     canceledDetails <- getCanceledPeriodsDetails w rt [] canceled 
 >     end <- getCurrentTime
->     print $ "Calc Period Efficiencies Time: " ++ (show $ end - begin)
+>     print $ "Calc Canceled Efficiencies Time: " ++ (show $ end - begin)
 >     -- check efficiency scores for normalicy
+>     print "Calculating more Efficiencies: "
+>     begin <- getCurrentTime
 >     let schdObsEffs =  map atso2o $ concatMap snd pSchdEffs
 >     let schdAtmEffs =  map atso2a $ concatMap snd pSchdEffs
 >     let schdTrkEffs =  map atso2t $ concatMap snd pSchdEffs
@@ -1475,6 +1486,8 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                        ]
 >     -- compare window efficinces: chosen vs. default periods
 >     windowEffs <- compareWindowPeriodEfficiencies winfo w
+>     end <- getCurrentTime
+>     print $ "Calc More Efficiencies Time: " ++ (show $ end - begin)
 >     -- text reports 
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create generic plots

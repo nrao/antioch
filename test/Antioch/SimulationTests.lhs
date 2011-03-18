@@ -17,12 +17,14 @@
 
 > tests = TestList [ 
 >     test_simulateDailySchedule
+>   , test_simulateDailyScheduleWithFixed
 >   , test_simulateDailyScheduleWithWindows
 >   , test_exhaustive_history
 >   , test_honor_history
 >   --, test_cancellations
 >   , test_updateHistory
 >   , test_updateSessions
+>   , test_filterDupUnpubPeriods
 >                  ]
 
 Attempt to see if the old test_sim_pack still works:
@@ -51,6 +53,50 @@ Attempt to see if the old test_sim_pack still works:
 >     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
 >     
 
+> test_simulateDailyScheduleWithFixed = TestCase $ do
+>     -- fisrt simulate with JUST the one fixed session & period
+>     let history = concatMap periods [s1]
+>     (result, t) <- simulateDailySchedule rs dt1 packDays simDays history [s1] True True [] []
+>     assertEqual "test_simFixed 1" 1 (length result)
+>     assertEqual "test_simFixed 2" (startTime . head $ history) (startTime . head $ result)
+>     -- make sure they are all getting published properly
+>     assertEqual "test_simFixed 3" True (all (==True) $ map published result)
+>     -- now make sure the fixed period is still there when it 
+>     -- gets scheduled around
+>     let ss = getOpenPSessions
+>     (result, t) <- simulateDailySchedule rs dt1 packDays simDays history ss True True [] []
+>     assertEqual "test_simFixed 4" 18 (length result)
+>     assertEqual "test_simFixed 5" (head history) (result !! 2)
+>     assertEqual "test_simFixed 6" 1 (length $ filter (\p -> (sId . session $ p) == 101) result)
+>     -- make sure they are all getting published properly
+>     assertEqual "test_simFixed 7" True (all (==True) $ map published result)
+>   where
+>     rs  = []
+>     dt1 = fromGregorian 2006  9 20 0 0 0
+>     dt2 = fromGregorian 2006  9 21 0 0 0
+>     dt3 = fromGregorian 2006  9 26 0 0 0
+>     dt4 = fromGregorian 2006 10 15 0 0 0
+>     dt5 = fromGregorian 2006  9 25 0 0 0
+>     simDays = 3
+>     packDays = 2
+>     --history = concat . map periods $ ss
+>     --ss = getWindowedPSessions
+>     published p = ((pState p) == Scheduled) && ((duration p) == pDuration p)
+>     s1' = defaultSession { sId = 101
+>                         , sName = "101"
+>                         , sType = Fixed
+>                         , frequency = 1.1
+>                         , band = L
+>                         }
+>     p1 = defaultPeriod { startTime = fromGregorian 2006 9 20 16 0 0
+>                        , duration = 2*60
+>                        , pState = Pending
+>                        , pDuration = 0
+>                        , session = s1'
+>                        }
+>     s1 = makeSession s1' [] [p1]
+
+
 > test_simulateDailyScheduleWithWindows = TestCase $ do
 >     -- default windowed periods
 >     let dwps = sort . concat . map periods $ ss
@@ -68,6 +114,9 @@ Attempt to see if the old test_sim_pack still works:
 >     -- The returned default period should be the same one as attached
 >     -- to the session
 >     assertEqual "test_simulateDailyScheduleWithWindows 5" def (head dwps)
+>     -- make sure they are all getting published properly
+>     assertEqual "test_simDSWin" [True,False,False,False] (map published result)
+>
 >     --  ***    No competition, but better weather, opportunity to
 >     -- schedule multiple chosen periods, but still get just one.
 >     (result, t) <- simulateDailySchedule rs dt2 packDays simDays history ss True True [] []
@@ -82,6 +131,8 @@ Attempt to see if the old test_sim_pack still works:
 >     -- The returned default period should be the same one as attached
 >     -- to the session
 >     assertEqual "test_simulateDailyScheduleWithWindows 10" def (head dwps)
+>     assertEqual "test_simDSWin 2" [True,False,False,False] (map published result)
+>
 >     --  ***    No competition, but the scheduling range encompasses
 >     --         a  default window, so no new periods should be
 >     --         scheduled.
@@ -96,16 +147,20 @@ Attempt to see if the old test_sim_pack still works:
 >     -- The returned default period should be the same one as attached
 >     -- to the session
 >     assertEqual "test_simulateDailyScheduleWithWindows 14" def (head dwps)
->     --  ***    No competition, but the scheduling range encompasses
->     --         a  window with a previously chosen period, so no
->     --         new periods should be scheduled.
+>     assertEqual "test_simDSWin 3" [True,False,False,False] (map published result)
+> 
+>     --  ***    No competition, but the scheduling range does not 
+>     --         encompass a defaul period, and no chosen period is 
+>     --         scheduled
 >     (result, t) <- simulateDailySchedule rs dt4 packDays simDays history ss True True [] []
->     -- Four scheduled periods, all the default periods
+>     -- Four periods, all the default periods, but NOT scheduled
 >     assertEqual "test_simulateDailyScheduleWithWindows 14" 4 (length result)
 >     -- Results should be all default periods
 >     assertEqual "test_simulateDailyScheduleWithWindows 15" dwps result
 >     -- No windowed periods in trace
 >     assertEqual "test_simulateDailyScheduleWithWindows 16" [] (getWindowPeriodsFromTrace t)
+>     assertEqual "test_simDSWin 4" True (all (==False) $ map published result)
+>
 >     --  ***    No competition, scheduling across two windows
 >     --         resulting in a chosen and a default window.
 >     (result, t) <- simulateDailySchedule rs dt5 packDays 10 history ss True True [] []
@@ -120,6 +175,8 @@ Attempt to see if the old test_sim_pack still works:
 >     -- The returned default period should be the same one as attached
 >     -- to the session
 >     assertEqual "test_simulateDailyScheduleWithWindows 21" def (head dwps)
+>     assertEqual "test_simDSWin 5" [True, True, False, False] (map published result)
+> 
 >   where
 >     rs  = []
 >     dt1 = fromGregorian 2006  9 20 0 0 0
@@ -131,6 +188,7 @@ Attempt to see if the old test_sim_pack still works:
 >     packDays = 2
 >     history = concat . map periods $ ss
 >     ss = getWindowedPSessions
+>     published p = ((pState p) == Scheduled) && ((duration p) == pDuration p)
 
 Attempt to see if old test still works:
 Test to make sure that our time accounting isn't screwed up by the precence 
@@ -211,8 +269,15 @@ get on, it has a high chance of being canceled.
 >     
 
 > test_updateHistory = TestCase $ do
+>     -- no time overlap of periods: it doesn't really matter how they
+>     -- are setup, the result should just be == ++ them up
 >     assertEqual "test_updateHistory_1" r1 (updateHistory h1 s1 []) 
->     assertEqual "test_updateHistory_2" r1 (updateHistory h1 s2 []) 
+>     -- this time, the new schedule (s2) includes all the same periods
+>     -- in the history, except now they've been published, so the history
+>     -- should get replaced
+>     assertEqual "test_updateHistory_2" r1 (updateHistory h1 s2 [])
+>     -- now cancel the last period in the history (h1), and make sure
+>     -- it is really removed from the history
 >     assertEqual "test_updateHistory_3" r3 (updateHistory h1 s3 c3) 
 >   where
 >     mkDts start num = map (\i->(i*dur) `addMinutes` start) [0 .. (num-1)] 
@@ -226,30 +291,32 @@ get on, it has a high chance of being canceled.
 >     dt1 = fromGregorian 2006 2 1 10 0 0
 >     r1 = h1 ++ s1
 >     -- second test
->     s2 = h1 ++ s1
+>     ph1 = (map publish h1)
+>     s2 = ph1 ++ s1
 >     -- third test
->     s3 = (take 4 h1) ++ s1
->     c3 = [last h1]
+>     s3 = (take 4 ph1) ++ s1
+>     c3 = [last ph1]
 >     r3 = s3
+>     publish p = p {pState = Scheduled, pDuration = duration p}
 
 > test_updateSessions = TestCase $ do
 >     -- test initial conditions
 >     let psIds = getPeriodIds ss 
 >     assertEqual "test_updateSessions_1" [1] psIds
 >     -- test an update w/ out canceled periods
->     let updatedSess = updateSessions ss new_ps [] []
+>     let updatedSess = updateSessions ss new_ps [] [] []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_2" [1,2,3] newPsIds
 >     -- test an update *with* canceled periods
->     let updatedSess = updateSessions ss new_ps canceled [] 
+>     let updatedSess = updateSessions ss new_ps [] canceled [] 
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_3" [2,3] newPsIds
 >     -- test an update *with* canceled periods, but no new periods
->     let updatedSess = updateSessions ss [] canceled []
+>     let updatedSess = updateSessions ss [] [] canceled []
 >     let newPsIds = getPeriodIds updatedSess 
 >     assertEqual "test_updateSessions_4" [] newPsIds
 >     -- try a non-empty windows argument
->     let updatedSess = updateSessions (tw1:ss) [chosen] [condemned] [w1]
+>     let updatedSess = updateSessions (tw1:ss) [chosen] [] [condemned] [w1]
 >     -- get the windowed session from the results
 >     let tw1' = head $ filter (==tw1) updatedSess
 >     --    session's first period has changed
@@ -266,13 +333,25 @@ get on, it has a high chance of being canceled.
 >     assertEqual "test_updateSessions_10" [tw1', tw1'] (map session $ periods tw1')
 >     --    session's windows are referencing the session
 >     assertEqual "test_updateSessions_11" [tw1', tw1'] (map wSession $ windows tw1')
+>     -- test an update w/ out canceled periods but with some published
+>     assertEqual "test_updateSessions_12" [Pending] (map pState (concatMap periods ss))
+>     let updatedSess = updateSessions ss new_ps [lp_p_pub] [] []
+>     let newPsIds = getPeriodIds updatedSess 
+>     assertEqual "test_updateSessions_13" [1,2,3] newPsIds
+>     assertEqual "test_updateSessions_14" [Scheduled,Scheduled,Scheduled] (map pState (concatMap periods updatedSess))
 >   where
->     lp_ps = [defaultPeriod { peId = 1, session = lp }]
+>     lp_p = defaultPeriod { peId = 1, session = lp }
+>     lp_ps = [lp_p]
+>     lp_p_pub = lp_p {pState = Scheduled, pDuration = duration lp_p}
 >     canceled = lp_ps
 >     lp' = makeSession lp [] lp_ps
 >     ss = [lp', cv]
->     new_lp_period = defaultPeriod { peId = 2, session = lp }
->     new_cv_period = defaultPeriod { peId = 3, session = cv }
+>     dp = defaultPeriod {duration  = 15
+>                       , pState = Scheduled
+>                       , pDuration = 15
+>                        }
+>     new_lp_period = dp { peId = 2, session = lp }
+>     new_cv_period = dp { peId = 3, session = cv }
 >     new_ps = [new_lp_period, new_cv_period]
 >     getPeriodIds sess = sort $ map peId $ concatMap periods sess
 >     w1 = (head . windows $ tw1) {wComplete = True}
@@ -281,9 +360,28 @@ get on, it has a high chance of being canceled.
 >                 session = tw1
 >               , startTime = fromGregorian 2006 10 2 12 15 0
 >               , duration = 4*60
+>               , pState = Scheduled
 >               , pDuration = 4*60
 >                }
 >     tw1_newPs = [chosen, last . periods $ tw1]
+
+> test_filterDupUnpubPeriods = TestCase $ do
+>     -- periods do not have to be that different to be different
+>     let p0 = defaultPeriod {startTime = 10000}
+>     let p1 = defaultPeriod {startTime = 20000}
+>     let p2 = defaultPeriod {startTime = 30000}
+>     let p2' = defaultPeriod {startTime = 30000, pState = Scheduled}
+>     let p3 = defaultPeriod {startTime = 40000}
+>     let p4 = defaultPeriod {startTime = 50000}
+>     let p5 = defaultPeriod {startTime = 60000}
+>
+>     -- should make p2 go away as long as it is next to p2'
+>     let result = filterDupUnpubPeriods [p0, p1, p2, p2', p3, p4, p5]
+>     assertEqual "test_filterDupUnpubPeriods_1" 6 (length result)
+>     assertEqual "test_filterDupUnpubPeriods_2" Scheduled (pState . (!!) result $ 2)
+>     let result = filterDupUnpubPeriods [p0, p1, p2', p2, p3, p4, p5]
+>     assertEqual "test_filterDupUnpubPeriods_3" 6 (length result)
+>     assertEqual "test_filterDupUnpubPeriods_4" Scheduled (pState . (!!) result $ 2) 
 
 Test Utilities:
 
