@@ -193,7 +193,9 @@ Generate a period that starts with the given time range.
 >   let sess = defaultSession { project = proj }
 >   return $ defaultPeriod { startTime = start
 >                          , duration  = dur
->                          , pState    = Scheduled
+>                          --, pState    = Scheduled
+>                          , pState    = Pending
+>                          , pDuration = 0
 >                          , session   = sess -- just to get the sem right
 >                          , pForecast = start 
 >                          }
@@ -275,6 +277,7 @@ valid elevations for the randomly generated ra/decs of their session.
 >                                   , duration  = dur
 >                                   , session   = sess
 >                                   , pForecast = dt 
+>                                   , pDuration = 0
 >                                   , pState    = Pending }
 
 For the given ra/dec, produce period starttimes & durations that are valid
