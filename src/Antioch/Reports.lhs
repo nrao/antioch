@@ -1439,6 +1439,7 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
 >     -- calculate scheduled and observed efficiencies
+>     print "Calculating Period Efficiences: "
 >     begin <- getCurrentTime
 >     w <- if test then getWeatherTest Nothing else getWeather Nothing
 >     rt <- getReceiverTemperatures
@@ -1448,6 +1449,8 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     end <- getCurrentTime
 >     print $ "Calc Period Efficiencies Time: " ++ (show $ end - begin)
 >     -- check efficiency scores for normalicy
+>     print "Calculating more Efficiencies: "
+>     begin <- getCurrentTime
 >     let schdObsEffs =  map atso2o $ concatMap snd pSchdEffs
 >     let schdAtmEffs =  map atso2a $ concatMap snd pSchdEffs
 >     let schdTrkEffs =  map atso2t $ concatMap snd pSchdEffs
@@ -1475,6 +1478,8 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                        ]
 >     -- compare window efficinces: chosen vs. default periods
 >     windowEffs <- compareWindowPeriodEfficiencies winfo w
+>     end <- getCurrentTime
+>     print $ "Calc More Efficiencies Time: " ++ (show $ end - begin)
 >     -- text reports 
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create generic plots
