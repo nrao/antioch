@@ -25,6 +25,7 @@
 >   --, test_cancellations
 >   , test_updateHistory
 >   , test_updateSessions
+>   , test_periodInWindow'
 >   , test_filterDupUnpubPeriods
 >                  ]
 
@@ -449,6 +450,25 @@ get on, it has a high chance of being canceled.
 >     let result = filterDupUnpubPeriods [p0, p1, p2', p2, p3, p4, p5]
 >     assertEqual "test_filterDupUnpubPeriods_3" 6 (length result)
 >     assertEqual "test_filterDupUnpubPeriods_4" Scheduled (pState . (!!) result $ 2) 
+
+> test_periodInWindow' = TestCase $ do
+>     assertEqual "test_periodInWindow' 1" True (periodInWindow' p1 w)
+>     assertEqual "test_periodInWindow' 2" True (periodInWindow' p2 w)
+>     assertEqual "test_periodInWindow' 3" True (periodInWindow' p3 w)
+>     assertEqual "test_periodInWindow' 4" False (periodInWindow' p4 w)
+>   where
+>     start = fromGregorian' 2009 2 8
+>     end   = fromGregorian' 2009 2 14
+>     w = defaultWindow { wRanges = [(start, end)] }
+>     pStart1 = fromGregorian 2009 2 8 12 0 0 
+>     p1 = defaultPeriod { startTime = pStart1
+>                       , duration = 60 }
+>     pStart2 = fromGregorian 2009 2 8 0 0 0 
+>     p2 = p1 { startTime = pStart2 }
+>     pStart3 = fromGregorian 2009 2 7 23 45 0 
+>     p3 = p2 { startTime = pStart3 }
+>     pStart4 = fromGregorian 2009 2 7 23 30 0 
+>     p4 = p3 { startTime = pStart4 }
 
 Test Utilities:
 
