@@ -200,6 +200,9 @@ Attempt to see if the old test_sim_pack still works:
 >   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS1, winS2] True True [] []
 >   -- make sure they are both being scheduled!!!
 >   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [s1, s2] True True [] []
+>   -- make sure they are both being scheduled!!!
+>   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
 >   
 >     where
 >   rs = []
@@ -219,6 +222,8 @@ Attempt to see if the old test_sim_pack still works:
 >                           , band = L
 >                           , sAllottedT = dur
 >                           , sAllottedS = dur
+>                           , minDuration = dur
+>                           , maxDuration = dur
 >                           , sType = Windowed
 >                           , project = proj
 >                           }
@@ -247,6 +252,9 @@ Attempt to see if the old test_sim_pack still works:
 >           }
 >   winS2 = makeSession winS2' [w2] [p2]
 >   expP2 = p2 { startTime = start }
+>   -- open sessions
+>   s1 = makeSession winS1 { sType = Open } [] []
+>   s2 = makeSession winS2 { sType = Open } [] []
 
 
 Attempt to see if old test still works:
