@@ -19,11 +19,13 @@
 >     test_simulateDailySchedule
 >   , test_simulateDailyScheduleWithFixed
 >   , test_simulateDailyScheduleWithWindows
+>   , test_simulateWithWindows_2
 >   , test_exhaustive_history
 >   , test_honor_history
 >   --, test_cancellations
 >   , test_updateHistory
 >   , test_updateSessions
+>   , test_periodInWindow'
 >   , test_filterDupUnpubPeriods
 >                  ]
 
@@ -189,6 +191,72 @@ Attempt to see if the old test_sim_pack still works:
 >     history = concat . map periods $ ss
 >     ss = getWindowedPSessions
 >     published p = ((pState p) == Scheduled) && ((duration p) == pDuration p)
+
+
+> test_simulateWithWindows_2 = TestCase $ do
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS1] True True [] []
+>   assertEqual "test_simulateWithWindows_2_1" [expP1] result
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS2] True True [] []
+>   assertEqual "test_simulateWithWindows_2_2" [expP2] result
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS1, winS2] True True [] []
+>   -- make sure they are both being scheduled!!!
+>   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [s1, s2] True True [] []
+>   -- make sure they are both being scheduled!!!
+>   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
+>   
+>     where
+>   rs = []
+>   packDays = 2
+>   dur = 2*60
+>   start = fromGregorian 2006 2 2 0 0 0
+>   wend = fromGregorian 2006 2 9 0 0 0
+>   -- first windowed session
+>   w1pId = 231
+>   proj = defaultProject { pId = 1, pAllottedT = dur, pAllottedS = dur }
+>   winS1' = defaultSession { sName = "one"
+>                           , sId = 1
+>                           , receivers = [[Rcvr1_2]]
+>                           , frequency = 1.1
+>                           , ra = 0.1
+>                           , dec = 1.5 -- always up
+>                           , band = L
+>                           , sAllottedT = dur
+>                           , sAllottedS = dur
+>                           , minDuration = dur
+>                           , maxDuration = dur
+>                           , sType = Windowed
+>                           , project = proj
+>                           }
+>   w1 = defaultWindow { wRanges = [(start, wend)]
+>                        , wPeriodId = Just w1pId
+>                        , wTotalTime = dur
+>                        } 
+>   p1 = defaultPeriod { peId = w1pId
+>                       , startTime = addMinutes (-(12*60)) wend
+>                       , duration = dur
+>                       , pDuration = 0
+>                       , pState = Pending
+>                       , session = winS1'
+>                       }
+>   winS1 = makeSession winS1' [w1] [p1] 
+>   expP1 = p1 { startTime = start }
+>   --ss1 = [winS1]
+>   -- second windowed session
+>   w2pId = 232
+>   proj2 = proj { pId = 2 }
+>   winS2' = winS1' { project = proj2, sName = "two", sId = 2 }
+>   w2 = w1 { wPeriodId = Just w2pId }
+>   p2 = p1 { startTime = addMinutes (-(15*60)) wend
+>           , peId = w2pId
+>           , session = winS2'
+>           }
+>   winS2 = makeSession winS2' [w2] [p2]
+>   expP2 = p2 { startTime = start }
+>   -- open sessions
+>   s1 = makeSession winS1 { sType = Open } [] []
+>   s2 = makeSession winS2 { sType = Open } [] []
+
 
 Attempt to see if old test still works:
 Test to make sure that our time accounting isn't screwed up by the precence 
@@ -382,6 +450,25 @@ get on, it has a high chance of being canceled.
 >     let result = filterDupUnpubPeriods [p0, p1, p2', p2, p3, p4, p5]
 >     assertEqual "test_filterDupUnpubPeriods_3" 6 (length result)
 >     assertEqual "test_filterDupUnpubPeriods_4" Scheduled (pState . (!!) result $ 2) 
+
+> test_periodInWindow' = TestCase $ do
+>     assertEqual "test_periodInWindow' 1" True (periodInWindow' p1 w)
+>     assertEqual "test_periodInWindow' 2" True (periodInWindow' p2 w)
+>     assertEqual "test_periodInWindow' 3" True (periodInWindow' p3 w)
+>     assertEqual "test_periodInWindow' 4" False (periodInWindow' p4 w)
+>   where
+>     start = fromGregorian' 2009 2 8
+>     end   = fromGregorian' 2009 2 14
+>     w = defaultWindow { wRanges = [(start, end)] }
+>     pStart1 = fromGregorian 2009 2 8 12 0 0 
+>     p1 = defaultPeriod { startTime = pStart1
+>                       , duration = 60 }
+>     pStart2 = fromGregorian 2009 2 8 0 0 0 
+>     p2 = p1 { startTime = pStart2 }
+>     pStart3 = fromGregorian 2009 2 7 23 45 0 
+>     p3 = p2 { startTime = pStart3 }
+>     pStart4 = fromGregorian 2009 2 7 23 30 0 
+>     p4 = p3 { startTime = pStart4 }
 
 Test Utilities:
 

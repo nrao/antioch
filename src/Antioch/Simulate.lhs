@@ -110,8 +110,6 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         let wps = filter (typeWindowed . session) newSched
 >         let ws' = getWindows sessions wps 
 >         let ws = map (\w -> w { wComplete = True }) ws'
->         --liftIO $ print $ "Compare periods to default periods: "
->         --liftIO $ printList $ getDefaultPeriods sessions ws
 >         let dps = getDefaultPeriods sessions ws
 >         let defaultsToDelete = dps \\ wps
 >         let condemned = cs ++ defaultsToDelete
@@ -148,9 +146,21 @@ Note we pass along all sessions so that we don't have to rely on the session tie
 the given period being up to date - this is the knot tying problem.
 
 > getWindow :: [Session] -> Period -> Window
-> getWindow ss p = fromJust $ find (periodInWindow p) (windows s)
+> getWindow ss p = fromJust $ find (periodInWindow' p) (windows s)
 >   where
 >     s = fromJust $ find (\s -> (sId s) == (sId . session $ p)) ss 
+
+This wrapper to periodInWindow just ensures that we allow a period to start
+a quarter before it's window starts.  This can happen because Pack
+ignores the 'overhead' of a session, which for most cases is just a quarter.
+
+> periodInWindow' :: Period -> Window -> Bool
+> periodInWindow' p w = periodInWindow p w'  
+>   where
+>     start = addMinutes (-quarter) $ wStart w
+>     w' = w { wRanges = [(start, wEnd w)] }
+
+
 
 > getDefaultPeriods ss ws = map (getDefaultPeriod ss) ws
 
@@ -159,7 +169,7 @@ Note that the session is identified using the sId and retrieved from the pool of
 since the session from wSession may not be up to date - this is the knot typing problem.
 
 > getDefaultPeriod :: [Session] -> Window -> Period
-> getDefaultPeriod ss w = fromJust $ find (flip periodInWindow w) $ periods s 
+> getDefaultPeriod ss w = fromJust $ find (flip periodInWindow' w) $ periods s 
 >   where
 >     s = fromJust $ find (\s -> (sId s) == (sId . wSession $ w)) ss 
 
