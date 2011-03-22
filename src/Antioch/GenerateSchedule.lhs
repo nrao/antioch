@@ -354,7 +354,7 @@ For now keep it real simple - a single proj & sess for each set of periods
 >   let (year, _, _, _, _, _) = toGregorian wstart
 >   proj'' <- genProjectForYear year
 >   let sem = dt2semester wstart
->   let proj' = proj'' { pName = "WinP", semester = sem }
+>   let proj' = proj'' { pId = id, pName = "WinP", semester = sem }
 >   let total = sum $ map duration wp
 >   -- grab the session that was used to create the periods, since
 >   -- we used it's ra/dec to determine the periods

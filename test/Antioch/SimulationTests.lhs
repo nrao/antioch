@@ -19,6 +19,7 @@
 >     test_simulateDailySchedule
 >   , test_simulateDailyScheduleWithFixed
 >   , test_simulateDailyScheduleWithWindows
+>   , test_simulateWithWindows_2
 >   , test_exhaustive_history
 >   , test_honor_history
 >   --, test_cancellations
@@ -189,6 +190,64 @@ Attempt to see if the old test_sim_pack still works:
 >     history = concat . map periods $ ss
 >     ss = getWindowedPSessions
 >     published p = ((pState p) == Scheduled) && ((duration p) == pDuration p)
+
+
+> test_simulateWithWindows_2 = TestCase $ do
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS1] True True [] []
+>   assertEqual "test_simulateWithWindows_2_1" [expP1] result
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS2] True True [] []
+>   assertEqual "test_simulateWithWindows_2_2" [expP2] result
+>   (result, t) <- simulateDailySchedule rs start packDays 2 [] [winS1, winS2] True True [] []
+>   -- make sure they are both being scheduled!!!
+>   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
+>   
+>     where
+>   rs = []
+>   packDays = 2
+>   dur = 2*60
+>   start = fromGregorian 2006 2 2 0 0 0
+>   wend = fromGregorian 2006 2 9 0 0 0
+>   -- first windowed session
+>   w1pId = 231
+>   proj = defaultProject { pId = 1, pAllottedT = dur, pAllottedS = dur }
+>   winS1' = defaultSession { sName = "one"
+>                           , sId = 1
+>                           , receivers = [[Rcvr1_2]]
+>                           , frequency = 1.1
+>                           , ra = 0.1
+>                           , dec = 1.5 -- always up
+>                           , band = L
+>                           , sAllottedT = dur
+>                           , sAllottedS = dur
+>                           , sType = Windowed
+>                           , project = proj
+>                           }
+>   w1 = defaultWindow { wRanges = [(start, wend)]
+>                        , wPeriodId = Just w1pId
+>                        , wTotalTime = dur
+>                        } 
+>   p1 = defaultPeriod { peId = w1pId
+>                       , startTime = addMinutes (-(12*60)) wend
+>                       , duration = dur
+>                       , pDuration = 0
+>                       , pState = Pending
+>                       , session = winS1'
+>                       }
+>   winS1 = makeSession winS1' [w1] [p1] 
+>   expP1 = p1 { startTime = start }
+>   --ss1 = [winS1]
+>   -- second windowed session
+>   w2pId = 232
+>   proj2 = proj { pId = 2 }
+>   winS2' = winS1' { project = proj2, sName = "two", sId = 2 }
+>   w2 = w1 { wPeriodId = Just w2pId }
+>   p2 = p1 { startTime = addMinutes (-(15*60)) wend
+>           , peId = w2pId
+>           , session = winS2'
+>           }
+>   winS2 = makeSession winS2' [w2] [p2]
+>   expP2 = p2 { startTime = start }
+
 
 Attempt to see if old test still works:
 Test to make sure that our time accounting isn't screwed up by the precence 
