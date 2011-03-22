@@ -584,7 +584,7 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >           ]
 >     durs = [60, 120, 60, 120, 60, 120]
 >     ps = zipWith3 mkPeriod ss' dts durs 
->     ss = updateSessions ss' ps [] []
+>     ss = updateSessions ss' ps [] [] []
 >     mkPeriod s start dur = Period 0 s start dur 0.0 Scheduled start False dur
 
 > getTestWindowSession :: Session
