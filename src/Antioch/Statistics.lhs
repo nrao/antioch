@@ -579,27 +579,25 @@ Same as original method, but we don't need the hourAnlgeLimit.
 >                       ]
 >     score effFactors dt s
 
-What are the various efficiencies for the given session at the given
-time while observing at the given time.
-
-> getObsEffScoringFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Session -> DateTime -> IO Factors
-> getObsEffScoringFactors w rt rs s dt = do
->   -- we must set this time here so we can get efficiency during observing
->   w' <- newWeather w $ Just dt
->   runScoring w' rs rt $ getEfficiencyScoringFactors' dt s
-> 
-
 For the given period, get the *observed* efficiencies at each quarter in
 the periods duration.  We can only do this by restting the weather for
 each quarter so that we pick up gbt_weather and latest forecast.
 
 > getPeriodObsEffFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO [Factors]
-> getPeriodObsEffFactors w rt rs p = mapM (getObsEffScoringFactors w rt rs (session p)) dts
+> getPeriodObsEffFactors w rt rs p = do
+>     -- to get the observed efficiencies, we need to use the gbt weather
+>     -- where we can, and the best forecast where we can't.
+>     -- a simple way of doing this is to simply set the origin of the 
+>     -- weather to be the end point of the period - since all times
+>     -- will now be in the 'past'.
+>     w' <- newWeather w $ Just $ periodEndTime p
+>     mapM (getObsEffScoringFactors w' rt rs (session p)) dts
 >   where
 >     dts = [(startTime p)
 >         ,  (addMinutes 15 (startTime p))
 >         .. (addMinutes (duration p) (startTime p))]
-> 
+>     getObsEffScoringFactors w rt rs s dt = runScoring w rs rt $ getEfficiencyScoringFactors' dt s
+
 
 > getPeriodSchdEffFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO [Factors]
 > getPeriodSchdEffFactors w rt rs p = do

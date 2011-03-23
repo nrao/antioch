@@ -63,7 +63,26 @@
 >   , test_historicalSchdMeanObsEffs_getPeriodsSchdEffs
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
+>   , test_getPeriodsObsEffs
 >    ]
+
+> test_getPeriodsObsEffs = TestCase $ do
+>     w <- getWeatherTest Nothing
+>     rt <- getReceiverTemperatures
+>     peffs <- getPeriodsObsEffs w rt [] ps
+>     assertEqual "test_getPeriodsObsEffs_1" firstEffs (snd . head $ peffs)
+>     assertEqual "test_getPeriodsObsEffs_2" lastEffs  (snd . last $ peffs)
+>   where
+>     ss = getOpenPSessions -- 10 of them
+>     start = fromGregorian 2006 2 2 0 0 0
+>     pdur = 2*60
+>     numPs = length ss 
+>     dts = [start, addMinutes pdur start .. addMinutes (pdur*(numPs-1)) start]
+>     mkPeriod (s, dt) = defaultPeriod { session = s, startTime = dt, duration = pdur }
+>     ps = map mkPeriod $ zip ss dts
+>     firstEffs = [(0.67870116,0.9770739,0.92952526,0.6164065),(0.68843114,0.9770739,0.92952526,0.6252434),(0.7175121,0.9756617,0.92952526,0.65071326),(0.7251464,0.9756617,0.92952526,0.6576369),(0.7297692,0.9756617,0.92952526,0.66182923),(0.73404694,0.9756617,0.92952526,0.6657088),(0.72494024,0.9999896,1.0,0.72493273),(0.728718,0.9999896,1.0,0.7287104),(0.7304929,0.9999896,1.0,0.7304853)]
+>     lastEffs = [(0.26221526,0.8907109,0.888959,0.20762347),(0.47001064,0.8907109,0.888959,0.37215698),(0.52427566,0.82269764,0.888959,0.3834261),(0.5634801,0.82269764,0.888959,0.41209802),(0.5944801,0.82269764,0.888959,0.43476972),(0.612092,0.82269764,0.888959,0.4476501),(0.63853604,0.8714121,0.888959,0.4946417),(0.65821105,0.8714121,0.888959,0.5098829),(0.6753238,0.8714121,0.888959,0.5231393)]
+
 
 > test_calcMeanWindowEfficiencies = TestCase $ do
 >     -- equal weights
