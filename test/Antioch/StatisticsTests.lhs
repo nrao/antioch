@@ -124,6 +124,30 @@
 >     exp2 = [((cp, 0.6327699),(dp,0.6808212 ))
 >            ,((cp2,0.6814143), (dp2,0.6646747))]
 
+> test_partitionWindowedPeriodEfficiencies = TestCase $ do
+>     assertEqual "test_partitionWindowedPeriodEfficiencies_1"
+>        expected
+>        (partitionWindowedPeriodEfficiencies wps pes)
+>     assertEqual "test_partitionWindowedPeriodEfficiencies_2"
+>        ([], [])
+>        (partitionWindowedPeriodEfficiencies wps [])
+>   where
+>     ps = [defaultPeriod {startTime = i} | i <- [0 .. 11]]
+>     pes = [(p,[]) | p <- ps]
+>     w1 = defaultWindow {wId = 1}
+>     w2 = defaultWindow {wId = 2}
+>     w3 = defaultWindow {wId = 3}
+>     wps = [(w1 {wPeriodId = Just 11}, Nothing,         ps !! 11)
+>          , (w2 {wPeriodId = Just 10}, Just (ps !!  9), ps !! 10)
+>          , (w3 {wPeriodId = Just  8}, Just (ps !!  7), ps !!  8)
+>          , (w1 {wPeriodId = Just  6}, Nothing,         ps !!  6)
+>          , (w2 {wPeriodId = Just  5}, Just (ps !!  4), ps !!  5)
+>          , (w3 {wPeriodId = Just  3}, Nothing,         ps !!  3)
+>          , (w1 {wPeriodId = Just  2}, Nothing,         ps !!  2)
+>          , (w3 {wPeriodId = Just  1}, Just (ps !!  0), ps !!  1)
+>           ]
+>     expected = partition (\pe -> (elem (startTime . fst $ pe) [0, 4, 7, 9])) pes
+
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   r <- historicalSchdMeanFactors [p] trackingEfficiency w

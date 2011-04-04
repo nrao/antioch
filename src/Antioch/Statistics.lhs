@@ -566,10 +566,28 @@ by band and across all hours of the day within HA limits.
 The next few methods are for calculating the efficiencies (both
 observed & scheduled) of periods.
 
-> type PeriodEfficiency   = (Period,[(Score, Score, Score, Score)])
+PeriodEfficiency is (period
+                   , [(atmosphericEfficiency
+                     , trackingEfficiency
+                     , surfaceObservingEfficiency
+                     , observingEfficiency)])
+
+> type PeriodEfficiency   = (Period, [(Score, Score, Score, Score)])
 > type PeriodEfficiencies = [PeriodEfficiency]
 
-Same as original method, but we don't need the hourAnlgeLimit.
+Note that the first argument is [WindowPeriods], i.e., it comes from calling
+getWindowPeriodsFromTrace on the Trace
+
+> partitionWindowedPeriodEfficiencies :: [(Window, Maybe Period, Period)] ->
+>                                        PeriodEfficiencies ->
+>                                        (PeriodEfficiencies, PeriodEfficiencies)
+> partitionWindowedPeriodEfficiencies wps pes = partition isAChosen pes
+>   where
+>     chosen = catMaybes . map second $ wps
+>     second (a, b, c) = b
+>     isAChosen pe = elem (fst pe) chosen
+
+Same as original method, but we don't need the hourAngleLimit.
 
 > getEfficiencyScoringFactors' :: DateTime -> Session -> Scoring Factors
 > getEfficiencyScoringFactors' dt s = do 

@@ -401,7 +401,7 @@ simDecFreq (stars, crosses)
 > plotDecFreq          :: StatsPlot
 > plotDecFreq fn n ss ps _ =
 >      scatterPlots attrs $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
->                                            , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
+>                                       , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
 >   where
 >     t   = "Dec vs Freq" ++ n
 >     x   = "Frequency [GHz]"
@@ -441,13 +441,23 @@ simSchdMeanObsEffError - this plot shows the error bars for simSchdMeanEffFreq
 
 Separate plots for the mean scheduled observing efficiency, by plot:
 
+> plotMeanObsEffVsFreqOpen, plotMeanObsEffVsFreqFixed, plotMeanObsEffVsFreqWindowed  :: PeriodEffStatsPlot
 > plotMeanObsEffVsFreqOpen peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Open
 > plotMeanObsEffVsFreqFixed peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Fixed
-> plotMeanObsEffVsFreqWindowed peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Windowed
+> plotMeanObsEffVsFreqWindowed peffs fn n ss _ tr = do
+>   let wpes = getWindowPeriodsFromTrace tr
+>   let (peffsC, peffsD) = partitionWindowedPeriodEfficiencies wpes . filter (\(p,sf) -> (isTypePeriod Windowed p)) $ peffs
+>   let effsD = extractPeriodMeanEffs peffsD (\(a, t, s, o) -> o)
+>   let psD = map fst peffsD
+>   let effsC = extractPeriodMeanEffs peffsC (\(a, t, s, o) -> o)
+>   let psC = map fst peffsC
+>   let t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
+>   let y = "Mean Observing Efficiency"
+>   plotEffVsFreq fn [("Min Obs Eff (Chosen)",  effsC, psC)
+>                   , ("Min Obs Eff (Default)", effsD, psD)] t y
 
-> plotMeanObsEffVsFreqByType peffs fn n ss ps tr stype = plotMeanObsEffVsFreq' peffs' fn n ss' ps' tr stype
+> plotMeanObsEffVsFreqByType peffs fn n ss ps tr stype = plotMeanObsEffVsFreq' peffs' fn n undefined ps' undefined stype
 >   where
->     ss' = filter (isType stype) ss
 >     ps' = filter (isTypePeriod stype) ps
 >     peffs' = filter (\(p,sf) -> (isTypePeriod stype p)) peffs
 
@@ -461,14 +471,13 @@ error bars done separately in simMeanObsEff
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
-> --plotMeanObsEffVsFreq'  :: StatsPlot
 > plotMeanObsEffVsFreq' peffs fn n _ ps _ stype = do
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Scheduled Mean Observing Efficiency (" ++ (show stype) ++ ") vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simSchdMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
@@ -478,7 +487,7 @@ Break down the above plot into the three factors that make up observing eff.
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> a)
 >   let t = "Scheduled Mean Atmospheric Efficiency vs Frequency" ++ n
 >   let y = "Mean Atmospheric Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simSchdMeanTrkFreq
 
@@ -487,7 +496,7 @@ simSchdMeanTrkFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> t)
 >   let t = "Scheduled Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Mean Tracking Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simSchdMeanSrfFreq
 
@@ -496,7 +505,7 @@ simSchdMeanSrfFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> s)
 >   let t = "Scheduled Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Mean Surface Obs. Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 Observed Efficiency Plots:
 
@@ -508,7 +517,7 @@ error bars done separately in simMeanObsEff
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Observed Mean Observing Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simObsMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
@@ -518,7 +527,7 @@ Break down the above plot into the three factors that make up observing eff.
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> a)
 >   let t = "Observed Mean Atmospheric Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Atmospheric Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simObsMeanTrkFreq
 
@@ -527,7 +536,7 @@ simObsMeanTrkFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> t)
 >   let t = "Observed Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Tracking Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simObsMeanSrfFreq
 
@@ -536,16 +545,16 @@ simObsMeanSrfFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> s)
 >   let t = "Observed Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Surface Obs. Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 
 General purpose function for scatter plots of some kind of efficiency vs. freq
 All plots that use this function will have the Min. Observing Eff. curve as well.
 
-> plotEffVsFreq fn effs ps t y =
->     scatterPlots attrs $ [(Just "Efficiency", effPlot), (Just "Min Obs Eff", moePlot)]
+> plotEffVsFreq :: String -> [(String, [Float], [Period])] -> String -> String -> IO ()
+> plotEffVsFreq fn params t y =
+>     scatterPlots attrs . (++) [(Just "Min Obs Eff", moePlot)] $ [(Just label, zip (historicalFreq ps) effs) | (label, effs, ps) <- params]
 >   where
->     effPlot = zip (historicalFreq ps) effs
 >     moePlot =  zip freqRange (map minObservingEff freqRange)
 >     x     = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
@@ -1022,6 +1031,7 @@ StatsPlot :: filename, simname, sessions, periods, trace
 > type StatsPlot = String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
 
 > type EffStatsPlot = Weather -> String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
+
 > type PeriodEffStatsPlot = PeriodEfficiencies -> String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
 
 > statsPlots = map (\f -> f "" "") statsPlotsList 
