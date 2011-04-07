@@ -21,8 +21,8 @@
 >    , test_activeWindows
 >    , test_adjustWindowSessionDuration
 >    , test_projectBlackedOut
+>    , test_filterDisabledPeriods
 >   ]
->
 
 > test_projectBlackedOut = TestCase $ do
 >   -- no blackouts
@@ -49,6 +49,41 @@
 >       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
 >       p2  = defaultProject { pBlackouts = bs ++ bs2 }
 >       s3  = defaultSession { project = p2}
+
+> getTestPeriods :: [Period]
+> getTestPeriods = [p1, p2, p3]
+>     where
+>       mproj = defaultProject { pName = "Maintenance" }
+>       proj  = defaultProject { pName = "test project" }
+>       msess = defaultSession { project = mproj, oType = Maintenance}
+>       sess  = defaultSession { project = proj, oType = SpectralLine, enabled = False}
+>       p1    = defaultPeriod { session = sess
+>                             , startTime = fromGregorian 2011 4 1 0 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+>       p2    = defaultPeriod { session = msess
+>                             , startTime = fromGregorian 2011 4 1 2 0 0
+>                             , duration  = 8 * 60
+>                             , pDuration = 8 * 60
+>                              }
+>       p3    = defaultPeriod { session = sess
+>                             , startTime = fromGregorian 2011 4 1 10 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+
+> test_filterMaintenancePeriods = TestCase $ do
+>   result <- filterMaintenancePeriods [p1, p2, p3]
+>   assertEqual "test_filterMaintenancePeriods" [p1, p3] result
+>     where
+>       (p1: p2: p3: []) = getTestPeriods
+
+> test_filterDisabledPeriods = TestCase $ do
+>   result <- filterDisabledPeriods [p1, p2, p3]
+>   assertEqual "test_filterDisabledPeriod" [p2] result
+>     where
+>       (p1: p2: p3: []) = getTestPeriods
 
 > test_sim_timeLeft = TestCase $ do
 >   -- dt1 => 09B, dt* => 09A
