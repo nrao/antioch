@@ -22,6 +22,7 @@
 >    , test_adjustWindowSessionDuration
 >    , test_projectBlackedOut
 >    , test_filterDisabledPeriods
+>    , test_filterMaintenancePeriods
 >   ]
 
 > test_projectBlackedOut = TestCase $ do
