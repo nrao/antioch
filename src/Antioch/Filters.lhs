@@ -92,7 +92,6 @@ Possible factors:
 
 > isNotMaintenance :: SelectionCriteria
 > isNotMaintenance _ _ s = oType s /= Maintenance
-> --isNotMaintenance _ _ s = (pName . project $ s) /= "Maintenance"
 
 > isBackup :: SelectionCriteria
 > isBackup _ _ s = backup s
