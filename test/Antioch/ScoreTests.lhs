@@ -31,6 +31,7 @@
 >   , test_zenithAngle
 >   , test_zenithAngle2
 >   , test_zenithAngleAtTransit
+>   , test_radecel2ha
 >   , test_minTsysPrime
 >   , test_systemNoiseTemperature
 >   , test_systemNoiseTemperature'
@@ -558,6 +559,34 @@ Equation 5
 >     assertEqual "test_zenithAngleAtTransit 2" 0.54078466 result 
 >     let result = zenithAngleAtTransit sessBug2
 >     assertEqual "test_zenithAngleAtTransit 3" 0.7788097 result 
+
+> test_radecel2ha = TestCase $ do
+>   --let degs =  [-90, -89 .. 90]
+>   --let has = map (\dec -> radecel2ha (1.0, dec) (deg2rad 5.0)) [deg2rad . fromInteger $ d | d <- degs]
+>   --let nums = map (\dec -> (cos 1.48352992 - sin dec * sin gbtLat')) [deg2rad . fromInteger $ d | d <- degs]
+>   --let denoms = map (\dec -> (cos gbtLat' * cos dec)) [deg2rad . fromInteger $ d | d <- degs]
+>   --printList . zip4 degs has nums $ denoms
+>   let el = elevation dt1 lp
+>   let ha = hourAngle dt1 lp
+>   assertEqual "test_radecel2ha_1" ha (radecel2ha (ra lp, dec lp) el)
+>   let el = elevation dt1 as
+>   let ha = hourAngle dt1 as
+>   assertEqual "test_radecel2ha_2" ha (radecel2ha (ra as, dec as) el)
+>   let el = elevation dt1 tx
+>   let ha = hourAngle dt1 tx
+>   assertEqual "test_radecel2ha_3" ha (radecel2ha (ra tx, dec tx) el)
+>   assertEqual "test_radecel2ha_4" 1.5340405 (radecel2ha (ra lp, dec lp) . deg2rad $ 5.0)
+>   assertEqual "test_radecel2ha_5" 1.7180437 (radecel2ha (ra as, dec as) . deg2rad $ 5.0)
+>   assertEqual "test_radecel2ha_6" 1.6755922 (radecel2ha (ra tx, dec tx) . deg2rad $ 5.0)
+>   assertEqual "test_radecel2ha_7" 2.4537244 (radecel2ha (1.0, deg2rad 50.0) . deg2rad $ 5.0)
+>   assertEqual "test_radecel2ha_8" pi        (radecel2ha (0.1, 1.5) . deg2rad $ 5.0)
+>   assertEqual "test_radecel2ha_10" 1.758852e-2 (radecel2ha (hrs2rad 9.85, deg2rad 33.5) . deg2rad $ 85.0)
+>   assertEqual "test_radecel2ha_11" (hrs2rad 0.25088155) (radecel2ha (hrs2rad 10.1, deg2rad (-46.5)) . deg2rad $ 5.0)
+>     where
+>       dt1 = fromGregorian 2008 1 23 21 0 0
+>       lp  = findPSessionByName "LP"
+>       as  = findPSessionByName "AS"
+>       tx  = findPSessionByName "TX"
 
 > test_minTsysPrime = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 9 15 2

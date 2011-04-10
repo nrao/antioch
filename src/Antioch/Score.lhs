@@ -181,9 +181,19 @@ Equation 5
 
 > zenithAngle' :: Radians -> Radians -> Radians
 > zenithAngle' dec ha = acos $ sin gbtLat' * sin dec + cos gbtLat' * cos dec * cos ha
->   where
->     gbtLat' = realToFrac gbtLat
 
+> radecel2ha :: (Radians, Radians) -> Radians -> Radians
+> radecel2ha (ra, dec) el = if (abs num) > (abs denom)
+>                      then if num < 0.0
+>                           then hrs2rad 12.0
+>                           else          0.0
+>                      else acos (num / denom)
+>   where
+>     za = pi/2 - el
+>     num = (cos za - sin dec * sin gbtLat')
+>     denom = (cos gbtLat' * cos dec)
+
+Given a certain Ra & Dec and their transit time, will the given time range
 TBF: this was moved from Statistic to here, but it needs a better home.
 
 > elevationFromZenith :: Period -> Float

@@ -4,9 +4,9 @@
 > import Antioch.Types
 > import Antioch.DateTime
 > import Antioch.Filters        (filterHistory)
-> --import Antioch.Utilities      (periodInWindow, dt2semester, deg2rad, lstHours2utc, rad2hrs)
 > import Antioch.Utilities
-> import Antioch.Score          (elevation)
+> import Antioch.Score          (elevation, radecel2ha)
+> import System.Random   
 > import Maybe                  (isNothing, fromJust, isJust)
 > import Data.List 
 > import Test.QuickCheck hiding (frequency)
@@ -202,11 +202,12 @@ Generate a period that starts with the given time range.
 >     where
 >   start' day hour = addMinutes ((day*24*60)+(hour*60)) start
 
-Very much like genFixedSchedule, here we create a list of list of periods: that is, 
-each sub-list of periods should belong to a single windowed session, and should be
-regularly spaced.  Just like in genFixedSchedule, we randomly try to insert 
-a periodic list of periods into the schedule until we can do this without causing
-overlaps, then repeat the process until we've run out of time.
+Very much like genFixedSchedule, here we create a list of list of periods:
+that is, each sub-list of periods should belong to a single windowed
+session, and should be regularly spaced.  Just like in genFixedSchedule,
+we randomly try to insert a periodic list of periods into the schedule
+until we can do this without causing overlaps, then repeat the process
+until we've run out of time.
 
 > genWindowedSchedule :: DateTime -> Int -> [Period] -> Int -> Gen [[Period]]
 > genWindowedSchedule _ _ _ 0 = return []
@@ -244,11 +245,10 @@ the given number of days.
 >                       | otherwise = return (1,days) -- days < 10
 
 
-Randomly generate a list of periods that are separated by a regular interval, that
-fit into the given time range.  These will become the default periods
-for a Windowed Session's Windows, and those windows will be built around
-these periods.  
-Also make sure that these periods have
+Randomly generate a list of periods that are separated by a regular
+interval, that fit into the given time range.  These will become the
+default periods for a Windowed Session's Windows, and those windows will
+be built around these periods.  Also make sure that these periods have
 valid elevations for the randomly generated ra/decs of their session.
 
 > genWindowedPeriods :: DateTime -> Int -> Gen [Period]
@@ -258,8 +258,6 @@ valid elevations for the randomly generated ra/decs of their session.
 >   -- what day number, since 'start' should the list of default periods
 >   -- start on?  
 >   day <- choose (2, days - 1) 
->   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs
->   let duration' = qtrs * 15
 >   let dayStart = addMinutes (day*24*60) start
 >   -- instead of creating the random ra/dec directly, create a whole
 >   -- windowed session (w/ ra/dec) that will then get attached 
@@ -268,7 +266,7 @@ valid elevations for the randomly generated ra/decs of their session.
 >   let (ra', dec') = (ra s, dec s)
 >   -- for the ra/dec, produce period starttimes & durations that are
 >   -- valid (produce valid elevations)
->   let trs = getValidTransitRanges dayStart duration' intervalDays numWindows end (ra', dec')
+>   trs <- getValidTransitRanges dayStart intervalDays numWindows end (ra', dec')
 >   return $! map (mkPeriod s) trs 
 >     where
 >   end = addMinutes (days*24*60) start
@@ -284,50 +282,41 @@ For the given ra/dec, produce period starttimes & durations that are valid
 (that is, they produce valid elevations), from the given number of periods
 needed, and their spacing.
 
-> getValidTransitRanges :: DateTime -> Minutes -> Int -> Int -> DateTime -> (Radians, Radians) -> [(DateTime, Minutes)]
-> getValidTransitRanges startDay dur intervalDays numWindows endDay (ra,dec) = map (getValidTransitRange dur (ra, dec)) $ filter (<endDay) days
->   where
->      days = [addMinutes (d*24*60) startDay | d <- [0, intervalDays .. ((numWindows-1) * intervalDays)]]
+> getValidTransitRanges :: DateTime -> Int -> Int -> DateTime -> (Radians, Radians) -> Gen [(DateTime, Minutes)]
+> getValidTransitRanges startDay intervalDays numWindows endDay (ra,dec) = do
+>   mapM (getValidTransitRange (ra, dec)) $ filter (<endDay) days
+>     where
+>       days = [addMinutes (d*24*60) startDay | d <- [0, intervalDays .. ((numWindows-1) * intervalDays)]]
 
 NOTE: finish checking a property of the transit ranges
+TBF this function does not run as part of quickcheck
+(unlike the other prop_ function)
 
-> prop_getValidTransitRanges = forAll (genRaDec 'g') $ \(ra', dec') -> let trs = getValidTransitRanges dt dur int num end (ra', dec') in (length trs) > 1
+> prop_getValidTransitRanges = forAll (genRaDec 'g') $ \(ra', dec') -> let trs = generate 0 g $ getValidTransitRanges dt int num end (ra', dec') in (length trs) > 1
 >   where 
+>     g = mkStdGen 1
 >     dt = fromGregorian 2010 2 2 0 0 0
->     dur = (8*60)
 >     int = 15
 >     num = 5
 >     end = fromGregorian 2011 2 2 0 0 0
+     
+For the given ra/dec, return a time period that surrounds the transit
+for this ra/dec trimmed to keep the elevations valid (source above the
+horizon). Note the duration could be forced to zero.
 
-For the given ra/dec, return a time period that surronds the transit
-for this ra/dec, preferibly of the given duration, but possibly trimmed
-to keep the elevations valid (source above the horizon).
-
-> getValidTransitRange :: Minutes -> (Radians, Radians) -> DateTime -> (DateTime, Minutes)
-> getValidTransitRange dur (ra,dec) day = fitValidPeriodToTransit dtTransit dur (ra, dec) 
->   where
->     dtTransit = roundToQuarter $ lstHours2utc day (rad2hrs ra)
->     
-
-Given a certain Ra & Dec and their transit time, will the given time range
-(indicated by the given duration surronding the transit) be valid?  If not, can we shrink this
-time range until it is?
-
-> fitValidPeriodToTransit :: DateTime -> Minutes -> (Radians, Radians) -> (DateTime, Minutes)
-> fitValidPeriodToTransit dtTransit trialDuration (ra, dec) = (dtStart, duration) 
->   where
->     startOffset = trialDuration `div` 2
->     trialStart = roundToQuarter $ addMinutes (-startOffset) dtTransit
->     dts = [trialStart, (addMinutes quarter trialStart) .. dtTransit]
->     dtStart' = find (validEl (ra, dec)) dts 
->     validEl (ra', dec') dt = validElev $ elevation dt defaultSession {ra = ra', dec = dec'}
->     dtStart = if isJust dtStart' then fromJust dtStart' else dtTransit
->     duration = if isJust dtStart' then round2quarter $ (diffMinutes dtTransit dtStart) * 2 else 0
-
-> prop_fitValidPeriodToTransit = forAll (genRaDec 'g') $ \(ra', dec') -> 
->   let (dtStart, dur) = fitValidPeriodToTransit (lstHours2utc dt (rad2hrs ra')) (8*60) (ra', dec') in dur /= 0
+> getValidTransitRange :: (Radians, Radians) -> DateTime -> Gen (DateTime, Minutes)
+> getValidTransitRange (ra, dec) day = do
+>   durQtrs <-  if haQtrs <= 0
+>               then return 0
+>               else choose ((1*4), min (8*4) haQtrs) -- 1 to 8 hours
+>   let start = (qtrs2mins $ (-durQtrs) `div` 2) `addMinutes` dtTrans
+>   let duration = qtrs2mins durQtrs
+>   return (start, duration)
 >     where
->       dt = fromGregorian 2010 2 2 0 0 0
+>       dtTrans = roundToQuarter $ lstHours2utc day (rad2hrs ra)
+>       el = 5.0
+>       haQtrs  = round2quarter . round . (*60.0) . rad2hrs . (*2.0) . radecel2ha (ra, dec) . deg2rad $ el
+>       qtrs2mins = (*quarter)
 
 > prop_raDecTransitsGiveValidElevations = forAll (genRaDec 'g') $ \(ra', dec') -> (validElev $  elevation (lstHours2utc dt (rad2hrs ra')) defaultSession {ra = ra', dec = dec'}) 
 >     where
