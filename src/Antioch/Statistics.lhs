@@ -372,6 +372,10 @@ For randomly generated data, this should be a flat distribution.
 > periodDuration :: [Period] -> [(Minutes, Minutes)]
 > periodDuration = histogram [0, quarter..(13*60)] . (duration `vs` duration)
 
+> periodStart :: DateTime -> [Period] -> [(Int, Int)]
+> periodStart start = histogram [0..400] . (const 1 `vs` startDay)
+>   where
+>     startDay = flip div (24*60) . flip diffMinutes start . startTime
 
 > sessionMinDuration :: [Session] -> [(Minutes, Minutes)]
 > sessionMinDuration = histogram [0, quarter..(13*60)] . (minDuration `vs` minDuration)
@@ -893,7 +897,7 @@ simpleStat provides a way to perform statistics on binned data
 
 > simpleStat f buckets = map (f . snd) . allocate buckets
 
-histStat provides a way to perform statistics on historgram data
+histStat provides a way to perform statistics on histogram data
 f is a function like mean', etc.
 
 > histStat :: ([Float] -> Float) -> [(Float, Float)] -> Float

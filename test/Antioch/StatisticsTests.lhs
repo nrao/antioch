@@ -34,6 +34,7 @@
 >   , test_sessionTP
 >   , test_sessionTP2
 >   , test_sessionTPQtrs
+>   , test_periodStart
 >   , test_periodDuration
 >   , test_sessionMinDuration
 >   , test_freqTime
@@ -409,6 +410,17 @@ what bin it shows up in.
 >     p2 = defaultPeriod {duration = 105, pDuration = 105}
 >     q  = quarter
 >     exp = [(0,0),(1*q,0),(2*q,(3*30)),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,(2*105))]
+
+> test_periodStart = TestCase $ do
+>     assertEqual "test_periodStart" exp cnt
+>   where
+>     dt1 = fromGregorian 2008 6 1 0 0 0
+>     dt2 = fromGregorian 2008 6 3 0 0 0
+>     ps = [p1, p2, p1, p2, p1]
+>     p1 = defaultPeriod {startTime = dt1}
+>     p2 = defaultPeriod {startTime = dt2}
+>     cnt = take 8 $ periodStart dt1 ps
+>     exp = [(0,3),(1,0),(2,2),(3,0),(4,0),(5,0),(6,0),(7,0)]
 
 > test_sessionMinDuration = TestCase $ do
 >     assertEqual "test_sessionMinDuration" exp cnt

@@ -160,13 +160,13 @@ ignores the 'overhead' of a session, which for most cases is just a quarter.
 >     start = addMinutes (-quarter) $ wStart w
 >     w' = w { wRanges = [(start, wEnd w)] }
 
-
-
+> getDefaultPeriods :: [Session] -> [Window] -> [Period]
 > getDefaultPeriods ss ws = map (getDefaultPeriod ss) ws
 
-Retrieves the default period for a given window given the full pool of sessoins.
-Note that the session is identified using the sId and retrieved from the pool of sessions,
-since the session from wSession may not be up to date - this is the knot typing problem.
+Retrieves the default period for a given window given the full pool
+of sessoins.  Note that the session is identified using the sId and
+retrieved from the pool of sessions, since the session from wSession
+may not be up to date - this is the knot typing problem.
 
 > getDefaultPeriod :: [Session] -> Window -> Period
 > getDefaultPeriod ss w = fromJust $ find (flip periodInWindow' w) $ periods s 

@@ -22,7 +22,7 @@
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, sortBy, (\\), nub
->                 , find, unzip4, transpose)
+>                 , find, unzip4, transpose, partition)
 > import Data.Maybe (catMaybes, fromJust, isJust, maybeToList)
 > import Text.Printf
 > import System.Random
@@ -109,10 +109,10 @@ simFracTime
 >   title = "Fractional Observed Time " ++ n
 >   xl = "Time [Days]"
 >   yl = "1 - Time Observed / Time Allocated"
->   ssA = filter isGradeA ss -- grade A sessions
->   psA = filter (isGradeA . session) ps -- grade A periods
->   ssB = filter isGradeB ss -- grade B sessions
->   psB = filter (isGradeB . session) ps -- grade B periods
+>   ssA = filter isGradeA ss              -- grade A sessions
+>   psA = filter (isGradeA . session) ps  -- grade A periods
+>   ssB = filter isGradeB ss              -- grade B sessions
+>   psB = filter (isGradeB . session) ps  -- grade B periods
 >   ssK = filter (\s -> (band s) == K) ss -- grade B sessions
 >   psK = filter (\p -> (band . session $ p) == K) ps -- K Band periods
 >   isGradeA s = grade s >= 4
@@ -624,9 +624,18 @@ simFreqTime (circles, dt on x-axis)
 > plotFreqVsTimeFixed fn n ss ps tr = plotFreqVsTimeType Fixed fn n ss ps tr
 
 > plotFreqVsTimeWindowed         :: StatsPlot
-> plotFreqVsTimeWindowed fn n ss ps tr = plotFreqVsTimeType Windowed fn n ss ps tr
+> plotFreqVsTimeWindowed fn n ss ps _ =
+>     scatterPlots attrs $ [(Just "Default", zip (map fromIntegral $ historicalTime' dwps') (historicalFreq dwps')), (Just "Chosen", zip (map fromIntegral $ historicalTime' cwps') (historicalFreq cwps'))]
+>   where
+>     t = "Freq vs Time for Windowed" ++ n
+>     x = "Time [days]"
+>     y = "Frequency [GHz]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
+>     wps = filter (\p -> isType Windowed (session p)) ps
+>     wss = getWindows ss wps
+>     dwps = getDefaultPeriods ss wss
+>     (dwps', cwps') = partition (\wp -> elem wp dwps) wps
 
-> --plotFreqVsTimeType 
 > plotFreqVsTimeType stype fn n _ ps _ =
 >     scatterPlot attrs $ zip (map fromIntegral $ historicalTime' ps') (historicalFreq ps')
 >   where
@@ -917,6 +926,20 @@ simHistFreq
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
 >     attrs = (histAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
+simHistDefPer
+
+> histDefPeriodStrt :: StatsPlot
+> histDefPeriodStrt fn n ss ps _ = histogramPlot attrs tpStrts
+>   where
+>     tpStrts = [(fromIntegral x, fromIntegral y) | (x, y) <- periodStart tzero dwps]
+>     t = "Telescope Default Window Period Histogram" ++ n
+>     x = "Time [Days]"
+>     y = "Counts [Periods]"
+>     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 400)]
+>     tzero = head . sort . map startTime $ ps
+>     wss = filter (\s -> sType s == Windowed) ss
+>     ws = concatMap windows wss
+>     dwps = getDefaultPeriods wss ws
 
 simFracCanceledFreq
 
@@ -963,7 +986,7 @@ simHistTPQtrs
 >     totalNumTPs = sum $ map snd tpDurs
 >     meanTimes = histStat mean' tpDurs
 >     stdTimes = histStat stddev' tpDurs
->     t = printf "Telescope Period Historgram (%f, %f, %f) %s" totalNumTPs meanTimes stdTimes n
+>     t = printf "Telescope Period Histogram (%f, %f, %f) %s" totalNumTPs meanTimes stdTimes n
 >     x = "TP [Minutes]"
 >     y = "Counts"
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780), YRange (0.5, 1000.0)]
@@ -972,15 +995,12 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn n ss ps _ = 
->     --histogramPlots attrs $ zip titles [maxTPTime, tpDurs]
 >     histogramPlot attrs tpDurs
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
->     --maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
->     t = "Telescope Period Historgram" ++ n
+>     t = "Telescope Period Histogram" ++ n
 >     x = "TP [Minutes]"
 >     y = "Counts [Minutes]"
->     --titles = [Just "Available", Just "Observed"]
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780)]
 
 Utilities
@@ -1051,6 +1071,7 @@ TBF: has this been deprecated?
 >  , plotLstScore' 
 >  , histSessRA 
 >  , histSessFreq 
+>  , histDefPeriodStrt
 >  , histSessDec 
 >  , histSessTP 
 >  , histSessTPQtrs 
@@ -1108,6 +1129,7 @@ The standard list of plots (that need no extra input).
 >  , plotLstScore'          $ rootPath ++ "/simScoreLST.png"
 >  , histSessRA             $ rootPath ++ "/simHistRA.png"
 >  , histSessFreq           $ rootPath ++ "/simHistFreq.png"
+>  , histDefPeriodStrt      $ rootPath ++ "/simHistDefPer.png"
 >  , histSessDec            $ rootPath ++ "/simHistDec.png"
 >  , histSessTPQtrs         $ rootPath ++ "/simHistTPQtrs.png"
 >  , histSessTPDurs         $ rootPath ++ "/simHistTPDurs.png"

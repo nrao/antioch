@@ -39,13 +39,13 @@ The user can specify:
 >     let openHrs     = openHrs' + backlogHrs
 >     let (year, _, _, _, _, _) = toGregorian start
 >     oProjs <- genProjectsByHrs year openHrs 
->     -- Becasuse we must build a schedule that has no overlaps,
+>     -- Because we must build a schedule that has no overlaps,
 >     -- it's easiest to first assign the periods to the schedule,
 >     -- then assign sessions & projects to these periods
 >     -- First, the windowed periods; Note that we start off with
 >     -- a Session Id of 1.
 >     winPeriods <- genWindowedSchedule start days schedule windowedHrs
->     wProjs <- genWindowedProjects  winPeriods 1 --genWindowedProjects winPeriods
+>     wProjs <- genWindowedProjects  winPeriods 1
 >     let schedule' = sort $ schedule ++ (concat winPeriods)
 >     -- Now, the fixed periods
 >     fixedPeriods <- genFixedSchedule start days schedule' fixedHrs
@@ -415,8 +415,9 @@ Window object appropriate.
 >     -- but make sure window ranges fall on integer days
 >     end = fromGregorian' y m d
 >     start' = addMinutes (-(days winWidth)) end
->     -- make sure window starts in same semester as period
->     start = max trimesterStartDt start'
+>     -- make sure window starts in same trimester as period
+>     start = max trimesterStartDt start'  -- truncate window
+>     --start = start'                       -- or not
 >     trimesterStartDt = fromJust . trimester2startDT . dt2semester . startTime $ defaultPeriod
 
 Self-test to be called in unit tests and simulations.
