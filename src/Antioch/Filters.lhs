@@ -24,15 +24,6 @@ be confused and raise false alarams.
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
 
-> filterDisabledPeriods :: [Period] -> IO ([Period])
-> filterDisabledPeriods ps = concatMapM enabledPeriod ps
->   where
->     enabledPeriod p = do
->       let state = not (not (enabled $ session p) && (pState p == Pending))
->       case state of
->         True -> return $ [p]
->         False -> return []
-
 > filterInactivePeriods :: [Period] -> IO ([Period])
 > filterInactivePeriods ps = concatMapM activePeriod ps
 >   where

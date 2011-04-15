@@ -40,7 +40,7 @@ and outputs:
 >     -- similarly, default periods of non-guaranteed, windowed sessions
 >     -- only run if they pass MOC
 >     history'''' <- filterDefaultPeriods w rs rt history'''
->     history <- filterDisabledPeriods history''''
+>     history <- filterInactivePeriods history''''
 >     print "scheduling around periods: "
 >     printList history
 >     schd <- runScoring w rs rt $ do
