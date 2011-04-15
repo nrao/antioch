@@ -34,6 +34,7 @@
 >   , test_sessionTP
 >   , test_sessionTP2
 >   , test_sessionTPQtrs
+>   , test_periodStart
 >   , test_periodDuration
 >   , test_sessionMinDuration
 >   , test_freqTime
@@ -63,7 +64,26 @@
 >   , test_historicalSchdMeanObsEffs_getPeriodsSchdEffs
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
+>   , test_getPeriodsObsEffs
 >    ]
+
+> test_getPeriodsObsEffs = TestCase $ do
+>     w <- getWeatherTest Nothing
+>     rt <- getReceiverTemperatures
+>     peffs <- getPeriodsObsEffs w rt [] ps
+>     assertEqual "test_getPeriodsObsEffs_1" firstEffs (snd . head $ peffs)
+>     assertEqual "test_getPeriodsObsEffs_2" lastEffs  (snd . last $ peffs)
+>   where
+>     ss = getOpenPSessions -- 10 of them
+>     start = fromGregorian 2006 2 2 0 0 0
+>     pdur = 2*60
+>     numPs = length ss 
+>     dts = [start, addMinutes pdur start .. addMinutes (pdur*(numPs-1)) start]
+>     mkPeriod (s, dt) = defaultPeriod { session = s, startTime = dt, duration = pdur }
+>     ps = map mkPeriod $ zip ss dts
+>     firstEffs = [(0.67870116,0.9770739,0.92952526,0.6164065),(0.68843114,0.9770739,0.92952526,0.6252434),(0.7175121,0.9756617,0.92952526,0.65071326),(0.7251464,0.9756617,0.92952526,0.6576369),(0.7297692,0.9756617,0.92952526,0.66182923),(0.73404694,0.9756617,0.92952526,0.6657088),(0.72494024,0.9999896,1.0,0.72493273),(0.728718,0.9999896,1.0,0.7287104),(0.7304929,0.9999896,1.0,0.7304853)]
+>     lastEffs = [(0.26221526,0.8907109,0.888959,0.20762347),(0.47001064,0.8907109,0.888959,0.37215698),(0.52427566,0.82269764,0.888959,0.3834261),(0.5634801,0.82269764,0.888959,0.41209802),(0.5944801,0.82269764,0.888959,0.43476972),(0.612092,0.82269764,0.888959,0.4476501),(0.63853604,0.8714121,0.888959,0.4946417),(0.65821105,0.8714121,0.888959,0.5098829),(0.6753238,0.8714121,0.888959,0.5231393)]
+
 
 > test_calcMeanWindowEfficiencies = TestCase $ do
 >     -- equal weights
@@ -104,6 +124,30 @@
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
 >     exp2 = [((cp, 0.6327699),(dp,0.6808212 ))
 >            ,((cp2,0.6814143), (dp2,0.6646747))]
+
+> test_partitionWindowedPeriodEfficiencies = TestCase $ do
+>     assertEqual "test_partitionWindowedPeriodEfficiencies_1"
+>        expected
+>        (partitionWindowedPeriodEfficiencies wps pes)
+>     assertEqual "test_partitionWindowedPeriodEfficiencies_2"
+>        ([], [])
+>        (partitionWindowedPeriodEfficiencies wps [])
+>   where
+>     ps = [defaultPeriod {startTime = i} | i <- [0 .. 11]]
+>     pes = [(p,[]) | p <- ps]
+>     w1 = defaultWindow {wId = 1}
+>     w2 = defaultWindow {wId = 2}
+>     w3 = defaultWindow {wId = 3}
+>     wps = [(w1 {wPeriodId = Just 11}, Nothing,         ps !! 11)
+>          , (w2 {wPeriodId = Just 10}, Just (ps !!  9), ps !! 10)
+>          , (w3 {wPeriodId = Just  8}, Just (ps !!  7), ps !!  8)
+>          , (w1 {wPeriodId = Just  6}, Nothing,         ps !!  6)
+>          , (w2 {wPeriodId = Just  5}, Just (ps !!  4), ps !!  5)
+>          , (w3 {wPeriodId = Just  3}, Nothing,         ps !!  3)
+>          , (w1 {wPeriodId = Just  2}, Nothing,         ps !!  2)
+>          , (w3 {wPeriodId = Just  1}, Just (ps !!  0), ps !!  1)
+>           ]
+>     expected = partition (\pe -> (elem (startTime . fst $ pe) [0, 4, 7, 9])) pes
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
@@ -367,6 +411,17 @@ what bin it shows up in.
 >     q  = quarter
 >     exp = [(0,0),(1*q,0),(2*q,(3*30)),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,(2*105))]
 
+> test_periodStart = TestCase $ do
+>     assertEqual "test_periodStart" exp cnt
+>   where
+>     dt1 = fromGregorian 2008 6 1 0 0 0
+>     dt2 = fromGregorian 2008 6 3 0 0 0
+>     ps = [p1, p2, p1, p2, p1]
+>     p1 = defaultPeriod {startTime = dt1}
+>     p2 = defaultPeriod {startTime = dt2}
+>     cnt = take 8 $ periodStart dt1 ps
+>     exp = [(0,3),(1,0),(2,2),(3,0),(4,0),(5,0),(6,0),(7,0)]
+
 > test_sessionMinDuration = TestCase $ do
 >     assertEqual "test_sessionMinDuration" exp cnt
 >   where
@@ -584,7 +639,7 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >           ]
 >     durs = [60, 120, 60, 120, 60, 120]
 >     ps = zipWith3 mkPeriod ss' dts durs 
->     ss = updateSessions ss' ps [] []
+>     ss = updateSessions ss' ps [] [] []
 >     mkPeriod s start dur = Period 0 s start dur 0.0 Scheduled start False dur
 
 > getTestWindowSession :: Session
@@ -601,6 +656,7 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >                        , pForecast = scheduled}
 >     wr = [(winStart, addMinutes winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
+>                        , wTotalTime = 60*2
 >                        , wRanges = wr }
 
 > getTestWindowSession2 :: Session
@@ -615,5 +671,6 @@ the gaps in the gbt_weather data.  So, another period that avoids these.
 >                        , session = s' }
 >     wr = [(winStart, addMinutes winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
+>                        , wTotalTime = 60*2
 >                        , wRanges = wr }
 

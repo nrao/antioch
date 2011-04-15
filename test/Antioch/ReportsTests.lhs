@@ -153,6 +153,7 @@ Utilities:
 >                        , pForecast = scheduled}
 >     wr = [(winStart, addMinutes winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
+>                        , wTotalTime = 60*2
 >                        , wRanges = wr }
 
 > getTestWindowSession2 :: Session
@@ -167,5 +168,6 @@ Utilities:
 >                        , session = s' }
 >     wr = [(winStart, addMinutes winDur winStart)]
 >     w' = defaultWindow { wSession = s' 
+>                        , wTotalTime = 60*2
 >                        , wRanges = wr }
 

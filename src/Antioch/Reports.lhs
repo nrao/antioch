@@ -22,7 +22,7 @@
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, sortBy, (\\), nub
->                 , find, unzip4, transpose)
+>                 , find, unzip4, transpose, partition)
 > import Data.Maybe (catMaybes, fromJust, isJust, maybeToList)
 > import Text.Printf
 > import System.Random
@@ -55,7 +55,7 @@ TBF this is SO broken, Mike fix it
 >   yl = "Remaining Time Used In Pressures"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] []
+>   ss = updateSessions ss' ps [] [] []
 >   ssBands = sessionsByBand ss
 >   titles = map (\b -> (Just (show b))) bandRange
 
@@ -77,7 +77,7 @@ See notes for simRemainingTime.
 >   yl = "Past Semester Time Used In Pressures"
 >   start = fst $ getPeriodRange ps
 >   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] []
+>   ss = updateSessions ss' ps [] [] []
 >   ssBands = sessionsByBand ss
 >   titles = map (\b -> (Just (show b))) bandRange 
 
@@ -109,10 +109,10 @@ simFracTime
 >   title = "Fractional Observed Time " ++ n
 >   xl = "Time [Days]"
 >   yl = "1 - Time Observed / Time Allocated"
->   ssA = filter isGradeA ss -- grade A sessions
->   psA = filter (isGradeA . session) ps -- grade A periods
->   ssB = filter isGradeB ss -- grade B sessions
->   psB = filter (isGradeB . session) ps -- grade B periods
+>   ssA = filter isGradeA ss              -- grade A sessions
+>   psA = filter (isGradeA . session) ps  -- grade A periods
+>   ssB = filter isGradeB ss              -- grade B sessions
+>   psB = filter (isGradeB . session) ps  -- grade B periods
 >   ssK = filter (\s -> (band s) == K) ss -- grade B sessions
 >   psK = filter (\p -> (band . session $ p) == K) ps -- K Band periods
 >   isGradeA s = grade s >= 4
@@ -401,7 +401,7 @@ simDecFreq (stars, crosses)
 > plotDecFreq          :: StatsPlot
 > plotDecFreq fn n ss ps _ =
 >      scatterPlots attrs $ zip titles $ [[(x, rad2deg y) | (x, y) <- sessionDecFreq ss]
->                                            , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
+>                                       , [(x, rad2deg y) | (x, y) <-  periodDecFreq ps]]
 >   where
 >     t   = "Dec vs Freq" ++ n
 >     x   = "Frequency [GHz]"
@@ -441,13 +441,23 @@ simSchdMeanObsEffError - this plot shows the error bars for simSchdMeanEffFreq
 
 Separate plots for the mean scheduled observing efficiency, by plot:
 
+> plotMeanObsEffVsFreqOpen, plotMeanObsEffVsFreqFixed, plotMeanObsEffVsFreqWindowed  :: PeriodEffStatsPlot
 > plotMeanObsEffVsFreqOpen peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Open
 > plotMeanObsEffVsFreqFixed peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Fixed
-> plotMeanObsEffVsFreqWindowed peffs fn n ss ps tr = plotMeanObsEffVsFreqByType peffs fn n ss ps tr Windowed
+> plotMeanObsEffVsFreqWindowed peffs fn n ss _ tr = do
+>   let wpes = getWindowPeriodsFromTrace tr
+>   let (peffsC, peffsD) = partitionWindowedPeriodEfficiencies wpes . filter (\(p,sf) -> (isTypePeriod Windowed p)) $ peffs
+>   let effsD = extractPeriodMeanEffs peffsD (\(a, t, s, o) -> o)
+>   let psD = map fst peffsD
+>   let effsC = extractPeriodMeanEffs peffsC (\(a, t, s, o) -> o)
+>   let psC = map fst peffsC
+>   let t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
+>   let y = "Mean Observing Efficiency"
+>   plotEffVsFreq fn [("Min Obs Eff (Chosen)",  effsC, psC)
+>                   , ("Min Obs Eff (Default)", effsD, psD)] t y
 
-> plotMeanObsEffVsFreqByType peffs fn n ss ps tr stype = plotMeanObsEffVsFreq' peffs' fn n ss' ps' tr stype
+> plotMeanObsEffVsFreqByType peffs fn n ss ps tr stype = plotMeanObsEffVsFreq' peffs' fn n undefined ps' undefined stype
 >   where
->     ss' = filter (isType stype) ss
 >     ps' = filter (isTypePeriod stype) ps
 >     peffs' = filter (\(p,sf) -> (isTypePeriod stype p)) peffs
 
@@ -461,14 +471,13 @@ error bars done separately in simMeanObsEff
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Scheduled Mean Observing Efficiency vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
-> --plotMeanObsEffVsFreq'  :: StatsPlot
 > plotMeanObsEffVsFreq' peffs fn n _ ps _ stype = do
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Scheduled Mean Observing Efficiency (" ++ (show stype) ++ ") vs Frequency" ++ n
 >   let y = "Mean Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simSchdMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
@@ -478,7 +487,7 @@ Break down the above plot into the three factors that make up observing eff.
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> a)
 >   let t = "Scheduled Mean Atmospheric Efficiency vs Frequency" ++ n
 >   let y = "Mean Atmospheric Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simSchdMeanTrkFreq
 
@@ -487,7 +496,7 @@ simSchdMeanTrkFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> t)
 >   let t = "Scheduled Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Mean Tracking Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simSchdMeanSrfFreq
 
@@ -496,7 +505,7 @@ simSchdMeanSrfFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> s)
 >   let t = "Scheduled Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Mean Surface Obs. Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 Observed Efficiency Plots:
 
@@ -508,7 +517,7 @@ error bars done separately in simMeanObsEff
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> o)
 >   let t = "Observed Mean Observing Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Observing Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simObsMeanAtmFreq
 Break down the above plot into the three factors that make up observing eff.
@@ -518,7 +527,7 @@ Break down the above plot into the three factors that make up observing eff.
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> a)
 >   let t = "Observed Mean Atmospheric Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Atmospheric Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simObsMeanTrkFreq
 
@@ -527,7 +536,7 @@ simObsMeanTrkFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> t)
 >   let t = "Observed Mean Tracking Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Tracking Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 simObsMeanSrfFreq
 
@@ -536,16 +545,16 @@ simObsMeanSrfFreq
 >   let effs = extractPeriodMeanEffs peffs (\(a, t, s, o) -> s)
 >   let t = "Observed Mean Surface Obs. Efficiency vs Frequency" ++ n
 >   let y = "Observed Mean Surface Obs. Efficiency"
->   plotEffVsFreq fn effs ps t y
+>   plotEffVsFreq fn [("Min ObsEff", effs, ps)] t y
 
 
 General purpose function for scatter plots of some kind of efficiency vs. freq
 All plots that use this function will have the Min. Observing Eff. curve as well.
 
-> plotEffVsFreq fn effs ps t y =
->     scatterPlots attrs $ [(Just "Efficiency", effPlot), (Just "Min Obs Eff", moePlot)]
+> plotEffVsFreq :: String -> [(String, [Float], [Period])] -> String -> String -> IO ()
+> plotEffVsFreq fn params t y =
+>     scatterPlots attrs . (++) [(Just "Min Obs Eff", moePlot)] $ [(Just label, zip (historicalFreq ps) effs) | (label, effs, ps) <- params]
 >   where
->     effPlot = zip (historicalFreq ps) effs
 >     moePlot =  zip freqRange (map minObservingEff freqRange)
 >     x     = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (-0.1, 1.1)]
@@ -615,9 +624,18 @@ simFreqTime (circles, dt on x-axis)
 > plotFreqVsTimeFixed fn n ss ps tr = plotFreqVsTimeType Fixed fn n ss ps tr
 
 > plotFreqVsTimeWindowed         :: StatsPlot
-> plotFreqVsTimeWindowed fn n ss ps tr = plotFreqVsTimeType Windowed fn n ss ps tr
+> plotFreqVsTimeWindowed fn n ss ps _ =
+>     scatterPlots attrs $ [(Just "Default", zip (map fromIntegral $ historicalTime' dwps') (historicalFreq dwps')), (Just "Chosen", zip (map fromIntegral $ historicalTime' cwps') (historicalFreq cwps'))]
+>   where
+>     t = "Freq vs Time for Windowed" ++ n
+>     x = "Time [days]"
+>     y = "Frequency [GHz]"
+>     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
+>     wps = filter (\p -> isType Windowed (session p)) ps
+>     wss = getWindows ss wps
+>     dwps = getDefaultPeriods ss wss
+>     (dwps', cwps') = partition (\wp -> elem wp dwps) wps
 
-> --plotFreqVsTimeType 
 > plotFreqVsTimeType stype fn n _ ps _ =
 >     scatterPlot attrs $ zip (map fromIntegral $ historicalTime' ps') (historicalFreq ps')
 >   where
@@ -908,6 +926,20 @@ simHistFreq
 >     titles = [Just "Available", Just "Observed", Just "Obs. Backup"]
 >     attrs = (histAttrs t x y fn) ++ [XRange $ minMax freqRange] 
 
+simHistDefPer
+
+> histDefPeriodStrt :: StatsPlot
+> histDefPeriodStrt fn n ss ps _ = histogramPlot attrs tpStrts
+>   where
+>     tpStrts = [(fromIntegral x, fromIntegral y) | (x, y) <- periodStart tzero dwps]
+>     t = "Telescope Default Window Period Histogram" ++ n
+>     x = "Time [Days]"
+>     y = "Counts [Periods]"
+>     attrs = (tail $ histAttrs t x y fn) ++ [XRange (0, 400)]
+>     tzero = head . sort . map startTime $ ps
+>     wss = filter (\s -> sType s == Windowed) ss
+>     ws = concatMap windows wss
+>     dwps = getDefaultPeriods wss ws
 
 simFracCanceledFreq
 
@@ -954,7 +986,7 @@ simHistTPQtrs
 >     totalNumTPs = sum $ map snd tpDurs
 >     meanTimes = histStat mean' tpDurs
 >     stdTimes = histStat stddev' tpDurs
->     t = printf "Telescope Period Historgram (%f, %f, %f) %s" totalNumTPs meanTimes stdTimes n
+>     t = printf "Telescope Period Histogram (%f, %f, %f) %s" totalNumTPs meanTimes stdTimes n
 >     x = "TP [Minutes]"
 >     y = "Counts"
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780), YRange (0.5, 1000.0)]
@@ -963,15 +995,12 @@ simHistTPDurs - how are Session minDuratin and Period duration distributed in te
 
 > histSessTPDurs :: StatsPlot
 > histSessTPDurs fn n ss ps _ = 
->     --histogramPlots attrs $ zip titles [maxTPTime, tpDurs]
 >     histogramPlot attrs tpDurs
 >   where
 >     tpDurs  = [(fromIntegral x, fromIntegral y) | (x, y) <- periodDuration ps]
->     --maxTPTime  = [(fromIntegral x, fromIntegral y) | (x, y) <- sessionMinDurMaxTime ss]
->     t = "Telescope Period Historgram" ++ n
+>     t = "Telescope Period Histogram" ++ n
 >     x = "TP [Minutes]"
 >     y = "Counts [Minutes]"
->     --titles = [Just "Available", Just "Observed"]
 >     attrs = (histAttrs t x y fn) ++ [XRange (60, 780)]
 
 Utilities
@@ -1022,6 +1051,7 @@ StatsPlot :: filename, simname, sessions, periods, trace
 > type StatsPlot = String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
 
 > type EffStatsPlot = Weather -> String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
+
 > type PeriodEffStatsPlot = PeriodEfficiencies -> String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
 
 > statsPlots = map (\f -> f "" "") statsPlotsList 
@@ -1041,6 +1071,7 @@ TBF: has this been deprecated?
 >  , plotLstScore' 
 >  , histSessRA 
 >  , histSessFreq 
+>  , histDefPeriodStrt
 >  , histSessDec 
 >  , histSessTP 
 >  , histSessTPQtrs 
@@ -1098,6 +1129,7 @@ The standard list of plots (that need no extra input).
 >  , plotLstScore'          $ rootPath ++ "/simScoreLST.png"
 >  , histSessRA             $ rootPath ++ "/simHistRA.png"
 >  , histSessFreq           $ rootPath ++ "/simHistFreq.png"
+>  , histDefPeriodStrt      $ rootPath ++ "/simHistDefPer.png"
 >  , histSessDec            $ rootPath ++ "/simHistDec.png"
 >  , histSessTPQtrs         $ rootPath ++ "/simHistTPQtrs.png"
 >  , histSessTPDurs         $ rootPath ++ "/simHistTPDurs.png"
@@ -1203,7 +1235,7 @@ The standard list of plots (that need no extra input).
 >     gs = if (gaps == []) then "No Gaps in Schedule.\n" else error ++ "Gaps in Schedule: " ++ (show $ map (\g -> (toSqlString . fst $ g, snd g)) gaps) ++ "\n"
 >     ras = if validRAs ss then "0 <= RAs <= 24\n" else error ++ "RAs NOT between 0 and 24 hours!\n"
 >     decs = if validDecs ss then "-40 <= Decs <= 90\n" else error ++ "Decs NOT between -40 and 90 degrees!\n"
->     elevs = if validElevs psOpen then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
+>     elevs = if validElevs ps then "5 <= Elevs <= 90\n" else error ++ "Elevations NOT between 5 and 90 degrees!\n"
 >     rfiFlag = if (disobeyLowRFI psOpen) == [] then "Low RFI Flags Honored\n" else error ++ "Low RFI Flags NOT Honored: "++ (show . disobeyLowRFI $ ps) ++"\n"
 >     lstEx = if (disobeyLSTExclusion psOpen) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
 >     trans = if (disobeyTransit psOpen) == [] then "Transit Flags Honored\n" else error ++ "Transit Flags NOT Honored: " ++ (show . disobeyTransit $ psOpen) ++ "\n"
@@ -1439,15 +1471,26 @@ Trying to emulate the Beta Test's Scoring Tab:
 >     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
 >     -- calculate scheduled and observed efficiencies
->     begin <- getCurrentTime
 >     w <- if test then getWeatherTest Nothing else getWeather Nothing
 >     rt <- getReceiverTemperatures
+>     print "Calculating Period Observed Efficiences: "
+>     begin <- getCurrentTime
 >     peffs <- getPeriodsObsEffs w rt [] scheduleNoMaint
+>     end <- getCurrentTime
+>     print $ "Calc Period Efficiencies Observed Time: " ++ (show $ end - begin)
+>     print "Calculating Period Scheduled Efficiences: "
+>     begin <- getCurrentTime
 >     pSchdEffs <- getPeriodsSchdEffs w rt [] scheduleNoMaint
+>     end <- getCurrentTime
+>     print $ "Calc Period Scheduled Efficiencies Time: " ++ (show $ end - begin)
+>     print "Calculating Canceled Period Efficiences: "
+>     begin <- getCurrentTime
 >     canceledDetails <- getCanceledPeriodsDetails w rt [] canceled 
 >     end <- getCurrentTime
->     print $ "Calc Period Efficiencies Time: " ++ (show $ end - begin)
+>     print $ "Calc Canceled Efficiencies Time: " ++ (show $ end - begin)
 >     -- check efficiency scores for normalicy
+>     print "Calculating more Efficiencies: "
+>     begin <- getCurrentTime
 >     let schdObsEffs =  map atso2o $ concatMap snd pSchdEffs
 >     let schdAtmEffs =  map atso2a $ concatMap snd pSchdEffs
 >     let schdTrkEffs =  map atso2t $ concatMap snd pSchdEffs
@@ -1475,6 +1518,8 @@ Trying to emulate the Beta Test's Scoring Tab:
 >                        ]
 >     -- compare window efficinces: chosen vs. default periods
 >     windowEffs <- compareWindowPeriodEfficiencies winfo w
+>     end <- getCurrentTime
+>     print $ "Calc More Efficiencies Time: " ++ (show $ end - begin)
 >     -- text reports 
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create generic plots

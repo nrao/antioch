@@ -22,6 +22,7 @@ see http://www.gb.nrao.edu/~fghigo/gbtdoc/vlbinfo.html#position
 
 > gbtLat, gbtLatD, gbtLong, gbtLongD, gbtAlt :: Double
 > gbtLat   = 0.67078465 -- radians
+> gbtLat' = (realToFrac gbtLat)::Radians
 > gbtLatD  = 38.433129  -- degrees
 > gbtLong  = -1.3934683 -- radians
 > gbtLongD = -79.839840 -- degrees
@@ -76,6 +77,7 @@ Ranges for all receivers: copied from the DSS database.
 > rad2deg' :: Double -> Double
 > rad2deg' rad = rad * 180.0 / pi
 
+> rad2hrs :: Float -> Float
 > rad2hrs x = 12 * x / pi
 
 > deg2hrs :: Double -> Double

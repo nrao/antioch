@@ -4,15 +4,11 @@
 > import Antioch.Generators
 > import Antioch.DateTime
 > import Antioch.Types
+> import Antioch.Filters
 > import Antioch.Statistics
-> import Antioch.Utilities    (printList, periodInWindow, validWindow)
-> {-
-> import Antioch.Score
-> import Antioch.Weather
 > import Antioch.Utilities
-> import Antioch.PProjects
-> import Control.Monad.Trans  (lift, liftIO)
-> -}
+> import Antioch.Score        (elevation)
+> import Antioch.PProjects    (findPSessionByName)
 > import Test.HUnit
 > import System.Random   
 > import Test.QuickCheck      (generate)
@@ -24,10 +20,16 @@
 >                 , test_genMaintenancePeriods
 >                 , test_genSimTime
 >                 , test_genSimTime_semesters
+>                 , test_genSimTime_windows
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
+>                 , test_makePeriod
 >                 , test_genWindows
 >                 , test_validSimulatedWindows
+>                 , test_validRaDec
+>                 , test_genRaDecFromPeriod
+>                 , test_getValidTransitRange
+>                 , test_getValidTransitRanges
 >                 , test_genWeeklyMaintPeriods]
 
 > test_genSimTime = TestCase $ do
@@ -101,6 +103,7 @@
 >     --print ("winMins", winMins)
 >     --print ("expMins", expMinsLower, expMinsUpper)
 >     assertEqual "test_genSimYear_10" True (expMinsLower < winMins' && winMins' < expMinsUpper) 
+>     --printList $ filter (not . validSimulatedWindows) winSs
 >     let allValidWinSess = all (==True) $ map validSimulatedWindows $ winSs
 >     assertEqual "test_genSimYear_10b" True allValidWinSess  
       
@@ -161,6 +164,18 @@
 >     allSems = ["05C", "06A", "06B", "06C"]
 >     filterProjs projs ptype = filter (\p -> (sType . head . sessions $ p) == ptype) projs
 
+
+> test_genSimTime_windows = TestCase $ do
+>     let g = mkStdGen 1
+>     let simMins = days*24*60
+>     -- open & fixed
+>     let projs = generate 0 g $ genSimTime start days False (0.5, 0.0, 0.5) 0  --(0.6, 0.1, 0.3) 0 
+>     -- check the windowed projects for validity
+>     let wss = filter typeWindowed $ concatMap sessions projs
+>     assertEqual "test_genSimTime_windows_1" True (all (==True) $ map validSimulatedWindows wss)
+>   where
+>     days = 30
+>     start = fromGregorian 2010 2 2 0 0 0
 
 > test_genSimTime_semesters = TestCase $ do
 >     let g = mkStdGen 1
@@ -223,7 +238,7 @@
 >     let g = mkStdGen 1
 >     let dt = fromGregorian 2006 1 1 0 0 0
 >     let proj = generate 0 g $ genMaintenanceProj dt 365
->     assertEqual "test_genMaintProj_1" "06A" (semester proj)
+>     assertEqual "test_genMaintProj_1" "05C" (semester proj)
 >     assertEqual "test_genMaintProj_1" "Maintenance" (pName proj)
 >     -- test that we tied the knots
 >     let ss = sessions proj
@@ -339,7 +354,7 @@
 >     --print ("start", toSqlString start)
 >     let g = mkStdGen 1
 >     let wp = generate 0 g $ genWindowedSchedule dt days schd hrs
->     --print wp
+>     --print ("wp: ", wp)
 >     end <- getCurrentTime
 >     --print ("end", toSqlString end)
 >     --print ("exec time: ", end - start)
@@ -347,7 +362,7 @@
 >     let total = (sum $ map duration ps) `div` 60
 >     let final = sort $ schd ++ ps
 >     let dts = map startTime ps
->     assertEqual "test_createWS_1" True (hrs < total)
+>     assertEqual "test_createWS_1" True (hrs <= total)
 >     assertEqual "test_createWS_2" False (internalConflicts final) 
 >     assertEqual "test_createWS_3" True ((dt<(minimum dts)) && ((maximum dts)<dt2)) 
 >     -- change the date range and see if it still works
@@ -376,19 +391,34 @@
 >     hrs = 100
 >     schd = createSummerMaintenance 2006 defaultSession
 
+> test_makePeriod = TestCase $ do
+>     let dp = defaultPeriod { startTime = fromGregorian 2010 2 12 12 30 0
+>                            , duration = 120
+>                            }
+>     let win = makeWindow 10 dp
+>     let start = fromGregorian 2010 2 4  0 0 0
+>     let end   = fromGregorian 2010 2 14 0 0 0
+>     let win' = defaultWindow { wRanges = [(start, end)]
+>                              , wTotalTime = 120
+>                              }
+>     assertEqual "test_makePeriod_1" win' win
+
 > test_genWindows = TestCase $ do
+>     -- create a list of default periods
 >     let g = mkStdGen 1
 >     let ps = map mkPeriod dts
+>     -- make windows for them
 >     let wins = generate 0 g $ genWindows ps
 >     let allPsInAWin = all (\(w, p) -> periodInWindow p w) $ zip wins ps
 >     assertEqual "test_genWindows_1" True allPsInAWin
 >     -- make sure each period is only in one window
 >     let allInOne = all (==True) $ map (inJustOneWindow wins) ps
 >     assertEqual "test_genWindows_2" True allInOne
+>     -- ensure we can handle the null case
 >     let wins2 = generate 0 g $ genWindows []
 >     assertEqual "test_genWindows_3" [] wins2 
+>     -- ensure we can handle just one default period
 >     let wins3 = generate 0 g $ genWindows [head ps] 
->     --print wins3
 >     assertEqual "test_genWindows_4" 1 (length wins3) 
 >     -- see how it fares with randomly generated periods
 >     let wps  = generate 0 g $ genWindowedSchedule start days [] (10*24)
@@ -421,20 +451,120 @@
 >     wstart1 = fromGregorian 2006 2 8 0 0 0
 >     wr1 = [(wstart1, addMinutes (3*24*60) wstart1)]
 >     validW = defaultWindow { wSession = s
+>                            , wTotalTime = quarter
 >                            , wRanges = wr1 }
 >     wr2 = [(wstart1, addMinutes (1*24*60) wstart1)]
 >     invalidW = defaultWindow { wSession = s
+>                              , wTotalTime = quarter
 >                              , wRanges = wr2 }
 >     wstart3 = fromGregorian 2006 2 13 0 0 0
 >     wr3 = [(wstart3, addMinutes (3*24*60) wstart3)]
 >     w2 = defaultWindow { wSession = s
+>                        , wTotalTime = quarter
 >                        , wRanges = wr3 }
 >     wstart4 = fromGregorian 2006 2 10 0 0 0
 >     wr4 = [(wstart4, addMinutes (7*24*60) wstart4)]
 >     w3 = defaultWindow { wSession = s
+>                        , wTotalTime = quarter
 >                        , wRanges = wr4 }
 >     validSess    = makeSession s [validW] [p]
 >     invalidSess  = makeSession s [invalidW] [p]
 >     validSess2   = makeSession s [validW, w2] [p, p2]
 >     invalidSess2 = makeSession s [validW, w3] [p, p2] -- overlapping windows
 > 
+
+> test_validRaDec = TestCase $ do
+>     -- based off ScoreTest's test_positionFactors
+>     assertEqual "test_validRaDec_0" 36.60029 (rad2deg $ elevation dt s)
+>     assertEqual "test_validRaDec_1" True (validRaDec ra' dec' p) 
+>     -- twelve hours earlier, look how low the eleveation is
+>     assertEqual "test_validRaDec_2" 1.9727771 (rad2deg $ elevation dt2 s)
+>     -- with elevations like that, a period won't pass
+>     assertEqual "test_validRaDec_3" False (validRaDec ra' dec' p2) 
+> 
+>   where
+>     dt  = fromGregorian 2006 9 2 14 30 0
+>     dt2 = fromGregorian 2006 9 2  2 30 0
+>     s = findPSessionByName "CV"
+>     ra' = ra s
+>     dec' = dec s
+>     p = defaultPeriod { session = s
+>                       , startTime = dt
+>                       , duration = 60
+>                       }
+>     p2 = p {startTime = dt2}
+
+How to test that we are producing legal ra & decs without resorting
+to the circumpolar rad/dec?  don't know, but I do know that what
+ever ra/decs we come out with should be valid.
+Also, simply be calling it we can see if it blows up or not ...
+
+> test_genRaDecFromPeriod = TestCase $ do
+>     let g = mkStdGen 1
+>     let (ra', dec') = generate 0 g $ genRaDecFromPeriod p 
+>     assertEqual "test_genRaDecFromPeriod_1" True (validRaDec ra' dec' p)
+>     let g' = mkStdGen 2
+>     let (ra', dec') = generate 1 g' $ genRaDecFromPeriod p 
+>     assertEqual "test_genRaDecFromPeriod_2" True (validRaDec ra' dec' p)
+>   where
+>     dt  = fromGregorian 2006 9 2 14 30 0
+>     s = findPSessionByName "CV"
+>     ra' = ra s
+>     dec' = dec s
+>     p = defaultPeriod { session = s
+>                       , startTime = dt
+>                       , duration = 60
+>                       }
+
+> test_getValidTransitRange = TestCase $ do
+>   let day = fromGregorian 2010 2 2 0 0 0
+>   let g = mkStdGen 1
+>   let tr = generate 0 g $ getValidTransitRange (0.1, 1.5) day
+>   assertEqual "test_gvtr_1" (fromGregorian 2010 2 2 19 0 0, 195) tr
+>   let g = mkStdGen 2
+>   let tr = generate 0 g $ getValidTransitRange (0.1, 1.5) day
+>   assertEqual "test_gvtr_2" (fromGregorian 2010 2 2 19 30 0, (150)) tr
+>   let g = mkStdGen 3
+>   let tr = generate 0 g $ getValidTransitRange (0.1, 0.01) day
+>   assertEqual "test_gvtr_3" (fromGregorian 2010 2 2 19 45 0, (120)) tr
+
+> test_getValidTransitRanges = TestCase $ do
+>   let g = mkStdGen 1
+>   let int = 15
+>   let num = 1
+>   let day = fromGregorian 2010 2 2 0 0 0
+>   let end = fromGregorian 2011 2 2 0 0 0
+>   let expDt = fromGregorian 2010 2 2 16 45 0
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 1.5) 
+>   assertEqual "test__getValidTransitRange_1" 1 (length trs)
+>   assertEqual "test__getValidTransitRange_2" expDt (fst . head $ trs)
+>   assertEqual "test__getValidTransitRange_3" 465 (snd . head $ trs)
+>   -- now really do a series
+>   let num = 3
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 1.5) 
+>   assertEqual "test__getValidTransitRange_4" 3 (length trs)
+>   assertEqual "test__getValidTransitRange_5" expDt (fst . head $ trs)
+>   assertEqual "test__getValidTransitRange_6" 465 (snd . head $ trs)
+>   let (trDts, trDurs) = unzip trs 
+>   -- watch the transit (LST) drift over a month!
+>   let expDts = [expDt
+>               , fromGregorian 2010 2 17 18  0 0
+>               , fromGregorian 2010 3  4 15 15 0
+>                ]
+>   assertEqual "test__getValidTransitRange_7" expDts trDts
+>   assertEqual "test__getValidTransitRange_8" [465, 195, 450] trDurs 
+>   -- now increase the duration and give the source some down-time
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 0.01) 
+>   let (trDts, trDurs) = unzip trs 
+>   -- see how the periods have shrunk, (because the source goes down) 
+>   -- but the series is still spaced the same
+>   let expDts = [fromGregorian 2010 2  2 16 45 0
+>               , fromGregorian 2010 2 17 18  0 0
+>               , fromGregorian 2010 3  4 15 15 0
+>                ]
+>   assertEqual "test__getValidTransitRange_9" expDts trDts
+>   assertEqual "test__getValidTransitRange_10" [465, 195, 450] trDurs 
+>   let trs = generate 0 g . fmap concat . mapM (getValidTransitRanges day int num end) $ [(0.1, deg2rad . fromIntegral $ d) | d <- [-47, -46 .. 14]]
+>   let (o, e) = partition odd [ d `div` 15 | (s, d) <- trs ]
+>   assertBool "test__getValidTransitRange_11" ((abs $ (length o) - (length e)) < 17) -- approximately same number of odd and even quarters
+>   assertBool "test__getValidTransitRange_12" $ all (\d -> 0 <= d && d <= (8*60)) [d | (s, d) <- trs] -- duration between 0 and 8 hours

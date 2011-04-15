@@ -372,6 +372,10 @@ For randomly generated data, this should be a flat distribution.
 > periodDuration :: [Period] -> [(Minutes, Minutes)]
 > periodDuration = histogram [0, quarter..(13*60)] . (duration `vs` duration)
 
+> periodStart :: DateTime -> [Period] -> [(Int, Int)]
+> periodStart start = histogram [0..400] . (const 1 `vs` startDay)
+>   where
+>     startDay = flip div (24*60) . flip diffMinutes start . startTime
 
 > sessionMinDuration :: [Session] -> [(Minutes, Minutes)]
 > sessionMinDuration = histogram [0, quarter..(13*60)] . (minDuration `vs` minDuration)
@@ -566,10 +570,28 @@ by band and across all hours of the day within HA limits.
 The next few methods are for calculating the efficiencies (both
 observed & scheduled) of periods.
 
-> type PeriodEfficiency   = (Period,[(Score, Score, Score, Score)])
+PeriodEfficiency is (period
+                   , [(atmosphericEfficiency
+                     , trackingEfficiency
+                     , surfaceObservingEfficiency
+                     , observingEfficiency)])
+
+> type PeriodEfficiency   = (Period, [(Score, Score, Score, Score)])
 > type PeriodEfficiencies = [PeriodEfficiency]
 
-Same as original method, but we don't need the hourAnlgeLimit.
+Note that the first argument is [WindowPeriods], i.e., it comes from calling
+getWindowPeriodsFromTrace on the Trace
+
+> partitionWindowedPeriodEfficiencies :: [(Window, Maybe Period, Period)] ->
+>                                        PeriodEfficiencies ->
+>                                        (PeriodEfficiencies, PeriodEfficiencies)
+> partitionWindowedPeriodEfficiencies wps pes = partition isAChosen pes
+>   where
+>     chosen = catMaybes . map second $ wps
+>     second (a, b, c) = b
+>     isAChosen pe = elem (fst pe) chosen
+
+Same as original method, but we don't need the hourAngleLimit.
 
 > getEfficiencyScoringFactors' :: DateTime -> Session -> Scoring Factors
 > getEfficiencyScoringFactors' dt s = do 
@@ -579,27 +601,25 @@ Same as original method, but we don't need the hourAnlgeLimit.
 >                       ]
 >     score effFactors dt s
 
-What are the various efficiencies for the given session at the given
-time while observing at the given time.
-
-> getObsEffScoringFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Session -> DateTime -> IO Factors
-> getObsEffScoringFactors w rt rs s dt = do
->   -- we must set this time here so we can get efficiency during observing
->   w' <- newWeather w $ Just dt
->   runScoring w' rs rt $ getEfficiencyScoringFactors' dt s
-> 
-
 For the given period, get the *observed* efficiencies at each quarter in
 the periods duration.  We can only do this by restting the weather for
 each quarter so that we pick up gbt_weather and latest forecast.
 
 > getPeriodObsEffFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO [Factors]
-> getPeriodObsEffFactors w rt rs p = mapM (getObsEffScoringFactors w rt rs (session p)) dts
+> getPeriodObsEffFactors w rt rs p = do
+>     -- to get the observed efficiencies, we need to use the gbt weather
+>     -- where we can, and the best forecast where we can't.
+>     -- a simple way of doing this is to simply set the origin of the 
+>     -- weather to be the end point of the period - since all times
+>     -- will now be in the 'past'.
+>     w' <- newWeather w $ Just $ periodEndTime p
+>     mapM (getObsEffScoringFactors w' rt rs (session p)) dts
 >   where
 >     dts = [(startTime p)
 >         ,  (addMinutes 15 (startTime p))
 >         .. (addMinutes (duration p) (startTime p))]
-> 
+>     getObsEffScoringFactors w rt rs s dt = runScoring w rs rt $ getEfficiencyScoringFactors' dt s
+
 
 > getPeriodSchdEffFactors :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO [Factors]
 > getPeriodSchdEffFactors w rt rs p = do
@@ -877,7 +897,7 @@ simpleStat provides a way to perform statistics on binned data
 
 > simpleStat f buckets = map (f . snd) . allocate buckets
 
-histStat provides a way to perform statistics on historgram data
+histStat provides a way to perform statistics on histogram data
 f is a function like mean', etc.
 
 > histStat :: ([Float] -> Float) -> [(Float, Float)] -> Float

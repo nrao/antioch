@@ -24,11 +24,21 @@ be confused and raise false alarams.
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
 
-> filterDisabledPeriods :: [Period] -> IO([Period])
+> filterDisabledPeriods :: [Period] -> IO ([Period])
 > filterDisabledPeriods ps = concatMapM enabledPeriod ps
 >   where
 >     enabledPeriod p = do
->       let state = not (not (enabled $ session p ) && (pState p == Pending))
+>       let state = not (not (enabled $ session p) && (pState p == Pending))
+>       case state of
+>         True -> return $ [p]
+>         False -> return []
+
+> filterInactivePeriods :: [Period] -> IO ([Period])
+> filterInactivePeriods ps = concatMapM activePeriod ps
+>   where
+>     activePeriod p = do
+>       let state = not (not (isAuthorized undefined undefined $ session p) &&
+>                            (pState p == Pending))
 >       case state of
 >         True -> return $ [p]
 >         False -> return []
@@ -70,13 +80,13 @@ Possible factors:
 > isNotTerminated _ _ s = not . sTerminated $ s
 
 > isNotTypeFixed :: SelectionCriteria
-> isNotTypeFixed _ _ s = sType s /= Fixed
+> isNotTypeFixed _ _ s = not . typeFixed $ s
 
 > isNotTypeElective :: SelectionCriteria
-> isNotTypeElective _ _ s = sType s /= Elective
+> isNotTypeElective _ _ s = not . typeElective $ s
 
 > isTypeOpen :: SelectionCriteria
-> isTypeOpen _ _ s = sType s == Open
+> isTypeOpen _ _ s = typeOpen s
 
 > isGradeA_B :: SelectionCriteria
 > isGradeA_B _ _ s = grade s >= 2.8
@@ -130,7 +140,7 @@ Note this code assumes that minDuration == maxDuration.
 
 > adjustWindowSessionDuration :: DateTime -> Minutes -> Session -> Session
 > adjustWindowSessionDuration dt dur s
->     | sType s == Windowed        = s'
+>     | typeWindowed s             = s'
 >     | otherwise                  = s
 >   where
 >     aws = activeWindows dt dur . windows $ s

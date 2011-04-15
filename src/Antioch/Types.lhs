@@ -158,7 +158,7 @@ data does not have periods with unique ids).
 
 Electives are just a means of grouping some periods.  But we do need
 an easy way of determining if a period is the last period in an elective,
-in case the Sesshun does not have gauranteed time.
+in case the Sesshun does not have guaranteed time.
 
 > data Electives = Electives {
 >     eId        :: Int -- DB PK
