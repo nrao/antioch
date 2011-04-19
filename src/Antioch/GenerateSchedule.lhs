@@ -414,11 +414,7 @@ Window object appropriate.
 >     (y, m, d) = toGregorian' $ addMinutes (days 2) (periodEndTime defaultPeriod)  
 >     -- but make sure window ranges fall on integer days
 >     end = fromGregorian' y m d
->     start' = addMinutes (-(days winWidth)) end
->     -- make sure window starts in same trimester as period
->     start = max trimesterStartDt start'  -- truncate window
->     --start = start'                       -- or not
->     trimesterStartDt = fromJust . trimester2startDT . dt2semester . startTime $ defaultPeriod
+>     start = addMinutes (-(days winWidth)) end
 
 Self-test to be called in unit tests and simulations.
 As a general guideline, these windows should also get past 

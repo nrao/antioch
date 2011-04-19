@@ -131,7 +131,8 @@
 >     assertEqual "test_genSimYear2_13" allSems (getProjectSems op)
 >     assertEqual "test_genSimYear2_14" allSems (getSessionSems op)
 >     assertEqual "test_genSimYear2_15" []      (getPeriodSems  op)
->     assertEqual "test_genSimYear2_16" allSems (getProjectSems wp)
+>     assertEqual "test_genSimYear2_16" ["05C","06A","06B","06C"]
+>                                               (getProjectSems wp)
 >     assertEqual "test_genSimYear2_17" allSems (getSessionSems wp)
 >     assertEqual "test_genSimYear2_18" allSems (getPeriodSems  wp)
 >
@@ -221,9 +222,12 @@
 >     assertEqual "test_genSimYear2_13" allSems (getProjectSems oprojs)
 >     assertEqual "test_genSimYear2_14" allSems (getSessionSems oprojs)
 >     assertEqual "test_genSimYear2_15" []      (getPeriodSems  oprojs)
->     assertEqual "test_genSimYear2_16" ["08A"] (getProjectSems wprojs)
->     assertEqual "test_genSimYear2_17" ["08A"] (getSessionSems wprojs)
->     assertEqual "test_genSimYear2_18" ["08A"] (getPeriodSems  wprojs)
+>     assertEqual "test_genSimYear2_16" ["07C","08A"]
+>                                               (getProjectSems wprojs)
+>     assertEqual "test_genSimYear2_17" ["07C","08A"]
+>                                               (getSessionSems wprojs)
+>     assertEqual "test_genSimYear2_18" ["07C","08A"]
+>                                               (getPeriodSems  wprojs)
 >
 >   where
 >     start = fromGregorian 2008 2 2 0 0 0
