@@ -276,7 +276,7 @@ set the origin of the weather to one hour before the start of the period,
 ensure that subsequent Scoring calls will use this weather, *then* call 
 this function.
 
-TBF: equation ? in Memo 5.?
+Equation 24a in Memo 5.3
 
 The final boolean value is a comparison of the average of the non-overhead
 quarter factors compared to the adjusted Min. Obs. Efficiency.  Those
@@ -320,7 +320,7 @@ the elective group.
 >                | isScheduledElective p = return True
 >                | isGuaranteedElective p = return True
 >                | otherwise = do
->   -- check for gauranteed?
+>   -- check for guaranteed?
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
 >     Nothing -> return False
@@ -336,7 +336,7 @@ the elective group.
 
 
 The last periods in a group of periods (Electives) needs special 
-consideration: if it's session is NOT gauranteed time, then there's
+consideration: if it's session is NOT guaranteed time, then there's
 a chance even the last periods won't observe.
 
 > isLastPeriodOfElective :: Period -> Bool

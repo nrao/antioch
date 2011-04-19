@@ -40,7 +40,7 @@
 >     session <- liftIO $ getSession sessionId cnn
 >     moc <- liftIO $ runMOC start dur session False
 >     -- send result back
->     jsonHandler $ makeObj [("moc", showJSON . fromJust $ moc)]
+>     jsonHandler $ makeObj [("moc", showJSON . fromMaybe True $ moc)]
 >   where
 >     getParam p ps = fromJust . fromJust . lookup p $ ps
 
