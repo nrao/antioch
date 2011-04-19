@@ -18,7 +18,8 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
-> import Data.Maybe         (fromMaybe, isJust, isNothing, fromJust, catMaybes)
+> import Data.Maybe         (fromMaybe, isJust, isNothing, fromJust
+>                          , catMaybes, listToMaybe)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -352,23 +353,29 @@ a chance even the last periods won't observe.
 >     | isNothing me = False
 >     | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
 
-Default Periods of Windows from non-guaranteed Sessions should not
-run if they don't pass MOC.  So we must enforce this matrix:
+Default Periods of Windows or Electives from non-guaranteed Sessions should
+not run if they don't pass MOC.  So we must enforce this matrix:
 _____________________________________________________________________________
 |             |  *guaranteed*      | *non-guaranteed*                       |
 _____________________________________________________________________________
-| has default |	The default period | The default period is scheduled if     |
-|             | is scheduled.      | it meets minimum observing conditions. |
+| has default |	The default or last| The default period is scheduled if     |
+| or last     | is scheduled.      | it meets minimum observing conditions. |
 _____________________________________________________________________________
-| no default  | NA                 | As previosuly in the window, the       |
-|             |                    | session must compete for a time slot.  |
+| no default  | NA                 | As earlier the session must            |
+| or last     |                    | compete for a time slot.               |
 |___________________________________________________________________________|
 
 > goodDefaultPeriod :: Period -> Scoring (Bool)
-> goodDefaultPeriod p | isNotWindowed p = return True
->                     | isScheduledWindow p = return True
->                     | isGuaranteedWindow p = return True
->                     | otherwise = do
+> goodDefaultPeriod p = do
+>     w <- goodDefaultWindowedPeriod p
+>     e <- goodDefaultElectivePeriod p
+>     return $ w && e
+
+> goodDefaultWindowedPeriod :: Period -> Scoring (Bool)
+> goodDefaultWindowedPeriod p | isNotWindowed p = return True
+>                             | isScheduledWindow p = return True
+>                             | isGuaranteedWindow p = return True
+>                             | otherwise = do
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
 >     Nothing -> return False
@@ -377,7 +384,31 @@ _____________________________________________________________________________
 >     isNotWindowed = not . isWindowed
 >     isWindowed = typeWindowed . session
 >     isScheduledWindow p = (isWindowed p) && (pState p == Scheduled)
->     isGuaranteedWindow p = (isWindowed p) && (guaranteed . session $ p) 
+>     isGuaranteedWindow p =
+>         (isWindowed p) &&
+>         (guaranteed . session $ p) &&
+>         (elem (Just . peId $ p) [wPeriodId w | w <- windows . session $ p])
+>     dt = startTime p
+>     dur = duration p
+>     s = session p
+
+> goodDefaultElectivePeriod :: Period -> Scoring (Bool)
+> goodDefaultElectivePeriod p | isNotElective p = return True
+>                             | isScheduledElective p = return True
+>                             | isGuaranteedElective p = return True
+>                             | otherwise = do
+>   moc <- minimumObservingConditions dt dur s
+>   case moc of
+>     Nothing -> return False
+>     Just moc'  -> return moc'
+>   where
+>     isNotElective = not . isElective
+>     isElective = typeElective . session
+>     isScheduledElective p = (isElective p) && (pState p == Scheduled)
+>     isGuaranteedElective p =
+>         (isElective p) &&
+>         (guaranteed . session $ p) &&
+>         (elem (Just . peId $ p) [listToMaybe . reverse . ePeriodIds $ e | e <- electives . session $ p])
 >     dt = startTime p
 >     dur = duration p
 >     s = session p
