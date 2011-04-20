@@ -62,7 +62,7 @@ in the reversion_version table if it had been created in Django:
 >     quickQuery' cnn query xs
 >     commit cnn
 >   where
->     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr) VALUES (?, ?, 34, 'json', ?, ?)"
+>     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr) VALUES (?, ?, 80, 'json', ?, ?)"
 >     serialData = serializePeriodAccounting p accntId
 >     objRepr = representPeriodAccounting p accntId
 >     xs = [toSql revisionId, toSql accntId, toSql serialData, toSql objRepr]
@@ -74,7 +74,7 @@ This should replicate the django.core.serialize product for a Period.
 >     quickQuery' cnn query xs
 >     commit cnn
 >   where
->     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr) VALUES (?, ?, 34, 'json', ?, ?)"
+>     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr) VALUES (?, ?, 59, 'json', ?, ?)"
 >     serialData = serializePeriod p accntId
 >     objRepr = representPeriod p
 >     xs = [toSql revisionId, toSql . peId $ p, toSql serialData, toSql objRepr]
