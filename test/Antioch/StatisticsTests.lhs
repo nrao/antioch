@@ -65,7 +65,39 @@
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
 >   , test_getPeriodsObsEffs
+>   , test_getCanceledPeriodsDetails
 >    ]
+
+
+> test_getCanceledPeriodsDetails = TestCase $ do
+>     -- first calculate the MOC for each period
+>     w <- getWeatherTest Nothing
+>     rt <- getReceiverTemperatures
+>     minObs' <- mapM (moc w rt) ps
+>     let minObs = map (\(Just x, _) -> x) minObs'
+>     -- now get the details
+>     details <- getCanceledPeriodsDetails w rt [] ps
+>     -- make sure parts of the details agree w/ the min obs results
+>     assertEqual "test_getCanceledPeriodsDetails_0" True $ all (==True) $ map compare $ zip minObs details
+>     -- make sure the first one is self consistent
+>     let (p, minObs, meanEff, effs, trks, winds) = head details
+>     let obsEffs = map (\(a,b,c,d) -> d) effs
+>     let prods = zipWith prod obsEffs trks
+>     let meanEff' = (sum prods) / (fromIntegral . length $ prods)
+>     assertEqual "test_getCanceledPeriodsDetails_1" meanEff' meanEff
+>     assertEqual "test_getCanceledPeriodsDetails_2" exp (head details)
+>   where
+>     prod e (Just t) = e * t
+>     ss = getOpenPSessions -- 10 of them
+>     start = fromGregorian 2006 2 2 0 0 0
+>     pdur = 2*60
+>     numPs = length ss 
+>     dts = [start, addMinutes pdur start .. addMinutes (pdur*(numPs-1)) start]
+>     mkPeriod (s, dt) = defaultPeriod { session = s, startTime = dt, duration = pdur }
+>     ps = map mkPeriod $ zip ss dts
+>     moc w rt p = runScoring' w [] rt $ minimumObservingConditions (startTime p) (duration p) (session p) 
+>     compare (minObs, (p, mo, meanEff, _, _, _)) = minObs == (meanEff >= mo)
+>     exp = (head ps, 0.35922727,0.64642495,[(0.6885284,0.96142334,0.92952526,0.6153153),(0.68980044,0.9626149,0.92952526,0.6172161),(0.6979545,0.9626149,0.92952526,0.62451214),(0.70289797,0.9626149,0.92952526,0.6289354),(0.70747703,0.9626149,0.92952526,0.6330327),(0.7023932,0.9979989,1.0,0.70098764),(0.70638925,0.9979989,1.0,0.70497566)],[Just 1.0,Just 1.0,Just 1.0,Just 1.0,Just 1.0,Just 1.0,Just 1.0],[Just 1.714091,Just 2.300624,Just 2.300624,Just 2.300624,Just 2.300624,Just 0.60922635,Just 0.60922635]) 
 
 > test_getPeriodsObsEffs = TestCase $ do
 >     w <- getWeatherTest Nothing
