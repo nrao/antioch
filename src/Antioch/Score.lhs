@@ -3,6 +3,7 @@
 > module Antioch.Score where
 
 > import Antioch.DateTime
+> import Antioch.Filters    (typeOpen, typeWindowed, typeFixed, typeElective)
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.TimeAccounting
@@ -181,9 +182,19 @@ Equation 5
 
 > zenithAngle' :: Radians -> Radians -> Radians
 > zenithAngle' dec ha = acos $ sin gbtLat' * sin dec + cos gbtLat' * cos dec * cos ha
->   where
->     gbtLat' = realToFrac gbtLat
 
+> radecel2ha :: (Radians, Radians) -> Radians -> Radians
+> radecel2ha (ra, dec) el = if (abs num) > (abs denom)
+>                      then if num < 0.0
+>                           then hrs2rad 12.0
+>                           else          0.0
+>                      else acos (num / denom)
+>   where
+>     za = pi/2 - el
+>     num = (cos za - sin dec * sin gbtLat')
+>     denom = (cos gbtLat' * cos dec)
+
+Given a certain Ra & Dec and their transit time, will the given time range
 TBF: this was moved from Statistic to here, but it needs a better home.
 
 > elevationFromZenith :: Period -> Float
@@ -314,8 +325,8 @@ the elective group.
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
->     isNotElective p = (sType . session $ p) /= Elective
->     isElective p = (sType . session $ p) == Elective
+>     isNotElective = not . typeElective . session
+>     isElective = typeElective . session
 >     isScheduledElective p = (isElective p) && (pState p == Scheduled)
 >     isGuaranteedElective p = (isElective p) && (guaranteed . session $ p) && (isLastPeriodOfElective p) 
 >     dt = startTime p
@@ -357,8 +368,8 @@ run if they don't pass MOC.  So we must enforce this matrix:
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
->     isNotWindowed p = (sType . session $ p) /= Windowed
->     isWindowed p = (sType . session $ p) == Windowed
+>     isNotWindowed = not . isWindowed
+>     isWindowed = typeWindowed . session
 >     isScheduledWindow p = (isWindowed p) && (pState p == Scheduled)
 >     isGuaranteedWindow p = (isWindowed p) && (guaranteed . session $ p) 
 >     dt = startTime p
@@ -716,9 +727,9 @@ up, all the time.
 
 > inWindows :: DateTime -> (Session -> [Window]) -> Session -> Score
 > inWindows dt f s
->       | sType s == Open           = 1.0
->       | sType s == Fixed          = 1.0
->       | sType s == Elective       = 1.0
+>       | typeOpen s                = 1.0
+>       | typeFixed s               = 1.0
+>       | typeElective s            = 1.0
 >       | any (inWindow dt) $ f s   = 1.0
 >       | otherwise                 = 0.0
 

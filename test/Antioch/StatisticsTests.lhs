@@ -34,6 +34,7 @@
 >   , test_sessionTP
 >   , test_sessionTP2
 >   , test_sessionTPQtrs
+>   , test_periodStart
 >   , test_periodDuration
 >   , test_sessionMinDuration
 >   , test_freqTime
@@ -64,7 +65,39 @@
 >   , test_compareWindowPeriodEfficiencies
 >   , test_calcMeanWindowEfficiencies
 >   , test_getPeriodsObsEffs
+>   , test_getCanceledPeriodsDetails
 >    ]
+
+
+> test_getCanceledPeriodsDetails = TestCase $ do
+>     -- first calculate the MOC for each period
+>     w <- getWeatherTest Nothing
+>     rt <- getReceiverTemperatures
+>     minObs' <- mapM (moc w rt) ps
+>     let minObs = map (\(Just x, _) -> x) minObs'
+>     -- now get the details
+>     details <- getCanceledPeriodsDetails w rt [] ps
+>     -- make sure parts of the details agree w/ the min obs results
+>     assertEqual "test_getCanceledPeriodsDetails_0" True $ all (==True) $ map compare $ zip minObs details
+>     -- make sure the first one is self consistent
+>     let (p, minObs, meanEff, effs, trks, winds) = head details
+>     let obsEffs = map (\(a,b,c,d) -> d) effs
+>     let prods = zipWith prod obsEffs trks
+>     let meanEff' = (sum prods) / (fromIntegral . length $ prods)
+>     assertEqual "test_getCanceledPeriodsDetails_1" meanEff' meanEff
+>     assertEqual "test_getCanceledPeriodsDetails_2" exp (head details)
+>   where
+>     prod e (Just t) = e * t
+>     ss = getOpenPSessions -- 10 of them
+>     start = fromGregorian 2006 2 2 0 0 0
+>     pdur = 2*60
+>     numPs = length ss 
+>     dts = [start, addMinutes pdur start .. addMinutes (pdur*(numPs-1)) start]
+>     mkPeriod (s, dt) = defaultPeriod { session = s, startTime = dt, duration = pdur }
+>     ps = map mkPeriod $ zip ss dts
+>     moc w rt p = runScoring' w [] rt $ minimumObservingConditions (startTime p) (duration p) (session p) 
+>     compare (minObs, (p, mo, meanEff, _, _, _)) = minObs == (meanEff >= mo)
+>     exp = (head ps, 0.35922727,0.64642495,[(0.6885284,0.96142334,0.92952526,0.6153153),(0.68980044,0.9626149,0.92952526,0.6172161),(0.6979545,0.9626149,0.92952526,0.62451214),(0.70289797,0.9626149,0.92952526,0.6289354),(0.70747703,0.9626149,0.92952526,0.6330327),(0.7023932,0.9979989,1.0,0.70098764),(0.70638925,0.9979989,1.0,0.70497566)],[Just 1.0,Just 1.0,Just 1.0,Just 1.0,Just 1.0,Just 1.0,Just 1.0],[Just 1.714091,Just 2.300624,Just 2.300624,Just 2.300624,Just 2.300624,Just 0.60922635,Just 0.60922635]) 
 
 > test_getPeriodsObsEffs = TestCase $ do
 >     w <- getWeatherTest Nothing
@@ -123,6 +156,30 @@
 >     wInfo3 = [(head . windows $ s2, Just cp2, dp2)]
 >     exp2 = [((cp, 0.6327699),(dp,0.6808212 ))
 >            ,((cp2,0.6814143), (dp2,0.6646747))]
+
+> test_partitionWindowedPeriodEfficiencies = TestCase $ do
+>     assertEqual "test_partitionWindowedPeriodEfficiencies_1"
+>        expected
+>        (partitionWindowedPeriodEfficiencies wps pes)
+>     assertEqual "test_partitionWindowedPeriodEfficiencies_2"
+>        ([], [])
+>        (partitionWindowedPeriodEfficiencies wps [])
+>   where
+>     ps = [defaultPeriod {startTime = i} | i <- [0 .. 11]]
+>     pes = [(p,[]) | p <- ps]
+>     w1 = defaultWindow {wId = 1}
+>     w2 = defaultWindow {wId = 2}
+>     w3 = defaultWindow {wId = 3}
+>     wps = [(w1 {wPeriodId = Just 11}, Nothing,         ps !! 11)
+>          , (w2 {wPeriodId = Just 10}, Just (ps !!  9), ps !! 10)
+>          , (w3 {wPeriodId = Just  8}, Just (ps !!  7), ps !!  8)
+>          , (w1 {wPeriodId = Just  6}, Nothing,         ps !!  6)
+>          , (w2 {wPeriodId = Just  5}, Just (ps !!  4), ps !!  5)
+>          , (w3 {wPeriodId = Just  3}, Nothing,         ps !!  3)
+>          , (w1 {wPeriodId = Just  2}, Nothing,         ps !!  2)
+>          , (w3 {wPeriodId = Just  1}, Just (ps !!  0), ps !!  1)
+>           ]
+>     expected = partition (\pe -> (elem (startTime . fst $ pe) [0, 4, 7, 9])) pes
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
@@ -385,6 +442,17 @@ what bin it shows up in.
 >     p2 = defaultPeriod {duration = 105, pDuration = 105}
 >     q  = quarter
 >     exp = [(0,0),(1*q,0),(2*q,(3*30)),(3*q,0),(4*q,0),(5*q,0),(6*q,0),(7*q,(2*105))]
+
+> test_periodStart = TestCase $ do
+>     assertEqual "test_periodStart" exp cnt
+>   where
+>     dt1 = fromGregorian 2008 6 1 0 0 0
+>     dt2 = fromGregorian 2008 6 3 0 0 0
+>     ps = [p1, p2, p1, p2, p1]
+>     p1 = defaultPeriod {startTime = dt1}
+>     p2 = defaultPeriod {startTime = dt2}
+>     cnt = take 8 $ periodStart dt1 ps
+>     exp = [(0,3),(1,0),(2,2),(3,0),(4,0),(5,0),(6,0),(7,0)]
 
 > test_sessionMinDuration = TestCase $ do
 >     assertEqual "test_sessionMinDuration" exp cnt

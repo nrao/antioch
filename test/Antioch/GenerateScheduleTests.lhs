@@ -28,8 +28,6 @@
 >                 , test_validSimulatedWindows
 >                 , test_validRaDec
 >                 , test_genRaDecFromPeriod
->                 , test_fitValidPeriodToTransit
->                 , test_fitValidPeriodToTransit_2
 >                 , test_getValidTransitRange
 >                 , test_getValidTransitRanges
 >                 , test_genWeeklyMaintPeriods]
@@ -133,7 +131,8 @@
 >     assertEqual "test_genSimYear2_13" allSems (getProjectSems op)
 >     assertEqual "test_genSimYear2_14" allSems (getSessionSems op)
 >     assertEqual "test_genSimYear2_15" []      (getPeriodSems  op)
->     assertEqual "test_genSimYear2_16" allSems (getProjectSems wp)
+>     assertEqual "test_genSimYear2_16" ["05C","06A","06B","06C"]
+>                                               (getProjectSems wp)
 >     assertEqual "test_genSimYear2_17" allSems (getSessionSems wp)
 >     assertEqual "test_genSimYear2_18" allSems (getPeriodSems  wp)
 >
@@ -223,9 +222,12 @@
 >     assertEqual "test_genSimYear2_13" allSems (getProjectSems oprojs)
 >     assertEqual "test_genSimYear2_14" allSems (getSessionSems oprojs)
 >     assertEqual "test_genSimYear2_15" []      (getPeriodSems  oprojs)
->     assertEqual "test_genSimYear2_16" ["08A"] (getProjectSems wprojs)
->     assertEqual "test_genSimYear2_17" ["08A"] (getSessionSems wprojs)
->     assertEqual "test_genSimYear2_18" ["08A"] (getPeriodSems  wprojs)
+>     assertEqual "test_genSimYear2_16" ["07C","08A"]
+>                                               (getProjectSems wprojs)
+>     assertEqual "test_genSimYear2_17" ["07C","08A"]
+>                                               (getSessionSems wprojs)
+>     assertEqual "test_genSimYear2_18" ["07C","08A"]
+>                                               (getPeriodSems  wprojs)
 >
 >   where
 >     start = fromGregorian 2008 2 2 0 0 0
@@ -519,80 +521,54 @@ Also, simply be calling it we can see if it blows up or not ...
 >                       }
 
 > test_getValidTransitRange = TestCase $ do
->   -- see test_fitValidPeriodToTransit for a better explanation
 >   let day = fromGregorian 2010 2 2 0 0 0
->   let tr = getValidTransitRange (2*60) (0.1, 1.5) day
->   assertEqual "test_gvtr_1" (fromGregorian 2010 2 2 19 45 0, 120) tr
->   let tr = getValidTransitRange (12*60) (0.1, 1.5) day
->   assertEqual "test_gvtr_2" (fromGregorian 2010 2 2 14 45 0, (12*60)) tr
->   let tr = getValidTransitRange (12*60) (0.1, 0.01) day
->   assertEqual "test_gvtr_3" (fromGregorian 2010 2 2 15 30 0, (10*60+30)) tr
+>   let g = mkStdGen 1
+>   let tr = generate 0 g $ getValidTransitRange (0.1, 1.5) day
+>   assertEqual "test_gvtr_1" (fromGregorian 2010 2 2 19 0 0, 195) tr
+>   let g = mkStdGen 2
+>   let tr = generate 0 g $ getValidTransitRange (0.1, 1.5) day
+>   assertEqual "test_gvtr_2" (fromGregorian 2010 2 2 19 30 0, (150)) tr
+>   let g = mkStdGen 3
+>   let tr = generate 0 g $ getValidTransitRange (0.1, 0.01) day
+>   assertEqual "test_gvtr_3" (fromGregorian 2010 2 2 19 45 0, (120)) tr
 
 > test_getValidTransitRanges = TestCase $ do
+>   let g = mkStdGen 1
 >   let int = 15
 >   let num = 1
 >   let day = fromGregorian 2010 2 2 0 0 0
 >   let end = fromGregorian 2011 2 2 0 0 0
->   let expDt = fromGregorian 2010 2 2 19 45 0
->   let trs = getValidTransitRanges day 120 int num end (0.1, 1.5) 
+>   let expDt = fromGregorian 2010 2 2 16 45 0
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 1.5) 
 >   assertEqual "test__getValidTransitRange_1" 1 (length trs)
 >   assertEqual "test__getValidTransitRange_2" expDt (fst . head $ trs)
->   assertEqual "test__getValidTransitRange_3" 120 (snd . head $ trs)
+>   assertEqual "test__getValidTransitRange_3" 465 (snd . head $ trs)
 >   -- now really do a series
 >   let num = 3
->   let trs = getValidTransitRanges day (2*60) int num end (0.1, 1.5) 
->   assertEqual "test__getValidTransitRange_1" 3 (length trs)
->   assertEqual "test__getValidTransitRange_2" expDt (fst . head $ trs)
->   assertEqual "test__getValidTransitRange_3" 120 (snd . head $ trs)
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 1.5) 
+>   assertEqual "test__getValidTransitRange_4" 3 (length trs)
+>   assertEqual "test__getValidTransitRange_5" expDt (fst . head $ trs)
+>   assertEqual "test__getValidTransitRange_6" 465 (snd . head $ trs)
 >   let (trDts, trDurs) = unzip trs 
 >   -- watch the transit (LST) drift over a month!
 >   let expDts = [expDt
->               , fromGregorian 2010 2 17 18 45 0
->               , fromGregorian 2010 3  4 18  0 0
+>               , fromGregorian 2010 2 17 18  0 0
+>               , fromGregorian 2010 3  4 15 15 0
 >                ]
->   assertEqual "test__getValidTransitRange_3" expDts trDts
->   assertEqual "test__getValidTransitRange_3" [120,120,120] trDurs 
+>   assertEqual "test__getValidTransitRange_7" expDts trDts
+>   assertEqual "test__getValidTransitRange_8" [465, 195, 450] trDurs 
 >   -- now increase the duration and give the source some down-time
->   let trs = getValidTransitRanges day (12*60) int num end (0.1, 0.01) 
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 0.01) 
 >   let (trDts, trDurs) = unzip trs 
 >   -- see how the periods have shrunk, (because the source goes down) 
 >   -- but the series is still spaced the same
->   let expDts = [fromGregorian 2010 2  2 15 30 0
->               , fromGregorian 2010 2 17 14 30 0
->               , fromGregorian 2010 3  4 13 30 0
+>   let expDts = [fromGregorian 2010 2  2 16 45 0
+>               , fromGregorian 2010 2 17 18  0 0
+>               , fromGregorian 2010 3  4 15 15 0
 >                ]
->   assertEqual "test__getValidTransitRange_3" expDts trDts
->   assertEqual "test__getValidTransitRange_3" [630,630,660] trDurs 
->   
-
-> test_fitValidPeriodToTransit = TestCase $ do
->   -- a 2 hour period surrounding the transit of a circumpolar source
->   -- is no problem: the final duration is not changed
->   --let dtTransit = fromGregorian 2010 2 2 19 30 0
->   let day = fromGregorian 2010 2 2 0 0 0
->   let duration = 120 -- minutes
->   let (ra, dec) = (0.1, 1.5) -- circumpolar
->   let dtTransit = roundToQuarter $ lstHours2utc day ra 
->   let (dt, dur) = fitValidPeriodToTransit dtTransit duration (ra, dec) 
->   assertEqual "test__fitValidPeriodToTransit_1" duration dur 
->   assertEqual "test__fitValidPeriodToTransit_1" (addMinutes (-60) dtTransit) dt 
->   -- however, if the duration is large, what happens?
->   let duration = 60*12
->   let (dt, dur) = fitValidPeriodToTransit dtTransit duration (ra, dec) 
->   -- well, it is always up, so the 12 hour period is still valid
->   assertEqual "test__fitValidPeriodToTransit_1" duration dur 
->   assertEqual "test__fitValidPeriodToTransit_1" (addMinutes (-(duration `div` 2)) dtTransit) dt 
->   -- so, see what happens to a large period w/ a source that's not up
->   let (ra, dec) = (0.1, 0.01) -- NOT always up
->   let (dt, dur) = fitValidPeriodToTransit dtTransit duration (ra, dec) 
->   -- since the source is *NOT* always up, we've had to shrink the period
->   assertEqual "test__fitValidPeriodToTransit_1" 600 dur 
->   assertEqual "test__fitValidPeriodToTransit_1" (addMinutes (-300) dtTransit) dt 
-
-> test_fitValidPeriodToTransit_2 = TestCase $ do
->   -- test a specific troublesome ra/dec
->   let day = fromGregorian 2010 2 2 0 0 0
->   let duration = (8*60) -- minutes
->   let (ra, dec) = (4.712389,-0.4762692)
->   let dtTransit =  lstHours2utc day (rad2hrs ra) 
->   assertEqual "test_fitValidPeriodToTransit_2" True (validElev $  elevation dtTransit defaultSession {ra = ra, dec = dec}) 
+>   assertEqual "test__getValidTransitRange_9" expDts trDts
+>   assertEqual "test__getValidTransitRange_10" [465, 195, 450] trDurs 
+>   let trs = generate 0 g . fmap concat . mapM (getValidTransitRanges day int num end) $ [(0.1, deg2rad . fromIntegral $ d) | d <- [-47, -46 .. 14]]
+>   let (o, e) = partition odd [ d `div` 15 | (s, d) <- trs ]
+>   assertBool "test__getValidTransitRange_11" ((abs $ (length o) - (length e)) < 17) -- approximately same number of odd and even quarters
+>   assertBool "test__getValidTransitRange_12" $ all (\d -> 0 <= d && d <= (8*60)) [d | (s, d) <- trs] -- duration between 0 and 8 hours
