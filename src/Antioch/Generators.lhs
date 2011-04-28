@@ -33,16 +33,7 @@ Generate a random project name: 'A' .. 'Z'
 > genProjectName :: Gen Char 
 > genProjectName = elements (map chr [65 .. 90])
 
-TBF: Currently, the idea of semester is very limited.
-
 > genSemesterName :: Int -> Gen String
-> {-
-> genSemesterName year = elements [ "05C"
->             , "06A", "06A", "06A", "06A"
->             , "06B", "06B", "06B", "06B"
->             , "06C", "06C", "06C"
->            ]
-> -}
 > genSemesterName year = elements $ semesterChoices year
 
 > semesterChoices :: Int -> [String]
@@ -62,37 +53,18 @@ trimesterMonth = [C,A,A,A,A,B,B,B,B,3,3,3]
 > genMaxSemesterTime :: Minutes -> Gen Minutes
 > genMaxSemesterTime time = T.frequency [(20, return $ div time 2), (80, return time)]
 
-Generation of arbitrary project
+Generation of arbitrary project, note the pId is set to 0,
+unique ids are produced in GenerateSchedule where needed.
 
 > genProject :: Gen Project
 > genProject = do
->     name     <- genProjectName
->     semester <- genSemesterName 2006
->     thesis   <- genThesis
->     sessions <- genProjectSessions
->     let pAllottedT = sum [ sAllottedT s | s <- sessions ]
->     maxST    <- genMaxSemesterTime pAllottedT
->     let project = defaultProject {
->           pName = str name
->         , semester = semester
->         , thesis = thesis
->         , pAllottedS = maxST
->         }
->     return $ makeProject project pAllottedT pAllottedT sessions
+>     genProjectForYear 2006
 
 Generation of not so arbitrary project: specify the year to 
 determine semester distrubition.
-TBF: how to avoid cut & pasted code from above?
 
 > genProjectForYear :: Int -> Gen Project
 > genProjectForYear year = do
->   -- TBF: this isn't good enough because it leaves the project's
->   -- sessions' periods pointing to the wrong project, so cut & past
->   -- from above
->   -- p' <- genProject
->   -- semester <- genSemesterName year
->   -- let p = p' { semester = semester }
->   -- return $ makeProject p (pAllottedT p) (pAllottedT p) (sessions p)
 >     name     <- genProjectName
 >     semester <- genSemesterName year
 >     thesis   <- genThesis
@@ -119,7 +91,6 @@ Generate n projects.
 
 > genScheduleProjects :: Gen [Project]
 > genScheduleProjects =
->     -- TBF: generate unique ids for projects & sessions
 >     choose (10, 30) >>= genProjects
 
 Now lets make sure we are properly generating Projects: test each attribute
@@ -127,9 +98,6 @@ at a time:
 
 > prop_pName p = "A" <= pName p && pName p <= "Z"
 > prop_semester p = any (==(semester p)) ["05C", "06A", "06B", "06C"]
-
-TBF: this will make an 8 hour maintenance day every 7 days - but we want it 
-to be randomly placed in the middle 5 days of each week.
 
 Each Project's Sessions can have a sAllottedT between 2 & 30 hrs.  Currently
 a project has between 1 and 5 Sessions.
@@ -142,9 +110,6 @@ a project has between 1 and 5 Sessions.
 Each Session can have 0-3 Periods, each with a max of 10 hours:
 
 > prop_projectPeriods p = let n = sum [length . periods $ s | s <- sessions p] in 0 <= n && n <= 5*3
-
-TBF: this does not pass because generated periods aren't limited by their
-sessions' sAllottedT.
 
 > prop_pCommittedT p = 0 <= pCommittedT p && pCommittedT p <= pAllottedT p
 
@@ -216,7 +181,8 @@ Backup sessions should not use a transit flag
 >       high <- choose (6.0, 12.0)
 >       return $ [(low, high)]
 
-Method for producing a generic Open Session.
+Method for producing a generic Open Session, note the sid is set
+to 0, unique ids are produced in GenerateSchedule where needed.
 
 > genSession :: Gen Session
 > genSession = do
@@ -248,7 +214,7 @@ Method for producing a generic Open Session.
 >                , dec            = dec
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
->                -- TBF: only for scheduleMinDuration; then go back
+>                -- This code is used only for strategy scheduleMinDuration.
 >                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
 >                , sAllottedT      = round2quarter sAllottedT
 >                , sAllottedS      = round2quarter sAllottedT
@@ -261,13 +227,13 @@ Method for producing a generic Open Session.
 >                , grade          = g
 >                , receivers      = [[r]]
 >                , backup         = bk
->                -- default Open Session should have no periods
+>                -- default Open Session have one period, want none here
 >                , periods        = []
 >                }
 
-Method for producing a generic Fixed Session.
-TBF: currently this is a cut & paste of genSession; how these sessions should
-differ from Open ones is TBD.
+Method for producing a generic, initial Fixed Session.  Various
+fields are modified in GenerateSchedule where more information
+is available.
 
 > genSessionFixed :: Gen Session
 > genSessionFixed = do
@@ -300,7 +266,7 @@ differ from Open ones is TBD.
 >                , dec            = dec
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
->                -- TBF: only for scheduleMinDuration; then go back
+>                -- This code is used only for strategy scheduleMinDuration.
 >                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
 >                , sAllottedT      = round2quarter sAllottedT
 >                , sAllottedS      = round2quarter sAllottedT
@@ -315,9 +281,9 @@ differ from Open ones is TBD.
 >                , oType          = otype
 >                }
 
-Method for producing a generic Windowed Session.
-TBF: currently this is a cut & paste of genSession; how these sessions should
-differ from Open ones is TBD.
+Method for producing a generic, initial Windowed Session.  Various
+fields are modified in GenerateSchedule where more information
+is available.
 
 > genSessionWindowed :: Gen Session
 > genSessionWindowed = do
@@ -350,7 +316,7 @@ differ from Open ones is TBD.
 >                , dec            = dec
 >                , minDuration    = round2quarter minD
 >                , maxDuration    = round2quarter maxD
->                -- TBF: only for scheduleMinDuration; then go back
+>                -- This code is used only for strategy scheduleMinDuration.
 >                --, sAllottedT     = matchAvTime sAllottedT(round2quarter minD)
 >                , sAllottedT      = round2quarter sAllottedT
 >                , sAllottedS      = round2quarter sAllottedT
@@ -365,7 +331,7 @@ differ from Open ones is TBD.
 >                , oType          = otype
 >                }
 
-TBF: this is only for use with the scheduleMinDuration strategy.  We want
+This is only for use with the scheduleMinDuration strategy.  We want
 to use this so that the sAllottedT of a session can be completely scheduled
 without leaving behind 'loose change'.  This can happen because this strategy
 only schedule Periods of length minDuration.
@@ -376,7 +342,6 @@ only schedule Periods of length minDuration.
 > genProjectSessions :: Gen [Session]
 > genProjectSessions = 
 >     T.frequency [(30, return 1), (30, return 2), (30, return 3), (5, return 4), (5, return 5)] >>= vector
-
 
 > genSessions         :: Int -> Gen [Session]
 > genSessions 0       = return []
@@ -414,20 +379,14 @@ Make sure that the total time used up by the periods is correct:
 
 > prop_Dec2 s = validDec s
 
-TBF: originally, Dana had us set the lower limit to -40.0, but Carl's data
-has some decs at -44.0.
+Lower limit is based on Carl's data where some decs were at -44.0.
 
 > validDec :: Session -> Bool
 > validDec s = -45.0 <= dec' && dec' <= 90.0
 >   where
 >     dec' = rad2deg . dec $ s
 
-TBF: thing is, this is in degrees, and it doesn't pass either!
-
 > prop_DecDegree s = (-180) <= dec s && dec s <= 180 
-
-TBF: start on 15 min. boundries in a given time range. But how to make them
-mutually exclusive?  Need for varied and interesting start times!!!! :|
 
 > genStartTime :: Gen DateTime
 > genStartTime = elements [fromGregorian' 2008 1 1, fromGregorian' 2008 1 2]
@@ -471,11 +430,10 @@ Make sure Durations are made of 15-minute intervals
 
 > prop_duration p = duration p `mod` quarter == 0
 
-We need to (partially) fill a chunk of time with valid periods.  
-It would be good to
-parameterize this such that we can control the degree to which the schedule
-is filled.
-TBF: we can make this more sophisticated.
+We need to (partially) fill a chunk of time with valid periods.  It would
+be good to parameterize this such that we can control the degree to which
+the schedule is filled, or randomly select which sessions to generate
+periods for, i.e., we can make this more sophisticated.
 
 > genSchedulePeriods :: DateTime -> Minutes -> [Session] -> Gen [Maybe Period]
 > genSchedulePeriods starttime schedDur sessions = do
@@ -487,7 +445,6 @@ TBF: we can make this more sophisticated.
 >     -- we don't create1 any dead space from holes < smalles min. session
 >     let schedDurs = round2quarter $ schedDur `div` n 
 >     let dts = [ (schedDurs * i) `addMinutes` starttime | i <- [0 .. (n-1)]]
->     -- TBF: randomly select which sessions to generate periods for
 >     mapM (genSchedulePeriod (head sessions) schedDurs) dts 
 
 > genSchedulePeriod :: Session -> Minutes -> DateTime -> Gen (Maybe Period)
@@ -511,11 +468,6 @@ Check this generator itself: make sure the periods adhere to expected properties
 >                                         not (internalConflicts ps') &&
 >                                         obeyMinSeparation ps' (2*60)
 
-TBF: this code needs to go somewhere where it can be shared better - duplicate!
-TBF: the sudoku.lhs from the python beta test has lots of tested code for 
-finding conflicts.  we should probably tap into that eventually.  For now
-we'll reproduce some of the basic conflict detection stuff:
-
 instance Ord t => Span (Interval t) where
     (Interval s1 e1) `conflict` (Interval s2 e2) = s1 < e2 && s2 < e15
 
@@ -532,8 +484,6 @@ instance Ord t => Span (Interval t) where
 
 > internalConflicts' xs = [x | x <- xs, x `overlaps` (xs \\ [x])]
 
-TBF: is there a better way to generalize internalConflicts to work w/ Windows?
-
 > windowConflicts xs = or [x `winOverlaps` (xs \\ [x]) | x <- xs]
 
 > windowConflicts' xs = [x | x <- xs, x `winOverlaps` (xs \\ [x])]
@@ -544,7 +494,6 @@ TBF: is there a better way to generalize internalConflicts to work w/ Windows?
 >     [e1, e2] = map wEnd   [w1, w2]
 
 > winOverlaps y = isJust . find (winOverlap y)
-
 
 > conflicts :: [Period] -> [Period] -> Bool
 > conflicts [] ys = False
@@ -558,7 +507,6 @@ TBF: is there a better way to generalize internalConflicts to work w/ Windows?
 > minutesBetween []     = []
 > minutesBetween (p:[]) = []
 > minutesBetween (p:ps) = diffMinutes (startTime (head ps)) (endTime p) : minutesBetween ps
-
 
 > type Semester = Char
   
@@ -591,13 +539,14 @@ Q      80     5.3%     3.2   6
 Deprecated: now we specify the band from the receiver.
 
 > band2Receiver :: Band -> Receiver
-> band2Receiver P = Rcvr_1070 -- TBF: 1 -> many ? which rcvr to use?
+> band2Receiver P = Rcvr_1070 -- represents all prime focus receivers
+
 > band2Receiver L = Rcvr1_2
 > band2Receiver S = Rcvr2_3
 > band2Receiver C = Rcvr4_6
 > band2Receiver X = Rcvr8_10
 > band2Receiver U = Rcvr12_18
-> band2Receiver K = Rcvr18_26 -- Rcvr18_22 -- Need Rcvr22_26
+> band2Receiver K = Rcvr18_26 -- Rcvr18_22 and Rcvr18_22
 > band2Receiver A = Rcvr26_40
 > band2Receiver Q = Rcvr40_52
 > band2Receiver W = Rcvr_PAR
@@ -654,27 +603,10 @@ Deprecated: now we specifiy the band from the receiver
 >             , "KKQQAAAXXUCCSLLLLLLL"  -- 3
 >             ]
 
-TBF: the below distribution of receivers is arbitrary, and runs across
-all frequencies for demo purposes only.  Dana needs to specify this.
-
 > genRcvr :: SessionType -> Char -> Gen Receiver
 > genRcvr sType sem = fmap (code2Receiver . str) . elements $ band
 >   where
 >     band = fromJust . lookup (sType, sem) $ bands
->     -- (session type, trimester)
->{--     bands = [ ((Open,'b'),      "338WKKQQAAXUCCSLLLLL")
->             , ((Open,'A'),      "338WKKKQQAAXUCCSSLLL")
->             , ((Open,'B'),      "338WKQQAXUCSLLLLLLLL")
->             , ((Open,'C'),      "338WKKQQAAAXXUCCSLLL")
->             , ((Fixed,'b'),     "338WKKQQAAXUCCSLLLLL")
->             , ((Fixed,'A'),     "338WKKKQQAAXUCCSSLLL")
->             , ((Fixed,'B'),     "338WKQQAXUCSLLLLLLLL")
->             , ((Fixed,'C'),     "338WKKQQAAAXXUCCSLLL")
->             , ((Windowed,'b'),  "338WKKQQAAXUCCSLLLLL")
->             , ((Windowed,'A'),  "338WKKKQQAAXUCCSSLLL")
->             , ((Windowed,'B'),  "338WKQQAXUCSLLLLLLLL")
->             , ((Windowed,'C'),  "338WKKQQAAAXXUCCSLLL")
->             ]--}
 >     bands = [ ((Open,'b'),      "38WWKKKQAAAXUUCCSLLL")
 >             , ((Open,'A'),      "38WWKKKQAAAXXUCCSSLL")
 >             , ((Open,'B'),      "38WKQQAAXUUCSLLLLLLL")

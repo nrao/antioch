@@ -102,6 +102,8 @@ Once attempts hits the tolerance level, return a failure.
 >         ,  (addMinutes 15 (startTime p))
 >         .. (addMinutes (duration p) (startTime p))]
 
+Horizon defined at 5 degrees.
+
 > validRaDecTime :: Float -> Float -> DateTime -> Bool
 > validRaDecTime ra dec dt = validElev $ elevation dt s'
 >   where
@@ -111,6 +113,16 @@ Once attempts hits the tolerance level, return a failure.
 > validElev el | ((deg2rad 5.0) <= el) && (el <= (deg2rad 90.0)) = True
 >              | otherwise = False
 
+Horizon defined at 0 degrees.
+
+> validRaDecTime' :: Float -> Float -> DateTime -> Bool
+> validRaDecTime' ra dec dt = validElev $ elevation dt s'
+>   where
+>     s' = defaultSession {ra = ra, dec = dec}
+
+> validElev' :: Radians -> Bool
+> validElev' el | ((deg2rad 0.0) <= el) && (el <= (deg2rad 90.0)) = True
+>              | otherwise = False
 
 For a given list of periods, create appropriate projects & sessions for them.
 The id is passed along so that each session can have a unique id.
@@ -133,8 +145,8 @@ The id is passed along to give the session a unique id.
 >   proj'' <- genProjectForYear year
 >   let proj' = proj'' { semester = dt2semester . startTime $ p }
 >   let total = duration p
->   -- TBF: genSessionFixed will figure things like sAllottedT, but we
->   -- really want these based off the periods that are pre-generated
+>   -- genSessionFixed provides default values for things like sAllottedT,
+>   -- but we really want these based off the periods that are pre-generated
 >   s'' <- genSessionFixed
 >   (ra', dec') <- genRaDecFromPeriod p
 >   -- min/max duration is randomly created for fixed sessions
@@ -288,17 +300,19 @@ needed, and their spacing.
 >     where
 >       days = [addMinutes (d*24*60) startDay | d <- [0, intervalDays .. ((numWindows-1) * intervalDays)]]
 
-NOTE: finish checking a property of the transit ranges
-TBF this function does not run as part of quickcheck
-(unlike the other prop_ function)
-
-> prop_getValidTransitRanges = forAll (genRaDec 'g') $ \(ra', dec') -> let trs = generate 0 g $ getValidTransitRanges dt int num end (ra', dec') in (length trs) > 1
+> prop_getValidTransitRanges =
+>     forAll (genRaDec 'g') $ \(ra, dec) ->
+>     forAll genStartTime $ \dt ->
+>     let end = addHours (365*24) dt
+>         trs = generate 0 g $ getValidTransitRanges dt int num end (ra, dec)
+>     in (length trs) > 1
+>     -- TBF why does this stronger test fail?
+>     --in all (validRaDecTime' ra dec) . concat . map times $ trs
 >   where 
 >     g = mkStdGen 1
->     dt = fromGregorian 2010 2 2 0 0 0
 >     int = 15
 >     num = 5
->     end = fromGregorian 2011 2 2 0 0 0
+>     times (dt, dur) = [dt, (addMinutes 15 dt) .. (addMinutes dur dt)]
      
 For the given ra/dec, return a time period that surrounds the transit
 for this ra/dec trimmed to keep the elevations valid (source above the
