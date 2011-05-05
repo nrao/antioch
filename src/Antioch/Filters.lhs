@@ -24,12 +24,30 @@ be confused and raise false alarams.
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
 
+> filterMaintenancePeriods :: [Period] -> IO ([Period])
+> filterMaintenancePeriods ps = concatMapM nonMaintenance ps
+>   where
+>     nonMaintenance p = do
+>       let state = oType (session p ) == Maintenance
+>       case state of
+>         False -> return $ [p]
+>         True  -> return []
+
+> filterDisabledPeriods :: [Period] -> IO ([Period])
+> filterDisabledPeriods ps = concatMapM enabledPeriod ps
+>   where
+>     enabledPeriod p = do
+>       let state = not (not (enabled $ session p) && (pState p == Pending))
+>       case state of
+>         True -> return $ [p]
+>         False -> return []
+
 > filterInactivePeriods :: [Period] -> IO ([Period])
 > filterInactivePeriods ps = concatMapM activePeriod ps
 >   where
 >     activePeriod p = do
->       let state = not (not (isAuthorized undefined undefined $ session p) &&
->                            (pState p == Pending))
+>       let state = ((enabled $ session p) && (authorized $ session p)) ||
+>                   (pState p /= Pending)
 >       case state of
 >         True -> return $ [p]
 >         False -> return []
@@ -83,7 +101,7 @@ Possible factors:
 > isGradeA_B _ _ s = grade s >= 2.8
 
 > isNotMaintenance :: SelectionCriteria
-> isNotMaintenance _ _ s = (pName . project $ s) /= "Maintenance"
+> isNotMaintenance _ _ s = oType s /= Maintenance
 
 > isBackup :: SelectionCriteria
 > isBackup _ _ s = backup s

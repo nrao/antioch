@@ -33,7 +33,7 @@ and outputs:
 >     let history'' = filterHistory history' dt (days + 1) 
 >     print "original history: "
 >     printList history''
->     -- TBF: Really, this should be done inside dailySchedule so that electives
+>     -- Note: Really, this should be done inside dailySchedule so that electives
 >     -- can be covered by simualtions as well, but it's so much simpler to do
 >     -- it here, and I doubt sims will need to cover electives.  so there.
 >     history''' <- filterElectives w rs rt history''
@@ -55,7 +55,8 @@ and outputs:
 >     putPeriods newPeriods
 >     -- do we need to remove any failed electives or default periods?
 >     print "moving to deleted: "
->     let periodsToDelete = history'' \\ history
+>     periods <- filterMaintenancePeriods $ history'' \\ history
+>     let periodsToDelete = periods
 >     printList periodsToDelete
 >     movePeriodsToDeleted periodsToDelete
 

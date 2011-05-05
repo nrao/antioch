@@ -24,6 +24,8 @@
 > import System.Random      (getStdGen)
 > import Test.QuickCheck    (generate, choose)
 > --import System.CPUTime
+> import Control.Monad.Writer
+> import Control.Monad.RWS.Strict
 
 > freqRange :: [Float]
 > freqRange = [0.0..120.0] 
@@ -601,6 +603,34 @@ Same as original method, but we don't need the hourAngleLimit.
 >                       ]
 >     score effFactors dt s
 
+Get efficiency factors for every quarter of the period but the overhead.
+
+> getPeriodEffFactors' :: Period -> Scoring [Factors]
+> getPeriodEffFactors' p = do
+>     fs <- mapM (getEfficiencyScoringFactors'' s) dts
+>     return fs
+>   where
+>     s = session p
+>     dt = startTime p
+>     dur = duration p
+>     getEfficiencyScoringFactors'' s dt = getEfficiencyScoringFactors' dt s
+>     dts = drop (getOverhead s) $ [(15 * m) `addMinutes` dt | m <- [0 .. (dur `div` 15) - 1]]
+
+Get efficiency factors for every quarter of the period but the overhead, but making sure that we evaluate the period the same way
+in which it's MOC was evaluated during simulations.
+What we're trying to do here is reproduce details so we can 
+understand why a period was canceled.
+
+> getCanceledPeriodEffFactors :: Period -> Scoring [Factors]
+> getCanceledPeriodEffFactors p = do 
+>   -- reset the weather origin to one hour before the period
+>   w <- weather
+>   let wDt = addMinutes (-60) (startTime p) -- 1 hr before period starts
+>   w' <- liftIO $ newWeather w (Just wDt)
+>   -- make sure all subsequent calls use this weather
+>   local (\env -> env { envWeather = w' }) $ getPeriodEffFactors' p
+
+
 For the given period, get the *observed* efficiencies at each quarter in
 the periods duration.  We can only do this by restting the weather for
 each quarter so that we pick up gbt_weather and latest forecast.
@@ -638,15 +668,16 @@ each quarter so that we pick up gbt_weather and latest forecast.
 >     where
 >       fs2ss ss = map f2s ss
 
-Same as above, except for canceled periods, we only care about the first 
-quarters values - that's what caused them to get canceled.
+For each period, first reproduce the 3 efficiencies that helped
+determine why the period was canceled, then also calculate
+the product of the three (observing efficiency factor).
 
-> getCanceledPeriodsObsEffs :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (PeriodEfficiencies) 
-> getCanceledPeriodsObsEffs w rt rs ps = do
->     peffs <- getPeriodsObsEffs w rt rs ps
->     return $ map firstQtr peffs
->   where
->     firstQtr (p, effs) = (p, take 1 effs)
+> getCanceledPeriodsEffs :: [Period] -> Scoring (PeriodEfficiencies) 
+> getCanceledPeriodsEffs ps = do
+>   effs <- mapM getCanceledPeriodEffFactors ps
+>   return $ zip ps (map fs2ss effs)
+>     where
+>       fs2ss ss = map f2s ss
 
 Same as getPeriodsObsEffs, but here we want the periods effs at the time of scheduling.
 
@@ -680,39 +711,77 @@ want to plot.
 >     avg xs = avg' $ map fn xs
 >     avg' xs = (sum xs)/(fromIntegral . length $ xs)
 
-For Canceled Periods, we'll want to know:
-   * the period
-   * the 4 observed efficiencies at the first quarter
-   * the tracking error limit at the first quarter
-   * the adjusted min obs value
-   * the gbt_wind at the first quarter
+For Canceled Periods, we'll want to reproduce values that determined
 
-> type CanceledPeriodDetail  = (Period,[(Score, Score, Score, Score)],Maybe Score,Float,Maybe Float)
+wether the period was canceled or not, so we'll want:
+   * the period
+   * the adjusted min obs value (minObs in minimumObservingConditions)
+   * the mean efficiency product (meanEff in min.Obs.Conditions)
+   * for each quarter:
+       * the 4 observed efficiencies 
+       * the tracking error limit 
+       * the gbt_wind 
+
+> type CanceledPeriodDetail  = (Period,Float,Float,[(Score, Score, Score, Score)], [Maybe Score], [Maybe Float])
 > type CanceledPeriodDetails = [CanceledPeriodDetail]  
 
 > getCanceledPeriodsDetails :: Weather -> ReceiverTemperatures -> ReceiverSchedule -> [Period] -> IO (CanceledPeriodDetails)
 > getCanceledPeriodsDetails w rt rs ps = do
->   peffs <- getCanceledPeriodsObsEffs w rt rs ps
->   otherCrap <- mapM (getCanceledPeriodCrap w rt rs) ps
->   return $ zipWith mkDetails peffs otherCrap
+>   -- get the effs for each period
+>   peffs <- runScoring w rs rt $ getCanceledPeriodsEffs ps 
+>   -- get all the other crap
+>   crap <- mapM (getCanceledPeriodCrap w rt rs) ps
+>   let minobs = map adjMinObs ps
+>   return $ zipWith3 mkDetails peffs crap minobs 
 >     where
->   mkDetails (p, effs) (trl, mo, w2) = (p, effs, trl, mo, w2)
+>   adjMinObs p = adjustedMinObservingEff $ minObservingEff . frequency . session $ p
+>   mkDetails (p, effs) (trls, w2s, meanEff) mo = (p, mo, meanEff, effs, trls, w2s)
 
-This gets the the left over crap not covered by getCanceledPeriodsObsEffs
+This gets the the left over crap not covered by getPeriodsObsEffs:
+   * tracking error limits
+   * gbt wind speeds
+   * the mean efficiency (that gets compared to min. obs. in
+     minimumObservingConditions).
 
-> getCanceledPeriodCrap ::  Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO (Maybe Score, Float, Maybe Float)
+> getCanceledPeriodCrap ::  Weather -> ReceiverTemperatures -> ReceiverSchedule -> Period -> IO ([Maybe Score], [Maybe Float], Float) 
 > getCanceledPeriodCrap w rt rs p = do
 >   w' <- newWeather w $ Just dt
 >   -- gbt_wind
->   w2wind <- gbt_wind w' dt
->   -- tracking error limit
->   [(_, trkErrLmt)] <- runScoring w' rs rt $ trackingErrorLimit dt s
->   -- adjusted min obs
->   let minObs = adjustedMinObservingEff $ minObservingEff . frequency $ s
->   return (trkErrLmt, minObs, w2wind)
+>   w2winds <- mapM (gbt_wind w') dts
+>   -- tracking error limits
+>   trkErrLmts <- mapM (trk w' rs rt s) dts
+>   -- the mean efficiency, as calculated in minimumObservingConditions
+>   fcts <- mapM (minObsFactors' w rs rt s (startTime p)) dts
+>   let effProducts = map (\(fs, tr) -> ((eval fs) * tr)) fcts
+>   let meanEff = (sum effProducts) / (fromIntegral . length $ effProducts)
+>   return (trkErrLmts, w2winds, meanEff)
 >     where
 >   s  = session p
 >   dt = startTime p
+>   dur = duration p
+>   dts = drop (getOverhead s) $ [(15 * m) `addMinutes` dt | m <- [0 .. (dur `div` 15) - 1]]
+>   trk w rs rt s dt = do
+>       [(_, trkErrLmt)] <- runScoring w rs rt $ trackingErrorLimit dt s
+>       return trkErrLmt
+
+These are wrappers to the minObsFactors function in Score.lhs:
+we need the wrappers to make sure that the function is evaluated
+in the same way as minimumObservingConditions was during simulations.
+The intent here is to produce reports that let us know *why*
+a period was canceled.
+
+> minObsFactors' :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> Session -> DateTime -> DateTime -> IO (Factors, Float)
+> minObsFactors' w rs rt s start dt = runScoring w rs rt $ minObsFactors'' s start dt
+
+> minObsFactors'' :: Session -> DateTime -> DateTime -> Scoring (Factors, Float)
+> minObsFactors'' s start dt = do
+>   -- reset the weather origin to one hour before the period
+>   w <- weather
+>   let wDt = addMinutes (-60) start -- 1 hr before period starts
+>   w' <- liftIO $ newWeather w (Just wDt)
+>   -- make sure all subsequent calls use this weather
+>   local (\env -> env { envWeather = w' }) $ minObsFactors s dt 
+
 
 This function retrieves the history of pressures written in the trace, 
 and returns them, for each band as [(day #, pressure)].

@@ -62,7 +62,7 @@ in the reversion_version table if it had been created in Django:
 >     quickQuery' cnn query xs
 >     commit cnn
 >   where
->     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr) VALUES (?, ?, 34, 'json', ?, ?)"
+>     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr, type) VALUES (?, ?, 80, 'json', ?, ?, 1)"
 >     serialData = serializePeriodAccounting p accntId
 >     objRepr = representPeriodAccounting p accntId
 >     xs = [toSql revisionId, toSql accntId, toSql serialData, toSql objRepr]
@@ -74,7 +74,7 @@ This should replicate the django.core.serialize product for a Period.
 >     quickQuery' cnn query xs
 >     commit cnn
 >   where
->     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr) VALUES (?, ?, 34, 'json', ?, ?)"
+>     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr, type) VALUES (?, ?, 59, 'json', ?, ?, 1)"
 >     serialData = serializePeriod p accntId
 >     objRepr = representPeriod p
 >     xs = [toSql revisionId, toSql . peId $ p, toSql serialData, toSql objRepr]
@@ -84,7 +84,7 @@ Example:
  serializePeriod p = "[{\"pk\": 3685, \"model\": \"sesshuns.period\", \"fields\": {\"score\": 66.0, \"moc_ack\": false, \"forecast\": \"2010-03-23 17:30:00\", \"start\": \"2010-03-23 00:00:00\", \"state\": 1, \"session\": 339, \"duration\": 1.0, \"accounting\": 4099, \"backup\": false}}]"
 
 > serializePeriod :: Period -> Int -> String
-> serializePeriod p accntId =  "[{\"pk\": " ++ pk ++ ", \"model\": \"sesshuns.period\", \"fields\": {\"score\": " ++ sc ++ ", \"moc_ack\": " ++ moc ++ ", \"forecast\": \"" ++ forecast ++ "\", \"start\": \"" ++ start ++ "\", \"state\": " ++ state ++ ", \"session\": " ++ sessionId ++ ", \"duration\": " ++ dur ++ ", \"accounting\": " ++ accountingId ++ ", \"backup\": " ++ backup ++ "}}]"
+> serializePeriod p accntId =  "[{\"pk\": " ++ pk ++ ", \"model\": \"scheduler.period\", \"fields\": {\"score\": " ++ sc ++ ", \"moc_ack\": " ++ moc ++ ", \"forecast\": \"" ++ forecast ++ "\", \"start\": \"" ++ start ++ "\", \"state\": " ++ state ++ ", \"session\": " ++ sessionId ++ ", \"duration\": " ++ dur ++ ", \"accounting\": " ++ accountingId ++ ", \"backup\": " ++ backup ++ "}}]"
 >   where
 >     pk = show . peId $ p
 >     sc = show . pScore $ p
@@ -107,7 +107,7 @@ This method is very simple since a newly created pending period had no
 interesting information in it's time accounting yet.
 
 > serializePeriodAccounting :: Period -> Int -> String
-> serializePeriodAccounting p accntId = "[{\"pk\": " ++ (show accntId) ++ ", \"model\": \"sesshuns.period_accounting\", \"fields\": {\"scheduled\": 0.0, \"other_session_rfi\": 0.0, \"description\": null, \"other_session_weather\": 0.0, \"lost_time_other\": 0.0, \"short_notice\": 0.0, \"not_billable\": \"0\", \"lost_time_weather\": 0.0, \"other_session_other\": 0.0, \"lost_time_rfi\": 0.0}}]"
+> serializePeriodAccounting p accntId = "[{\"pk\": " ++ (show accntId) ++ ", \"model\": \"scheduler.period_accounting\", \"fields\": {\"scheduled\": 0.0, \"other_session_rfi\": 0.0, \"description\": null, \"other_session_weather\": 0.0, \"lost_time_other\": 0.0, \"short_notice\": 0.0, \"not_billable\": \"0\", \"lost_time_weather\": 0.0, \"other_session_other\": 0.0, \"lost_time_rfi\": 0.0}}]"
 
 This should replicate the __str__ method for the Django Period_Accounting Model:
 Example:

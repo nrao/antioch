@@ -21,8 +21,10 @@
 >    , test_activeWindows
 >    , test_adjustWindowSessionDuration
 >    , test_projectBlackedOut
+>    , test_filterDisabledPeriods
+>    , test_filterInactivePeriods
+>    , test_filterMaintenancePeriods
 >   ]
->
 
 > test_projectBlackedOut = TestCase $ do
 >   -- no blackouts
@@ -49,6 +51,70 @@
 >       bs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
 >       p2  = defaultProject { pBlackouts = bs ++ bs2 }
 >       s3  = defaultSession { project = p2}
+
+> getTestPeriods :: [Period]
+> getTestPeriods = [p1, p2, p3, p4, p5]
+>     where
+>       mproj = defaultProject { pName = "Maintenance" }
+>       proj  = defaultProject { pName = "test project" }
+>       msess = defaultSession { project = mproj, sName = "maint", oType = Maintenance}
+>       sesse = defaultSession { project = proj, sName = "disabled", oType = SpectralLine, enabled = False}
+>       sessa = defaultSession { project = proj, sName = "unauthorized", oType = SpectralLine, authorized = False}
+>       sess  = defaultSession { project = proj, sName = "active", oType = SpectralLine}
+>       -- not enabled
+>       p1    = defaultPeriod { peId = 1
+>                             , session = sesse
+>                             , startTime = fromGregorian 2011 4 1 0 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+>       -- maintenance
+>       p2    = defaultPeriod { peId = 2
+>                             , session = msess
+>                             , startTime = fromGregorian 2011 4 1 2 0 0
+>                             , duration  = 8 * 60
+>                             , pDuration = 8 * 60
+>                              }
+>       -- not enabled
+>       p3    = defaultPeriod { peId = 3
+>                             , session = sesse
+>                             , startTime = fromGregorian 2011 4 1 10 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+>       -- not authorized
+>       p4    = defaultPeriod { peId = 4
+>                             , session = sessa
+>                             , startTime = fromGregorian 2011 4 1 10 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+>       -- scheduled
+>       p5    = defaultPeriod { peId = 5
+>                             , session = sess
+>                             , pState = Scheduled
+>                             , startTime = fromGregorian 2011 4 1 10 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+
+> test_filterMaintenancePeriods = TestCase $ do
+>   result <- filterMaintenancePeriods [p1, p2, p3, p4, p5]
+>   assertEqual "test_filterMaintenancePeriods" [p1, p3, p4, p5] result
+>     where
+>       (p1: p2: p3: p4: p5: []) = getTestPeriods
+
+> test_filterDisabledPeriods = TestCase $ do
+>   result <- filterDisabledPeriods [p1, p2, p3, p4, p5]
+>   assertEqual "test_filterDisabledPeriod" [p2, p4, p5] result
+>     where
+>       (p1: p2: p3: p4: p5: []) = getTestPeriods
+
+> test_filterInactivePeriods = TestCase $ do
+>   result <- filterInactivePeriods [p1, p2, p3, p4, p5]
+>   assertEqual "test_filterInactivePeriod" [p2, p5] result
+>     where
+>       (p1: p2: p3: p4: p5: []) = getTestPeriods
 
 > test_sim_timeLeft = TestCase $ do
 >   -- dt1 => 09B, dt* => 09A
