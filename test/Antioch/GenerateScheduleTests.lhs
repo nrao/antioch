@@ -158,7 +158,6 @@
 >     shi  = fromIntegral $ (simHrs + tolerance)
 >     slow = fromIntegral $ (simHrs - tolerance)
 >     projTime projs = sum $ map sAllottedT $ concatMap sessions projs
->     -- TBF: cut & paste from below
 >     getProjectSems projs = nub . sort $ map semester projs
 >     getSessionSems projs = nub . sort $ map (semester . project) $ concatMap sessions projs
 >     getPeriodSems  projs = nub . sort $ map (semester . project . session) $ concatMap periods $ concatMap sessions projs
@@ -524,35 +523,60 @@ Also, simply be calling it we can see if it blows up or not ...
 >   let day = fromGregorian 2010 2 2 0 0 0
 >   let g = mkStdGen 1
 >   let tr = generate 0 g $ getValidTransitRange (0.1, 1.5) day
->   assertEqual "test_gvtr_1" (fromGregorian 2010 2 2 19 0 0, 195) tr
+>   assertEqual "test_gvtr_1" (fromGregorian 2010 2 2 19 15 0, 195) tr
+>   assertEqual "test_gvtr_1'" True . all (validRaDecTime 0.1 1.5) . times $ tr
+>
 >   let g = mkStdGen 2
 >   let tr = generate 0 g $ getValidTransitRange (0.1, 1.5) day
 >   assertEqual "test_gvtr_2" (fromGregorian 2010 2 2 19 30 0, (150)) tr
+>   assertEqual "test_gvtr_2'" True . all (validRaDecTime 0.1 1.5) . times $ tr
+>
 >   let g = mkStdGen 3
 >   let tr = generate 0 g $ getValidTransitRange (0.1, 0.01) day
 >   assertEqual "test_gvtr_3" (fromGregorian 2010 2 2 19 45 0, (120)) tr
+>   assertEqual "test_gvtr_3'" True . all (validRaDecTime 0.1 1.5) . times $ tr
+>
+>   let g = mkStdGen 1
+>   let tr = generate 0 g $ getValidTransitRange (4.712389, (-0.5007201)) (fromGregorian 2010 1 2 0 0 0)
+>   assertEqual "test_gvtr_4" (fromGregorian 2010 1 2 16 0 0, (60)) tr
+>   assertEqual "test_gvtr_4'" True . all (validRaDecTime 0.1 1.5) . times $ tr
+>     where
+>       times (dt, dur) = [dt, (addMinutes 15 dt) .. (addMinutes dur dt)]
 
 > test_getValidTransitRanges = TestCase $ do
 >   let g = mkStdGen 1
 >   let int = 15
 >   let num = 1
 >   let day = fromGregorian 2010 2 2 0 0 0
+>   let ra = 0.1
+>   let dec = 1.5
 >   let end = fromGregorian 2011 2 2 0 0 0
->   let expDt = fromGregorian 2010 2 2 16 45 0
->   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 1.5) 
+>   let expDt = fromGregorian 2010 2 2 17 0 0
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (ra, dec) 
 >   assertEqual "test__getValidTransitRange_1" 1 (length trs)
 >   assertEqual "test__getValidTransitRange_2" expDt (fst . head $ trs)
 >   assertEqual "test__getValidTransitRange_3" 465 (snd . head $ trs)
+>   -- all resulting quarters should be above the horizon
+>   assertEqual "test__getValidTransitRange_3'" True . all (validRaDecTime 0.1 1.5) . times . head $ trs
+>   -- center of range should be transit within a quarter
+>   let qtrs = times . head $ trs
+>   let dtTrans = roundToQuarter $ lstHours2utc day (rad2hrs ra)
+>   --printList [(toSqlString t, d) | (t, d) <- trs]
+>   --printList . map toSqlString $ qtrs
+>   assertBool "test__getValidTransitRange_3''" $ ((dtTrans - (head qtrs)) - ((last qtrs) - dtTrans)) <= 900
 >   -- now really do a series
 >   let num = 3
->   let trs = generate 0 g $ getValidTransitRanges day int num end (0.1, 1.5) 
+>   let trs = generate 0 g $ getValidTransitRanges day int num end (ra, dec)
 >   assertEqual "test__getValidTransitRange_4" 3 (length trs)
 >   assertEqual "test__getValidTransitRange_5" expDt (fst . head $ trs)
 >   assertEqual "test__getValidTransitRange_6" 465 (snd . head $ trs)
+>   assertEqual "test__getValidTransitRange_6'" True . all (validRaDecTime 0.1 1.5) . times . head $ trs
+>   assertEqual "test__getValidTransitRange_6''" True . all (validRaDecTime 0.1 1.5) . times . head . tail $ trs
+>   assertEqual "test__getValidTransitRange_6'''" True . all (validRaDecTime 0.1 1.5) . times . last $ trs
 >   let (trDts, trDurs) = unzip trs 
 >   -- watch the transit (LST) drift over a month!
 >   let expDts = [expDt
->               , fromGregorian 2010 2 17 18  0 0
+>               , fromGregorian 2010 2 17 18 15 0
 >               , fromGregorian 2010 3  4 15 15 0
 >                ]
 >   assertEqual "test__getValidTransitRange_7" expDts trDts
@@ -562,8 +586,8 @@ Also, simply be calling it we can see if it blows up or not ...
 >   let (trDts, trDurs) = unzip trs 
 >   -- see how the periods have shrunk, (because the source goes down) 
 >   -- but the series is still spaced the same
->   let expDts = [fromGregorian 2010 2  2 16 45 0
->               , fromGregorian 2010 2 17 18  0 0
+>   let expDts = [fromGregorian 2010 2  2 17  0 0
+>               , fromGregorian 2010 2 17 18 15 0
 >               , fromGregorian 2010 3  4 15 15 0
 >                ]
 >   assertEqual "test__getValidTransitRange_9" expDts trDts
@@ -572,3 +596,6 @@ Also, simply be calling it we can see if it blows up or not ...
 >   let (o, e) = partition odd [ d `div` 15 | (s, d) <- trs ]
 >   assertBool "test__getValidTransitRange_11" ((abs $ (length o) - (length e)) < 17) -- approximately same number of odd and even quarters
 >   assertBool "test__getValidTransitRange_12" $ all (\d -> 0 <= d && d <= (8*60)) [d | (s, d) <- trs] -- duration between 0 and 8 hours
+>     where
+>       times (dt, dur) = [dt, (addMinutes 15 dt) .. (addMinutes dur dt)]
+>       --times (dt, dur) = [(addMinutes (-15) dt), dt .. (addMinutes (dur + 15) dt)]
