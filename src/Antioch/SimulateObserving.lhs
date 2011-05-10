@@ -48,7 +48,7 @@ What backups are even condsidered when looking for one to fill a hole due to
 a cancelation may depend on the strategy being used.  For now it doesn't.
 
 > filterBackups :: StrategyName -> [Session] -> Period -> [Session]
-> filterBackups _ ss p = [ s | s <- ss, backup s, between (duration p) (minDuration s) (maxDuration s)]
+> filterBackups _ ss p = [ s | s <- ss, typeOpen s, backup s, between (duration p) (minDuration s) (maxDuration s)]
 
 If a scheduled period fails it's Minimum Observing Conditions criteria,
 then try to replace it with the best backup that can (according to it's

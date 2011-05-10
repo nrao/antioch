@@ -244,7 +244,7 @@ is available.
 >     let b      = receiver2Band r
 >     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     bk         <- genBackupFlag f
+>     let bk     = False
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
 >     sAllottedT <- choose (6*60, 30*60)
@@ -294,7 +294,7 @@ is available.
 >     let b      = receiver2Band r
 >     f          <- genFreq' r
 >     g          <- genGrade [4.0, 4.0, 3.0, 3.0, 3.0]
->     bk         <- genBackupFlag f
+>     let bk     = False
 >     s          <- skyType
 >     (ra, dec)  <- genRaDec s
 >     sAllottedT <- choose (6*60, 30*60)
