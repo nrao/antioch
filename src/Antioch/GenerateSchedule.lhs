@@ -3,7 +3,7 @@
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.DateTime
-> import Antioch.Filters        (filterHistory)
+> import Antioch.Filters        (filterHistory, typeWindowed)
 > import Antioch.Utilities
 > import Antioch.Score          (elevation, radecel2ha)
 > import System.Random   
@@ -452,6 +452,35 @@ many of the criteria in Filters.lhs: activeWindows:
 
 > allValidSimWindows :: [Session] -> Bool
 > allValidSimWindows wss = all (==True) $ map (validSimulatedWindows) wss
+
+Once valid simulated windows get scheduled in the simulator, they should
+all be complete, with either:
+   * no chosen period
+   * only one chosen period, with duration equal to the original duration
+Since getting the original default periods duration could be a pain,
+we will instead just check that the sum of all periods in the session
+equals it's allotted time.
+
+> validScheduledWindows :: [Session] -> [Period] -> Bool
+> validScheduledWindows ss ps = (validScheduledWindowedTime wss ps) && (validNumWindows wss ps)
+>   where
+>     wss = filter typeWindowed ss
+
+> validNumWindows :: [Session] -> [Period] -> Bool
+> validNumWindows ss ps = all (==True) $ map (validNumWindows' ps) ss
+>   where
+>     validNumWindows' ps s = (length . windows $ s) == (length (getPeriods ps s))
+>     getPeriods ps s = filter (\p -> (sId . session $ p) == (sId s)) ps
+
+> validScheduledWindowedTime :: [Session] -> [Period] -> Bool
+> validScheduledWindowedTime ss ps = all (==True) $ map (validScheduledWindowedTime' ps) ss
+>   -- where
+>   --  wss = filter isTypeWindowed ss
+
+> validScheduledWindowedTime' :: [Period] -> Session -> Bool
+> validScheduledWindowedTime' ps s = (sAllottedT s) == (sum $ map duration ps')
+>   where
+>     ps' = filter (\p -> (sId . session $ p) == (sId s)) ps
 
 Creates a maintenance project with a year's worth of pre-scheduled periods
 reflecting a realistic maintenance schedule.
