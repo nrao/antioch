@@ -21,6 +21,7 @@
 >                 , test_genSimTime
 >                 , test_genSimTime_semesters
 >                 , test_genSimTime_windows
+>                 , test_genSimTime_fixed
 >                 , test_genFixedSchedule
 >                 , test_genWindowedSchedule
 >                 , test_makePeriod
@@ -173,6 +174,24 @@
 >     -- check the windowed projects for validity
 >     let wss = filter typeWindowed $ concatMap sessions projs
 >     assertEqual "test_genSimTime_windows_1" True (all (==True) $ map validSimulatedWindows wss)
+>     -- now make sure that if all the default periods got scheduled,
+>     -- our schedule would be marked as valid.
+>     let ss = concatMap sessions projs
+>     let ps = concatMap periods ss
+>     assertEqual "test_genSimTime_windows_2" True (validScheduledWindows ss ps)
+>   where
+>     days = 30
+>     start = fromGregorian 2010 2 2 0 0 0
+
+> test_genSimTime_fixed = TestCase $ do
+>     let g = mkStdGen 1
+>     let simMins = days*24*60
+>     -- just fixed!
+>     let projs = generate 0 g $ genSimTime start days False (0.0, 0.5, 0.0) 0  --(0.6, 0.1, 0.3) 0 
+>     -- check the windowed projects for validity
+>     let fss = filter typeFixed $ concatMap sessions projs
+>     let fps = concatMap periods fss
+>     assertEqual "test_genSimTime_fixed_1" (length fss) (length fps)
 >   where
 >     days = 30
 >     start = fromGregorian 2010 2 2 0 0 0
