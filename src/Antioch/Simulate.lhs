@@ -84,9 +84,8 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >             -- simulate observing
 >             newSched'' <- scheduleBackups sf Pack sessions newSched' start (24 * 60 * 1)
 >             -- write any scheduled windows to the trace
->             let newWinInfo= getWindowInfo sessions newSched''
->             let oldWinInfo = getWindowPeriodsFromTrace trace
->             mapM (\w -> tell [WindowPeriods w]) (newWinInfo\\oldWinInfo)
+>             let winInfo = getNewlyScheduledWindowInfo sessions newSched''
+>             mapM (\w -> tell [WindowPeriods w]) winInfo
 >             return $ newSched''
 >
 >         -- This writeFile is a necessary hack to force evaluation
@@ -123,7 +122,20 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
+> getNewlyScheduledWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
+> getNewlyScheduledWindowInfo ss ps = getWindowInfo ss $ map fst $ findNotCompleteWindows ss ps
+
+Find those windows that are newly scheduled; that is, they are not complete yet.
+TBF: Unit test
+
+> findNotCompleteWindows :: [Session] -> [Period] -> [(Period, Window)]
+> findNotCompleteWindows ss ps = filterNotCmp $ zip wps (getWindows ss wps)
+>   where
+>     wps = filter (typeWindowed . session) ps
+>     filterNotCmp = filter (\(p,w) -> not . wComplete $ w) 
+
 For the given list of sessions and periods
+TBF: Unit test
 
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
@@ -135,6 +147,8 @@ For the given list of sessions and periods
 
 Retrieve all the windows belonging to the given periods' session.
 
+TBF: Unit test
+
 > getWindows :: [Session] -> [Period] -> [Window]
 > getWindows ss ps = map (getWindow wss) wps
 >   where
@@ -144,6 +158,7 @@ Retrieve all the windows belonging to the given periods' session.
 Retrieve the window belonging to the given period's session.
 Note we pass along all sessions so that we don't have to rely on the session tied to
 the given period being up to date - this is the knot tying problem.
+TBF: Unit test
 
 > getWindow :: [Session] -> Period -> Window
 > getWindow ss p = fromJust $ find (periodInWindow' p) (windows s)

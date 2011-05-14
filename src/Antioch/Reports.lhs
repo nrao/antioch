@@ -761,16 +761,23 @@ simScoreLST
 
 simScoreFreq
 
+Plots the score given to a period via pack, by frequency, separated by session type.
+
 > plotScoreFreq           :: StatsPlot
 > plotScoreFreq fn n _ ps _ = do
->     scatterPlot attrs $ zip (historicalFreq ps) (map pScore ps)
+>     scatterPlots attrs $ zip titles [plotType ps' Open, plotType ps' Fixed, plotType ps' Windowed] --[(Just "Open", plotType ps Open)] 
 >   where
 >     t = "Score vs Frequency" ++ n
 >     x = "Frequency [GHz]"
 >     y = "Score"
+>     -- we can't start YRange at zero for a log plot, but we want to see the zero scores
 >     attrs = (scatterAttrs t x y fn) ++ [XRange $ minMax freqRange, YRange (0.01, 100.0)]
-
-
+>     -- so we bump them up to the min. value where they will show up in the plot
+>     promoteScore p = if ((pScore p) > 0.01) then p else p {pScore = 0.01}
+>     ps' = map promoteScore ps
+>     scoreData ps'' = zip (historicalFreq ps'') (map pScore ps'')
+>     plotType ps'' sessType = scoreData $ filter (\p -> (sType . session $ p) == sessType) ps''
+>     titles = [Just "Open", Just "Fixed", Just "Windowed"]
 
 simBandPFTime
 
