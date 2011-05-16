@@ -195,7 +195,7 @@ Generate a period that starts with the given time range.
 
 > genFixedPeriod :: DateTime -> Int -> Gen Period
 > genFixedPeriod start days = do
->   day <- choose (1, days)
+>   day <- choose (1, days - 1)
 >   hour <- choose (0, 23)
 >   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs 
 >   let dur = qtrs * 15
