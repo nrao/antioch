@@ -239,7 +239,7 @@ the given number of days.
 >   intervalDays <- choose (15, days)
 >   return (numWindows, intervalDays)
 >                       | days > 10 && days <= 30 = do -- days < 30
->   let minDays = days `div` 4 
+>   let minDays = days `div` 3 
 >   numWindows <- choose (3,10)
 >   intervalDays <- choose (minDays, days)
 >   return (numWindows, intervalDays)
