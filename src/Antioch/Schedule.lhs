@@ -300,11 +300,19 @@ by a duration greater then their session's timebetween.
 >                        | (session p1) < (session p2) = LT
 >                        | otherwise                   = EQ
 
+Returns a tuple for each pair of periods, with their separation 
+(between first periods end and the next periods start).
+Note that this separation takes into account session overhead, since
+the timeBetween scoring factor won't check these quarters.
+
 > periodDiffs :: [Period] -> [(Minutes, (Period, Period))]
 > periodDiffs (p:[]) = []
 > periodDiffs (p:ps) = (diffTime p (head ps), (p, (head ps))):(periodDiffs ps)
 >   where
->     diffTime p1 p2 = diffMinutes (startTime p2) (endTime p1)
+>     diffTime p1 p2 = diffMinutes (startTime' p2) (endTime p1)
+>     -- since periods don't get scored on overhead, don't check 
+>     -- right at the start time
+>     startTime' p = addMinutes (quarter * (getOverhead . session $ p)) (startTime p)
 
 Make sure that we don't have a schedule that has more periods scheduled then 
 what we actually scheduled for.  TBF: right now we are scheduling an extra

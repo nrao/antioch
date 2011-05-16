@@ -327,7 +327,7 @@ TBF: constrain has not been fully implemented yet
 >       -- now disallow them
 >       s2 = defaultSession { sId = 1, timeBetween = 1 * 60 }
 >       ps2 = map (mkPeriod s2) [dt1, dt2]
->       badTb1 = [(0, ((ps2!!0), (ps2!!1)))]
+>       badTb1 = [(15, ((ps2!!0), (ps2!!1)))]
 >       -- more complex, but allowed
 >       dt3 = fromGregorian 2006 1 1 2 0 0
 >       dt4 = fromGregorian 2006 1 1 3 0 0
@@ -340,7 +340,7 @@ TBF: constrain has not been fully implemented yet
 >       ps4_1 = map (mkPeriod s2) [dt1, dt3, dt4]
 >       ps4_2 = map (mkPeriod s1) [dt2, dt5, dt6]
 >       ps4 = sort $ ps4_1 ++ ps4_2
->       badTb2 = [(0, ((ps4_1!!1), (ps4_1!!2)))]
+>       badTb2 = [(15, ((ps4_1!!1), (ps4_1!!2)))]
 >       
 
 > test_disobeySessionAlloted = TestCase $ do
