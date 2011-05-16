@@ -113,17 +113,6 @@ Horizon defined at 5 degrees.
 > validElev el | ((deg2rad 5.0) <= el) && (el <= (deg2rad 90.0)) = True
 >              | otherwise = False
 
-Horizon defined at 0 degrees.
-
-> validRaDecTime' :: Float -> Float -> DateTime -> Bool
-> validRaDecTime' ra dec dt = validElev $ elevation dt s'
->   where
->     s' = defaultSession {ra = ra, dec = dec}
-
-> validElev' :: Radians -> Bool
-> validElev' el | ((deg2rad 0.0) <= el) && (el <= (deg2rad 90.0)) = True
->              | otherwise = False
-
 For a given list of periods, create appropriate projects & sessions for them.
 The id is passed along so that each session can have a unique id.
 For now keep it real simple - a single proj & sess for each period
@@ -305,9 +294,7 @@ needed, and their spacing.
 >     forAll genStartTime $ \dt ->
 >     let end = addHours (365*24) dt
 >         trs = generate 0 g $ getValidTransitRanges dt int num end (ra, dec)
->     in (length trs) > 1
->     -- TBF why does this stronger test fail?
->     --in all (validRaDecTime' ra dec) . concat . map times $ trs
+>     in all (validRaDecTime ra dec) . concat . map times $ trs
 >   where 
 >     g = mkStdGen 1
 >     int = 15
@@ -320,16 +307,17 @@ horizon). Note the duration could be forced to zero.
 
 > getValidTransitRange :: (Radians, Radians) -> DateTime -> Gen (DateTime, Minutes)
 > getValidTransitRange (ra, dec) day = do
->   durQtrs <-  if haQtrs <= 0
+>   durQtrs <-  if haQtrs < 3
 >               then return 0
->               else choose ((1*4), min (8*4) haQtrs) -- 1 to 8 hours
->   let start = (qtrs2mins $ (-durQtrs) `div` 2) `addMinutes` dtTrans
+>               -- subtract 2 quarters to guarantee stays within HA (fudge)
+>               else choose ((1*4), min (8*4) (haQtrs - 2)) -- 1 to 8 hours
+>   let start = (-(qtrs2mins (durQtrs `div` 2))) `addMinutes` dtTrans
 >   let duration = qtrs2mins durQtrs
 >   return (start, duration)
 >     where
 >       dtTrans = roundToQuarter $ lstHours2utc day (rad2hrs ra)
 >       el = 5.0
->       haQtrs  = round2quarter . round . (*60.0) . rad2hrs . (*2.0) . radecel2ha (ra, dec) . deg2rad $ el
+>       haQtrs  = flip div quarter . round . (*60.0) . rad2hrs . (*2.0) . radecel2ha (ra, dec) . deg2rad $ el
 >       qtrs2mins = (*quarter)
 
 > prop_raDecTransitsGiveValidElevations = forAll (genRaDec 'g') $ \(ra', dec') -> (validElev $  elevation (lstHours2utc dt (rad2hrs ra')) defaultSession {ra = ra', dec = dec'}) 
