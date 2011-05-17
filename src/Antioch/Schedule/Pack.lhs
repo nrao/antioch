@@ -243,6 +243,22 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iPast    :: ![Score]
 >   } deriving (Eq, Show)
 
+A convenient way of displaying Items, since we often don't want to see the entire
+session.  However, this string can be used to cut and past into unit tests to 
+create new Items.  Note: trying to create an instance of Show Item causes complications
+since it's a parameterized data structure.
+
+> showItem :: Item Session -> String
+> showItem i = "Item {iId = defaultSession {sId = " ++ ssId ++ "}, iProj = " ++ ssId ++ ", iMinDur = " ++ sMin ++", iMaxDur = " ++ sMax ++ ", iOvhdDur = 1, iSTimAv = " ++ sS ++ ", iPTimAv = " ++ sP ++ ", iTimeBt = " ++ sTB ++ ", iTrType = Optional, iTrnsts = [], iFuture = " ++ futures ++ ", iPast = []}"
+>     where
+>       ssId = show . sId . iId $ i
+>       sMin = show . iMinDur $ i
+>       sMax = show . iMaxDur $ i
+>       sS  = show . iSTimAv $ i
+>       sP  = show . iPTimAv $ i
+>       sTB = show . iTimeBt $ i
+>       futures = show . iFuture $ i
+
 The function *candidates*, defined below, generates a series of candidates
 representing all the possible periods which end at a specified time
 (t(n)) and start at incrementally times earlier, i.e., if the scheduling
