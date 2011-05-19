@@ -132,6 +132,7 @@ Convert an open session `s` into a schedulable item by scoring it with
 >     let force = if sum scores > 0.0 then True else False
 >     return $! force `seq` Item {
 >         iId      = s
+>       , iSessId  = sId s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (sAvailT s)
@@ -230,6 +231,7 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 
 > data Item a = Item {
 >     iId      :: !a
+>   , iSessId  :: !Int
 >   , iProj    :: !Int
 >   , iMinDur  :: !Int
 >   , iMaxDur  :: !Int
@@ -242,6 +244,22 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
 >   } deriving (Eq, Show)
+
+> defaultItem = Item {
+>     iId      = 0
+>   , iSessId  = 0
+>   , iProj    = 0 
+>   , iMinDur  = 0 
+>   , iMaxDur  = 0 
+>   , iOvhdDur = 0 
+>   , iSTimAv  = 0 
+>   , iPTimAv  = 0 
+>   , iTimeBt  = 0 
+>   , iTrType  = Optional 
+>   , iTrnsts   = []
+>   , iFuture   = []
+>   , iPast     = []
+>   }
 
 A convenient way of displaying Items, since we often don't want to see the entire
 session.  However, this string can be used to cut and past into unit tests to 
