@@ -534,40 +534,46 @@ flags - so we'll have to collapse the DB's 2 types into our 1.
 >       -- TBF: for some reason, I need to have 'Exclude' & 'Include' in
 >       -- the query strings: putting it in xs causes an SQL error ???
 >       xs = [toSql . sId $ s]
->       query = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
->       query' = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND op.session_id = ?" 
+>       query = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ? order by op.id" 
+>       query' = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND op.session_id = ? order by op.id" 
 
 The 'ex' flag determines whether we are importing LST Exclusion ranges
 or Inclusion ranges.
 
 > addLSTExclusion' :: Bool -> Session -> [[SqlValue]] -> Session
-> addLSTExclusion' _ s []        = s
-> addLSTExclusion' ex s sqlValues = s { lstExclude = (lstExclude s) ++ [lstRange ex sqlValues] }  
+> addLSTExclusion' _ s []         = s
+> addLSTExclusion' ex s sqlValues = s { lstExclude = (lstExclude s) ++ lstRanges ex sqlValues }  
 
 If we are importing the inclusion range, then reversing the endpoints makes
 it an exclusion range.
 
-> lstRange :: Bool -> [[SqlValue]] -> (Float, Float)
-> lstRange ex sqlValues = if ex then (low, hi) else (hi, low) 
->   where
->     (low, hi) = lstRangeLow ex sqlValues $ lstRangeHi ex sqlValues
+> invertIn :: [Float] -> [Float] -> [(Float, Float)]
+> invertIn [] []      = []
+> invertIn [l] [h]    = if l == 0 then [(h, 24)] else [(0, l), (h, 24)]
+> invertIn lows highs = filter (\x-> (not $ (0,0) == x) && (not $ (24.0, 24.0) == x)) $ splitIn $ 0:(zipConcat $ zip lows highs)++[24]
 
-> lstRangeHi :: Bool -> [[SqlValue]] -> Float
-> lstRangeHi ex sqlValues = lstRangeHi' . head $ filter (isLSTName n) sqlValues
+> zipConcat :: [(Float, Float)] -> [Float]
+> zipConcat []     = []
+> zipConcat (x:xs) = fst x : snd x : zipConcat xs
+
+> splitIn :: [Float] -> [(Float, Float)]
+> splitIn []        = []
+> splitIn (x:y:xys) = (x, y) : splitIn xys
+
+> lstRanges :: Bool -> [[SqlValue]] -> [(Float, Float)]
+> lstRanges ex sqlValues = if ex then (zip lows highs) else (invertIn lows highs)
 >   where
->     n = if ex then "LST Exclude Hi" else "LST Include Hi"
->     lstRangeHi' (pName:pHi:[]) = fromSql pHi
+>     lows   = lstSplit ex "Low" sqlValues
+>     highs  = lstSplit ex "Hi" sqlValues
+
+> lstSplit :: Bool -> String -> [[SqlValue]] -> [Float]
+> lstSplit ex dir sqlValues = map lstRange' $ filter (isLSTName n) sqlValues
+>   where
+>     n = if ex then "LST Exclude " ++ dir else "LST Include " ++ dir
+>     lstRange' (pName:pValue:[]) = fromSql pValue
 
 > isLSTName :: String -> [SqlValue] -> Bool
 > isLSTName name (pName:pFloat:[]) = (fromSql pName) == name
-
-> lstRangeLow :: Bool -> [[SqlValue]] -> Float -> (Float, Float)
-> lstRangeLow ex sqlValues hiValue = (lowValue, hiValue)
->   where
->     n = if ex then "LST Exclude Low" else "LST Include Low"
->     lowValue = lstRangeLow' . head $ filter (isLSTName n) sqlValues
->     --isLow (pName:pFloat:[]) = (fromSql pName) == "LST Exclude Low"
->     lstRangeLow' (pName:pLow:[]) = fromSql pLow
 
 > getElectives :: Connection -> Session -> IO [Electives]
 > getElectives cnn s = do

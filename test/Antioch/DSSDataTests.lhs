@@ -12,6 +12,7 @@
 > import List (nub, sort)
 > import Data.List (find)
 > import Test.HUnit
+> import Control.Monad.Trans                   (liftIO)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
 
@@ -361,6 +362,37 @@ example in comments.
 >            , (fromGregorian 2010  2 2 0 0 0
 >            ,  fromGregorian 2010  2 2 4 0 0)
 >             ]
+
+> test_addLSTExclusion = TestCase $ do
+>   cnn <- connect
+>   s <- getSession 1 cnn
+>   let mod_s  = addLSTExclusion' True s single
+>   let lstEx  = lstExclude mod_s
+>   assertEqual "test_addLSTExclusion" lstEx lstEx'
+
+>   let mod_s      = addLSTExclusion' True s range
+>   let lstExRange = lstExclude mod_s
+>   disconnect cnn
+>   assertEqual "test_addLSTExclusion" lstExRange lstEx''
+>     where
+>       single = [[toSql "LST Exclude Low", toSql "1.0"], [toSql "LST Exclude Hi", toSql "3.0"]]
+>       range  = [[toSql "LST Exclude Low", toSql "1.0"], [toSql "LST Exclude Hi", toSql "3.0"]
+>               , [toSql "LST Exclude Low", toSql "6.0"], [toSql "LST Exclude Hi", toSql "9.0"]
+>                 ]
+>       lstEx'  = [(1.0, 3.0)]
+>       lstEx'' = [(1.0, 3.0), (6.0, 9.0)]
+
+> test_invertIn = TestCase $ do
+>   let result = invertIn [] []
+>   assertEqual "test_invertIn empty" [] result
+>   let result = invertIn [2] [6]
+>   assertEqual "test_invertIn single" [(0.0,2.0),(6.0,24.0)] result
+>   let result = invertIn [0] [6]
+>   assertEqual "test_invertIn single zero" [(6.0,24.0)] result
+>   let result = invertIn [6, 12] [10, 14]
+>   assertEqual "test_invertIn multiple" [(0.0,6.0),(10.0,12.0),(14.0,24.0)] result
+>   let result = invertIn [0, 12] [10, 24]
+>   assertEqual "test_invertIn multiple" [(10.0,12.0)] result
 
 Test Utilities: 
 
