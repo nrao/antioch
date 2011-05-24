@@ -48,7 +48,8 @@
 >   , test_GetBest3'
 >   , test_GetBest4
 >   , test_GetBest4' 
->   , test_queryPast
+>   , test_queryPast1
+>   , test_queryPast2
 >   , test_QueryPast_Big
 >   , test_inFixed
 >   , test_Madd1
@@ -58,10 +59,10 @@
 >   , test_Pack1
 >   , test_Pack1'
 >   , test_PackTransit1
->   , test_PackTransit2
+>   --, test_PackTransit2
 >   --, test_PackBt
->   , test_Pack2
->   , test_Pack3
+>   --, test_Pack2
+>   --, test_Pack3
 >   , test_Pack4
 >   , test_Pack5
 >   , test_Pack6
@@ -348,53 +349,95 @@ WTF is going on?  Why is the expected score of F1 in xs 0.0????
 >     past = [Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 >     sessions = map (step . step . step . step) testItems
 
-> test_queryPast = TestCase $ do
->   assertEqual "test_queryPast101" (0, 0, 0, []) (queryPast testItem1 (drop 6 past) 1)
->   assertEqual "test_queryPast201" (0, 0, 0, []) (queryPast testItem2 (drop 6 past) 1)
->   assertEqual "test_queryPast111" (0, 0, 1, [0]) (queryPast testItem1 (drop 5 past) 1)
->   assertEqual "test_queryPast211" (0, 0, 1, [0]) (queryPast testItem2 (drop 5 past) 1)
->   assertEqual "test_queryPast121" (2, 2, 0, [1])  (queryPast testItem1 (drop 4 past) 1)
->   assertEqual "test_queryPast221" (0, 2, 0, [1]) (queryPast testItem2 (drop 4 past) 1)
->   assertEqual "test_queryPast131" (3, 3, 0, [2]) (queryPast testItem1 (drop 3 past) 1)
->   assertEqual "test_queryPast231" (0, 3, 0, [2]) (queryPast testItem2 (drop 3 past) 1)
->   assertEqual "test_queryPast141" (2, 4, 2, [1,1]) (queryPast testItem1 (drop 2 past) 1)
->   assertEqual "test_queryPast241" (2, 4, 0, [1,1]) (queryPast testItem2 (drop 2 past) 1)
->   assertEqual "test_queryPast151" (2, 5, 3, [2,1]) (queryPast testItem1 (drop 1 past) 1)
->   assertEqual "test_queryPast251" (3, 5, 0, [2,1]) (queryPast testItem2 (drop 1 past) 1)
->   assertEqual "test_queryPast161" (2, 6, 4, [3,1]) (queryPast testItem1 past 1)
->   assertEqual "test_queryPast261" (4, 6, 0, [3,1]) (queryPast testItem2 past 1)
->   assertEqual "test_queryPast122" (0, 0, 1, [0])  (queryPast testItem1 (drop 4 past) 2)
->   assertEqual "test_queryPast222" (0, 0, 1, [0]) (queryPast testItem2 (drop 4 past) 2)
->   assertEqual "test_queryPast132" (2, 2, 0, [1]) (queryPast testItem1 (drop 3 past) 2)
->   assertEqual "test_queryPast232" (0, 2, 0, [1]) (queryPast testItem2 (drop 3 past) 2)
->   assertEqual "test_queryPast142" (3, 3, 0, [2]) (queryPast testItem1 (drop 2 past) 2)
->   assertEqual "test_queryPast242" (0, 3, 0, [2]) (queryPast testItem2 (drop 2 past) 2)
->   assertEqual "test_queryPast152" (2, 4, 2, [1,1]) (queryPast testItem1 (drop 1 past) 2)
->   assertEqual "test_queryPast252" (2, 4, 0, [1,1]) (queryPast testItem2 (drop 1 past) 2)
->   assertEqual "test_queryPast162" (2, 5, 3, [2,1]) (queryPast testItem1 past 2)
->   assertEqual "test_queryPast262" (3, 5, 0, [2,1]) (queryPast testItem2 past 2)
->   assertEqual "test_queryPast153" (3, 3, 0, [2]) (queryPast testItem1 (drop 1 past) 3)
->   assertEqual "test_queryPast253" (0, 3, 0, [2]) (queryPast testItem2 (drop 1 past) 3)
->   assertEqual "test_queryPast163" (2, 4, 2, [1,1]) (queryPast testItem1 past 3)
->   assertEqual "test_queryPast263" (2, 4, 0, [1,1]) (queryPast testItem2 past 3)
->   assertEqual "test_queryPast1hole" (2, 4, 3, [0,1,1]) (queryPast testItem1 hole 1)
->   assertEqual "test_queryPast2hole" (2, 4, 1, [0,1,1]) (queryPast testItem2 hole 1)
+> test_queryPast1 = TestCase $ do
+>   --                         (sUsed pUsed separate, steps)
+>   assertEqual "test_queryPast1_101" (0, 0, (-1), []) (queryPast testItem1 (drop 6 past) 1)
+>   assertEqual "test_queryPast1_201" (0, 0, (-1), []) (queryPast testItem2 (drop 6 past) 1)
+>   assertEqual "test_queryPast1_111" (0, 0, (-1), [1]) (queryPast testItem1 (drop 5 past) 1)
+>   assertEqual "test_queryPast1_211" (0, 0, (-1), [1]) (queryPast testItem2 (drop 5 past) 1)
+>   assertEqual "test_queryPast1_121" (2, 2, 0, [2])  (queryPast testItem1 (drop 4 past) 1)
+>   assertEqual "test_queryPast1_221" (0, 2, (-1), [2]) (queryPast testItem2 (drop 4 past) 1)
+>   assertEqual "test_queryPast1_131" (3, 3, 0, [3]) (queryPast testItem1 (drop 3 past) 1)
+>   assertEqual "test_queryPast1_231" (0, 3, (-1), [3]) (queryPast testItem2 (drop 3 past) 1)
+>   assertEqual "test_queryPast1_141" (2, 4, 2, [2,2]) (queryPast testItem1 (drop 2 past) 1)
+>   assertEqual "test_queryPast1_241" (2, 4, 0, [2,2]) (queryPast testItem2 (drop 2 past) 1)
+>   assertEqual "test_queryPast1_151" (2, 5, 3, [2,3]) (queryPast testItem1 (drop 1 past) 1)
+>   assertEqual "test_queryPast1_251" (3, 5, 0, [2,3]) (queryPast testItem2 (drop 1 past) 1)
+>   assertEqual "test_queryPast1_161" (2, 6, 4, [2,4]) (queryPast testItem1 past 1)
+>   assertEqual "test_queryPast1_261" (4, 6, 0, [2,4]) (queryPast testItem2 past 1)
+>   -- notice how tests 122 ... 263 == 111 ... 261 (the previous ones)
+>   -- this is because queryPast really only worries about the past, not the fact that we're
+>   -- changing the duration of the item being tested.
+>   assertEqual "test_queryPast1_122" (0, 0, (-1), [1])  (queryPast testItem1 (drop 4 past) 2)
+>   assertEqual "test_queryPast1_222" (0, 0, (-1), [1]) (queryPast testItem2 (drop 4 past) 2)
+>   assertEqual "test_queryPast1_132" (2, 2, 0, [2]) (queryPast testItem1 (drop 3 past) 2)
+>   assertEqual "test_queryPast1_232" (0, 2, (-1), [2]) (queryPast testItem2 (drop 3 past) 2)
+>   assertEqual "test_queryPast1_142" (3, 3, 0, [3]) (queryPast testItem1 (drop 2 past) 2)
+>   assertEqual "test_queryPast1_242" (0, 3, (-1), [3]) (queryPast testItem2 (drop 2 past) 2)
+>   assertEqual "test_queryPast1_152" (2, 4, 2, [2,2]) (queryPast testItem1 (drop 1 past) 2)
+>   assertEqual "test_queryPast1_252" (2, 4, 0, [2,2]) (queryPast testItem2 (drop 1 past) 2)
+>   assertEqual "test_queryPast1_162" (2, 5, 3, [2,3]) (queryPast testItem1 past 2)
+>   assertEqual "test_queryPast1_262" (3, 5, 0, [2,3]) (queryPast testItem2 past 2)
+>   assertEqual "test_queryPast1_153" (3, 3, 0, [3]) (queryPast testItem1 (drop 1 past) 3)
+>   assertEqual "test_queryPast1_253" (0, 3, (-1), [3]) (queryPast testItem2 (drop 1 past) 3)
+>   assertEqual "test_queryPast1_163" (2, 4, 2, [2,2]) (queryPast testItem1 past 3)
+>   assertEqual "test_queryPast1_263" (2, 4, 0, [2,2]) (queryPast testItem2 past 3)
+>   --
+>   assertEqual "test_queryPast1_A" (3, 7, 0, [2,4,1]) (queryPast testItem1 past2 1)
+>   assertEqual "test_queryPast1_B" (4, 7, 1, [2,4,1]) (queryPast testItem2 past2 1)
+>   --
+>   assertEqual "test_queryPast1_C" (2, 6, 5, [2,4,1]) (queryPast testItem1 past3 1)
+>   assertEqual "test_queryPast1_D" (4, 6, 1, [2,4,1]) (queryPast testItem2 past3 1)
+>   --
+>   assertEqual "test_queryPast1_E" (2, 6, 5, [2,4,1]) (queryPast testItem1 past4 1)
+>   assertEqual "test_queryPast1_F" (4, 6, 1, [2,4,1]) (queryPast testItem2 past4 1)
+>   --
+>   assertEqual "test_queryPast1_1hole" (2, 4, 3, [2,2,1]) (queryPast testItem1 hole 1)
+>   assertEqual "test_queryPast1_2hole" (2, 4, 1, [2,2,1]) (queryPast testItem2 hole 1)
 >     where
 >       past = [Just (Candidate 2 0 0 4 10.0), Just (Candidate 2 0 0 3 8.0)
 >              ,Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
 >              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
+>       past2 = (Just (Candidate 1 0 0 1 12.0)):past
+>       past3 = (Just (Candidate 1 0 0 1 9.0)):past
+>       past4 = (Just (Candidate 1 0 0 2 9.0)):past
 >       hole = [Nothing, Just (Candidate 2 0 0 2 6.0),  Just (Candidate 1 0 0 3 3.0)
 >              ,Just (Candidate 1 0 0 2 2.0),  Nothing, Nothing]
+
+> test_queryPast2 = TestCase $ do
+>   --                           (sUsed pUsed separate, steps)
+>   assertEqual "test_queryPast2_1_2_1" (1, 6, 5, [1,5]) (queryPast testItem1 [a2, Nothing, Nothing, Nothing, Nothing, b1, Nothing] 1)
+>   assertEqual "test_queryPast2_1_1_2" (5, 6, 0, [1,5]) (queryPast testItem1 [a1, Nothing, Nothing, Nothing, Nothing, b2, Nothing] 1)
+>   assertEqual "test_queryPast2_1N2_1" (1, 6, 6, [1,5,1]) (queryPast testItem1 [Nothing, a2, Nothing, Nothing, Nothing, Nothing, b1, Nothing] 1)
+>   assertEqual "test_queryPast2_1N1_2" (5, 6, 1, [1,5,1]) (queryPast testItem1 [Nothing, a1, Nothing, Nothing, Nothing, Nothing, b2, Nothing] 1)
+>   assertEqual "test_queryPast2_1_2N1" (1, 6, 6, [1,1,5]) (queryPast testItem1 [a2, Nothing, Nothing, Nothing, Nothing, Nothing, b1, Nothing] 1)
+>   assertEqual "test_queryPast2_1_1N2" (5, 6, 0, [1,1,5]) (queryPast testItem1 [a1, Nothing, Nothing, Nothing, Nothing, Nothing, b2, Nothing] 1)
+>   assertEqual "test_queryPast2_1N2N1" (1, 6, 7, [1,1,5,1]) (queryPast testItem1 [Nothing, a2, Nothing, Nothing, Nothing, Nothing, Nothing, b1, Nothing] 1)
+>   assertEqual "test_queryPast2_1N1N2" (5, 6, 1, [1,1,5,1]) (queryPast testItem1 [Nothing, a1, Nothing, Nothing, Nothing, Nothing, Nothing, b2, Nothing] 1)
+>   -- test with a following candidate with a larger score
+>   assertEqual "test_queryPast2_1_2_1" (1, 6, 5, [1,5]) (queryPast testItem1 [a2, Nothing, Nothing, Nothing, Nothing, b1, Nothing] 1)
+>   assertEqual "test_queryPast2_1_1_2" (1, 2, 6, [1,1,1,1,1,1,1]) (queryPast testItem1 [a1, b3, Nothing, Nothing, Nothing, Nothing, b1, Nothing] 1)
+>     where
+>       a1 = Just (Candidate 1 0 0 5 4.0)
+>       a2 = Just (Candidate 2 0 0 5 4.0)
+>       b1 = Just (Candidate 1 0 0 1 4.0)
+>       b2 = Just (Candidate 2 0 0 1 4.0)
+>       b3 = Just (Candidate 2 0 0 1 5.0)
 
 > test_QueryPast_Big = TestCase $ do
 >     -- see how session 92 does at a certain point 
 >     let i = defaultItem {iId = 92}
 >     let past = drop (289 - 195) unwoundPackResult
 >     let dur = 9 -- the Candidate we are querying for is of duration 9
+>     -- so, past that is queryed should look like:
+>     -- Candidate 1 ...
+>     -- Candidate 1 ...
+>     -- Candidate 92 ...
+>     -- ...
 >     let (sUsed, pUsed, sep, vs) = queryPast i past dur
 >     -- with the way queryPast traverses the past, it doesn't see
 >     -- the second item 92, thus sUsed == 0
->     assertEqual "test_QueryPast_Big_1" (0, 0, 164) (sUsed, pUsed, sep)
+>     assertEqual "test_QueryPast_Big_1" (9, 0, 2) (sUsed, pUsed, sep)
 >     
 
 Happy Path tests for filterCandidate: all candidates should be accepted

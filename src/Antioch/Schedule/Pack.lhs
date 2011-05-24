@@ -375,34 +375,47 @@ for the item, 'pUsed' time for its project, and the 'separate'ion between
 the current item's period and any previous periods.  Note the returned
 separate value only applies if a previous candidate of item was found, i.e.,
 'sUsed' > 0.
-TBF Note: the returned list (vs) at the end of the tuple is for debugging
-purposes.  It was last used during development on 6/15/09.  It should be
-removed if not used in a month or so.
 
 > queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, Int, [Int])
-> queryPast item past dur = queryPast' item . drop (dur - 1) $ past
+> queryPast item past dur = queryPast' (0,     0,     (-1),       []) item . drop (dur - 1) $ past
 
-> queryPast' :: (Eq a) => Item a -> [Maybe (Candidate a)] -> (Int, Int, Int, [Int])
-> --queryPast' item   past     -> (pUsed, sUsed, separate)
-> queryPast'   item   [Nothing] = (0,     0,     0,       [])
-> queryPast'   item (c:cs)
->     | isNothing c               = (sUsed, pUsed, 1 + separate, step:vs)
->     | itemSId == candidateSId   = (newSUsed, newPUsed, 0, step:vs)
->     | otherwise                 = if sUsed > 0
->                                   then (newSUsed, newPUsed, dur + separate, step:vs)
->                                   else (newSUsed, newPUsed,       separate, step:vs)
+> queryPast' :: (Eq a) => (Int, Int, Int, [Int]) -> Item a -> [Maybe (Candidate a)] -> (Int, Int, Int, [Int])
+> -- termination, already got the answer, just return it
+> queryPast' (sUsed, pUsed, separate, steps) item [Nothing]       = (sUsed, pUsed, separate, steps)
+> -- drop the nothing candidate, and note it in the separation
+> queryPast' (sUsed, pUsed, separate, steps) item (Nothing:cs)    = queryPast' (sUsed, pUsed, separate, 1:steps) item cs
+> -- 
+> queryPast' (sUsed, pUsed, separate, steps) item cs@(Just c : cs'@(Just c' : _))
+>         | cScore c' > cScore c  = queryPast' (sUsed,  pUsed,  separate,     1:steps) item cs' 
+>         | otherwise             = queryPast' (sUsed', pUsed', separate', step:steps) item (drop step cs)
 >   where
+>     step = min ((length cs) - 1) dur
+>     dur  = cDuration c
 >     itemSId = iId item
->     candidateSId = cId (fromJust c)
+>     candidateSId = cId c
 >     itemPId = iProj item
->     candidatePId = cProj (fromJust c)
->     step = min (length cs) dur - 1
->     dur = cDuration (fromMaybe (defaultCandidate {cId = itemSId, cDuration = 1}) c)
->     (sUsed, pUsed, separate, vs) = queryPast' item (drop step cs)
->     newPUsed | itemPId == candidatePId   = dur + pUsed
->              | otherwise                 = pUsed
->     newSUsed | itemSId == candidateSId   = dur + sUsed
->              | otherwise                 = sUsed
+>     candidatePId = cProj c
+>     pUsed' | itemPId == candidatePId   = dur + pUsed
+>            | otherwise                 = pUsed
+>     sUsed' | itemSId == candidateSId   = dur + sUsed
+>            | otherwise                 = sUsed
+>     separate' | itemSId == candidateSId   = if separate == (-1) then sum steps else separate
+>               | otherwise                 = separate
+> queryPast' (sUsed, pUsed, separate, steps) item cs@(Just c : _) =
+>                                   queryPast' (sUsed', pUsed', separate', step:steps) item (drop step cs)
+>   where
+>     step = min ((length cs) - 1) dur
+>     dur  = cDuration c
+>     itemSId = iId item
+>     candidateSId = cId c
+>     itemPId = iProj item
+>     candidatePId = cProj c
+>     pUsed' | itemPId == candidatePId   = dur + pUsed
+>            | otherwise                 = pUsed
+>     sUsed' | itemSId == candidateSId   = dur + sUsed
+>            | otherwise                 = sUsed
+>     separate' | itemSId == candidateSId   = if separate == (-1) then sum steps else separate
+>               | otherwise                 = separate
 
 Given possible scores (using Maybe) over a range of a session's durations,
 generate a list of possible candidates corresponding to the scores.
