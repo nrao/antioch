@@ -27,7 +27,6 @@ Interim solution: comparisons use some type of bigbox weather database.
 >  , test_stringencyLimit
 >  -- , test_getStringencyArgs
 >  -- , test_getStringencies
->  , test_getRcvrFreqIndices
 >  -- , test_limitsToStringency
 >  -- , test_stringencyLimitsByDate
 >                  ]
@@ -94,9 +93,12 @@ Interim solution: comparisons use some type of bigbox weather database.
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 SpectralLine dt
 >   assertEqual "stringencyLimit 2" True sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 Continuum dt
->   assertEqual "stringencyLimit 3" False sl
+>   assertEqual "stringencyLimit 3" True sl
+>   -- lower the elevation a little, and watch the stringency fail
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 20.0 Continuum dt
+>   assertEqual "stringencyLimit 3.5" False sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 Continuum dt
->   assertEqual "stringencyLimit 4" False sl
+>   assertEqual "stringencyLimit 4" True sl
 >     where
 >   dt = fromGregorian 2006 6 1 1 0 0
 >   rcvr = Rcvr2_3

@@ -9,6 +9,8 @@
 >    , connectDB
 >    , showTsysTable
 >    , showStringencyTable
+>    , getWeatherDates
+>    , stringencyLimit
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
