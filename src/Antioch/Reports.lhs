@@ -184,10 +184,6 @@ hours offset vs. raw wind speed
 >     plotRcvrTemps -- not really historical weather, but what the hey!
 >     plotWindCorrection
 
-TBF: declared also in HistoricalWeather but have cyclical refs now.
-
-> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
-
 Stringency versus frequency for elevation = 90 deg, all receivers,
 and both obs types.
 

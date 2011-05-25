@@ -136,8 +136,6 @@ also call it from the parrallel version ('genhists').
 >   where
 >     hours' = (endDt `diffMinutes` startDt) `div` 60
 
-> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
-
 ---------------Min. Effective System Temperature---------------
 
 > -- getMinEffSysTemp :: IOBase.IORef -> Receiver -> Int -> Int -> DateTime -> IO ()
