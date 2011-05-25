@@ -18,13 +18,14 @@ Interim solution: comparisons use some type of bigbox weather database.
 
 > tests = TestList [
 >    test_getWeatherDates
+>  , test_stringencyLimit
+>  , test_tSysPrimeNow'
 >  -- , test_getRcvrFreqArgs
 >  -- , test_getMinEffSysTempArgs
 >  -- , test_getMinEffSysTemp
 >  -- , test_calculateEffSysTemps
 >  -- , test_tSysPrimeNow
 >  -- , test_getRaDec
->  , test_stringencyLimit
 >  -- , test_getStringencyArgs
 >  -- , test_getStringencies
 >  -- , test_limitsToStringency
@@ -109,19 +110,45 @@ Interim solution: comparisons use some type of bigbox weather database.
 >   assertEqual "getStringencyArgs_1" 16856 (length args)
 >   assertEqual "getStringencyArgs_2" (Rcvr_RRI,100,5,False) (head args)
 >   assertEqual "getStringencyArgs_3" (RcvrArray18_26,28000,90,True) (last args)
+> -}
 
 NOTE: here is a unit test that requires code changes.  Otherwise,
 we'd be calculating over 6 years, and would take a long time.
    * make sure you're using a 'bigbox' DB
    * change getWeatherDates to go from 2006-06-10 00:00:00 for 1 day.
 
+
+> {-
 > test_getMinEffSysTemp = TestCase $ do
->     effs <- newIORef Map.empty
 >     let dt = fromGregorian 2006 6 10 8 30 0
->     m <- getMinEffSysTemp effs Rcvr1_2 2.0 10 dt
->     assertEqual "getMinEffSysTemp" 24.838247 m
+>     w <- getWeatherTest $ Just dt
+>     rts <- getReceiverTemperatures
+>     effs <- newIORef Map.empty
+>     m <- runScoring w [] rts $ getMinEffSysTemp effs Rcvr1_2 2000 10 dt
+>     mins <- readIORef effs
+>     print mins
+>     let tsys = maybe 0.0 id $ Map.lookup (Rcvr1_2, 2000, 10) mins 
+>     print tsys
+>     --assertEqual "getMinEffSysTemp" 24.838247 m
 > -}
- 
+
+> 
+> test_tSysPrimeNow' = TestCase $ do
+>     let dt = fromGregorian 2006 6 10 8 0 0
+>     w <- getWeatherTest $ Just dt
+>     rts <- getReceiverTemperatures
+>     tsys <- runScoring w [] rts $ tSysPrimeNow' Rcvr1_2 1.1 5 dt
+>     assertEqual "test_tSysPrimeNow' 1" (Just 52.92739) tsys
+>     tsys <- runScoring w [] rts $ tSysPrimeNow' Rcvr1_2 1.1 45 dt
+>     assertEqual "test_tSysPrimeNow' 2" (Just 30.807869) tsys
+>     tsys <- runScoring w [] rts $ tSysPrimeNow' Rcvr1_2 1.1 85 dt
+>     assertEqual "test_tSysPrimeNow' 3" (Just 29.939125) tsys
+>     tsys <- runScoring w [] rts $ tSysPrimeNow' Rcvr2_3 2.2 5 dt
+>     assertEqual "test_tSysPrimeNow' 4" (Just 38.114845) tsys
+>     tsys <- runScoring w [] rts $ tSysPrimeNow' Rcvr2_3 2.2 45 dt
+>     assertEqual "test_tSysPrimeNow' 5" (Just 17.032955) tsys
+>     tsys <- runScoring w [] rts $ tSysPrimeNow' Rcvr2_3 2.2 85 dt
+>     assertEqual "test_tSysPrimeNow' 6" (Just 16.204964) tsys
 
 
 > {-

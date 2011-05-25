@@ -23,7 +23,15 @@
 >   , test_correctWindSpeed
 >   , test_gbt_wind
 >   , test_wind
+>   , test_bestOpacity
 >      ]
+
+> test_bestOpacity = TestCase $ do
+>     let dt = fromGregorian 2006 6 10 8 0 0
+>     w <- getWeatherTest $ Just dt
+>     opacity <- bestOpacity w dt 1.1
+>     print opacity
+>     assertEqual "test_bestOpacity" (Just 7.219601e-3) opacity 
 
 > test_forecastType = TestCase $ do
 >   assertEqual "test_forecastType 1" 1 (forecastType dt1 dt1 dt1)

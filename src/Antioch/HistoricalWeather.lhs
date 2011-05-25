@@ -11,6 +11,7 @@
 >    , showStringencyTable
 >    , getWeatherDates
 >    , stringencyLimit
+>    , tSysPrimeNow'
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
