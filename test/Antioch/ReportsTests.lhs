@@ -12,6 +12,8 @@
 > import Antioch.GenerateSchedule
 > import Data.List
 > import Data.Maybe
+> import System.Directory
+> import System.Cmd
 
 Main value of these unit tests is to check for compilation and run time errors:
 If it doesn't blow up, it passes
@@ -24,14 +26,29 @@ If it doesn't blow up, it passes
 >                  , test_reportWindowEfficiencies
 >                  ]
 
-TBF this test depends on weatherDB instead of weatherUnitTestDB!
 
 > test_runSim = TestCase $ do
->   -- TBF: remove old plots
+>   -- remove old plots
+>   fs <- getFiles "." ".png"
+>   cleanUpFiles fs
+>   fs <- getFiles "." ".png"
+>   assertEqual "test_runSim 1" 0 (length fs)
+>   -- how many .txt files are there now?
+>   originalTxtFiles <- getFiles "." ".txt"
 >   let start = fromGregorian 2006 2 2 0 0 0
->   runSimulation Pack start 3 False 100 0 0 2000 "." "" True True True
->   -- TBF: make sure new plots and text report are there
->   assertEqual "test_runSim" True True
+>   -- make sure test is true so that we use weather DB for tests
+>   let test = True
+>   runSimulation Pack start 3 False 100 0 0 2000 "." "" True True test
+>   -- make sure new plots and text report are there
+>   fs <- getFiles "." ".png"
+>   -- how many plots did we make?
+>   assertEqual "test_runSim" 43 (length fs)
+>   finalTxtFiles <- getFiles "." ".txt"
+>   assertEqual "test_runSim 2" 1 ((length finalTxtFiles) - (length originalTxtFiles))
+>   -- clean up any simulation files
+>   let simFiles = filter (\f -> (take 11 f) == "simulation_") finalTxtFiles
+>   assertEqual "test_runSim 3" True (length simFiles >= 1) 
+>   cleanUpFiles simFiles
 
 > test_textReports = TestCase $ do
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo we gaps scores scoreDetails simInput rs history quiet 
@@ -138,6 +155,20 @@ TBF this test depends on weatherDB instead of weatherUnitTestDB!
 >     exp = "Window Period Efficiencies (Chosen vs. Default): \n    Chosen Mean Eff:  0.87     \n    Default Mean Eff: 0.43     \n    Period for     0 2006-02-01 00:00:00 for   240  mins. : 1.00      Period for     0 2006-02-07 00:00:00 for   240  mins. : 0.50     \n    Period for     0 2006-03-01 00:00:00 for   120  mins. : 0.60      Period for     0 2006-03-07 00:00:00 for   120  mins. : 0.30     \n"
 
 Utilities:
+
+> getFiles :: String -> String -> IO ([String])
+> getFiles dir ext = do
+>     allFiles <- getDirectoryContents "."
+>     return $ filter isPngFile allFiles
+>   where
+>     isPngFile f = drop ((length f) - 4) f == ext
+
+> cleanUpFiles :: [String] -> IO ()
+> cleanUpFiles files = do
+>     mapM system cmds
+>     return ()
+>   where
+>     cmds = map ((++) "rm -rf ") files
 
 > getTestWindowSession :: Session
 > getTestWindowSession = makeSession s' [w'] [p']
