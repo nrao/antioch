@@ -13,12 +13,8 @@
 > import Antioch.Debug
 > import Antioch.TimeAccounting
 > import Antioch.ReceiverTemperatures
-> --import Antioch.HistoricalWeather (allRcvrs)
 > import Antioch.Filters
 > import Antioch.GenerateSchedule
-> --import Antioch.HardwareSchedule
-> --import Antioch.DSSData
-> --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, sortBy, (\\), nub
@@ -30,56 +26,6 @@
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
-
-simRemainingTime
-
-Here we are trying to reproduce subcompenents of the pressure calculations.
-However, it is possible that this plot and its companion, simPastSemesterTime
-have been deprecated and replaced by simBandPBinPastTime & simBandPBinRemainingTime.  For some reason, now long forgotten, these plots cannot be treated like
-n & d and used to recreate the pressure plots (1 + log (n/d)).  Perhaps they
-should be removed?
-
-> plotRemainingTimeByBand              :: StatsPlot
-> plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
-
-TBF this is SO broken, Mike fix it
-
-> plotRemainingTimeByBand'              :: StatsPlot
-> plotRemainingTimeByBand' fn n ss' ps _ = do
->   let bandFracs = map (\ss -> remainingTimeByDays ss start days) ssBands
->   let plots = zip titles bandFracs 
->   linePlots (scatterAttrs title xl yl fn) $ plots 
->     where
->   title = "Remaining Time By Band" ++ n
->   xl = "Time [Days]"
->   yl = "Remaining Time Used In Pressures"
->   start = fst $ getPeriodRange ps
->   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] [] []
->   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) bandRange
-
-
-simPastSemesterTime
-See notes for simRemainingTime.
-
-> plotPastSemesterTimeByBand              :: StatsPlot
-> plotPastSemesterTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotPastSemesterTimeByBand" else plotPastSemesterTimeByBand' fn n ss ps tr
-
-> plotPastSemesterTimeByBand'              :: StatsPlot
-> plotPastSemesterTimeByBand' fn n ss' ps _ = do
->   let bandFracs = map (\ss -> pastSemesterTimeByDays ss start days) ssBands
->   let plots = zip titles bandFracs 
->   linePlots (scatterAttrs title xl yl fn) $ plots 
->     where
->   title = "Past Semester Time By Band" ++ n
->   xl = "Time [Days]"
->   yl = "Past Semester Time Used In Pressures"
->   start = fst $ getPeriodRange ps
->   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] [] []
->   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) bandRange 
 
 > sessionsByBand :: [Session] -> [[Session]]
 > sessionsByBand ss = map (ssBand ss) bandRange
