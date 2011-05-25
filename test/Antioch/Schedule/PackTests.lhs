@@ -365,9 +365,10 @@ WTF is going on?  Why is the expected score of F1 in xs 0.0????
 >   assertEqual "test_queryPast1_251" (3, 5, 0, [2,3]) (queryPast testItem2 (drop 1 past) 1)
 >   assertEqual "test_queryPast1_161" (2, 6, 4, [2,4]) (queryPast testItem1 past 1)
 >   assertEqual "test_queryPast1_261" (4, 6, 0, [2,4]) (queryPast testItem2 past 1)
->   -- notice how tests 122 ... 263 == 111 ... 261 (the previous ones)
->   -- this is because queryPast really only worries about the past, not the fact that we're
->   -- changing the duration of the item being tested.
+>   -- Notice how tests 122 ... 263 == 111 ... 261 (the previous ones).
+>   -- This is because queryPast really only worries about the past, not the fact that we're
+>   -- changing the duration of the item being tested, i.e., the duration only determines
+>   -- where in the past we start the traversal.
 >   assertEqual "test_queryPast1_122" (0, 0, (-1), [1])  (queryPast testItem1 (drop 4 past) 2)
 >   assertEqual "test_queryPast1_222" (0, 0, (-1), [1]) (queryPast testItem2 (drop 4 past) 2)
 >   assertEqual "test_queryPast1_132" (2, 2, 0, [2]) (queryPast testItem1 (drop 3 past) 2)
