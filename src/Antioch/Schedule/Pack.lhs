@@ -205,6 +205,7 @@ is restored later in pack.
 TBF: when scheduling is sparse, and there are lots of Nothing's in the input to this
 function, the optimal schedule is not being picked because we are always picking
 the last candidate, which may NOT necessarily have the largest accumulated score!
+This function must traverse the list of candiates exactly as queryPast does.
 
 > unwind :: [Maybe (Candidate a)] -> [Candidate a]
 > unwind = unwind' []
@@ -374,17 +375,20 @@ all the previous slots ('past'), return the count of previously 'sUsed' time
 for the item, 'pUsed' time for its project, and the 'separate'ion between
 the current item's period and any previous periods.  Note the returned
 separate value only applies if a previous candidate of item was found, i.e.,
-'sUsed' > 0.
+'sUsed' > 0, otherwise it is set to (-1). This function must traverse the
+list of candiates exactly as unwind does.
 
 > queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, Int, [Int])
 > queryPast item past dur = queryPast' (0,     0,     (-1),       []) item . drop (dur - 1) $ past
 
 > queryPast' :: (Eq a) => (Int, Int, Int, [Int]) -> Item a -> [Maybe (Candidate a)] -> (Int, Int, Int, [Int])
-> -- termination, already got the answer, just return it
+> -- Sentinel signals termination, already got the answer, so just return
+> -- the tuple.
 > queryPast' (sUsed, pUsed, separate, steps) item [Nothing]       = (sUsed, pUsed, separate, steps)
-> -- drop the nothing candidate, and note it in the separation
+> -- No candidate, skip it noting the hole in the steps field of the return tuple.
 > queryPast' (sUsed, pUsed, separate, steps) item (Nothing:cs)    = queryPast' (sUsed, pUsed, separate, 1:steps) item cs
-> -- 
+> -- Two candiates in a row, use the one with the larger score, i.e., update
+> -- the return tuple and continue.
 > queryPast' (sUsed, pUsed, separate, steps) item cs@(Just c : cs'@(Just c' : _))
 >         | cScore c' > cScore c  = queryPast' (sUsed,  pUsed,  separate,     1:steps) item cs' 
 >         | otherwise             = queryPast' (sUsed', pUsed', separate', step:steps) item (drop step cs)
@@ -401,6 +405,8 @@ separate value only applies if a previous candidate of item was found, i.e.,
 >            | otherwise                 = sUsed
 >     separate' | itemSId == candidateSId   = if separate == (-1) then sum steps else separate
 >               | otherwise                 = separate
+> -- Default case: have a candidate followed by whatever, update the
+> -- return tuple and continue.
 > queryPast' (sUsed, pUsed, separate, steps) item cs@(Just c : _) =
 >                                   queryPast' (sUsed', pUsed', separate', step:steps) item (drop step cs)
 >   where
