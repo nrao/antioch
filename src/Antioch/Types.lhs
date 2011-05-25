@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime
 > import Data.Function (on)
-> import Data.List     (find)
+> import Data.List     (find, (\\))
 > import Data.Ix
 
 > type Frequency = Float   -- GHz
@@ -43,6 +43,10 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 'or' receiver groups must evaluate as True.
 
 > type ReceiverGroup = [Receiver]
+
+Very often we'll want to cycle through *almost* all the receivers (you wouldn't want to calculate stringency for NoiseSource, would you?).
+
+> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
 Note: some of the bands specified below are simply for our own purposes,
 such as: P

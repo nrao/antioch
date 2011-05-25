@@ -9,6 +9,8 @@
 >    , connectDB
 >    , showTsysTable
 >    , showStringencyTable
+>    , getWeatherDates
+>    , stringencyLimit
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
@@ -135,8 +137,6 @@ also call it from the parrallel version ('genhists').
 > getWeatherDates' startDt endDt = [(h * 60) `addMinutes` startDt | h <- [0 .. (hours' - 1)]]
 >   where
 >     hours' = (endDt `diffMinutes` startDt) `div` 60
-
-> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
 ---------------Min. Effective System Temperature---------------
 

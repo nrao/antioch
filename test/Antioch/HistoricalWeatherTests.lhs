@@ -27,7 +27,6 @@ Interim solution: comparisons use some type of bigbox weather database.
 >  , test_stringencyLimit
 >  -- , test_getStringencyArgs
 >  -- , test_getStringencies
->  , test_getRcvrFreqIndices
 >  -- , test_limitsToStringency
 >  -- , test_stringencyLimitsByDate
 >                  ]
@@ -94,9 +93,12 @@ Interim solution: comparisons use some type of bigbox weather database.
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 SpectralLine dt
 >   assertEqual "stringencyLimit 2" True sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 Continuum dt
->   assertEqual "stringencyLimit 3" False sl
+>   assertEqual "stringencyLimit 3" True sl
+>   -- lower the elevation a little, and watch the stringency fail
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 20.0 Continuum dt
+>   assertEqual "stringencyLimit 3.5" False sl
 >   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 Continuum dt
->   assertEqual "stringencyLimit 4" False sl
+>   assertEqual "stringencyLimit 4" True sl
 >     where
 >   dt = fromGregorian 2006 6 1 1 0 0
 >   rcvr = Rcvr2_3
@@ -120,11 +122,7 @@ we'd be calculating over 6 years, and would take a long time.
 >     assertEqual "getMinEffSysTemp" 24.838247 m
 > -}
  
-> test_getRcvrFreqIndices = TestCase $ do
->   assertEqual "getRcvrFreqIndices 1" [8000,9000,10000] (getRcvrFreqIndices Rcvr8_10)
->   assertEqual "getRcvrFreqIndices 2" [900,1000] (getRcvrFreqIndices Rcvr_1070)
->   assertEqual "getRcvrFreqIndices 3" 80000 (head . getRcvrFreqIndices $ Rcvr_PAR)
->   assertEqual "getRcvrFreqIndices 4" 100000 (last . getRcvrFreqIndices $ Rcvr_PAR)
+
 
 > {-
 > test_limitsToStringency = TestCase $ do

@@ -7,6 +7,7 @@
 > import qualified Antioch.FilterTests as FilterTestT
 > import qualified Antioch.GenerateScheduleTests as GeneratorT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
+> import qualified Antioch.HistoricalWeatherTests as HistoricalWeatherT
 > import qualified Antioch.ReceiverTests as ReceiverT
 > import qualified Antioch.ReceiverTemperaturesTests as ReceiverTempT
 > import qualified Antioch.ReportsTests as ReportT
@@ -31,6 +32,7 @@
 >   , DSSDataT.tests
 >   , FilterTestT.tests
 >   , HardwareScheduleT.tests
+>   , HistoricalWeatherT.tests
 >   , ScoreT.tests
 >   , ScheduleT.tests
 >   , RunScoresT.tests
