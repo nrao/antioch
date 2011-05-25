@@ -120,11 +120,7 @@ we'd be calculating over 6 years, and would take a long time.
 >     assertEqual "getMinEffSysTemp" 24.838247 m
 > -}
  
-> test_getRcvrFreqIndices = TestCase $ do
->   assertEqual "getRcvrFreqIndices 1" [8000,9000,10000] (getRcvrFreqIndices Rcvr8_10)
->   assertEqual "getRcvrFreqIndices 2" [900,1000] (getRcvrFreqIndices Rcvr_1070)
->   assertEqual "getRcvrFreqIndices 3" 80000 (head . getRcvrFreqIndices $ Rcvr_PAR)
->   assertEqual "getRcvrFreqIndices 4" 100000 (last . getRcvrFreqIndices $ Rcvr_PAR)
+
 
 > {-
 > test_limitsToStringency = TestCase $ do
