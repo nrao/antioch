@@ -372,7 +372,8 @@ simMinObsEff - simply the min. observing curve.  Note: observing efficiencies
 that are below this line experience and exponential cutoff (i.e., not simply zero).
 simSchd* - these are plots that represent the efficiency at the time the
 period was scheduled (*not*) the time it was observed.
-simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  TBF: note that this is *not* an excact reflection of the scoring used when
+simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  
+Note: this is *not* an excact reflection of the scoring used when
 the period was scheduled, because the Pack algorithm ignores the first quarter,
 but it's pretty close.
    * simSchdMeanEffFreq - Observing Efficiency
@@ -1365,24 +1366,6 @@ The standard list of plots (that need no extra input).
 > reportTotalScore ps = "\n\nTotal Score: " ++ (show total) ++ "\n"
 >   where
 >     total = sum [pScore p * fromIntegral (duration p `div` 15) | p <- ps]
-
-Trying to emulate the Beta Test's Scoring Tab:
-
-> {-
-> scoringReport :: Int -> DateTime -> Minutes -> IO ()
-> scoringReport sessionId dt dur = do
->   (rs, ss, projs, history') <- dbInput dt
->   let s = head $ filter (\sess -> (sId sess) == sessionId) ss
->   scoringInfo s ss dt dur rs
-> -}
-
-> {-
-> scoringReportByName :: String -> DateTime -> Minutes -> IO ()
-> scoringReportByName name dt dur = do
->   (rs, ss, projs, history') <- dbInput dt
->   let s = head $ filter (\sess -> (sName sess) == name) ss
->   scoringInfo s ss dt dur rs
-> -}
 
 > createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> Bool -> IO ()
 > createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet test = do
