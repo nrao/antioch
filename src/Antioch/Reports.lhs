@@ -1003,36 +1003,6 @@ StatsPlot :: filename, simname, sessions, periods, trace
 
 > type PeriodEffStatsPlot = PeriodEfficiencies -> String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
 
-> statsPlots = map (\f -> f "" "") statsPlotsList 
-
-TBF: combine this list with the statsPlotsToFile fnc
-TBF: has this been deprecated?
-
-> statsPlotsList = [
->    plotDecFreq 
->  , plotDecVsRA 
->  , plotFreqVsTime 
->  , plotSatRatioVsFreq 
->  , plotMinObsEff 
->  , plotElevDec 
->  , plotScoreElev' 
->  , plotScoreFreq 
->  , plotLstScore' 
->  , histSessRA 
->  , histSessFreq 
->  , histDefPeriodStrt
->  , histSessDec 
->  , histSessTP 
->  , histSessTPQtrs 
->  , histSessTPDurs 
->  , plotSchdFreqVsTime    
->  , histCanceledFreqRatio 
->  , plotBandPressureTime  
->  , plotRAPressureTime1   
->  , plotRAPressureTime2  
->  , plotRAPressureTime3  
->   ]
-
 These are the plots that need efficiencies as well.
 
 > periodSchdEffStatsPlotsToFile :: PeriodEfficiencies -> String -> String -> [[Session]->[Period]->[Trace]-> IO ()]
