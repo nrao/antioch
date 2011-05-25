@@ -2,7 +2,6 @@
 
 > module Antioch.HistoricalWeather
 >     (updateHistoricalWeather
->    , allRcvrs
 >    , getStringency
 >    , truncateTable
 >    , fillTsysTable
@@ -12,6 +11,7 @@
 >    , getWeatherDates
 >    , stringencyLimit
 >    , tSysPrimeNow'
+>    , getMinEffSysTemp
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
