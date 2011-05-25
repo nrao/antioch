@@ -13,12 +13,8 @@
 > import Antioch.Debug
 > import Antioch.TimeAccounting
 > import Antioch.ReceiverTemperatures
-> --import Antioch.HistoricalWeather (allRcvrs)
 > import Antioch.Filters
 > import Antioch.GenerateSchedule
-> --import Antioch.HardwareSchedule
-> --import Antioch.DSSData
-> --import Antioch.Settings (dssDataDB)
 > import Control.Monad      (liftM)
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, sortBy, (\\), nub
@@ -30,56 +26,6 @@
 > import Test.QuickCheck hiding (promote, frequency)
 > import Graphics.Gnuplot.Simple
 
-
-simRemainingTime
-
-Here we are trying to reproduce subcompenents of the pressure calculations.
-However, it is possible that this plot and its companion, simPastSemesterTime
-have been deprecated and replaced by simBandPBinPastTime & simBandPBinRemainingTime.  For some reason, now long forgotten, these plots cannot be treated like
-n & d and used to recreate the pressure plots (1 + log (n/d)).  Perhaps they
-should be removed?
-
-> plotRemainingTimeByBand              :: StatsPlot
-> plotRemainingTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotRemainingTimeByBand" else plotRemainingTimeByBand' fn n ss ps tr
-
-TBF this is SO broken, Mike fix it
-
-> plotRemainingTimeByBand'              :: StatsPlot
-> plotRemainingTimeByBand' fn n ss' ps _ = do
->   let bandFracs = map (\ss -> remainingTimeByDays ss start days) ssBands
->   let plots = zip titles bandFracs 
->   linePlots (scatterAttrs title xl yl fn) $ plots 
->     where
->   title = "Remaining Time By Band" ++ n
->   xl = "Time [Days]"
->   yl = "Remaining Time Used In Pressures"
->   start = fst $ getPeriodRange ps
->   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] [] []
->   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) bandRange
-
-
-simPastSemesterTime
-See notes for simRemainingTime.
-
-> plotPastSemesterTimeByBand              :: StatsPlot
-> plotPastSemesterTimeByBand fn n ss ps tr = if (length ps == 0) then print "no periods for plotPastSemesterTimeByBand" else plotPastSemesterTimeByBand' fn n ss ps tr
-
-> plotPastSemesterTimeByBand'              :: StatsPlot
-> plotPastSemesterTimeByBand' fn n ss' ps _ = do
->   let bandFracs = map (\ss -> pastSemesterTimeByDays ss start days) ssBands
->   let plots = zip titles bandFracs 
->   linePlots (scatterAttrs title xl yl fn) $ plots 
->     where
->   title = "Past Semester Time By Band" ++ n
->   xl = "Time [Days]"
->   yl = "Past Semester Time Used In Pressures"
->   start = fst $ getPeriodRange ps
->   days = snd $ getPeriodRange ps
->   ss = updateSessions ss' ps [] [] []
->   ssBands = sessionsByBand ss
->   titles = map (\b -> (Just (show b))) bandRange 
 
 > sessionsByBand :: [Session] -> [[Session]]
 > sessionsByBand ss = map (ssBand ss) bandRange
@@ -237,10 +183,6 @@ hours offset vs. raw wind speed
 >     plotAvgObservingEff
 >     plotRcvrTemps -- not really historical weather, but what the hey!
 >     plotWindCorrection
-
-TBF: declared also in HistoricalWeather but have cyclical refs now.
-
-> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
 
 Stringency versus frequency for elevation = 90 deg, all receivers,
 and both obs types.
@@ -430,7 +372,8 @@ simMinObsEff - simply the min. observing curve.  Note: observing efficiencies
 that are below this line experience and exponential cutoff (i.e., not simply zero).
 simSchd* - these are plots that represent the efficiency at the time the
 period was scheduled (*not*) the time it was observed.
-simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  TBF: note that this is *not* an excact reflection of the scoring used when
+simSchdMean* - these are the mean efficiencies for the periods when they were scheduled.  
+Note: this is *not* an excact reflection of the scoring used when
 the period was scheduled, because the Pack algorithm ignores the first quarter,
 but it's pretty close.
    * simSchdMeanEffFreq - Observing Efficiency
@@ -1061,36 +1004,6 @@ StatsPlot :: filename, simname, sessions, periods, trace
 
 > type PeriodEffStatsPlot = PeriodEfficiencies -> String -> String -> [Session] -> [Period] -> [Trace] -> IO ()
 
-> statsPlots = map (\f -> f "" "") statsPlotsList 
-
-TBF: combine this list with the statsPlotsToFile fnc
-TBF: has this been deprecated?
-
-> statsPlotsList = [
->    plotDecFreq 
->  , plotDecVsRA 
->  , plotFreqVsTime 
->  , plotSatRatioVsFreq 
->  , plotMinObsEff 
->  , plotElevDec 
->  , plotScoreElev' 
->  , plotScoreFreq 
->  , plotLstScore' 
->  , histSessRA 
->  , histSessFreq 
->  , histDefPeriodStrt
->  , histSessDec 
->  , histSessTP 
->  , histSessTPQtrs 
->  , histSessTPDurs 
->  , plotSchdFreqVsTime    
->  , histCanceledFreqRatio 
->  , plotBandPressureTime  
->  , plotRAPressureTime1   
->  , plotRAPressureTime2  
->  , plotRAPressureTime3  
->   ]
-
 These are the plots that need efficiencies as well.
 
 > periodSchdEffStatsPlotsToFile :: PeriodEfficiencies -> String -> String -> [[Session]->[Period]->[Trace]-> IO ()]
@@ -1453,24 +1366,6 @@ The standard list of plots (that need no extra input).
 > reportTotalScore ps = "\n\nTotal Score: " ++ (show total) ++ "\n"
 >   where
 >     total = sum [pScore p * fromIntegral (duration p `div` 15) | p <- ps]
-
-Trying to emulate the Beta Test's Scoring Tab:
-
-> {-
-> scoringReport :: Int -> DateTime -> Minutes -> IO ()
-> scoringReport sessionId dt dur = do
->   (rs, ss, projs, history') <- dbInput dt
->   let s = head $ filter (\sess -> (sId sess) == sessionId) ss
->   scoringInfo s ss dt dur rs
-> -}
-
-> {-
-> scoringReportByName :: String -> DateTime -> Minutes -> IO ()
-> scoringReportByName name dt dur = do
->   (rs, ss, projs, history') <- dbInput dt
->   let s = head $ filter (\sess -> (sName sess) == name) ss
->   scoringInfo s ss dt dur rs
-> -}
 
 > createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> Bool -> IO ()
 > createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet test = do

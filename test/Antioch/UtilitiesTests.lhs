@@ -27,7 +27,14 @@
 >           , test_freq2ForecastIndex
 >           , test_freq2HistoryIndex
 >           , test_approximate
+>           , test_getRcvrFreqIndices
 >                  ]
+
+> test_getRcvrFreqIndices = TestCase $ do
+>   assertEqual "getRcvrFreqIndices 1" [8000,9000,10000] (getRcvrFreqIndices Rcvr8_10)
+>   assertEqual "getRcvrFreqIndices 2" [900,1000,2000] (getRcvrFreqIndices Rcvr_1070)
+>   assertEqual "getRcvrFreqIndices 3" 80000 (head . getRcvrFreqIndices $ Rcvr_PAR)
+>   assertEqual "getRcvrFreqIndices 4" 100000 (last . getRcvrFreqIndices $ Rcvr_PAR)
 
 > test_trimester2startDT = TestCase $ do
 >   assertEqual "test_trimester2startDT_1" dt06A (trimester2startDT "06A")
