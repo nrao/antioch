@@ -85,6 +85,7 @@
 >   , test_PackWorker3
 >   , test_PackWorker4
 >   , test_packWorker_timeBetween
+>   , test_packWorker_example
 >   -- , test_PackWorker5 -- TBF: related to test_Unwind5
 >   , test_PackWorkerSimple
 >   , test_RandomScore
@@ -129,6 +130,18 @@ Simplified interfaces to Item data struct:
 >   }
 
 Begin tests:
+
+> test_packWorker_example = TestCase $ do
+>     let cs = packWorker schedule items
+>     assertEqual "test_packWorker_example" exp cs
+>   where
+>     i1 = item 1 2 4 [1.0, 5.0, 1.0, 1.0] []
+>     i2 = item 2 2 4 [1.0, 1.0, 1.0, 2.0] []
+>     schedule = take 4 $ repeat Nothing
+>     items = [i1, i2]
+>     c1 = Candidate 1 0 0 2 5.0
+>     c2 = Candidate 2 0 2 2 2.0
+>     exp = [c1, c2]
 
 > test_packWorker_timeBetween = TestCase $ do
 >     let dt = fromGregorian 2006 6 1 0 0 0
