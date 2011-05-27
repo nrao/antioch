@@ -136,13 +136,14 @@ these unit tests.  We need to remove that dependency.
 > test_compareWindowPeriodEfficiencies = TestCase $ do
 >     w <- getWeatherTest Nothing
 >     assertEqual "test_compareWindowPeriodEfficiencies_0" True (validSimulatedWindows $ wSession . (\(w,c,p) -> w) . head $ wInfo2)
->     effs <- compareWindowPeriodEfficiencies wInfo w 
+>     effs <- compareWindowPeriodEfficiencies wInfo w rs 
 >     assertEqual "test_compareWindowPeriodEfficiencies_1" [] effs
->     effs <- compareWindowPeriodEfficiencies wInfo2 w
+>     effs <- compareWindowPeriodEfficiencies wInfo2 w rs
 >     assertEqual "test_compareWindowPeriodEfficiencies_2" exp effs
->     effs <- compareWindowPeriodEfficiencies (wInfo2 ++ wInfo3) w
+>     effs <- compareWindowPeriodEfficiencies (wInfo2 ++ wInfo3) w rs
 >     assertEqual "test_compareWindowPeriodEfficiencies_3" exp2 effs
 >   where
+>     rs = []
 >     s = getTestWindowSession
 >     wInfo = [(head . windows $ s, Nothing, head . periods $ s)]
 >     s2' = getTestWindowSession2
@@ -186,16 +187,17 @@ these unit tests.  We need to remove that dependency.
 
 > test_historicalSchdMeanFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
->   r <- historicalSchdMeanFactors [p] trackingEfficiency w
+>   r <- historicalSchdMeanFactors [p] trackingEfficiency w rs
 >   assertEqual "test_historicalSchdMeanFactors_1" [0.99873495] r
 >     where
+>   rs = []
 >   p = getTestPeriod
 
 TBF: refactor so that historical*Factors methods can take a test weather.
 
 > test_historicalSchdObsEffs = TestCase $ do
 >   w <- getWeatherTest Nothing
->   r <- historicalSchdObsEffs [getTestPeriod] w 
+>   r <- historicalSchdObsEffs [getTestPeriod] w [] 
 >   assertEqual "test_historicalSchdObsEffs_0" 20 (length r)
 >   assertEqual "test_historicalSchdObsEffs_1" [0.9804807,0.9770225] (take 2 r)
 >   -- these should be equivalent
@@ -211,7 +213,7 @@ Test that two ways to get the same result yield the same answer.
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   -- method 1
->   r1 <- historicalSchdMeanObsEffs [getTestPeriod, getTestPeriod2] w
+>   r1 <- historicalSchdMeanObsEffs [getTestPeriod, getTestPeriod2] w []
 >   -- method 2
 >   r2' <- getPeriodsSchdEffs w rt [] [getTestPeriod, getTestPeriod2]
 >   let r2 = extractPeriodMeanEffs r2' (\(a,t,s,o) -> o)
@@ -233,10 +235,10 @@ Test that two ways to get the same result yield the same answer.
 >   -- TBF: score the session
 >   -- now socre the period, and make sure results match
 >   w <- getWeatherTest Nothing
->   fcs <- periodSchdFactors getTestPeriod trackingEfficiency w
+>   fcs <- periodSchdFactors getTestPeriod trackingEfficiency w []
 >   assertEqual "test_periodSchdFactors_1" 0.9994102 (head fcs)
 >   assertEqual "test_periodSchdFactors_2" 0.9973051 (last fcs)
->   fcs <- periodSchdFactors getTestPeriod2 trackingEfficiency w
+>   fcs <- periodSchdFactors getTestPeriod2 trackingEfficiency w []
 >   assertEqual "test_periodSchdFactors_3" 0.9761378  (head fcs)
 >   assertEqual "test_periodSchdFactors_4" 0.97425276 (last fcs)
 

@@ -51,11 +51,11 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
 
-> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> Weather -> IO [((Period, Float), (Period, Float))]
-> compareWindowPeriodEfficiencies winfo w = do
+> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> Weather -> ReceiverSchedule -> IO [((Period, Float), (Period, Float))]
+> compareWindowPeriodEfficiencies winfo w rs = do
 >     --w <- getWeather Nothing
->     dpsEffs <- historicalSchdMeanObsEffs dps w
->     cpsEffs <- historicalSchdMeanObsEffs cps w
+>     dpsEffs <- historicalSchdMeanObsEffs dps w rs
+>     cpsEffs <- historicalSchdMeanObsEffs cps w rs
 >     return $ zip (zip cps cpsEffs) (zip dps dpsEffs)
 >   where
 >     dps = concat $ map (\(w, mc, d) -> if isJust mc then [d] else []) winfo 
@@ -127,24 +127,24 @@ for the given scoring factor that the periods' sessions had when they
 were scheduled.  Currently this is used to check all the schedules scores
 for normalicy (0 < score < 1).
 
-> historicalSchdFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
-> historicalSchdFactors ps sf w = do
+> historicalSchdFactors :: [Period] -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> historicalSchdFactors ps sf w rs = do
 >   --w <- getWeather Nothing
->   fs <- mapM (periodSchdFactors' w) ps
+>   fs <- mapM (periodSchdFactors' w rs) ps
 >   return $ concat fs
 >     where
->       periodSchdFactors' w p = periodSchdFactors p sf w
+>       periodSchdFactors' w rs p = periodSchdFactors p sf w rs
 
 This function can be useful if invalid scores are encountered, and the 
 offending period/session/project needs to be revealed.
 
-> historicalSchdFactorsDebug :: [Period] -> ScoreFunc -> IO [(Float,Period)]
-> historicalSchdFactorsDebug ps sf = do
+> historicalSchdFactorsDebug :: [Period] -> ScoreFunc -> ReceiverSchedule -> IO [(Float,Period)]
+> historicalSchdFactorsDebug ps sf rs = do
 >   w <- getWeather Nothing
->   fs <- mapM (periodSchdFactors' w) ps
+>   fs <- mapM (periodSchdFactors' w rs) ps
 >   return $ concat $ zipWith (\x y -> map (\y' -> (y', x)) y) ps fs --concat fs
 >     where
->       periodSchdFactors' w p = periodSchdFactors p sf w
+>       periodSchdFactors' w rs p = periodSchdFactors p sf w rs
 
 For the given list of periods, returns the mean of the scoring factor given
 at the time that the periods' session was scheduled.  In other words, this
@@ -153,13 +153,13 @@ time the periods were scheduled.
 Note: the use of mean' might cause misunderstandings, since pack zero's out
 the first quarter.  We should be using the weighted average found in Score.
 
-> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
-> historicalSchdMeanFactors ps sf w = do
+> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> historicalSchdMeanFactors ps sf w rs = do
 >   --w <- getWeather Nothing
->   fs <- mapM (periodSchdFactors' w) ps
+>   fs <- mapM (periodSchdFactors' w rs) ps
 >   return $ map mean' fs
 >     where
->       periodSchdFactors' w p = periodSchdFactors p sf w
+>       periodSchdFactors' w rs p = periodSchdFactors p sf w rs
 
 Same as historicalSchdMeanFactors, except calculates the efficiencies
 that the period would have observed at.
@@ -176,15 +176,13 @@ For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it was scheduled*.
 In other words, recreates the conditions for which this period was scheduled.
 
-> periodSchdFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
-> periodSchdFactors p sf w = do
+> periodSchdFactors :: Period -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> periodSchdFactors p sf w rs = do
 >   rt <- getReceiverTemperatures
 >   -- this step is key to ensure we use the right forecasts
 >   w' <- newWeather w $ Just $ pForecast p
 >   fs <- runScoring w' rs rt $ factorPeriod p sf  
 >   return $ map eval fs
->     where
->   rs = [] -- TBF: how to pass this down?
 
 For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it observed*.
