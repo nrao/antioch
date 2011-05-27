@@ -244,7 +244,7 @@ Test that two ways to get the same result yield the same answer.
 
 > test_periodObsFactors = TestCase $ do
 >   w <- getWeatherTest Nothing
->   fcs <- periodObsFactors getTestPeriod2 trackingEfficiency w
+>   fcs <- periodObsFactors getTestPeriod2 trackingEfficiency w [] 
 >   assertEqual "test_periodObsFactors_1" 0.9774544 (head fcs)
 >   assertEqual "test_periodObsFactors_2" 0.9773642 (last fcs)
 

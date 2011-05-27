@@ -164,13 +164,13 @@ the first quarter.  We should be using the weighted average found in Score.
 Same as historicalSchdMeanFactors, except calculates the efficiencies
 that the period would have observed at.
 
-> historicalObsMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
-> historicalObsMeanFactors ps sf w = do
+> historicalObsMeanFactors :: [Period] -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> historicalObsMeanFactors ps sf w rs = do
 >   --w <- getWeather Nothing
->   fs <- mapM (periodObsFactors' w) ps
+>   fs <- mapM (periodObsFactors' w rs) ps
 >   return $ map mean' fs
 >     where
->       periodObsFactors' w p = periodObsFactors p sf w
+>       periodObsFactors' w rs p = periodObsFactors p sf w rs
 
 For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it was scheduled*.
@@ -187,21 +187,19 @@ In other words, recreates the conditions for which this period was scheduled.
 For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it observed*.
 
-> periodObsFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
-> periodObsFactors p sf w = do
+> periodObsFactors :: Period -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> periodObsFactors p sf w rs = do
 >   rt <- getReceiverTemperatures
->   fs <- mapM (periodObsFactors' p sf w rt) dts 
+>   fs <- mapM (periodObsFactors' p sf w rt rs) dts 
 >   return $ map eval fs
 >     where
 >   dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
-> periodObsFactors' :: Period -> ScoreFunc -> Weather -> ReceiverTemperatures -> DateTime -> IO Factors
-> periodObsFactors' p sf w rt dt = do
+> periodObsFactors' :: Period -> ScoreFunc -> Weather -> ReceiverTemperatures -> ReceiverSchedule -> DateTime -> IO Factors
+> periodObsFactors' p sf w rt rs dt = do
 >   -- this ensures we'll use the best forecasts and gbt_weather
 >   w' <- newWeather w $ Just dt   
 >   runScoring w' rs rt $ sf dt (session p) 
->     where
->   rs = [] -- TBF: how to pass this down?
 
 > sessionDecFreq :: [Session] -> [(Float, Radians)]
 > sessionDecFreq = dec `vs` frequency
