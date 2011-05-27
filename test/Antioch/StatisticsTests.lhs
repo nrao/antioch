@@ -59,8 +59,6 @@ these unit tests.  We need to remove that dependency.
 >   , test_getOriginalSchedule'
 >   , test_breakdownSimulationTimes
 >   , test_fracObservedTimeByDays
->   , test_remainingTimeByDays
->   , test_pastSemesterTimeByDays
 >   , test_periodSchdFactors
 >   , test_getPeriodsSchdEffs
 >   , test_periodObsFactors
@@ -273,25 +271,6 @@ Test that two ways to get the same result yield the same answer.
 >     ps = zipWith3 mkPeriod ss dts durs 
 >     mkPeriod s start dur = Period 0 s start dur 0.0 Pending undefined False dur
 
-> test_remainingTimeByDays = TestCase $ do
->     let result = remainingTimeByDays ss start numDays
->     assertEqual "remainingTimeByDays_1" exp result 
->   where
->     ss = getTestSessions
->     ps = sort $ concatMap periods ss
->     start = fst $ getPeriodRange ps
->     numDays = snd $ getPeriodRange ps
->     exp = zip [0.0 .. 9.0] (take 10 (repeat 12.0))
-
-> test_pastSemesterTimeByDays = TestCase $ do
->     let result = pastSemesterTimeByDays ss start numDays
->     let exp = [(0.0,0.0),(1.0,1.0),(2.0,3.0),(3.0,3.0),(4.0,4.0),(5.0,6.0),(6.0,6.0),(7.0,7.0),(8.0,7.0),(9.0,9.0)]
->     assertEqual "pastSemesterTimeByDays_1" exp result 
->   where
->     ss = getTestSessions
->     ps = sort $ concatMap periods ss
->     start = fst $ getPeriodRange ps
->     numDays = snd $ getPeriodRange ps
 
 > test_scheduleHonorsFixed = TestCase $ do
 >     assertEqual "StatisticsTests_test_scheduleHonorsFixed_1" True (scheduleHonorsFixed fixed1 schd)

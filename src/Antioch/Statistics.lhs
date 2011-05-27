@@ -107,48 +107,6 @@ To Do List (port from Statistics.py):
 >     firstDt = startTime $ head ps
 >     lastDt  = startTime $ last ps
 
-Remaining Time here refers to the remaining time used in the pressure
-factor calculation.  See Score.initBins'.
-Given a pool of sessions, a start time, and a number of days, produces:
-[(day #, sum of 'remaining time' for that day #)]; 
-TBF: this was created in an attempt to reproduce the components of the 
-preassure plots, but I believe that they were deprecated because we really
-need to use the trace to do this correctly.
-
-> remainingTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
-> remainingTimeByDays [] _ _ = []
-> remainingTimeByDays ss start numDays = map fracRemainingTime days
->   where
->     days = [0 .. (numDays + 1)]
->     fracRemainingTime day = (fromIntegral day, totalRemaining day)
->     --totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
->     totalRemaining day = fractionalHours . sum $ map (remaining (toDt day)) $ ss 
->     toDt day = (day * 24 * 60) `addMinutes` start
->     remaining dt s = (rho dt s) + (sPastS dt s)
->     -- this is simply cut and paste from Score.initBins'
->     rho dt s
->       | isActive s dt = max 0 (sFutureS dt s)
->       | otherwise  = 0
->     -- here, Scomplete -> sTerminated to avoid looking at sAvailT (==0)
->     isActive s dt = (isAuthorized s dt) && (not . sTerminated $ s)
->     isAuthorized s dt = (semester . project $ s) <= (dt2semester dt)
-
-Given a pool of sessions, a start time, and a number of days, produces:
-[(day #, sum of SPastS for that day #)]; 
-TBF: this was created in an attempt to reproduce the components of the 
-preassure plots, but I believe that they were deprecated because we really
-need to use the trace to do this correctly.
-See Also Score.initBins'.
-
-> pastSemesterTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
-> pastSemesterTimeByDays [] _ _ = []
-> pastSemesterTimeByDays ss start numDays = map fracSemesterTime days
->   where
->     days = [0 .. (numDays + 1)]
->     fracSemesterTime day = (fromIntegral day, totalSemester day)
->     totalSemester day = fractionalHours . sum $ map (sPastS (toDt day)) $ ss 
->     toDt day = (day * 24 * 60) `addMinutes` start
-
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
 > historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericEfficiency
 > historicalSchdTrkEffs ps = historicalSchdFactors ps trackingEfficiency
