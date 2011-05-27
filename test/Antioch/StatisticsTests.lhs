@@ -232,12 +232,19 @@ Test that two ways to get the same result yield the same answer.
 >   assertEqual "test_getPeriodsSchdEffs_1" True (pSchdEffs /= pObsEffs)
 
 > test_periodSchdFactors = TestCase $ do
->   -- TBF: score the session
->   -- now socre the period, and make sure results match
+>   -- score it the same way epriodSchdFactors will 
+>   w <- getWeather $ Just . pForecast $ getTestPeriod
+>   rts <- getReceiverTemperatures
+>   let s = session getTestPeriod
+>   let dt = startTime getTestPeriod
+>   [(_, Just trkEff1)] <- runScoring w [] rts $ trackingEfficiency dt s
+>   let dt2 = periodEndTime getTestPeriod
+>   [(_, Just trkEff2)] <- runScoring w [] rts $ trackingEfficiency dt2 s
+>   -- now score the period, and make sure results match
 >   w <- getWeatherTest Nothing
 >   fcs <- periodSchdFactors getTestPeriod trackingEfficiency w []
->   assertEqual "test_periodSchdFactors_1" 0.9994102 (head fcs)
->   assertEqual "test_periodSchdFactors_2" 0.9973051 (last fcs)
+>   assertEqual "test_periodSchdFactors_1" trkEff1 (head fcs)
+>   assertEqual "test_periodSchdFactors_2" trkEff2 (last fcs)
 >   fcs <- periodSchdFactors getTestPeriod2 trackingEfficiency w []
 >   assertEqual "test_periodSchdFactors_3" 0.9761378  (head fcs)
 >   assertEqual "test_periodSchdFactors_4" 0.97425276 (last fcs)
