@@ -149,8 +149,8 @@ offending period/session/project needs to be revealed.
 For the given list of periods, returns the mean of the scoring factor given
 at the time that the periods' session was scheduled.  In other words, this
 *almost* represents the exact scoring result for the periods' session at the
-time the periods were scheduled (see TBF).
-TBF: the use of mean' might cause misunderstandings, since pack zero's out
+time the periods were scheduled.
+Note: the use of mean' might cause misunderstandings, since pack zero's out
 the first quarter.  We should be using the weighted average found in Score.
 
 > historicalSchdMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
