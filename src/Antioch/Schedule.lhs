@@ -47,7 +47,7 @@ over a Period's duration.
 
 > scheduleMinDuration :: Strategy
 > scheduleMinDuration sf dt dur history sessions = 
->   scheduleMinDurationWorker sf dt dur history sessions averageScore
+>   scheduleMinDurationWorker sf dt dur history sessions averageScore'
 
 Always schedules a session at its minimum duration, but choose the best
 Session for scheduling w/ different methods.
