@@ -6,6 +6,7 @@
 > import Maybe
 > import Test.HUnit
 > import System.IO.Unsafe (unsafePerformIO)
+> import qualified Control.Exception as E
 
 > tests = TestList [
 >     test_data0_11Day

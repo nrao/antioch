@@ -15,6 +15,7 @@
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
+> import Antioch.DBUtilities
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Antioch.Score
