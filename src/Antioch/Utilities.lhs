@@ -171,7 +171,11 @@ note no guard against yys == [].
 Return a receiver's frequency range as a tuple
 
 > getRcvrRange :: Receiver -> (Frequency, Frequency)
-> getRcvrRange rcvr = snd . head $ filter (\r -> (fst r) == rcvr) rcvrRanges
+> getRcvrRange rcvr = if rngs == []
+>                     then (0.0, 0.0)
+>                     else snd . head $ rngs
+>   where
+>     rngs = filter (\r -> (fst r) == rcvr) rcvrRanges
 
 The elevation range of the weather DB is from 5 - 90 degrees.
 

@@ -797,41 +797,48 @@ Returns list of receivers that will be up at the given time.
 
 More Scoring Factors not covered in Memo 5.2
 
-Is there an observer on site for this time and session?
+Is there an observer on site for this time and session,
+and not blacked out?
 Important, because on site observers get a boost.
 
 > observerOnSite :: ScoreFunc
-> observerOnSite dt s = factor "observerOnSite" . Just $ if (obsOnSite dt s) then 1.5 else 1.0
-
-> obsOnSite :: DateTime -> Session -> Bool
-> obsOnSite dt s = any (isOnSite dt) (obs s)
->   where 
->     obs s = observers . project $ s
->     isOnSite dt o = any (inDateRange dt) (reservations o) 
+> observerOnSite dt s = factor "observerOnSite" . Just $ if (onSiteObsAvailable dt s) then 1.5 else 1.0
 
 Is there an observer available for this time and session?
-Rules (observer available if): 
-   * if a single observer is on site (ignore their black outs)
-   * if a single sancioned observer is not blacked out
+An observer is available if): 
+   * an observer is on site and is not blacked out
+   * a sanctioned observer is not blacked out
+
+> isObsOnSite :: DateTime -> Observer -> Bool
+> isObsOnSite dt o = any (inDateRange dt) (reservations o) 
+
+> isObsBlackedOut :: DateTime -> Observer -> Bool
+> isObsBlackedOut dt o = any (inDateRange dt) (blackouts o) 
 
 > observerAvailable :: ScoreFunc
 > observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
 
 > obsAvailable :: DateTime -> Session -> Bool
-> obsAvailable dt s = ((obsOnSite dt s) || (remoteObsAvailable dt s)) && (requiredFriendsAvailable dt s)
+> obsAvailable dt s = ((onSiteObsAvailable dt s) ||
+>                      (remoteObsAvailable dt s)) &&
+>                     (requiredFriendsAvailable dt s)
 
 > remoteObsAvailable :: DateTime -> Session -> Bool
 > remoteObsAvailable dt s = not $ allObsBlackedOut dt obs
 >   where
 >     obs = filter sanctioned $ observers . project $ s
 
-Note that this will return True if there are NO observers, but this case
-is handled by previously filtering out observerless sessions.
+> onSiteObsAvailable :: DateTime -> Session -> Bool
+> onSiteObsAvailable dt s = not $ allObsBlackedOut dt obs
+>   where
+>     obs = filter (isObsOnSite dt) $ observers . project $ s
+
+Note that this will return True in the trivial case when there
+are NO observers, but this case is handled by previously filtering
+out observerless sessions using hasObservers.
 
 > allObsBlackedOut :: DateTime -> [Observer] -> Bool
-> allObsBlackedOut dt obs = all (isBlackedOut dt) obs
->   where 
->     isBlackedOut dt obs = any (inDateRange dt) (blackouts obs)
+> allObsBlackedOut dt obs = all (isObsBlackedOut dt) obs
 
 > requiredFriendsAvailable :: DateTime -> Session -> Bool
 > requiredFriendsAvailable dt s = not $ anyObsBlackedOut dt friends

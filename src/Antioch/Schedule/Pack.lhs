@@ -1,5 +1,7 @@
 > {-# OPTIONS -XParallelListComp #-}
 
+See https://safe.nrao.edu/wiki/bin/view/GB/Software/DSSPackingAlgorithm
+
 > module Antioch.Schedule.Pack where
 
 > import Antioch.DateTime

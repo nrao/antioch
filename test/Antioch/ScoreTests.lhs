@@ -2092,25 +2092,28 @@ Assumes the Rcvr getting boosted is Rcvr_1070.
 >       s6 = s { receivers = [[Rcvr1_2, b1], [Rcvr1_2, b2]] }
 
 > test_observerOnSite = TestCase $ do
->   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
->   assertEqual "test_observerOnSite_2" False (obsOnSite dt2 s1)
->   assertEqual "test_observerOnSite_3" False (obsOnSite dt3 s1)
->   assertEqual "test_observerOnSite_4" True  (obsOnSite dt  s2)
->   assertEqual "test_observerOnSite_5" False (obsOnSite dt2 s2)
->   assertEqual "test_observerOnSite_6" True  (obsOnSite dt3 s2)
+>   assertEqual "test_observerOnSite_1" True  (onSiteObsAvailable dt  s1)
+>   assertEqual "test_observerOnSite_2" False (onSiteObsAvailable dt2 s1)
+>   assertEqual "test_observerOnSite_3" False (onSiteObsAvailable dt3 s1)
+>   assertEqual "test_observerOnSite_4" True  (onSiteObsAvailable dt  s2)
+>   assertEqual "test_observerOnSite_5" False (onSiteObsAvailable dt2 s2)
+>   assertEqual "test_observerOnSite_6" True  (onSiteObsAvailable dt3 s2)
+>   assertEqual "test_observerOnSite_7" False  (onSiteObsAvailable dt4 s2)
 >     where
 >       dt  = fromGregorian 2006 2 1  0 0 0
 >       dt2 = fromGregorian 2006 2 7  0 0 0
 >       dt3 = fromGregorian 2006 2 11 0 0 0
+>       dt4 = fromGregorian 2006 1 31 0 0 0
 >       rs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
 >       o   = defaultObserver
->       o2  = defaultObserver { reservations = rs }
+>       o2  = defaultObserver { blackouts = bs, reservations = rs }
 >       pr1 = defaultProject { observers = [o,o2] }
 >       s1  = defaultSession { project = pr1 }
 >       rs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
 >       o3  = defaultObserver { reservations = rs2 }
 >       pr2 = defaultProject { observers = [o2, o3] }
 >       s2  = defaultSession { project = pr2 }
+>       bs  = [(fromGregorian 2006 1 30 0 0 0, fromGregorian 2006 2 1 0 0 0)]
 
 > test_scorePeriodOverhead = TestCase $ do
 >   -- do explicitly what scorePeriod is supposed to do

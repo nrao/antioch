@@ -208,7 +208,7 @@ Tying the knot.
 > type DateRange = (DateTime, DateTime)
 
 > inDateRange :: DateTime -> DateRange -> Bool
-> inDateRange dt r = start < dt && dt < end
+> inDateRange dt r = start <= dt && dt < end
 >   where
 >     start = fst r
 >     end   = snd r
