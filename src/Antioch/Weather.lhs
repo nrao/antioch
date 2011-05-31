@@ -3,6 +3,7 @@
 > module Antioch.Weather where
 
 > import Antioch.DateTime
+> import Antioch.DBUtilities
 > import Antioch.Types
 > import Antioch.Utilities
 > import Antioch.Generators
@@ -67,7 +68,6 @@ purported time or origin in testing and simulation.
 >     now <- maybe getCurrentTimeSafe return dt
 >     case dt of
 >       Nothing -> getWeatherSafe now
->       -- Nothing -> cannot just use getWeather' . Just $ now  TBF Why not?
 >       Just x  -> getWeatherSafe x
 
 > getWeatherTest dt = do
@@ -86,16 +86,14 @@ year's worth of weather is in the database, by modifiying the date.
 > getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
 Right now, the only historical weather we have is 2006.
-TBF: shouldn't we be able to put 2007, 2008 in there now? No, only 2006 in DB!
-However, we are importing the latest weather forecasts into this DB,
-so we've deprecated 'dateSafe'.
+TBF: We've deprecated 'dateSafe' for production use, however it is still
+     used for look ahead simulations.  See story,
+     https://www.pivotaltracker.com/story/show/2543985
 
 > dateSafe :: DateTime -> DateTime
 > dateSafe dt = dt -- if (year == 2006) then dt else replaceYear 2006 dt
 >   where
 >     (year, _, _, _, _, _) = toGregorian dt
-> -- TBF: do this when you have more then one year:
-> --dateSafe dt = if (any (==year) [2006, 2007, 2008]) then dt else replaceYear 2006 dt
 
 > getCurrentTimeSafe = do
 >   dt <- getCurrentTime
@@ -565,18 +563,6 @@ Get latest forecast time from the DB for given timestamp
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt
 
-TBF: this stolen from DSSData.lhs
-
-> getRcvrId :: Connection -> Receiver -> IO Int
-> getRcvrId cnn rcvr = do
->     result <- quickQuery' cnn query xs
->     return $ fromSql . head . head $ result 
->   where
->     query = "SELECT id FROM receivers WHERE name = ?;"
->     xs = [toSql . show $ rcvr]
-
-TBF: this is redundant too
-
 > getObservingTypeId :: Connection -> ObservingType -> IO Int
 > getObservingTypeId cnn obsType = do
 >     result <- quickQuery' cnn query xs
@@ -585,14 +571,14 @@ TBF: this is redundant too
 >     query = "SELECT id FROM observing_types WHERE type = ?;"
 >     xs = [fromObservingType obsType]
 
-TBF: so is this is this is this.  this is redundant too.
-
 > fromObservingType :: ObservingType -> SqlValue
 > fromObservingType obsType = toSql . toLowerFirst $ show obsType 
 >   where
 >     toLowerFirst x = if x == "SpectralLine" then "spectral line" else [toLower . head $ x] ++ tail x
 
 Helper function to get singular Float values out of the database.
+Note:  The given query is expect to return a single result, multiple
+       results will produce the failure below.
 
 > getFloat :: Connection -> String -> [SqlValue] -> IO (Maybe Float)
 > getFloat conn query xs = handleSqlError $ do
@@ -602,9 +588,7 @@ Helper function to get singular Float values out of the database.
 >         [[x]] -> return $ Just (fromSql x)
 >         [[]]  -> return Nothing
 >         []    -> return Nothing
->         -- TBF: This match can cause failures for legitimate querys, e.g.,
->         -- "SELECT wind_speed_mph FROM forecasts"
->         x     -> fail "There is more than one forecast with that time stamp."
+>         x     -> fail ("The given query returned more than one result. " ++ query)
 
 Just some test functions to make sure things are working.
 
@@ -615,7 +599,7 @@ Just some test functions to make sure things are working.
 >            , opacity w target frequency
 >            , tsys w target frequency
 >            , totalStringency w frequency elevation
->            --, minOpacity w frequency elevation
+>            -- , minOpacity w frequency elevation
 >            , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
@@ -627,7 +611,7 @@ Quick Check Properties:
 
 TBF: 1. can't use more then 100 connections
 TBF: 2. Weather is screwed up, but these don't always find the problems: need to run
-more then 100 tests.
+more than 100 tests.
 
 > prop_validWeather = forAll gen2006Date $ \dt ->
 >                     forAll genLookupFrequency $ \f ->
@@ -650,8 +634,6 @@ more then 100 tests.
 >         -- TBF: no table! but not being used: , minOpacity w f el
 >             , minTSysPrime w f el Rcvr1_2
 >             ]
-
-TBF: is this the right way to save connections?
 
 > theWeather = getWeather Nothing
 

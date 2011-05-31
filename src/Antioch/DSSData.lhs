@@ -1,6 +1,7 @@
 > module Antioch.DSSData where
 
 > import Antioch.DateTime
+> import Antioch.DBUtilities
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Reservations
@@ -799,16 +800,6 @@ Creates a new entry in the periods_receivers table.
 >                      , toSql rcvrId
 >                       ]
 >       query = "INSERT INTO periods_receivers (period_id, receiver_id) VALUES (?, ?);"
-
-You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
-
-> getRcvrId :: Connection -> Receiver -> IO Int
-> getRcvrId cnn rcvr = do
->     result <- quickQuery' cnn query xs
->     return $ fromSql . head . head $ result 
->   where
->     query = "SELECT id FROM receivers WHERE name = ?;"
->     xs = [toSql . show $ rcvr]
 
 > updateWindow :: Connection -> Period -> IO ()
 > updateWindow cnn p = handleSqlError $ do
