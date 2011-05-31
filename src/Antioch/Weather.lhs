@@ -599,7 +599,6 @@ Just some test functions to make sure things are working.
 >            , opacity w target frequency
 >            , tsys w target frequency
 >            , totalStringency w frequency elevation
->            -- , minOpacity w frequency elevation
 >            , minTSysPrime w frequency elevation)
 >   where 
 >     frequency = 2.0 :: Float
@@ -609,9 +608,10 @@ Just some test functions to make sure things are working.
 
 Quick Check Properties:
 
-TBF: 1. can't use more then 100 connections
-TBF: 2. Weather is screwed up, but these don't always find the problems: need to run
-more than 100 tests.
+Note some of the limitations to this Quick Check property:
+1. can't use more then 100 connections
+2. Weather *can be* screwed up, but sometimes you need to run more than 100 tests to catch these.
+
 
 > prop_validWeather = forAll gen2006Date $ \dt ->
 >                     forAll genLookupFrequency $ \f ->
@@ -631,7 +631,6 @@ more than 100 tests.
 >             , opacity w target f
 >             , tsys w target f
 >             , totalStringency w f el Rcvr1_2 SpectralLine
->         -- TBF: no table! but not being used: , minOpacity w f el
 >             , minTSysPrime w f el Rcvr1_2
 >             ]
 
