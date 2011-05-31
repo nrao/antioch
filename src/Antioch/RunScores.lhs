@@ -37,10 +37,6 @@ Other outside factors that affect scoring, but are more or less invariant in the
    * Receiver Temperatures
    * Receiver Schedule
 
-TBFs:
-   * Score.scorePeriod & Score.scoreSession should be able to share code, and put the IO Monad part into this module.
-   # Can Score.bestDuration also be sharing w/ scorePeriod & scoreSession better?
-
 NOTE: to make these functions accessable to unit testing:
    * the projects are passed in - this makes the unit tests independent of the projects DB; unit tests create what they need and pass it in, while the Server simply gives the results from 'getProjects'
    * test parameter - if set to True, Weather is *not* NOW, but given the origin from something predictable (like earliest period start time), and receiver schedule is ignored.  Thus we can get consistent unit test results.
