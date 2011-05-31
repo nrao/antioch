@@ -19,6 +19,11 @@
 > import System.IO.Unsafe (unsafePerformIO)
 > import Control.Monad.Trans (liftIO)
 
+What's a Strategy?  It's a different way of coming up with a telescope
+schedule using a pool of session's and their scores.  Antioch supports
+multiple strategies, but all have been deprecated except Pack.  We leave
+the other strategies in place here for illustrative purposes.
+
 We need to be able to pass down knowledge of what strategy is being run.
 One way to do this is through an enum that can, in turn, give us our
 desired Strategy.
@@ -34,6 +39,8 @@ desired Strategy.
 
 > pack             :: Strategy
 > pack sf dt dur fixed = P.pack sf dt dur fixed 
+ 
+**** Deprecated Strategies ****
 
 Little Nell was Dana's original simulator, and it scheduled sessions
 by simply scoring them at the begining of a Period.
@@ -116,8 +123,6 @@ before the strategy is first called, but since the act of scheduling a session
 may affect their candidacy, we need to run some of these filters within the 
 strategy as well.  Examples are:
    * timeLeft - if a Session has been scheduled, and subsequently used up all its useful time, remove it in the filter.
-   * timeBetween - TBF: if a Session has been scheduled recently, we may have to wait till we can do so again.
-   * TBF: what else?
 
 > constrain :: [Period] -> [Session] -> [Session]
 > constrain = filter . timeLeftHistory 
@@ -149,6 +154,8 @@ Select the highest scoring element of a list.
 >         s' <- f y
 >         return $ if s' > s then (y, s') else (x, s)
 
+**** End of Deprecated Strategies ****
+
 QuickCheck Properties:
 
 Make sure that the schedule produced by pack has no conlficts: no
@@ -161,16 +168,15 @@ overlapping periods.
 >      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
->      --validPackScores sched
 >      validScores sched &&
 >      validSchdPositions ps sched &&
 >      disobeySessionAlloted sched == [] &&
 >      disobeyProjectAlloted sched == [] &&
 >      disobeyTransit sched == []  &&
->      disobeyTimeBetween sched == [] -- TBF: also failing!
+>      disobeyTimeBetween sched == [] 
 
 Same as above, but now insert some pre-schedule periods into the problem.
-TBF: failing after 1 test!
+
 
 > prop_packValidMixedSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
@@ -183,8 +189,9 @@ TBF: failing after 1 test!
 >      honorsFixed fixed sched &&
 >      validSchdPositions' ps sched fixed &&
 >      disobeySessionAlloted sched == [] &&
->      disobeyProjectAlloted sched == [] -- &&
->      --disobeyTimeBetween sched == []
+>      disobeyProjectAlloted sched == []  &&
+>      disobeyTimeBetween sched == []
+
 
 > prop_minDurValidSchedule = forAll genScheduleProjects $ \ps ->
 >                      forAll genStartDate $ \starttime ->
@@ -193,7 +200,7 @@ TBF: failing after 1 test!
 >      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
->      validScores sched && -- TBF: allows scores of zero
+>      validScores sched && 
 >      validSchdPositions ps sched
 
 > prop_minDurValidMixedSchedule = forAll genScheduleProjects $ \ps ->
@@ -204,8 +211,8 @@ TBF: failing after 1 test!
 >      not (internalConflicts sched)  && 
 >      obeyDurations sched && 
 >      obeySchedDuration dur sched &&
->      --honorsFixed fixed sched && -- TBF: fails, by design?  
->      validScores sched && -- TBF: allows scores of zero
+>      --honorsFixed fixed sched && -- fails, by design!  
+>      validScores sched && 
 >      validSchdPositions ps sched
 
 Framework for quick checking startegies
@@ -220,21 +227,13 @@ Framework for quick checking startegies
 >     print "fixed:"
 >     print fixed' 
 >     -}
->     w <- theWeather -- TBF: is this right?
+>     w <- theWeather 
 >     w' <- newWeather w (Just starttime)
 >     rt <- getReceiverTemperatures
->     --let sess' = concatMap sessions ps
 >     let sess = zipWith (\s n -> s { sId = n, sName = show n }) (concatMap sessions ps) [0..]
 >     ps <- runScoring w' [] rt $ do
 >         fs <- genScore starttime sess
 >         strategy fs starttime dur fixed' sess
->     --print "timebetween: "
->     --print $ disobeyTimeBetween ps
->     --print $ map (\(diff, (p1, p2)) -> ((sId . session $ p1, timeBetween . session $ p1), (sId . session $ p2, timeBetween . session $ p2))) $ disobeyTimeBetween ps
->     --print "transit: : "
->     --print $ disobeyTransit ps
->     --print $ map (rad2hrs . ra . session) $ disobeyTransit ps
->     --print ps
 >     return ps
 
 
@@ -315,11 +314,11 @@ the timeBetween scoring factor won't check these quarters.
 >     startTime' p = addMinutes (quarter * (getOverhead . session $ p)) (startTime p)
 
 Make sure that we don't have a schedule that has more periods scheduled then 
-what we actually scheduled for.  TBF: right now we are scheduling an extra
+what we actually scheduled for.  
 15 minutes at the end.
 
 > obeySchedDuration :: Int -> [Period] -> Bool
-> obeySchedDuration dur ps = sum (map duration ps) <= dur -- + quarter -- TBF: qtr
+> obeySchedDuration dur ps = sum (map duration ps) <= dur 
 
 All open sessions scheduled w/ by pack should have scores much greater then 0, 
 given there are enough sessions and the weather doesn't absolutely suck.
@@ -427,17 +426,3 @@ with wrap around (ex: 23 to 2 Hours) by converting it to two ranges (ex:
 >     lstStart = utc2lstHours . addMinutes quarter . startTime $ p
 >     lstEnd = utc2lstHours . periodEndTime $ p
 
-> disobeyRcvrSchedule :: ReceiverSchedule -> [Period] -> [Period]
-> disobeyRcvrSchedule rs ps = if rs == [] then [] else filter (disobeyRcvrSchedule' rs) ps
-
-Is the given period overlapping with any time in which the period's rcvr(s)
-aren't available?
-TBF: not done yet!
-
-> disobeyRcvrSchedule' :: ReceiverSchedule -> Period -> Bool
-> disobeyRcvrSchedule' rs p = False -- any (overlap pRng) (rcvrBlackouts rs p)
->   where
->     pRng = (startTime p, endTime p)
->     rcvrBlackouts rs p = [] -- TBF: when is p's rcvr not available?
->     
-> 

@@ -136,7 +136,8 @@ similar test in SimulationTests.
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 
-TBF: constrain has not been fully implemented yet
+Note: constrain has not been fully implemented yet - but it's only used for 
+the deprecated Strategies, not Pack (so who cares)!
 
 > test_constrain = TestCase $ do
 >     assertEqual "ScheduleTests_test_constrain_1" ss (constrain [] ss)
