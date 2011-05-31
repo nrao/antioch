@@ -53,9 +53,6 @@
 >   dt7 = fromGregorian 2006 2 3 12 9 0 -- 24:09 V
 >   dt8 = fromGregorian 2006 2 3 13 9 0 -- 25:09 V
 
-TBF I just do not understand what this test is trying to accomplish,
-because of dateSafe should they all not return the 2006 value?
-
 > test_years = TestCase $ do 
 >   test_year dt05 n
 >   test_year dt06 val06
@@ -113,7 +110,6 @@ because of dateSafe should they all not return the 2006 value?
 >         w <- getWeatherTest . Just $ dt
 >         return $ [ wind w target
 >                  , gbt_wind w target
->         -- TBF: this does not work & is not being used: , tatm w target
 >                  , opacity w target f
 >                  , tsys w target f
 >                  , totalStringency w f el Rcvr1_2 SpectralLine 
@@ -136,8 +132,6 @@ finding any forecast can actually be successful.  To support this test, we
 inserted the following into the 'weather' DB:
 insert into weather_dates values (DEFAULT, '2007-01-01 01:00:00');
 insert into forecasts values (DEFAULT, 3, 12554, 99.99);
-
-TBF again I have not the foggiest what is about here
 
 > test_fetchAnyWind = TestCase $ do
 >   let dt = fromGregorian 2007 1 1 1 0 0
@@ -267,14 +261,4 @@ to 2006 date.
 >          tsys100 <- tsys w dt 100
 >          print $ (toSqlString dt) ++ ":" ++ (sv wind') ++ (sv wind_mph') ++ (sv ir) ++ (sv op2) ++ (sv tsys2)  ++ (sv op20) ++ (sv tsys20) ++ (sv op100) ++ (sv tsys100)
 >       sv v = " " ++ (show $ fromMaybe (-1.0) v)
-
-Test utilities
-
-TBF: place this in utils ...
-
-> assertAlmostEqual :: String -> Int -> Float -> Float -> IO ()
-> assertAlmostEqual name places expected value =
->     assertBool name $ abs (value - expected) < epsilon
->   where
->     epsilon = 1.0 / 10.0 ** fromIntegral places
 
