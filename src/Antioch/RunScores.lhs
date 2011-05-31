@@ -157,7 +157,7 @@ Example params:
 >     let rfi         = fromJust . fromJust . lookup "rfi" $ params
 >     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
 >     let blackout    = fromJust . fromJust . lookup "blackout" $ params
->     -- TBF: filer #1
+>     -- Using the flags from above, what optional scoring factors should we include? 
 >     let sfs = catMaybes [if rfi == "true" then Nothing else Just needsLowRFI
 >                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
 >                        , if blackout == "true" then Nothing else Just observerAvailable
@@ -166,7 +166,8 @@ Example params:
 >     let backup = fromJust . fromJust . lookup "backup" $ params
 >     -- include completed sessions?
 >     let completed = fromJust . fromJust . lookup "completed" $ params
->     -- TBF: filter #2
+>     -- Using the above two flags, construct the list of filters to apply against our
+>     -- pool of candidate sessions
 >     let filter = catMaybes . concat $ [
 >             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
 >           , [Just isNotMaintenance]
@@ -188,9 +189,10 @@ Example params:
 > 
 >     -- find the nominees
 >     nominees <- liftIO $ runScoring w rs rt $ do
->         -- TBF: apply filter #1
+>         -- generate the scoring function, adding on whatever optional scoring functions were
+>         -- selected from above
 >         sf <- genPartScore dt sfs . scoringSessions dt undefined $ ss
->         -- TBF: apply filter #2
+>         -- apply the filter we constructed from above
 >         durations <- bestDurations sf dt lower upper $ schedSessions ss
 >         return durations
 >     return nominees
