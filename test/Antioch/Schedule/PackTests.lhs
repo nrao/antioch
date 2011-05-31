@@ -22,7 +22,7 @@
 >   , test_Unwind1
 >   , test_Unwind2
 >   , test_Unwind3
->   -- , test_Unwind4 -- TBF: scoring pre-scheduled periods wrong!
+>   , test_Unwind4 
 >   , test_Unwind_Big
 >   , test_takeWhilen
 >   , test_candidates1
@@ -59,10 +59,10 @@
 >   , test_Pack1
 >   , test_Pack1'
 >   , test_PackTransit1
->   --, test_PackTransit2
->   --, test_PackBt
->   --, test_Pack2
->   --, test_Pack3
+>   , test_PackTransit2
+>   , test_pack_timeBetween
+>   , test_Pack2
+>   , test_Pack3
 >   , test_Pack4
 >   , test_Pack5
 >   , test_Pack6
@@ -86,7 +86,7 @@
 >   , test_PackWorker4
 >   , test_packWorker_timeBetween
 >   , test_packWorker_example
->   -- , test_PackWorker5 -- TBF: related to test_Unwind5
+>   , test_PackWorker5 
 >   , test_PackWorkerSimple
 >   , test_RandomScore
 >   , test_RandomScore2
@@ -212,13 +212,9 @@ Begin tests:
 >     xs = [Candidate 1 0 0 4 4.0]
 >     ys = [Just (Candidate 1 0 0 4 4.0), Just (Candidate 1 0 0 3 3.0), Just (Candidate 1 0 0 2 2.0), Nothing, Nothing]
 
-TBF: this test may be exposing the bug wherein the fixed candiate gets a 
-negative score.
-WTF is going on?  Why is the expected score of F1 in xs 0.0????
-
 > test_Unwind4 = TestCase . assertEqual "test_Unwind4" xs . unwind $ ys
 >   where
->     xs = [Candidate "B" 0 0 3 0.75, Candidate "F1" 0 3 1 0.0]
+>     xs = [Candidate "B" 0 0 3 0.75, Candidate "F1" 0 3 1 0.25]
 >     ys = [     Just (Candidate "F1" 0 0 1 1.0)
 >              , Just (Candidate "B" 0  0 3 0.75)
 >              , Just (Candidate "B" 0  0 2 0.50)
@@ -932,8 +928,6 @@ Same as test above, now just checking the affect of pre-scheduled periods:
 >                              , pForecast = dt1
 >                              }
 
-TBF: are the candidate values for cStart & cDur correct?
-
 > test_ToSchedule = TestCase $ do
 >     assertEqual "test_ToSchedule" expected result
 >   where
@@ -942,7 +936,6 @@ TBF: are the candidate values for cStart & cDur correct?
 >     fixed = Period 0 defaultSession ft 30 0.0 Pending ft False 30
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed]
->     -- TBF: are the candidate values for cStart & cDur correct?
 >     candidates = map (\d -> Just $ Candidate defaultSession 0 0 d 0.0) [1, 2]
 >     expected = (replicate 8 Nothing) ++ candidates ++ (replicate 22 Nothing) 
 
@@ -958,7 +951,6 @@ Same test, >1 fixed
 >     fixed2 = Period 0 defaultSession ft2 30 0.0 Pending ft2 False 30
 >     dts = quarterDateTimes starttime (8*60)
 >     result = toSchedule dts [fixed1,fixed2]
->     -- TBF: are the candidate values for cStart & cDur correct?
 >     candidates1 = map (\d -> Just $ Candidate defaultSession 0 0 d 0.0) [1, 2]
 >     candidates2 = map (\d -> Just $ Candidate defaultSession 0 0 d 0.0) [1, 2]
 >     expected = (replicate 8 Nothing) ++ candidates1 ++ (replicate 8 Nothing)
@@ -1066,24 +1058,25 @@ Simplest test case of high-level 'pack': schedule a single candidate.
 >     expStartTime = fromGregorian 2006 2 19 22 30 0
 >     expPeriod = Period 0 candidate expStartTime 360 3.0550473 Pending expStartTime False 360
 
-TBF Is this just a random test that the results can be changed, or
-is it testing some specific aspect of packing, i.e., what deos Bt
-stand for?
-
-> test_PackBt = TestCase $ do
+> test_pack_timeBetween = TestCase $ do
 >     w <- getWeatherTest . Just $ starttime 
 >     rt <- getRT
+>     -- pack with the first session: just one period created
 >     periods1' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate1]
 >         pack fs starttime duration [] [candidate1]
 >     assertEqual "test_PackBt_1" 1 (length periods1')
 >     assertEqual "test_PackBt_2" expPeriod1 (head periods1')
+>     -- the second session has a much smaller min/max duration:
+>     -- but 4 periods of this session are packed
 >     periods2' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate2]
 >         pack fs starttime duration [] [candidate2]
 >     assertEqual "test_PackBt_3" 4 (length periods2')
 >     assertEqual "test_PackBt_4" expPeriod2_1 (head periods2')
 >     assertEqual "test_PackBt_5" expPeriod2_2 (head . tail $ periods2')
+>     -- now pack with the same session, but it has a big time between
+>     -- and see how we're back to just one period scheduled.
 >     periods3' <- runScoring w [] rt $ do
 >         fs <- genScore starttime [candidate3]
 >         pack fs starttime duration [] [candidate3]
@@ -1092,7 +1085,6 @@ stand for?
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     duration = 14*60
->     --duration = 12*60
 >     candidate1 = defaultSession {sName = "singleton1"
 >                                , sAllottedT = 24*60
 >                                , sAllottedS = 24*60
@@ -1103,6 +1095,7 @@ stand for?
 >                                , timeBetween = 0
 >                                , project = testProject
 >                                }
+>     -- change the min/max duration
 >     candidate2 = defaultSession {sName = "singleton2"
 >                                , sAllottedT = 24*60
 >                                , sAllottedS = 24*60
@@ -1113,6 +1106,7 @@ stand for?
 >                                , receivers = [[Rcvr1_2]]
 >                                , project = testProject
 >                                }
+>     -- now add a big time between
 >     candidate3 = defaultSession {sName = "singleton3"
 >                                , sAllottedT = 24*60
 >                                , sAllottedS = 24*60
@@ -1127,8 +1121,9 @@ stand for?
 >     expStartTime2 = fromGregorian 2006 11 8 22 45 0
 >     expStartTime3 = fromGregorian 2006 11 8 22 30 0
 >     expStartTime4 = fromGregorian 2006 11 8 22  0 0
+>     expStartTime5 = fromGregorian 2006 11 8 21  45 0
 >     expPeriod1 = Period 0 candidate1 expStartTime1 135 2.8371732 Pending expStartTime1 False 135
->     expPeriod2_1 = Period 0 candidate2 expStartTime4 60 2.0238378 Pending expStartTime1 False 60
+>     expPeriod2_1 = Period 0 candidate2 expStartTime5 60 2.0238378 Pending expStartTime1 False 60
 >     expPeriod2_2 = Period 0 candidate2 expStartTime2 60 3.1227193 Pending expStartTime2 False 60
 >     expPeriod3 = Period 0 candidate3 expStartTime3 60 2.3257873 Pending expStartTime3 False 60
 
@@ -1158,9 +1153,6 @@ produce changes in the final result.
 >                 , fromGregorian 2006 11 9   8 30 0 ]
 >         scores = [2.9446945, 3.260362, 3.2440414]
 
-Same test, but this time, stick some fixed periods in there.
-TBF: the pre-scheduled periods scores are getting mangled in the final schedule.
-
 Build up to this case with the simplest examples possible:
 
 > test_PackWorkerSimple =
@@ -1189,12 +1181,11 @@ These results are then used in test_Unwind3.
 >     open   = map step open'
 
 Same as above, but with one time segment pre-scheduled:
-TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 
 > test_PackWorker'Simple2 =
 >     TestCase . assertEqual "test_PackWorkerSimple2" result . packWorker' 0 fixed past $ open
 >   where
->     result = [ Just (Candidate "F1" 0 0 1 0.0)
+>     result = [ Just (Candidate "F1" 0 0 1 0.0) 
 >              , Just (Candidate "B"  0 0 3 0.50)
 >              , Just (Candidate "B"  0 0 2 0.25)
 >              , Nothing
@@ -1209,13 +1200,15 @@ TBF: These results are then used in test_Unwind4, which doesn't pass!!!!
 >     open'  =  [item  "B" 2 4 (replicate 4 0.25) []]
 >     open   = map step open'
 
-TBF: Scores not right due to negative score for F1 !!!
+This test demonstrates how unwind (called after packWorker' inside of packWorker)
+will mangle the scores for the pre-scheduled periods we pack around.
+That's okay, we make up for it in 'pack' using restoreFixed.
 
 > test_PackWorker5 =
 >     TestCase . assertEqual "test_PackWorker5" result . packWorker fixed $ open
 >   where
 >     result = [ Candidate "B"  0 0 8 1.925
->              , Candidate "F1" 0 8 2 0.0 -- bug: -1.925
+>              , Candidate "F1" 0 8 2 (-1.925)
 >              ]
 >     fixed  = [ Nothing                         --  0
 >              , Nothing                         --  1
@@ -1225,7 +1218,7 @@ TBF: Scores not right due to negative score for F1 !!!
 >              , Nothing                         --  5
 >              , Nothing                         --  6
 >              , Nothing                         --  7
->              , Just (Candidate "F1" 0 0 1 0.0) --  8 bug: durrs = 1 & 2?
+>              , Just (Candidate "F1" 0 0 1 0.0) --  8 
 >              , Just (Candidate "F1" 0 0 2 0.0) --  9 
 >              , Nothing                         --  10
 >              , Nothing                         --  11
@@ -1446,6 +1439,11 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     assertEqual "test_Pack9_4" (2*60) (duration (last periods'))
 >     assertEqual "test_Pack9_5" "candidate" (sName . session . last $ periods')
 >     -- TBF: uncomment this too see the BUG!!! WTF.
+>     -- From the Story for this Bug:
+>     {-
+>     Pack's queryPast function looks at the Candidates durations - but if these Candidates are from pre-scheduled periods, those pre-scheduled periods durations may not be equal to pDuration (the billed time).
+>     This will be very rare, so I don't think it's worth tackling, but worth noting.
+>     -}
 >     -- now push the sessions periods w/ out billed time to w/ in the
 >     -- range of pack (put it where that fixed period was), and watch
 >     -- the bug: pack thinks the session has no more time left

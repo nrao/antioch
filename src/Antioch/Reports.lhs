@@ -1420,7 +1420,7 @@ The standard list of plots (that need no extra input).
 >                       , ("trkEff", trkEffDetails)
 >                        ]
 >     -- compare window efficinces: chosen vs. default periods
->     windowEffs <- compareWindowPeriodEfficiencies winfo w
+>     windowEffs <- compareWindowPeriodEfficiencies winfo w rs
 >     end <- getCurrentTime
 >     print $ "Calc More Efficiencies Time: " ++ (show $ end - begin)
 >     -- text reports 

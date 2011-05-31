@@ -51,11 +51,11 @@ To Do List (port from Statistics.py):
    * historical pressure vs lst
       Need historical pressures
 
-> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> Weather -> IO [((Period, Float), (Period, Float))]
-> compareWindowPeriodEfficiencies winfo w = do
+> compareWindowPeriodEfficiencies :: [(Window, Maybe Period, Period)] -> Weather -> ReceiverSchedule -> IO [((Period, Float), (Period, Float))]
+> compareWindowPeriodEfficiencies winfo w rs = do
 >     --w <- getWeather Nothing
->     dpsEffs <- historicalSchdMeanObsEffs dps w
->     cpsEffs <- historicalSchdMeanObsEffs cps w
+>     dpsEffs <- historicalSchdMeanObsEffs dps w rs
+>     cpsEffs <- historicalSchdMeanObsEffs cps w rs
 >     return $ zip (zip cps cpsEffs) (zip dps dpsEffs)
 >   where
 >     dps = concat $ map (\(w, mc, d) -> if isJust mc then [d] else []) winfo 
@@ -107,48 +107,6 @@ To Do List (port from Statistics.py):
 >     firstDt = startTime $ head ps
 >     lastDt  = startTime $ last ps
 
-Remaining Time here refers to the remaining time used in the pressure
-factor calculation.  See Score.initBins'.
-Given a pool of sessions, a start time, and a number of days, produces:
-[(day #, sum of 'remaining time' for that day #)]; 
-TBF: this was created in an attempt to reproduce the components of the 
-preassure plots, but I believe that they were deprecated because we really
-need to use the trace to do this correctly.
-
-> remainingTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
-> remainingTimeByDays [] _ _ = []
-> remainingTimeByDays ss start numDays = map fracRemainingTime days
->   where
->     days = [0 .. (numDays + 1)]
->     fracRemainingTime day = (fromIntegral day, totalRemaining day)
->     --totalRemaining day = fractionalHours . sum $ map (rho (toDt day)) $ ss 
->     totalRemaining day = fractionalHours . sum $ map (remaining (toDt day)) $ ss 
->     toDt day = (day * 24 * 60) `addMinutes` start
->     remaining dt s = (rho dt s) + (sPastS dt s)
->     -- this is simply cut and paste from Score.initBins'
->     rho dt s
->       | isActive s dt = max 0 (sFutureS dt s)
->       | otherwise  = 0
->     -- here, Scomplete -> sTerminated to avoid looking at sAvailT (==0)
->     isActive s dt = (isAuthorized s dt) && (not . sTerminated $ s)
->     isAuthorized s dt = (semester . project $ s) <= (dt2semester dt)
-
-Given a pool of sessions, a start time, and a number of days, produces:
-[(day #, sum of SPastS for that day #)]; 
-TBF: this was created in an attempt to reproduce the components of the 
-preassure plots, but I believe that they were deprecated because we really
-need to use the trace to do this correctly.
-See Also Score.initBins'.
-
-> pastSemesterTimeByDays :: [Session] -> DateTime -> Int -> [(Float, Float)]
-> pastSemesterTimeByDays [] _ _ = []
-> pastSemesterTimeByDays ss start numDays = map fracSemesterTime days
->   where
->     days = [0 .. (numDays + 1)]
->     fracSemesterTime day = (fromIntegral day, totalSemester day)
->     totalSemester day = fractionalHours . sum $ map (sPastS (toDt day)) $ ss 
->     toDt day = (day * 24 * 60) `addMinutes` start
-
 > historicalSchdObsEffs ps = historicalSchdFactors ps observingEfficiency
 > historicalSchdAtmEffs ps = historicalSchdFactors ps atmosphericEfficiency
 > historicalSchdTrkEffs ps = historicalSchdFactors ps trackingEfficiency
@@ -169,83 +127,79 @@ for the given scoring factor that the periods' sessions had when they
 were scheduled.  Currently this is used to check all the schedules scores
 for normalicy (0 < score < 1).
 
-> historicalSchdFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
-> historicalSchdFactors ps sf w = do
+> historicalSchdFactors :: [Period] -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> historicalSchdFactors ps sf w rs = do
 >   --w <- getWeather Nothing
->   fs <- mapM (periodSchdFactors' w) ps
+>   fs <- mapM (periodSchdFactors' w rs) ps
 >   return $ concat fs
 >     where
->       periodSchdFactors' w p = periodSchdFactors p sf w
+>       periodSchdFactors' w rs p = periodSchdFactors p sf w rs
 
 This function can be useful if invalid scores are encountered, and the 
 offending period/session/project needs to be revealed.
 
-> historicalSchdFactorsDebug :: [Period] -> ScoreFunc -> IO [(Float,Period)]
-> historicalSchdFactorsDebug ps sf = do
+> historicalSchdFactorsDebug :: [Period] -> ScoreFunc -> ReceiverSchedule -> IO [(Float,Period)]
+> historicalSchdFactorsDebug ps sf rs = do
 >   w <- getWeather Nothing
->   fs <- mapM (periodSchdFactors' w) ps
+>   fs <- mapM (periodSchdFactors' w rs) ps
 >   return $ concat $ zipWith (\x y -> map (\y' -> (y', x)) y) ps fs --concat fs
 >     where
->       periodSchdFactors' w p = periodSchdFactors p sf w
+>       periodSchdFactors' w rs p = periodSchdFactors p sf w rs
 
 For the given list of periods, returns the mean of the scoring factor given
 at the time that the periods' session was scheduled.  In other words, this
 *almost* represents the exact scoring result for the periods' session at the
-time the periods were scheduled (see TBF).
-TBF: the use of mean' might cause misunderstandings, since pack zero's out
+time the periods were scheduled.
+Note: the use of mean' might cause misunderstandings, since pack zero's out
 the first quarter.  We should be using the weighted average found in Score.
 
-> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
-> historicalSchdMeanFactors ps sf w = do
+> historicalSchdMeanFactors :: [Period] -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> historicalSchdMeanFactors ps sf w rs = do
 >   --w <- getWeather Nothing
->   fs <- mapM (periodSchdFactors' w) ps
+>   fs <- mapM (periodSchdFactors' w rs) ps
 >   return $ map mean' fs
 >     where
->       periodSchdFactors' w p = periodSchdFactors p sf w
+>       periodSchdFactors' w rs p = periodSchdFactors p sf w rs
 
 Same as historicalSchdMeanFactors, except calculates the efficiencies
 that the period would have observed at.
 
-> historicalObsMeanFactors :: [Period] -> ScoreFunc -> Weather -> IO [Float]
-> historicalObsMeanFactors ps sf w = do
+> historicalObsMeanFactors :: [Period] -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> historicalObsMeanFactors ps sf w rs = do
 >   --w <- getWeather Nothing
->   fs <- mapM (periodObsFactors' w) ps
+>   fs <- mapM (periodObsFactors' w rs) ps
 >   return $ map mean' fs
 >     where
->       periodObsFactors' w p = periodObsFactors p sf w
+>       periodObsFactors' w rs p = periodObsFactors p sf w rs
 
 For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it was scheduled*.
 In other words, recreates the conditions for which this period was scheduled.
 
-> periodSchdFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
-> periodSchdFactors p sf w = do
+> periodSchdFactors :: Period -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> periodSchdFactors p sf w rs = do
 >   rt <- getReceiverTemperatures
 >   -- this step is key to ensure we use the right forecasts
 >   w' <- newWeather w $ Just $ pForecast p
 >   fs <- runScoring w' rs rt $ factorPeriod p sf  
 >   return $ map eval fs
->     where
->   rs = [] -- TBF: how to pass this down?
 
 For the given period and scoring factor, returns the value of that scoring
 factor at each quarter of the period *for the time it observed*.
 
-> periodObsFactors :: Period -> ScoreFunc -> Weather -> IO [Float]
-> periodObsFactors p sf w = do
+> periodObsFactors :: Period -> ScoreFunc -> Weather -> ReceiverSchedule -> IO [Float]
+> periodObsFactors p sf w rs = do
 >   rt <- getReceiverTemperatures
->   fs <- mapM (periodObsFactors' p sf w rt) dts 
+>   fs <- mapM (periodObsFactors' p sf w rt rs) dts 
 >   return $ map eval fs
 >     where
 >   dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
-> periodObsFactors' :: Period -> ScoreFunc -> Weather -> ReceiverTemperatures -> DateTime -> IO Factors
-> periodObsFactors' p sf w rt dt = do
+> periodObsFactors' :: Period -> ScoreFunc -> Weather -> ReceiverTemperatures -> ReceiverSchedule -> DateTime -> IO Factors
+> periodObsFactors' p sf w rt rs dt = do
 >   -- this ensures we'll use the best forecasts and gbt_weather
 >   w' <- newWeather w $ Just dt   
 >   runScoring w' rs rt $ sf dt (session p) 
->     where
->   rs = [] -- TBF: how to pass this down?
 
 > sessionDecFreq :: [Session] -> [(Float, Radians)]
 > sessionDecFreq = dec `vs` frequency

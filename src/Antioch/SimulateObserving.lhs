@@ -149,5 +149,5 @@ using the weather placed an hour before the period we wish to replace.
 >   w <- weather
 >   let wDt = addMinutes (-60) (startTime p) -- 1 hr before period starts
 >   w' <- liftIO $ newWeather w (Just wDt)
->   local (\env -> env { envWeather = w' }) $ averageScore' sf (startTime p) (duration p) s  
+>   local (\env -> env { envWeather = w' }) $ averageScore sf (startTime p) (duration p) s  
 

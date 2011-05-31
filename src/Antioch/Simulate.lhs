@@ -126,7 +126,6 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 > getNewlyScheduledWindowInfo ss ps = getWindowInfo ss $ map fst $ findNotCompleteWindows ss ps
 
 Find those windows that are newly scheduled; that is, they are not complete yet.
-TBF: Unit test
 
 > findNotCompleteWindows :: [Session] -> [Period] -> [(Period, Window)]
 > findNotCompleteWindows ss ps = filterNotCmp $ zip wps (getWindows ss wps)
@@ -135,7 +134,6 @@ TBF: Unit test
 >     filterNotCmp = filter (\(p,w) -> not . wComplete $ w) 
 
 For the given list of sessions and periods
-TBF: Unit test
 
 > getWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
 > getWindowInfo ss ps = zip3 wins chosen dps 
@@ -147,8 +145,6 @@ TBF: Unit test
 
 Retrieve all the windows belonging to the given periods' session.
 
-TBF: Unit test
-
 > getWindows :: [Session] -> [Period] -> [Window]
 > getWindows ss ps = map (getWindow wss) wps
 >   where
@@ -158,7 +154,6 @@ TBF: Unit test
 Retrieve the window belonging to the given period's session.
 Note we pass along all sessions so that we don't have to rely on the session tied to
 the given period being up to date - this is the knot tying problem.
-TBF: Unit test
 
 > getWindow :: [Session] -> Period -> Window
 > getWindow ss p = fromJust $ find (periodInWindow' p) (windows s)
@@ -218,7 +213,6 @@ to future trimesters.
 
 If the given period is found in the given list of periods, compare
 their states.  Used for finding what periods just got published.
-TBF: needs unit test
 
 > newlyPublished :: [Period] -> Period -> Bool 
 > newlyPublished history p = case find (==p) history of
@@ -313,7 +307,6 @@ For a given session, and it's:
    * existing periods to publish
    * canceled periods to remove
 Returns the sessions new periods (ready for makeSession).
-TBF: needs unit test
 
 > updateSessionPeriods :: Session -> [Period] -> [Period] -> [Period] -> [Period]
 > updateSessionPeriods s published canceled newPs = sort $ updatePublishedPeriods published $ (removeCanceled s canceled) ++ newPs
@@ -323,7 +316,6 @@ periods, with periods that appear in the published list updated (published)
 Note: the given list of published periods do not have to be for the same
 session as the other periods, since identity for periods depends on 
 the parent session.
-TBF: needs unit test
 
 > updatePublishedPeriods :: [Period] -> [Period] -> [Period]
 > updatePublishedPeriods published ps = map (publish published) ps

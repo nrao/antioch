@@ -113,19 +113,19 @@ similar test in SimulationTests.
 >       w      <- getWeatherTest . Just $ dt
 >       (s, score) <- runScoring w [] rt $ do
 >           sf <- genScore dt sess
->           best (averageScore sf dt2) sess 
+>           best (averageScore' sf dt2) sess 
 >       assertEqual "ScheduleTests_test_best1" expSession1 s
 >       assertEqual "ScheduleTests_test_best2" expScore1 score
 >       -- make sure it can handle just one session
 >       (s, score) <- runScoring w [] rt $ do
 >           sf <- genScore dt sess
->           best (averageScore sf dt2) [(head sess)] 
+>           best (averageScore' sf dt2) [(head sess)] 
 >       assertEqual "ScheduleTests_test_best3" expSession2 s
 >       assertEqual "ScheduleTests_test_best4" expScore2 score
 >       -- does not handle no sessions, this produces and error
 >       --(s, score) <- runScoring w [] rt $ do
 >       --    sf <- genScore dt sess
->       --    (best (averageScore sf dt2) []) 
+>       --    (best (averageScore' sf dt2) []) 
 >       --assertEqual "ScheduleTests_test_best" True True
 >   where
 >     sess = getOpenPSessions
@@ -136,7 +136,8 @@ similar test in SimulationTests.
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 
-TBF: constrain has not been fully implemented yet
+Note: constrain has not been fully implemented yet - but it's only used for 
+the deprecated Strategies, not Pack (so who cares)!
 
 > test_constrain = TestCase $ do
 >     assertEqual "ScheduleTests_test_constrain_1" ss (constrain [] ss)

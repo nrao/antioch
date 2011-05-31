@@ -234,7 +234,9 @@ more constraints.
 >   s' = getSchedulableSession { sType = Windowed }
 >   -- a week long window
 >   -- give it a lot of time at first so that we can see the window range
->   -- TBF: anything more then 2 days causes an exception!!!! WTF!!!!
+>   -- NOTE: because dailySchedule will only schedule one chosen period
+>   -- per scheduling range, we can't give this window more time then the
+>   -- scheduling range!
 >   wtime = (2*24*60)
 >   winStart1 = fromGregorian' 2006 10 12
 >   wr = [(winStart1, addMinutes (7*24*60) winStart1)]
@@ -287,7 +289,6 @@ Utilities:
 > getSchedulableProject = makeProject proj' (100*60) (100*60) [s']
 >   where
 >     -- simplest session that can be scheduled at anytime
->     -- TBF: hour angle limit fails on this occassionally - shouldn't happen
 >     proj' = defaultProject { pAllottedT = 100*60 }
 >     s' = defaultSession { sAllottedT = 100*60
 >                         , sAllottedS = 100*60

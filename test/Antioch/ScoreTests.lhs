@@ -94,9 +94,9 @@
 >   , test_score_window
 >   , test_bestDuration
 >   , test_bestDurations
->   , test_averageScore
->   , test_averageScore2
 >   , test_averageScore'
+>   , test_averageScore'2
+>   , test_averageScore
 >   , test_obsAvailable
 >   , test_obsAvailable2
 >   , test_obsAvailable3
@@ -106,8 +106,6 @@
 >   , test_needsLowRFI
 >   , test_lstExcepted
 >   , test_enoughTimeBetween
->   , test_receiverBoost
->   , test_receiverBoost2
 >   , test_observerOnSite
 >   , test_scorePeriodOverhead
 >   , test_scorePeriod
@@ -1656,7 +1654,7 @@ plus 40 quarters.
 >   where
 >     starttime = fromGregorian 2006 10 1 17 0 0
 
-> test_averageScore = TestCase $ do
+> test_averageScore' = TestCase $ do
 >     w <- getWeatherTest . Just $ starttime 
 >     rt <- getReceiverTemperatures
 >     let score' w dt = runScoring w [] rt $ do
@@ -1669,7 +1667,7 @@ plus 40 quarters.
 >     assertEqual "test_score1" expected scoreTotal
 >     avgScore <- runScoring w [] rt $ do
 >         fs <- genScore starttime [sess]
->         averageScore fs starttime sess
+>         averageScore' fs starttime sess
 >     assertEqual "test_score2" expected avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
@@ -1683,7 +1681,7 @@ plus 40 quarters.
 
 Look at the scores over a range where none are zero.
 
-> test_averageScore2 = TestCase $ do
+> test_averageScore'2 = TestCase $ do
 >     w <- getWeatherTest . Just $ starttime 
 >     rt <- getReceiverTemperatures
 >     (scoreTotal, scoreTotal', avgScore) <- runScoring w [] rt $ do
@@ -1691,11 +1689,11 @@ Look at the scores over a range where none are zero.
 >         scores <- lift $ mapM (score' w rt sf) times
 >         let scoreTotal = addScores scores
 >         scoreTotal' <- totalScore sf dt dur sess
->         avgScore <- averageScore sf dt sess
+>         avgScore <- averageScore' sf dt sess
 >         return (scoreTotal, scoreTotal', avgScore)
->     assertEqual "test_averageScore2_addScores" expectedTotal scoreTotal
->     assertEqual "test_averageScore2_totalScore" expectedTotal scoreTotal'
->     assertEqual "test_averageScore2_avgScore" expectedAvg avgScore
+>     assertEqual "test_averageScore'2_addScores" expectedTotal scoreTotal
+>     assertEqual "test_averageScore'2_totalScore" expectedTotal scoreTotal'
+>     assertEqual "test_averageScore'2_avgScore" expectedAvg avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     dur = 2*60
@@ -1714,7 +1712,7 @@ Look at the scores over a range where none are zero.
 >     expectedTotal = 3.8158395 
 >     expectedAvg = expectedTotal / (fromIntegral numQtrs)
 
-> test_averageScore' = TestCase $ do
+> test_averageScore = TestCase $ do
 >     w <- getWeatherTest . Just $ starttime 
 >     rt <- getReceiverTemperatures
 >     let score' w dt = runScoring w [] rt $ do
@@ -1724,11 +1722,11 @@ Look at the scores over a range where none are zero.
 >     scores <- mapM (score' w) times
 >     let scoreTotal = addScores scores
 >     let expected = 0.0
->     assertEqual "test_averageScore'_1" expected scoreTotal
+>     assertEqual "test_averageScore_1" expected scoreTotal
 >     avgScore <- runScoring w [] rt $ do
 >         fs <- genScore starttime [sess]
->         averageScore' fs starttime dur sess
->     assertEqual "test_averageScore'_2" expected avgScore
+>         averageScore fs starttime dur sess
+>     assertEqual "test_averageScore_2" expected avgScore
 >   where
 >     starttime = fromGregorian 2006 11 8 12 0 0
 >     dur = 2*60
@@ -1989,67 +1987,6 @@ Like test_obsAvailbe, but with required friends
 >                                    , pDuration = 60
 >                                     }
 >       
-
-Assumes the Rcvr getting boosted is Rcvr_1070.
-
-> test_receiverBoost = TestCase $ do
->   assertEqual "test_receiverBoost_1"  False (receiverBoost' s1)
->   assertEqual "test_receiverBoost_2"  False (receiverBoost' s2)
->   assertEqual "test_receiverBoost_3"  False (receiverBoost' s3)
->   assertEqual "test_receiverBoost_4"  False (receiverBoost' s4)
->   assertEqual "test_receiverBoost_5"  True  (receiverBoost' s5)
->   assertEqual "test_receiverBoost_6"  False (receiverBoost' s6)
->   assertEqual "test_receiverBoost_7"  True  (receiverBoost' s7)
->   assertEqual "test_receiverBoost_8"  False (receiverBoost' s8)
->   assertEqual "test_receiverBoost_9"  False (receiverBoost' s9)
->   assertEqual "test_receiverBoost_10" False (receiverBoost' s10)
->     where
->       boost = Rcvr_1070
->       s = defaultSession { grade = 4.0 }
->       -- just L band
->       s1 = s { receivers = [[Rcvr1_2]] }
->       -- L or S
->       s2 = s { receivers = [[Rcvr1_2, Rcvr2_3]] }
->       -- L and S
->       s3 = s { receivers = [[Rcvr1_2], [Rcvr2_3]] }
->       -- L or (S and C)
->       s4 = s { receivers = [[Rcvr1_2,Rcvr4_6], [Rcvr1_2,Rcvr2_3]] }
->       -- now start including the boosted rcvr
->       s5 = s { receivers = [[boost]] }
->       -- L or boost 
->       s6 = s { receivers = [[Rcvr1_2, boost]] }
->       -- L and boost
->       s7 = s { receivers = [[Rcvr1_2], [boost]] }
->       -- boost or (S and C)
->       s8 = s { receivers = [[boost,Rcvr4_6], [boost,Rcvr2_3]] }
->       -- L or (boost and C)
->       s9 = s { receivers = [[Rcvr1_2,boost], [Rcvr1_2,Rcvr2_3]] }
->       -- Grade B's don't get the boost
->       s10 = defaultSession { receivers = [[boost]], grade = 3.0 }
-
-> test_receiverBoost2 = TestCase $ do
->   assertEqual "test_receiverBoost2_1"  False (receiverBoost' s1)
->   assertEqual "test_receiverBoost2_2"  False (receiverBoost' s2)
->   assertEqual "test_receiverBoost2_3"  False (receiverBoost' s3)
->   assertEqual "test_receiverBoost2_4"  True  (receiverBoost' s4)
->   assertEqual "test_receiverBoost2_5"  True  (receiverBoost' s5)
->   assertEqual "test_receiverBoost2_6"  False (receiverBoost' s6)
->     where
->       b1 = Rcvr_1070
->       b2 = Rcvr_450
->       s = defaultSession { grade = 4.0 }
->       -- just L band
->       s1 = s { receivers = [[Rcvr1_2]] }
->       -- L or S
->       s2 = s { receivers = [[Rcvr1_2, Rcvr2_3]] }
->       -- L or boost
->       s3 = s { receivers = [[Rcvr1_2, b1]] }
->       -- boost 1 or 2
->       s4 = s { receivers = [[b1, b2]] }
->       -- boost 1 and 2
->       s5 = s { receivers = [[b1], [b2]] }
->       -- L or (boost 1 and 2)
->       s6 = s { receivers = [[Rcvr1_2, b1], [Rcvr1_2, b2]] }
 
 > test_observerOnSite = TestCase $ do
 >   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
