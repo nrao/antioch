@@ -79,7 +79,8 @@ class SamplerData:
             #print msg,
             #sys.stdout.flush()
 
-            # TBF: what to do about compressed files?
+            # Note: we aren't worried about compressed files, since the
+            # DSS should be reading recent sampler data.
             hdulist = pyfits.open(f)
             hdudata = hdulist[1].data
             numRows = hdudata.size
@@ -87,7 +88,7 @@ class SamplerData:
             columnData = [ [], [], [] ]
             for i, colNo in enumerate(columns):
                 columnData[i].extend( hdudata.field(columns[i]) )
-            # TBF: we could do this better by using a query in the collection
+            # Note: we could do this better by using a query in the collection
             # of the data (see Pyfits manual)
             for rowNo in range(numRows):
                 dmjd = dmjds[rowNo]
@@ -118,6 +119,18 @@ class SamplerData:
     def GetExpr(self, id):
         return self.exprTxt[id]
 
+    def GetMax(self, x, y):
+        "Only necessary due to problems calling max mulitple times"
+        # NOTE: this fails (rets 0) when called the second time in the unit tests
+        # might be that numpy.max is getting called?
+        #startIdx = max(0, startIdx - 1)
+        return x if y < x else y
+
+    def GetMin(self, x, y):
+        "Only necessary due to problems calling min mulitple times"
+        # NOTE: same issue as with max
+        return x if x < y else y
+
     def GetLogFilesInRange(self, startDateTime, endDateTime):
         "Returns a list of paths to all the log files between the two times for the currently selected sampler."
         startText = startDateTime.Format("%Y_%m_%d_%H:%M:%S")
@@ -128,25 +141,12 @@ class SamplerData:
         while startIdx < length and \
               self.logKeys[startIdx] < startText:
             startIdx = startIdx + 1
-        # TBF: this fails (rets 0) when called the second time in the unit tests
-        # might be that numpy.max is getting called?
-        #startIdx = max(0, startIdx - 1)
-        if startIdx - 1 < 0:
-            startIdx = 0
-        else:
-            startIdx -= 1
-
+        startIdx = self.GetMax(0, startIdx - 1)
         endIdx   = startIdx
         while endIdx   < length and \
               self.logKeys[endIdx] < endText:
             endIdx   = endIdx   + 1
-        # TBF: these fail second time called, like above
-        #endIdxM1 = min(length - 1, endIdx)
-        if length - 1 < endIdx:
-            endIdxM1 = length - 1
-        else:
-            endIdxM1 = endIdx
-        #endIdx   = min(length - 1, endIdx + 1)
+        endIdxM1 = self.GetMin(length - 1, endIdx)
         if length - 1 < endIdx + 1:
             endIdx = length - 1
         else:
