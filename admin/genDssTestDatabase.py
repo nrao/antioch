@@ -102,7 +102,7 @@ def create_lst_exclusion(sesshun, fdata):
 
 def save_receivers(sesshun, proposition):
     abbreviations = [r.abbreviation for r in Receiver.objects.all()]
-    # TBF catch errors and report to user
+    # this will fail loudly, so users will notice if there's a problem
     rc = ReceiverCompile(abbreviations)
     ands = rc.normalize(proposition)
     for ors in ands:
