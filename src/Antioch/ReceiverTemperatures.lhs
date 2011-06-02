@@ -84,7 +84,7 @@ I'm really getting tired of typing that long-ass name:
 >     freq' = (/1000.0) . fromIntegral . freq2HistoryIndex rcvr $ freq
 >     freq'' = nearestNeighbor freq' . map fst $ temps
 
-TBF, WTF: I can't believe I couldn't steal code from somebody else to do 
+I can't believe I couldn't steal code from somebody else to do 
 the nearest neighbor calculation.  So here it is:
 
 > nns :: Ord a => a -> [a] -> (Maybe a, Maybe a)
