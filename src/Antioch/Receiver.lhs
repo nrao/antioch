@@ -18,17 +18,10 @@
 >   where
 >     cnnStr = "host=" ++ dssHost ++ " dbname=" ++ dssDataDB ++ " port=" ++ databasePort ++ " user=dss"
 
-Using this function does not take advantage of the cache in 
-ReceiverTemperatures.  We still need to incorporate this into the
-Scoring Monad by using ReceiverTemperatures, i.e., we want to
-make a call to getReceiverTemperatures only once.
-ReceiverTemperatures' is good for testing.
-
-TBF: Calling getReceiverTemperatures should create a map
-where the key is (Receiver, Int) where the Int is taken
-from freqIndices, i.e., the result of freq2HistoryIndex.
-The value is the temperature from the receiver_temperatures
-table.
+This is for testing purposes only.  Note how this test function
+doesn't make use of the cache in ReceiverTemperatures, since
+the cache will get initalized every call.  Instead, the rcvr temps
+are part of the scoring monad, like Weather.
 
 > getReceiverTemperature' :: Session -> IO (Maybe Float)
 > getReceiverTemperature' s = do
@@ -42,8 +35,8 @@ A Session can have a logical grouping of receivers - but what receiver
 should we use to lookup the rcvr temperature?  Use the frequency of the
 session as a key.
 
-TBF should we use get "nearest" receiver to given frequency instead
-rather than returning Nothing?
+Note:If returning Nothing here becomes a problem, we can always try to
+return the 'nearest' receiver to the session's frequency.
 
 > getPrimaryReceiver :: Session -> Maybe Receiver
 > getPrimaryReceiver s

@@ -4,7 +4,6 @@
 > import Antioch.DBUtilities
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB, dssHost, databasePort)
 > import Antioch.SLALib (slaGaleq)
 > import Antioch.DSSReversion            (putPeriodReversion)

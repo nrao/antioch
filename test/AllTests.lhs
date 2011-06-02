@@ -11,7 +11,6 @@
 > import qualified Antioch.ReceiverTests as ReceiverT
 > import qualified Antioch.ReceiverTemperaturesTests as ReceiverTempT
 > import qualified Antioch.ReportsTests as ReportT
-> import qualified Antioch.ReservationsTests as ReservationsT
 > import qualified Antioch.RunHistWeatherOptTests as RunHistWeatherOptT
 > import qualified Antioch.RunScoresTests as RunScoresT
 > import qualified Antioch.ScheduleTests as ScheduleT
@@ -41,7 +40,6 @@
 >   , PackT.tests
 >   , ReceiverT.tests
 >   , ReceiverTempT.tests
->   , ReservationsT.tests
 >   , RunHistWeatherOptT.tests
 >   , TimeAccountingT.tests
 >   , UtilitiesT.tests
