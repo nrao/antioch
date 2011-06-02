@@ -113,7 +113,6 @@
 >                  , opacity w target f
 >                  , tsys w target f
 >                  , totalStringency w f el Rcvr1_2 SpectralLine 
->         -- TBF: no table! but not being used: , minOpacity w f el
 >                  , minTSysPrime w f el Rcvr1_2
 >             ]
 
