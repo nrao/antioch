@@ -160,68 +160,6 @@
 >       , band = W
 >       }
 >
->   {- TBF: period for Fixed vs. periods for Open, Windowed 
->   , defaultFixed {
->         sId = 9
->       , sName = "TestFixed1"  -- no fixed yet
->       , period =
->             defaultPeriod {
->                 startTime = fromGregorian 2006 9 1 18 0 0
->               , duration = 6*60
->               , pDuration = 6*60
->                }
->       , sAllottedT = 6*60
->       , sAllottedS = 6*60
->       , minDuration = 6*60
->       , maxDuration = 6*60
->       , frequency = 67.8
->       , ra = hrs2rad 12.3
->       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
->       , band = W
->       }
->
->   , defaultFixed {
->         sId = 10
->       , sName = "TestFixed2"  -- no fixed yet
->       , period =
->             defaultPeriod {
->                 startTime = fromGregorian 2006 9 4 11 0 0
->               , duration = 4*60
->               , pDuration = 4*60
->                }
->       , sAllottedT = 4*60
->       , sAllottedS = 4*60
->       , minDuration = 4*60
->       , maxDuration = 4*60
->       , frequency = 67.8
->       , ra = hrs2rad 12.3
->       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
->       , band = W
->       }
->
->   , defaultFixed {
->         sId = 11
->       , sName = "TestFixed3"  -- no fixed yet
->       , period =
->             defaultPeriod {
->                 startTime = fromGregorian 2006 9 5 1 0 0
->               , duration = 5*60
->               , pDuration = 5*60
->                }
->       , sAllottedT = 5*60
->       , sAllottedS = 5*60
->       , minDuration = 5*60
->       , maxDuration = 5*60
->       , frequency = 67.8
->       , ra = hrs2rad 12.3
->       , dec = deg2rad 10.4
->       , receivers = [Rcvr_PAR]
->       , band = W
->       }
->   -}
->
 >   , defaultSession {
 >         sId = 12
 >       , sName = "TestWindowed1"
