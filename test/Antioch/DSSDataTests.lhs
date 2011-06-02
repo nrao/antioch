@@ -33,6 +33,7 @@ instructions in admin/genDssTestDatagase.py.
 >     , test_makeSession
 >     , test_scoreDSSData
 >     , test_session2
+>     , test_sessionGal
 >     , test_session_scores
 >     , test_totaltime
 >     , test_toDateRangesFromInfo_1
@@ -51,13 +52,14 @@ instructions in admin/genDssTestDatagase.py.
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
 >     let ss = concatMap sessions ps
+>     let ss' = reverse . tail $ reverse ss
 >     let allPeriods = sort $ concatMap periods $ ss
 >     assertEqual "test_getProjects1" 1 (length ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 3 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects4" 4 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
@@ -65,8 +67,8 @@ instructions in admin/genDssTestDatagase.py.
 >     assertEqual "test_getProjects10" 6 (length allPeriods)    
 >     assertEqual "test_getProjects11" [[Rcvr8_10]] (receivers . head $ ss)
 >     assertEqual "test_getProjects12" True (guaranteed . head $ ss)
->     assertEqual "test_getProjects13" 1 (length . electives . last $ ss)
->     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives . last $ ss)
+>     assertEqual "test_getProjects13" 1 (length . electives . last $ ss')
+>     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives . last $ ss')
 >     assertEqual "test_getProjects15" 1 (length . observers . head $ ps)
 >     assertEqual "test_getProjects16" 1 (length . requiredFriends . head $ ps)
 >     assertEqual "test_getProjects17" obsBlackouts ( blackouts . head . observers . head $ ps) 
@@ -178,6 +180,28 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_15" X (band s)
 >   assertEqual "test_session2_16" False (lowRFI s)
 >   assertEqual "test_session2_17" 1 (length . lstExclude $ s)
+
+> test_sessionGal = TestCase $ do
+>   ps <- getProjects 
+>   let ss = concatMap sessions ps
+>   let s = head $ filter (\s -> (sName s == "GBT09A-001-Gal")) ss
+>   assertEqual "test_sessionGal_1" 3.0 (grade s)
+>   assertEqual "test_sessionGal_2" Open (sType s)
+>   assertEqual "test_sessionGal_3" 4 (sId s)
+>   assertEqual "test_sessionGal_4" "GBT09A-001-Gal" (sName s)
+>   assertEqual "test_sessionGal_5" "GBT09A-001" (pName . project $ s)
+>   assertEqual "test_sessionGal_6" "09A" (semester . project $ s)
+>   assertEqual "test_sessionGal_7" 210 (sAllottedT s)
+>   assertEqual "test_sessionGal_8" 180 (minDuration s)
+>   assertEqual "test_sessionGal_9" 210 (maxDuration s)
+>   assertEqual "test_sessionGal_10" 0 (timeBetween s)
+>   assertEqual "test_sessionGal_11" 9.3 (frequency s)
+>   assertEqual "test_sessionGal_12" 4.4592996  (ra s)
+>   assertEqual "test_sessionGal_13" (-0.91732764) (dec s)
+>   assertEqual "test_sessionGal_14" [[Rcvr8_10]] (receivers s)
+>   assertEqual "test_sessionGal_15" X (band s)
+>   assertEqual "test_sessionGal_16" False (lowRFI s)
+>   assertEqual "test_sessionGal_17" 1 (length . lstExclude $ s)
 
 Perhaps these should be Quick Check properities, but the input is not 
 generated: it's the input we want to test, really.
