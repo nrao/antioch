@@ -3,7 +3,6 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
