@@ -31,10 +31,9 @@ import pg
 
 class TestWeather2DBImport(unittest.TestCase):
 
-# TBF, WTF: these aren't "unit tests" because they interact with a DB!
+    # Note: these aren't "unit tests" because they interact with a DB!
 
     def setUp(self):
-        # use a special DB because we'll be cleaning this one out everytime.
         self.dbname = "weather_unit_tests"
         self.wdb = Weather2DBImport(self.dbname)
 
@@ -49,9 +48,9 @@ class TestWeather2DBImport(unittest.TestCase):
 
     def testBackfillWind(self):
 
-        # it turns out there is one wind speed not filled out, and it
-        # looks like that's because the sampler logs return NaN for that time
-        results = self.wdb.backfillWind()
+        # set the test flag so that we don't inadvertantely write
+        # to our test DB
+        results = self.wdb.backfillWind(test = True)
         self.assertEquals([], results)
 
        
