@@ -1438,8 +1438,8 @@ Same as test_Pack1 except only 2 hours of sAllottedT instead of 24
 >     assertEqual "test_Pack9_3" 2 (length periods')
 >     assertEqual "test_Pack9_4" (2*60) (duration (last periods'))
 >     assertEqual "test_Pack9_5" "candidate" (sName . session . last $ periods')
->     -- TBF: uncomment this too see the BUG!!! WTF.
->     -- From the Story for this Bug:
+>     -- Uncomment this too see the BUG!!! WTF.
+>     -- From the Story: https://www.pivotaltracker.com/story/show/13914635
 >     {-
 >     Pack's queryPast function looks at the Candidates durations - but if these Candidates are from pre-scheduled periods, those pre-scheduled periods durations may not be equal to pDuration (the billed time).
 >     This will be very rare, so I don't think it's worth tackling, but worth noting.
