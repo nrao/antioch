@@ -670,17 +670,6 @@ Test Utilities:
 >       , sType = Windowed
 >       }
 
-TBF try:
-
-Prelude Data.IORef> z <- newIORef (\x -> x)
-Prelude Data.IORef> y <- newIORef (\x -> x)
-Prelude Data.IORef> z == z
-True
-Prelude Data.IORef> z == y
-False
-
-http://stackoverflow.com/questions/1717553/pointer-equality-in-haskell
-
 > isSessionKnotted :: Session -> Bool
 > isSessionKnotted s = all (\f -> f s) [pknots]
 >   where
