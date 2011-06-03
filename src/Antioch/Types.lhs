@@ -58,11 +58,6 @@ such as: P
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
 > data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing | Commissioning deriving (Ord, Eq, Show, Read)
 
-TBF: Initially, Open, Fixed, and Windowed all share the same contents.
-Ideally, we need to evolve these as we go and add new items and remove
-useless items. Until the need arises to use different types, we will
-use a single data structure for all sessions.
-
 > data Session = Session {
 >     sId         :: Int
 >   , sName       :: String
@@ -260,9 +255,12 @@ Tying the knot.
 >     (<=) = (<=) `on` startTime
 >     (>=) = (>=) `on` startTime
 
-TBF: Until scoring settles down, we want an equality operator for periods that
+Since scoring can change often, we want an equality operator for periods that
 ignores their numerical scores.  Note that equality between different periods
-is slightly arbitrary.
+is slightly arbitrary.  Here we define equality as depending on:
+   * session id
+   * startTime
+   * duration
 
 > instance Eq Period where
 >     (==) = periodsEqual
