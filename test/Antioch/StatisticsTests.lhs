@@ -188,7 +188,8 @@
 >   rs = []
 >   p = getTestPeriod
 
-TBF: refactor so that historical*Factors methods can take a test weather.
+Note: refactor so that historical*Factors methods can take a test weather.
+Story: https://www.pivotaltracker.com/story/show/14140221
 
 > test_historicalSchdObsEffs = TestCase $ do
 >   w <- getWeatherTest Nothing
