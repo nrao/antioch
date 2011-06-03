@@ -125,8 +125,7 @@ schedule deadtime.
     
 Utilities:
 
-TBF: w/ a lot of work, we could get evalSim* functions generalized.
-They both evaluate a function with the weather set to an hour
+The next two functions evaluate a function with the weather set to an hour
 before the evaluation duration starts.
 
 Evaluates the MOC for the given period, w/ weather placed an hour before the period.
@@ -134,9 +133,7 @@ Evaluates the MOC for the given period, w/ weather placed an hour before the per
 > evalSimPeriodMOC :: Period -> Scoring (Maybe Bool)
 > evalSimPeriodMOC p = do
 >   -- reset the weather origin to one hour before the period
->   w <- weather
->   let wDt = addMinutes (-60) (startTime p) -- 1 hr before period starts
->   w' <- liftIO $ newWeather w (Just wDt)
+>   w' <- getWeatherForPeriodEvaluation p
 >   -- make sure all subsequent calls use this weather
 >   local (\env -> env { envWeather = w' }) $ minimumObservingConditions (startTime p) (duration p) (session p)
 
@@ -146,8 +143,15 @@ using the weather placed an hour before the period we wish to replace.
 > evalSimBackup :: ScoreFunc -> Period -> Session -> Scoring Score
 > evalSimBackup sf p s = do
 >   -- reset the weather origin to one hour before the period
+>   w' <- getWeatherForPeriodEvaluation p
+>   local (\env -> env { envWeather = w' }) $ averageScore sf (startTime p) (duration p) s  
+
+Returns a weather with origin (pForecast) one hour before the start of 
+the given period.
+
+> getWeatherForPeriodEvaluation :: Period -> Scoring Weather
+> getWeatherForPeriodEvaluation p = do
 >   w <- weather
 >   let wDt = addMinutes (-60) (startTime p) -- 1 hr before period starts
->   w' <- liftIO $ newWeather w (Just wDt)
->   local (\env -> env { envWeather = w' }) $ averageScore sf (startTime p) (duration p) s  
+>   liftIO $ newWeather w (Just wDt)
 
