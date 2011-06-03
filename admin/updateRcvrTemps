@@ -20,6 +20,12 @@ runhaskell UpdateReceiverTemperatures.lhs $1 Holography     2010-01-01
 runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr68_92     2010-01-01 
 
 # Notes:        TBF what does this table signify?
+# Here is the mapping that the above calls produce between the
+# receivers as the MySql DB of rcvr temps thinks of them
+# and the DSS receivers used.  The date specifies the date used (same
+# as above).  If this is *not* the most recent set of temperatures, there's 
+# a good reason why we're not using that most recent set - that's 
+# explained in the notes column.
 
 #| receiver       | date       |  notes
 
@@ -27,17 +33,18 @@ runhaskell UpdateReceiverTemperatures.lhs $1 Rcvr68_92     2010-01-01
 #| RcvrPF_1       | 2007-08-01 | DSS: Rcvr_342
 #| RcvrPF_1       | 2003-07-01 | DSS: Rcvr_600
 #| RcvrPF_2       | 2003-03-01 | DSS: Rcvr_1070
-#| Rcvr1_2        | 2002-02-14 | 2005-05-27 has all 1.0's.; done
-#| Rcvr2_3        | 2008-08-01 | done
-#| Rcvr4_6        | 2007-10-06 | done
-#| Rcvr8_10       | 2007-06-15 | 2009-07-26 has all 1.0's; done
-#| Rcvr12_18      | 2003-11-10 | 2009-07-23 has all 1.0's; done
-#| Rcvr18_26      | 2003-09-19 | 2005-05-27 has all 1.0's; done
-#| RcvrArray18_26 | 2010-03-08 | done
-#| Rcvr26_40      | 2007-09-01 | done
-#| Rcvr40_52      | 2008-11-01 | 2009-11-21 has all 1.0's; done
+#| Rcvr1_2        | 2002-02-14 | 2005-05-27 has all 1.0's.
+#| Rcvr2_3        | 2008-08-01 | 
+#| Rcvr4_6        | 2007-10-06 | 
+#| Rcvr8_10       | 2007-06-15 | 2009-07-26 has all 1.0's
+#| Rcvr12_18      | 2003-11-10 | 2009-07-23 has all 1.0's
+#| Rcvr18_26      | 2003-09-19 | 2005-05-27 has all 1.0's
+#| RcvrArray18_26 | 2010-03-08 | 
+#| Rcvr26_40      | 2007-09-01 | 
+#| Rcvr40_52      | 2008-11-01 | 2009-11-21 has all 1.0's
 
-#Not in Measurement:
+#Not in Measurement - here, we explain what UpdateReceiverTemperatures
+# will put in for these:
 #NoiseSource   (not used)
 #Zpectrometer  (not used)
 #Holography    (11.7,1e6),(12.2,1e6)
