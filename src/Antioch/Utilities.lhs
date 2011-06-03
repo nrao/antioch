@@ -249,9 +249,10 @@ Get all the session periods that are within the given window
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
 
-TBF: this is called *trimester2startDT* because it only handles dates
+Note: this is called *trimester2startDT* because it only handles dates
 before 2011, before we switched to *semesters*, so don't change the
-name till we can get this right.
+name till we can get this right.  This is only used in post-simulation
+checks, so we don't need the more general function yet.
 
 Here we make any year > 2010 return Nothing as a reminder that this is
 NOT semester2startDT - that still needs to be coded.
