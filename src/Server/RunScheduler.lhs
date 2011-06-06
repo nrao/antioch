@@ -29,7 +29,7 @@ for the given date range.
 
 > runSchedule :: StateT Context IO ()
 > runSchedule = do
->     -- parse params; TBF: why does this look different from others?
+>     -- parse params; Note: this look different from other param parsing.
 >     bytes <- contents
 >     let params   = maybe [] id $ bytes >>= parseQueryParams . L.unpack
 >     let params'  = getKeyValuePairs params
