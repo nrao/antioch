@@ -86,8 +86,8 @@ year's worth of weather is in the database, by modifiying the date.
 > getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
 Right now, the only historical weather we have is 2006.
-TBF: We've deprecated 'dateSafe' for production use, however it is still
-     used for look ahead simulations.  See story,
+     We've deprecated 'dateSafe' for production use, however it is still
+     used for look ahead simulations.  See Story,
      https://www.pivotaltracker.com/story/show/2543985
 
 > dateSafe :: DateTime -> DateTime
@@ -555,7 +555,10 @@ Get latest forecast time from the DB for given timestamp
 >   result <- quickQuery' cnn query xs
 >   case result of
 >     [forecastTime]:_ -> return $ sqlToDateTime forecastTime
->     _                -> return $ fromGregorian 2000 1 1 0 0 0 -- TBF!
+>     -- the request is for a forecast_time that doesn't have an equivalent
+>     -- in the DB - other calls will probably fail, so returning this 
+>     -- bogus date should be safe.
+>     _                -> return $ fromGregorian 2000 1 1 0 0 0 
 >     where
 >       query = "SELECT date FROM forecast_times WHERE date <= ? ORDER BY date DESC"
 >       xs = [toSql' dt]
