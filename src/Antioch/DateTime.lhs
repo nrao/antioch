@@ -220,7 +220,7 @@ The string conversions may loss precision at the level of a second.
 
 > sqlDateFormat = iso8601DateFormat (Just "")
 
-> httpFormat = iso8601DateFormat (Just "%HA%MA%S") -- TBF space needed?
+> httpFormat = iso8601DateFormat (Just "%HA%MA%S") 
 
 Simple arithmetic.
 
