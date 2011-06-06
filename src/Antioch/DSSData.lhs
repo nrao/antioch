@@ -245,9 +245,7 @@ two allotments, and querying w/ a join will duplicate the project.
 >       toAllotmentList = map toAllotment
 >       toAllotment (ttime:mstime:grade:[]) = (fromSqlMinutes ttime, fromSqlMinutes mstime, fromSql grade)
 
-TBF: In Antioch, do we need to be taking into account grades at the 
-project level?  For now, we are ignoring grade and summing the different
-hours together to get the total time.
+We are ignoring grade and summing the different hours together to get the total time.
 
 > setProjectAllotments :: Project -> [(Minutes, Minutes, Grade)] -> Project
 > setProjectAllotments p [] = p
