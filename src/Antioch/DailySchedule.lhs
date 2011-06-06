@@ -51,8 +51,11 @@ hour scheduling period.
 
 > dailySchedule :: ScoreFunc -> StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
 > dailySchedule sf strategyName dt days history ss quiet = do
->     -- figure out the time period to schedule for
->     let workStartMinutes = 8*60  -- TBF when do they get to work?
+>     -- Figure out the time period to schedule for.
+>     -- Is this precise an EST time for the start of the working day
+>     -- to use?  
+>     -- See Story: https://www.pivotaltracker.com/story/show/14223333
+>     let workStartMinutes = 8*60  
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
 >     let dur = endTime `diffMinutes` dt 
 >     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
