@@ -197,19 +197,6 @@ scheduled.
 > schedulableSessions :: DateTime -> Minutes -> [Session] -> [Session]
 > schedulableSessions dt dur = filterSessions dt dur schedulableCriteria
 
-TBF, WTF: this isn't being called anywhere, but has a working unit test
-
-> clearWindowedTimeBilled :: Session -> Session
-> clearWindowedTimeBilled s
->   | (windows s) == [] = s
->   | otherwise         = makeSession s (windows s) ps
->       where
->         ps = map clear . periods $ s
->         clear p
->           | elem (peId p) pIds = p { pDuration = 0 }
->           | otherwise          = p
->         pIds = concatMap maybeToList $ [wPeriodId w | w <- (windows s)]
-
 > schedulableSession :: DateTime -> Minutes -> Session -> Bool
 > schedulableSession dt dur s = meetsCriteria dt dur s schedulableCriteria
 

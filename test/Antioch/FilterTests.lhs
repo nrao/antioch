@@ -16,7 +16,6 @@
 > tests = TestList [
 >      test_sim_timeLeft
 >    , test_schedulableSessions
->    , test_clearWindowedTimeBilled
 >    , test_isSchedulableType
 >    , test_activeWindows
 >    , test_adjustWindowSessionDuration
@@ -163,17 +162,6 @@
 >     dt1 = fromGregorian 2006 10 1  7 15 0
 >     early = fromGregorian 2005 11 30  23 45 0
 >     late = fromGregorian 2006 6 30  15 30 0
-
-> test_clearWindowedTimeBilled = TestCase $ do
->     let s = tw2
->     let s' = clearWindowedTimeBilled s
->     -- because pDuration is not checked in session equivalence
->     assertEqual "test_clearWindowedTimeBilled 1" s s'
->     --assertEqual "test_clearWindowedTimeBilled 2" 180 (pDuration . fromJust . wPeriod . head . windows $ s)
->     assertEqual "test_clearWindowedTimeBilled 3" 0 (pDuration . fromJust . wPeriod . head . windows $ s')
->     -- should be nop
->     let cv' = clearWindowedTimeBilled cv
->     assertEqual "test_clearWindowedTimeBilled 4" cv cv'
 
 > test_isSchedulableType = TestCase $ do
 >     -- session is Open, who cares about windows?
