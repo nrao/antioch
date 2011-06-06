@@ -389,7 +389,8 @@ class CleoDBImport:
         # then came the 'ground' or wind speed stuff     
         windFile = self.path + "/" + f2 + '/time_avrg' + f2[9:] + '.txt'
         
-        # TBF: check the FileList* files in each dir for FT's.
+        # Check the FileList* files in each dir for FT's.
+        # Story: https://www.pivotaltracker.com/story/show/14224103
 
         return atmFile, windFile
 
