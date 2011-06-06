@@ -1,7 +1,8 @@
 # simple enough: if there isn't entries marking an import in the recent past,
 # send a warning
-# TBF: someday we need to move a lot of this stuff in antioch/admin into
+# Someday we need to move a lot of this stuff in antioch/admin into
 # nell, or some common code sharing spot.
+# Story: https://www.pivotaltracker.com/story/show/14223967
 
 import pg
 import settings
