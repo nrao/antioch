@@ -172,12 +172,6 @@ Note this code assumes that minDuration == maxDuration.
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
-> -- TBF is this needed?
-> isSchedulableSemester :: SelectionCriteria 
-> isSchedulableSemester dt _ s = (semester $ project s) <= current_semester
->    where
->      current_semester = dt2semester dt
-
 > filterSessions :: DateTime -> Minutes -> [SelectionCriteria] -> [Session] -> [Session]
 > filterSessions dt _   []       ss = ss
 > filterSessions dt dur (sc:scs) ss = filterSessions dt dur scs $ filter (sc dt dur) ss

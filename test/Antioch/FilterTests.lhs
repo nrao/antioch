@@ -143,10 +143,6 @@
 >     assertEqual "test_schedulableSessions 3" True (hasTimeSchedulable dt undefined ts)
 >     let ts = s {sAllottedT = 9*60, sAllottedS = 9*60}
 >     assertEqual "test_schedulableSessions 4" False (hasTimeSchedulable dt undefined ts)
->     let s = findPSessionByName "GB"
->     assertEqual "test_schedulableSessions 5" True (isSchedulableSemester dt undefined s)
->     assertEqual "test_schedulableSessions 6" False (isSchedulableSemester early undefined s)
->     assertEqual "test_schedulableSessions 7" True (isSchedulableSemester late undefined s)
 >     let s = findPSessionByName "TX"
 >     assertEqual "test_schedulableSessions 8" True (isApproved dt undefined s)
 >     let ts = s {enabled = False}
