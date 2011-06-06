@@ -8,6 +8,7 @@
 > import qualified Antioch.GenerateScheduleTests as GeneratorT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
 > import qualified Antioch.HistoricalWeatherTests as HistoricalWeatherT
+> import qualified Antioch.PlotTests as PlotT
 > import qualified Antioch.ReceiverTests as ReceiverT
 > import qualified Antioch.ReceiverTemperaturesTests as ReceiverTempT
 > import qualified Antioch.ReportsTests as ReportT
@@ -27,6 +28,7 @@
 > tests = TestList [
 >     DailyScheduleT.tests
 >   , DateTimeT.tests
+>   , PlotT.tests
 >   , DebugT.tests
 >   , DSSDataT.tests
 >   , FilterTestT.tests
