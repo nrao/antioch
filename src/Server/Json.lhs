@@ -13,8 +13,9 @@
 
 > jsonHandler      :: JSON t => t -> Handler ()
 > jsonHandler json = do
->     -- TBF: setting the content type here seems to cause the output to 
->     -- not be returned.
+>     -- Note: setting the content type here seems to cause the output to 
+>     -- not be returned. but I suppose this isn't important since we're
+>     -- getting along fine with out it.
 >     --enterM response $ setM contentType ("text/plain", Just "utf-8")
 >     sendStr $ encode json
 
