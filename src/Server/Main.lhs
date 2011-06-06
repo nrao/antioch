@@ -60,4 +60,4 @@
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
 >         , ("/moc",           getMOCHandler cnn)  
 >       ] $ hError NotFound
->     liftIO $ disconnect cnn   -- TBF important? some of the above use pre-connected DSSData methods!?
+>     liftIO $ disconnect cnn   
