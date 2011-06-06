@@ -29,6 +29,8 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >       test_fetchPeriods
 >     , test_getWindows
 >     , test_getPeriods
+>     , test_getPeriodStates
+>     , test_getPeriodStateId
 >     , test_getProjects
 >     , test_getProjectData
 >     , test_makeSession
@@ -40,6 +42,19 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     , test_toDateRangesFromInfo_2
 >     , test_toDateRangesFromInfo_3
 >     ]
+
+> test_getPeriodStates = TestCase $ do
+>     cnn <- connect
+>     states <- getPeriodStates cnn
+>     assertEqual "test_getPeriodStates" expectedPeriodStates states 
+
+> test_getPeriodStateId = TestCase $ do
+>     assertEqual "test_getPeriodStateId 1" 1 (getState Pending)
+>     assertEqual "test_getPeriodStateId 2" 2 (getState Scheduled)
+>     assertEqual "test_getPeriodStateId 3" 3 (getState Deleted)
+>     assertEqual "test_getPeriodStateId 4" 4 (getState Complete)
+>   where
+>     getState st = getPeriodStateId st expectedPeriodStates
 
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
@@ -310,4 +325,7 @@ Test Utilities:
 >     run cnn ("TRUNCATE TABLE " ++ tableName ++ " CASCADE") []
 >     commit cnn
 >     disconnect cnn
+
+> expectedPeriodStates :: [(Int, StateType)]
+> expectedPeriodStates = [(1,Pending),(2,Scheduled),(3,Deleted),(4,Complete)]
 

@@ -4,6 +4,7 @@
 > import qualified Antioch.DateTimeTests as DateTimeT
 > import qualified Antioch.DebugTests as DebugT
 > import qualified Antioch.DSSDataTests as DSSDataT
+> import qualified Antioch.DSSReversionTests as DSSReversionT
 > import qualified Antioch.FilterTests as FilterTestT
 > import qualified Antioch.GenerateScheduleTests as GeneratorT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
@@ -31,6 +32,7 @@
 >   , PlotT.tests
 >   , DebugT.tests
 >   , DSSDataT.tests
+>   , DSSReversionT.tests
 >   , FilterTestT.tests
 >   , HardwareScheduleT.tests
 >   , HistoricalWeatherT.tests

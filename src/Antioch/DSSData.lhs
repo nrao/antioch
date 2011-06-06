@@ -740,7 +740,7 @@ A single Window can have mutliple date ranges associated with it.
 >   return ()
 
 Here we add a new period to the database.  
-Initialize the Period in the Pending state (state_id = 1).
+Initialize the Period in the Pending state.
 Since Antioch is creating it,
 we will set the Period_Accounting.scheduled field
 and the associated receviers using the session's receivers.
@@ -752,8 +752,11 @@ and the associated receviers using the session's receivers.
 >   -- is this period part of a window?
 >   let window = find (periodInWindow p) (windows . session $ p)
 >   let winId = if (isNothing window) then SqlNull else (toSql . wId . fromJust $ window)
+>   -- what should the id be for the pending state?
+>   periodStates <- getPeriodStates cnn
+>   let pendingStateId = getPeriodStateId Pending periodStates
 >   -- now for the period itself
->   quickQuery' cnn query (xs accounting_id winId) 
+>   quickQuery' cnn query (xs accounting_id winId pendingStateId) 
 >   commit cnn
 >   pId <- getNewestID cnn "periods"
 >   -- init the rcvrs associated w/ this period
@@ -762,10 +765,10 @@ and the associated receviers using the session's receivers.
 >   --updateWindow cnn p
 >   commit cnn
 >   -- finally, track changes in the DB by filling in the reversion tables
->   putPeriodReversion cnn p accounting_id
+>   putPeriodReversion cnn p accounting_id pendingStateId
 >   commit cnn
 >     where
->       xs a w = [toSql . sId . session $ p
+>       xs a w stateId = [toSql . sId . session $ p
 >              , toSql $ (toSqlString . startTime $ p) 
 >              , minutesToSqlHrs . duration $ p
 >              , toSql . pScore $ p
@@ -773,8 +776,9 @@ and the associated receviers using the session's receivers.
 >              , toSql . pBackup $ p
 >              , toSql a
 >              , w
+>              , toSql stateId
 >             ]
->       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, window_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, false);"
+>       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, window_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, false);"
 
 When we create a period, we are going to associate the rcvrs from the session
 to it's period (they can be changed later by schedulers)
@@ -849,10 +853,12 @@ Change the state of all given periods to Deleted.
 > movePeriodsToDeleted :: [Period] -> IO ()
 > movePeriodsToDeleted ps = do
 >   cnn <- connect
->   result <- mapM (movePeriodToDeleted cnn) ps
+>   periodStates <- getPeriodStates cnn
+>   let deletedId = getPeriodStateId Deleted periodStates
+>   result <- mapM (movePeriodToDeleted cnn deletedId) ps
 >   return ()
 >     where
->   movePeriodToDeleted cnn p = movePeriodToState cnn (peId p) 3
+>   movePeriodToDeleted cnn stateId p = movePeriodToState cnn (peId p) stateId
 
 Changes the state of a Period.
 
@@ -864,6 +870,25 @@ Changes the state of a Period.
 >     where
 >       query = "UPDATE periods SET state_id = ? WHERE id = ?;"
 >       xs = [toSql stateId, toSql periodId]
+
+Retrieves from the DB a mapping of row id to period state.
+
+> getPeriodStates :: Connection -> IO ([(Int, StateType)])
+> getPeriodStates cnn = do
+>     r <- quickQuery' cnn query xs
+>     return $ map toStates r
+>   where
+>     xs = []
+>     query = "SELECT abbreviation, id FROM period_states;"
+>     toStates (ab:id:[]) = (fromSql id, deriveState . fromSql $ ab)
+
+Given a period state and the mapping to the states primary ID in the DB,
+returns the appropriate primary ID.
+
+> getPeriodStateId :: StateType -> [(Int, StateType)] -> Int
+> getPeriodStateId periodState mapping = fst . fromJust $ find findState mapping
+>   where
+>     findState (id, state) = state == periodState
 
 Utilities
 
