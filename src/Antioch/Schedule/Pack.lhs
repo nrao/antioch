@@ -198,9 +198,11 @@ were built up from multiple Candidates in the first place.
 Note that this does not honor for pre-scheduled periods, this value
 is restored later in pack.
 
-TBF: when scheduling is sparse, and there are lots of Nothing's in the input to this
+Story: https://www.pivotaltracker.com/story/show/14219719
+When scheduling is sparse, and there are lots of Nothing's in the input to this
 function, the optimal schedule is not being picked because we are always picking
 the last candidate, which may NOT necessarily have the largest accumulated score!
+
 This function must traverse the list of candiates exactly as queryPast does.
 
 > unwind :: [Maybe (Candidate a)] -> [Candidate a]
