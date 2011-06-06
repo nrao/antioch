@@ -339,7 +339,7 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime 
 >           , sAllottedS  = fromSqlMinutes stime 
->           , ra = fromSql h -- TBF: assume all J2000? Created story to fix story id 13828493.
+>           , ra = fromSql h -- assume all J2000? Story: https://www.pivotaltracker.com/story/show/13828493.
 >           , dec = fromSql v  
 >           , grade = fromSql grade
 >           , receivers = []
