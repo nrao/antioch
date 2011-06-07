@@ -128,7 +128,8 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 Note that start_date and end_date refer respectively to the check-in
 and check-out dates, e.g., a person with a start_date of 03/13/2011
 and an end_date of 03/15/2011 would spend two nights in Green Bank,
-the nights of 03/13/2011 and 03/14/2011. 
+the nights of 03/13/2011 and 03/14/2011. Therefore the time range
+would be 03/13/2011 00:00 <= on site < 3/16/2011 00:00.
 
 > getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
 > getObserverBlackouts cnn obs = do
@@ -585,10 +586,10 @@ it an exclusion range.
 >     query = "SELECT id, complete FROM electives WHERE session_id = ?;"
 >     toElectiveList = map toElective
 >     toElective(id:comp:[]) =
->       Electives { eId = fromSql id
->                 , eComplete = fromSql comp 
->                 , ePeriodIds = [] -- for later
->                }
+>       Electives {eId = fromSql id
+>                , eComplete = fromSql comp 
+>                , ePeriodIds = [] -- for later
+>                 }
 
 > getElectivePeriods :: Connection -> Electives -> IO (Electives)
 > getElectivePeriods cnn elec = do

@@ -13,8 +13,8 @@ we care about: those that fall in between the dates we are simulating for.
 We do this, because otherwise the reports at the end of the simulations will
 be confused and raise false alarams.
 
-> filterHistory :: [Period] -> DateTime -> Int -> [Period]
-> filterHistory ps start daysDur = filter overlie' ps
+> truncateHistory :: [Period] -> DateTime -> Int -> [Period]
+> truncateHistory ps start daysDur = filter overlie' ps
 >   where
 >     overlie' p = overlie start (daysDur*24*60) p
 

@@ -169,6 +169,17 @@ in case the Sesshun does not have guaranteed time.
 > instance Show Electives where
 >     show e = "Elective (" ++ (show . eId $ e) ++ ")"
 
+> defaultElective = Electives {
+>     eId        = 0
+>   , eComplete  = False
+>   , ePeriodIds = []
+>    }
+
+> getElective :: Period -> Maybe Electives
+> getElective p = find (\e -> elem peid . ePeriodIds $ e) . electives . session $ p
+>   where
+>     peid = peId p
+
 Need to calculate a windowed session's opportunities from its observation details.
 
 Tying the knot.

@@ -46,13 +46,11 @@ http://trent.gb.nrao.edu:9051/score/periods?pids=6957&pids=6931&pids=6939
 >     -- Interpret options: pids
 >     let spids = (catMaybes . map snd $ params)::[String]
 >     let pids = urlToPids spids
->     liftIO $ print pids
 >
 >     -- compute the scores 
 >     projs <- liftIO getProjects
 >     retvals <- liftIO $ runScorePeriods pids projs False
->     liftIO $ print retvals
-
+>
 >     -- send them back
 >     jsonHandler $ makeObj [("scores", scoresListToJSValue retvals)]
 
@@ -75,7 +73,6 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     -- compute the score
 >     projs <- liftIO getProjects
 >     score <- liftIO $ runScoreSession id dt dur projs False
->     liftIO $ print ("getSScore score: ", score)
 >     
 >      -- send it back
 >     jsonHandler $ makeObj [("score", showJSON score)]

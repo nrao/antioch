@@ -7,6 +7,7 @@
 > import Antioch.Score
 > import Antioch.Filters
 > import Antioch.HardwareSchedule
+> import Antioch.Utilities         -- debug
 
 > import Control.Monad.Trans (liftIO)
 > import Data.Maybe
@@ -85,8 +86,6 @@ Variables:
 >     scores <- sequence $ map (\(p, s) -> scorePeriod p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
 >     -- match the scores backup w/ their period Ids
 >     return $ zip (map (peId . fst) tsps) scores
-
-
 
 Computes the current score of a given Session (identified by ID) over
 the given time range, to be found in the given list of Projects.  Example usage: a period is changed or newly created (?) via the Nell server.

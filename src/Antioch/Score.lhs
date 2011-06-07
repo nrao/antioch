@@ -316,17 +316,14 @@ MOC, unless they are guaranteed, and this is the last period in
 the elective group.
 
 > goodElective :: Period -> Scoring (Bool)
-> goodElective p | isNotElective p = return True
->                | isScheduledElective p = return True
+> goodElective p | isScheduledElective p = return True
 >                | isGuaranteedElective p = return True
 >                | otherwise = do
->   -- check for guaranteed?
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
->     isNotElective = not . typeElective . session
 >     isElective = typeElective . session
 >     isScheduledElective p = (isElective p) && (pState p == Scheduled)
 >     isGuaranteedElective p = (isElective p) && (guaranteed . session $ p) && (isLastPeriodOfElective p) 
@@ -335,7 +332,7 @@ the elective group.
 >     s = session p
 
 
-The last periods in a group of periods (Electives) needs special 
+The last periods in a group of periods (Elective) needs special 
 consideration: if it's session is NOT guaranteed time, then there's
 a chance even the last periods won't observe.
 

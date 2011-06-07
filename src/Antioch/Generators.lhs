@@ -5,7 +5,7 @@
 > import Antioch.SLALib  (slaGaleq)
 > import Antioch.Utilities
 > import Antioch.DateTime
-> import Antioch.Filters (filterHistory)
+> --import Antioch.Filters (truncateHistory)
 > import Data.Char
 > import Data.List 
 > import Data.Maybe      (isJust, maybeToList, fromJust)

@@ -35,7 +35,6 @@
 > getFactors :: Connection -> StateT Context IO ()
 > getFactors cnn = do
 >     params <- hParameters
->     liftIO $ print params
 >     -- Interpret options: id, start, tz, duration
 >     let id       = read . fromJust . fromJust . lookup "id" $ params
 >     let startStr = fromJust . fromJust . lookup "start" $ params

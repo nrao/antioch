@@ -68,7 +68,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         -- make sure default periods that are in this scheduling range
 >         -- get scheduled; cast a large net: any windowed periods in this
 >         -- schedule range mean those windows won't get scheduled here.
->         let h = filterHistory history start (packDays+1) 
+>         let h = truncateHistory history start (packDays+1) 
 >         let ws' = getWindows sessions'' h 
 >         let ws = map (\w -> w {wComplete = True}) ws'
 >         let sessions' = updateSessions sessions'' [] [] [] ws

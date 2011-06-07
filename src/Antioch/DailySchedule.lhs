@@ -56,7 +56,7 @@ hour scheduling period.
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
 >     let dur = endTime `diffMinutes` dt 
 >     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
->     let history' = filterHistory history dt (days + 1)
+>     let history' = truncateHistory history dt (days + 1)
 >     liftIO $ pr quiet $ "scheduling around periods: "
 >     liftIO $ prl quiet $ history'
 >     -- schedule with a buffer

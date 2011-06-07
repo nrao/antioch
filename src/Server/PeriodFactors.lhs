@@ -72,7 +72,6 @@ score of the specified period.
 >     -- it's possible the time they gave for the start of the period
 >     -- is wrong: there's no period that starts then?
 >     let maybePeriod = if (length psCandidates == 0) then Nothing else Just . head $ psCandidates
->     liftIO $ print $ "got period: " ++ (show maybePeriod)
 >     -- if you've found a period for the given time, use it's start time & dur;
 >     -- otherwise, use the passed in start & dur.
 >     let weatherDt = if isJust maybePeriod then pForecast . fromJust $ maybePeriod else dt

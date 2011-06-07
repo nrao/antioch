@@ -3,7 +3,7 @@
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.DateTime
-> import Antioch.Filters        (filterHistory)
+> import Antioch.Filters        (truncateHistory)
 > import Antioch.Utilities
 > import Antioch.Score          (elevation, radecel2ha)
 > import System.Random   
@@ -476,7 +476,7 @@ that falls in the time range, and filtering out what's not needed.
 >   let (lastYear, _, _, _, _, _) = toGregorian end
 >   let (firstYear, _, _, _, _, _) = toGregorian start
 >   ps <- mapM (genMaintenancePeriodsByYear s) [firstYear .. lastYear]
->   return $ filterHistory (concat ps) start days
+>   return $ truncateHistory (concat ps) start days
 >     where
 >       
 

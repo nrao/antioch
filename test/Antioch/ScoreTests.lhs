@@ -736,7 +736,7 @@ weather (gbt or forecasted) is being used:
 >   result <- mapM (goodElective' w rs rt) ps'
 >   assertEqual "test_goodElective_3" [False] result
 >     where
->   exp = [True, True, False, True, True, True]
+>   exp = [False, True, False, True, True, True]
 >   mkPeriod s dt dur id = defaultPeriod { session   = s
 >                                        , startTime = dt
 >                                        , duration  = dur
@@ -759,7 +759,6 @@ weather (gbt or forecasted) is being used:
 >       , mkPeriod es2 dt 60 6 -- last
 >        ]
 >   goodElective' w rs rt p = runScoring w rs rt $ goodElective p
->   
 
 > test_goodDefaultWindowedPeriod = TestCase $ do
 >   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
@@ -843,7 +842,7 @@ weather (gbt or forecasted) is being used:
 >     assertEqual "test_isLastPeriodOfElective_5" False (isLastPeriodOfElective p5) 
 >   where
 >     -- order of period Ids is assumed to be by ASC startTime (DSSData)
->     e1 = Electives 1 False [100, 101] 
+>     e1 = Elective 1 False [100, 101] 
 >     e2 = Electives 2 False [102, 103] 
 >     s' = defaultSession { sType = Elective
 >                         , electives = [e1, e2] }

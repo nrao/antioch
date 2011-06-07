@@ -55,7 +55,7 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     -- print . show $ projs
 >     -- print . show $ history'
 >     --history'' <- fakeWindows dt days
->     let history = filterHistory history' dt days 
+>     let history = truncateHistory history' dt days 
 >     print "pre-scheduled history: "
 >     printList history
 >     let total = sum $ map sAllottedT ss

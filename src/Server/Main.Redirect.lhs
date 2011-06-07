@@ -23,7 +23,6 @@
 > connect = handleSqlError $ connectPostgreSQL "host=" ++ dssHost ++ " dbname=dss_pmargani2 user=dss"
 
 > main = do
->     print "starting server"
 >     addr <- inet_addr "127.0.0.1"
 >     cfg  <- defaultConfig
 >     let cfg' = cfg {
