@@ -61,33 +61,34 @@ Filter out deprecated periods:
    * blacked-out periods
 
 > filterHistory w rs rt history ss projs = do
+>     -- Filter out periods from disabled/unauthorized sessions.
+>     history'inactive <- filterInactivePeriods history
+>     print "original history - inactive"
+>     printList history'inactive
+>
+>     -- Filter out periods having inadequate representation.
+>     let history'no_observer = filter (flip periodObsAvailable ss) history'inactive
+>     print "original history - inactive - no observers: "
+>     printList history'no_observer
+>
+>     -- Filter out failing elective periods.
 >     -- Note: Really, this should be done inside dailySchedule so
 >     -- that electives can be covered by simualtions as well,
 >     -- but it's so much simpler to do it here, and I doubt
 >     -- simulations will need to cover electives.  so there.
->     -- Only elective periods that will be scheduled.
->     history'electives <- filterElectives w rs rt history
->     print "original history - electives: "
+>     history'electives <- filterElectives w rs rt history'no_observer
+>     print "original history - inactive - no observers - electives: "
 >     printList history'electives
 >
->     -- similarly, default periods of non-guaranteed, windowed
->     -- sessions only run if they pass MOC
+>     -- Filter out default periods of non-guaranteed, windowed
+>     -- sessions if they fail MOC.
 >     history'defaulted <- filterDefaultPeriods w rs rt history'electives
->     print "original history - electives - default: "
+>     print "original history - inactive - no observers - electives - default: "
 >     printList history'defaulted
->     print . length $ history'defaulted
 >
->     -- filter out periods having inadequate representation
->     let history'no_observer = filter (flip periodObsAvailable ss) history'defaulted 
->     print . length $ history'no_observer
->     print "original history - electives - default - no observers: "
->     printList history'no_observer
+>     let scheduling_history = history'defaulted
+>     print "Also scheduling around the above periods."
 >
->     -- filter out inactive/unauthorized periods
->     scheduling_history <- filterInactivePeriods history'no_observer
->     print "original history - electives - default - no observers - inactive"
->     print " and scheduling around periods: "
->     printList scheduling_history
 >     return scheduling_history
 
 Determines whether some observer, any observer is available for

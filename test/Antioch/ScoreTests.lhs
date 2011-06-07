@@ -842,7 +842,7 @@ weather (gbt or forecasted) is being used:
 >     assertEqual "test_isLastPeriodOfElective_5" False (isLastPeriodOfElective p5) 
 >   where
 >     -- order of period Ids is assumed to be by ASC startTime (DSSData)
->     e1 = Elective 1 False [100, 101] 
+>     e1 = Electives 1 False [100, 101] 
 >     e2 = Electives 2 False [102, 103] 
 >     s' = defaultSession { sType = Elective
 >                         , electives = [e1, e2] }
