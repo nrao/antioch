@@ -51,8 +51,8 @@ hour scheduling period.
 
 > dailySchedule :: ScoreFunc -> StrategyName -> DateTime -> Int -> [Period] -> [Session] -> Bool -> Scoring [Period]
 > dailySchedule sf strategyName dt days history ss quiet = do
->     -- figure out the time period to schedule for
->     let workStartMinutes = 8*60
+>     -- Figure out the time period to schedule for.
+>     let workStartMinutes = 8*60  
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
 >     let dur = endTime `diffMinutes` dt 
 >     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
@@ -130,53 +130,5 @@ part of the history of pre-scheduled periods
 >     Just _  -> False
 >     Nothing -> True
 
-Very basic function for calling Daily Schedule multiple times.
-NOTE: you may want to change getWeather in dailySchedule to use the
-start time if you use this function.
-TBF: this also needs to be refactored to merge this with Simulations.lhs
 
-> {-
-> simDailySchedulePack :: DateTime -> Int -> Int -> IO ()
-> simDailySchedulePack start packDays simDays 
->     | packDays > simDays = return ()
->     | otherwise = do 
->         dailySchedulePack start packDays
->         simDailySchedulePack (nextDay start) packDays (simDays - 1)
->   where
->     nextDay dt = addMinutes (1 * 24 * 60) dt 
-> -}
-
-Debugging Utilities:
-
-Use these for making sure the recently created Periods can reproduce their
-scores.
-NOTE: currently, all period-dependent scoring factors must be ignored in order
-to reproduce scores.
-
-> scoreThesePeriods :: [Period] -> IO ()
-> scoreThesePeriods     [] = return ()
-> scoreThesePeriods (p:ps) = do 
->     scoreThisPeriod' p
->     scoreThesePeriods ps
-
-> scoreThisPeriod' p = scoreThisPeriod (sName . session $ p) (startTime p)
-
-> scoreThisPeriod :: String -> DateTime -> IO ()
-> scoreThisPeriod sessName dt = do
->     -- get the session in question
->     --projs <- getProjects
->     let projs = [] -- TBF: place this all somewhere else?
->     let ss = concatMap sessions projs
->     let s = head $ filter (\s -> (sName s) == sessName) ss
->     -- now get it's period
->     let ps = periods s
->     let p = head $ filter (\p -> (startTime p) == dt) ps
->     --print $ "session : " ++ (show . session $ p)
->     w <- getWeather $ Just . pForecast $ p
->     rt <- getReceiverTemperatures
->     -- make sure we can reproduce the period's score
->     periodScore <- scorePeriod p s ss w [] rt
->     print " "
->     print $ "result: " ++ (show periodScore) ++ " vs. " ++ (show . pScore $ p)
->     print " "
 

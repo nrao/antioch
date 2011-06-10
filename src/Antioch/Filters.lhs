@@ -172,12 +172,6 @@ Note this code assumes that minDuration == maxDuration.
 We are explicitly ignoring grade here: it has been decided that a human
 should deal with closing old B projects, etc.
 
-> -- TBF is this needed?
-> isSchedulableSemester :: SelectionCriteria 
-> isSchedulableSemester dt _ s = (semester $ project s) <= current_semester
->    where
->      current_semester = dt2semester dt
-
 > filterSessions :: DateTime -> Minutes -> [SelectionCriteria] -> [Session] -> [Session]
 > filterSessions dt _   []       ss = ss
 > filterSessions dt dur (sc:scs) ss = filterSessions dt dur scs $ filter (sc dt dur) ss
@@ -202,19 +196,6 @@ scheduled.
 
 > schedulableSessions :: DateTime -> Minutes -> [Session] -> [Session]
 > schedulableSessions dt dur = filterSessions dt dur schedulableCriteria
-
-TBF, WTF: this isn't being called anywhere, but has a working unit test
-
-> clearWindowedTimeBilled :: Session -> Session
-> clearWindowedTimeBilled s
->   | (windows s) == [] = s
->   | otherwise         = makeSession s (windows s) ps
->       where
->         ps = map clear . periods $ s
->         clear p
->           | elem (peId p) pIds = p { pDuration = 0 }
->           | otherwise          = p
->         pIds = concatMap maybeToList $ [wPeriodId w | w <- (windows s)]
 
 > schedulableSession :: DateTime -> Minutes -> Session -> Bool
 > schedulableSession dt dur s = meetsCriteria dt dur s schedulableCriteria

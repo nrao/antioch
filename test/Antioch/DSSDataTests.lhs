@@ -12,23 +12,27 @@
 > import List (nub, sort)
 > import Data.List (find)
 > import Test.HUnit
+> import Control.Monad.Trans                   (liftIO)
 > import System.IO.Unsafe (unsafePerformIO)
 > import Database.HDBC
 
 The DB used for these unit tests is created and populated via the
 instructions in admin/genDssTestDatagase.py.
 
+Note that all these tests are read only.  There are no unit tests
+for functions that write to the DB because not only does that 
+corrupt the DB for the next test, but we also have problems resetting
+the DB connection.
+Story: https://www.pivotaltracker.com/story/show/14123905
+
 > tests = TestList [
 >       test_fetchPeriods
 >     , test_getWindows
 >     , test_getPeriods
+>     , test_getPeriodStates
+>     , test_getPeriodStateId
 >     , test_getProjects
->     -- , test_numPeriods
 >     , test_getProjectData
->     -- , test_getProjectsProperties
->     -- , test_putPeriods
->     -- , test_movePeriodsToDeleted
->     -- , test_populateWindowedSession
 >     , test_makeSession
 >     , test_scoreDSSData
 >     , test_session2
@@ -38,6 +42,19 @@ instructions in admin/genDssTestDatagase.py.
 >     , test_toDateRangesFromInfo_2
 >     , test_toDateRangesFromInfo_3
 >     ]
+
+> test_getPeriodStates = TestCase $ do
+>     cnn <- connect
+>     states <- getPeriodStates cnn
+>     assertEqual "test_getPeriodStates" expectedPeriodStates states 
+
+> test_getPeriodStateId = TestCase $ do
+>     assertEqual "test_getPeriodStateId 1" 1 (getState Pending)
+>     assertEqual "test_getPeriodStateId 2" 2 (getState Scheduled)
+>     assertEqual "test_getPeriodStateId 3" 3 (getState Deleted)
+>     assertEqual "test_getPeriodStateId 4" 4 (getState Complete)
+>   where
+>     getState st = getPeriodStateId st expectedPeriodStates
 
 > test_getProjectData = TestCase $ do
 >     cnn <- connect
@@ -73,31 +90,6 @@ instructions in admin/genDssTestDatagase.py.
 >   where
 >     obsBlackouts = [(fromGregorian 2009 4 1 0 0 0,fromGregorian 2009 4 3 0 0 0)]    
 >     frdBlackouts = [(fromGregorian 2009 4 7 0 0 0,fromGregorian 2009 4 10 0 0 0)]    
-
-TBF: cant' run this one automatically because it doesn't clean up yet, 
-so, clean up by hand for now.
-
-> test_numPeriods = TestCase $ do
->   projs <- getProjects
->   let ps = concatMap periods $ concatMap sessions projs
->   let numPs = length ps
->   assertEqual "test_numPeriods_1" 137 numPs
->   --  now create a new period identical to an existing period
->   -- and make sure it doesn't get translated to a period
->   assertEqual "test_numPeriods_2" [identicalToOpt] (filter (==identicalToOpt) ps)
->   -- TBF: Oops!  We're supposed to put in a new opportunity, not a window!
->   --putPeriods [identicalToOpt]
->   projs <- getProjects
->   let ps = concatMap periods $ concatMap sessions projs
->   assertEqual "test_numPeriods_3" numPs (length ps)
->   -- need to clean up!
->     where
->       identicalToOpt = defaultPeriod { session = defaultSession { sId = 48 }
->                             , startTime = fromGregorian 2009 7 15 4 0 0
->                             , duration = hrsToMinutes 3.75 
->                             , pForecast = fromGregorian 2009 7 15 4 0 0
->                                      }
->   
 
 Makes sure that a project with hrs for more then one grade is imported
 once and has a total time that is the sum of the grade hrs.
@@ -177,81 +169,6 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_15" X (band s)
 >   assertEqual "test_session2_16" False (lowRFI s)
 >   assertEqual "test_session2_17" 1 (length . lstExclude $ s)
-
-Perhaps these should be Quick Check properities, but the input is not 
-generated: it's the input we want to test, really.
-
-> test_getProjectsProperties = TestCase $ do
->   ps <- getProjects
->   let ss = concatMap sessions ps
->   let allPeriods = sort $ concatMap periods ss 
->   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
->   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
->   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
->   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == 3.0) ss) )
->   assertEqual "test_getProjects_properties_5" 46 (length $ filter lowRFI ss)
->   let lsts = filter (\s -> (length . lstExclude $ s) > 0) ss
->   assertEqual "test_getProjects_properties_6" 4 (length lsts)
->   assertEqual "test_getProjects_properties_7" [(15.0,21.0)] (lstExclude . head $ lsts)
->   assertEqual "test_getProjects_properties_8" [(14.0,9.0)] (lstExclude . last $ lsts)
->   -- TBF, BUG: Session (17) BB261-01 has no target, 
->   -- so is not getting imported.
->   assertEqual "test_getProjects_properties_9" 255 (length ss)  
->   assertEqual " " True True
->     where
->       validProject proj = "0" == (take 1 $ semester proj)
->       validSession s = (maxDuration s) >= (minDuration s)
->                    -- TBF!! &&  (sAllottedT s)     >= (minDuration s)
->                     &&  (validRA s) && (validDec s)
->       validPeriods allPeriods = not . internalConflicts $ allPeriods
-
-> test_putPeriods = TestCase $ do
->   r1 <- getNumRows "periods"
->   putPeriods [p1]
->   r2 <- getNumRows "periods"
->   cleanup "periods"
->   assertEqual "test_putPeriods" True (r2 == (r1 + 1)) 
->     where
->       dt = fromGregorian 2006 1 1 0 0 0
->       p1 = defaultPeriod { session = defaultSession { sId = 1 }
->                          , startTime = dt
->                          , pScore = 0.0
->                          , pForecast = dt }
-
-> test_movePeriodsToDeleted = TestCase $ do
->   projs <- getProjects
->   let ps = concatMap periods $ concatMap sessions projs
->   let exp = [Pending,Scheduled,Pending,Pending]
->   assertEqual "test_movePeriods_1" exp (map pState ps) 
->   -- move all to deleted
->   movePeriodsToDeleted ps
->   projs <- getProjects
->   let ps = concatMap periods $ concatMap sessions projs
->   --let exp = [Deleted,Deleted,Deleted,Deleted]
->   -- won't pick them up from DB since they are deleted
->   assertEqual "test_movePeriods_2" [] ps 
->   -- move them back
->   cnn <- connect
->   movePeriodToState cnn 1 1 
->   movePeriodToState cnn 2 2 
->   movePeriodToState cnn 3 1 
->   movePeriodToState cnn 4 1 
->   -- make sure the moved back okay
->   projs <- getProjects
->   let ps = concatMap periods $ concatMap sessions projs
->   assertEqual "test_movePeriods_3" exp (map pState ps) 
-
-Kluge, data base has to be prepped manually for test to work, see
-example in comments.
-
-> test_populateWindowedSession = TestCase $ do
->   cnn <- connect
->   s <- getSession sId cnn
->   ios <- populateSession cnn s
->   assertEqual "test_populateWindowedSession 1" s ios
->     where
->       sId =  194  -- just placeholders
->       pId = 1760
 
 > mkSqlLst  :: Int -> DateTime -> Int -> Int -> Int -> Int -> String -> [SqlValue]
 > mkSqlLst id strt dur def per pid st =
@@ -362,6 +279,37 @@ example in comments.
 >            ,  fromGregorian 2010  2 2 4 0 0)
 >             ]
 
+> test_addLSTExclusion = TestCase $ do
+>   cnn <- connect
+>   s <- getSession 1 cnn
+>   let mod_s  = addLSTExclusion' True s single
+>   let lstEx  = lstExclude mod_s
+>   assertEqual "test_addLSTExclusion" lstEx lstEx'
+
+>   let mod_s      = addLSTExclusion' True s range
+>   let lstExRange = lstExclude mod_s
+>   disconnect cnn
+>   assertEqual "test_addLSTExclusion" lstExRange lstEx''
+>     where
+>       single = [[toSql "LST Exclude Low", toSql "1.0"], [toSql "LST Exclude Hi", toSql "3.0"]]
+>       range  = [[toSql "LST Exclude Low", toSql "1.0"], [toSql "LST Exclude Hi", toSql "3.0"]
+>               , [toSql "LST Exclude Low", toSql "6.0"], [toSql "LST Exclude Hi", toSql "9.0"]
+>                 ]
+>       lstEx'  = [(1.0, 3.0)]
+>       lstEx'' = [(1.0, 3.0), (6.0, 9.0)]
+
+> test_invertIn = TestCase $ do
+>   let result = invertIn [] []
+>   assertEqual "test_invertIn empty" [] result
+>   let result = invertIn [2] [6]
+>   assertEqual "test_invertIn single" [(0.0,2.0),(6.0,24.0)] result
+>   let result = invertIn [0] [6]
+>   assertEqual "test_invertIn single zero" [(6.0,24.0)] result
+>   let result = invertIn [6, 12] [10, 14]
+>   assertEqual "test_invertIn multiple" [(0.0,6.0),(10.0,12.0),(14.0,24.0)] result
+>   let result = invertIn [0, 12] [10, 24]
+>   assertEqual "test_invertIn multiple" [(10.0,12.0)] result
+
 Test Utilities: 
 
 > getNumRows :: String -> IO Int
@@ -377,4 +325,7 @@ Test Utilities:
 >     run cnn ("TRUNCATE TABLE " ++ tableName ++ " CASCADE") []
 >     commit cnn
 >     disconnect cnn
+
+> expectedPeriodStates :: [(Int, StateType)]
+> expectedPeriodStates = [(1,Pending),(2,Scheduled),(3,Deleted),(4,Complete)]
 

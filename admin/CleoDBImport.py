@@ -96,7 +96,7 @@ class CleoDBImport:
         backward-compatible integer identifier, e.g., 1-8 or 9-24 or ...
         """
         retval = int(delta) / FORECASTDELTA + SIXDELTASTART
-        # TBF perhaps retval < SIXDELTASTART always implies SIXDELTASTART?
+        # Note: perhaps retval < SIXDELTASTART always implies SIXDELTASTART?
         return retval if SIXDELTASTART <= retval < MAXFORECASTTYPE else None
 
     def getForecastTypeIdFromTimestamp(self, timestamp):
@@ -137,10 +137,11 @@ class CleoDBImport:
         self.readWindFile(wind_file)
         self.readAtmoFile(forecast_file)
 
-        # TBF: we are changing our dictionary to an ordered list
+        # Note: we are changing our dictionary to an ordered list
         # why not just create the new ordered list?
         # i.e., self.data[time index][0] = timestamp
         # or self.data[time index][1][keyword][maybe freq] = value
+        # This works, and performance isn't an issue.
         self.data = [(timestamp, values) \
             for timestamp, values in self.data.items()]
         self.data.sort(key = lambda x: x[0])
@@ -169,7 +170,7 @@ class CleoDBImport:
 
             self.readWindFileValues(header, timestamp, row)
 
-            # TBF: we'll stop doing this eventually, but for now:
+            # Note: we'll stop doing this eventually, but for now:
             # need to insert a corrected wind speed into the DB.
             speed_mph = self.data[timestamp]['speed_mph']
             self.data[timestamp]['speed_ms'] = \
@@ -332,7 +333,8 @@ class CleoDBImport:
 
         self.reportLine("Inserting data for forecast %s\n" % self.forecast_time)
 
-        #assert self.dbname != "weather"          # TBF temporary!
+        # uncomment this line if you're developing and feeling paranoid
+        #assert self.dbname != "weather"          
         self.c = pg.connect(user = "dss", dbname = self.dbname, port = settings.DATABASE_PORT)
 
         # for the data we are inserting, record what forecast_time
@@ -387,7 +389,8 @@ class CleoDBImport:
         # then came the 'ground' or wind speed stuff     
         windFile = self.path + "/" + f2 + '/time_avrg' + f2[9:] + '.txt'
         
-        # TBF: check the FileList* files in each dir for FT's.
+        # Check the FileList* files in each dir for FT's.
+        # Story: https://www.pivotaltracker.com/story/show/14224103
 
         return atmFile, windFile
 
@@ -416,7 +419,6 @@ class CleoDBImport:
         "Sends email notification about import"
 
         to_list = ['pmargani@nrao.edu'
-                 , 'ashelton@nrao.edu'
                  , 'mclark@nrao.edu'
                  , 'rcreager@nrao.edu'
                  , 'mmccarty@nrao.edu'
@@ -425,7 +427,6 @@ class CleoDBImport:
                  , 'dbalser@nrao.edu'
                  ]
         timeStr = datetime.strftime(self.import_time, "%Y_%m_%d_%H_%M_%S")
-        # TBF: more detailed comments here?
         subject = "Weather Forecasts have been imported."
         body = """
         Weather Forecasts have been imported at %s UTC.\n

@@ -76,8 +76,6 @@ class WeatherData(SamplerData):
         See DSPN6.1.  Data is assumed to be at 1 Hz.
         """
 
-        # TBF: a real pythonista would use list-comprehension
-        # and could spell it too.
         stepSize = 20
         fraction = 0.1 # get the 90% highest median
         length = len(data)

@@ -4,11 +4,12 @@ import time
 from datetime import datetime
 
 RONPATH = "/users/rmaddale/Weather/"
-#RONPATH = "./"                           # TBF for development
-# TBF: there is a file for each site; c27, kekn, klwb.  which one to use?
+#RONPATH = "./"                           # for development
+# Note: there is a file for each site; c27, kekn, klwb.  
+# It's not clear to me why c27 is being used.
 RONFILE = "TS_c27_NAM"
-#WEATHERDATABASE = "weather_unit_tests"   # TBF for development
 WEATHERDATABASE = "weather"
+#WEATHERDATABASE = "weather_unit_tests"   # for development
 
 def process(filePath):
     "Let CleoDBImport do the thing that it does."

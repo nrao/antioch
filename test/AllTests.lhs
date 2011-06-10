@@ -4,13 +4,15 @@
 > import qualified Antioch.DateTimeTests as DateTimeT
 > import qualified Antioch.DebugTests as DebugT
 > import qualified Antioch.DSSDataTests as DSSDataT
+> import qualified Antioch.DSSReversionTests as DSSReversionT
 > import qualified Antioch.FilterTests as FilterTestT
 > import qualified Antioch.GenerateScheduleTests as GeneratorT
 > import qualified Antioch.HardwareScheduleTests as HardwareScheduleT
+> import qualified Antioch.HistoricalWeatherTests as HistoricalWeatherT
+> import qualified Antioch.PlotTests as PlotT
 > import qualified Antioch.ReceiverTests as ReceiverT
 > import qualified Antioch.ReceiverTemperaturesTests as ReceiverTempT
 > import qualified Antioch.ReportsTests as ReportT
-> import qualified Antioch.ReservationsTests as ReservationsT
 > import qualified Antioch.RunHistWeatherOptTests as RunHistWeatherOptT
 > import qualified Antioch.RunDailyScheduleTests as RunDailyScheduleT
 > import qualified Antioch.RunScoresTests as RunScoresT
@@ -28,10 +30,13 @@
 > tests = TestList [
 >     DailyScheduleT.tests
 >   , DateTimeT.tests
+>   , PlotT.tests
 >   , DebugT.tests
 >   , DSSDataT.tests
+>   , DSSReversionT.tests
 >   , FilterTestT.tests
 >   , HardwareScheduleT.tests
+>   , HistoricalWeatherT.tests
 >   , ScoreT.tests
 >   , ScheduleT.tests
 >   , RunScoresT.tests
@@ -40,7 +45,6 @@
 >   , PackT.tests
 >   , ReceiverT.tests
 >   , ReceiverTempT.tests
->   , ReservationsT.tests
 >   , RunDailyScheduleT.tests
 >   , RunHistWeatherOptT.tests
 >   , TimeAccountingT.tests

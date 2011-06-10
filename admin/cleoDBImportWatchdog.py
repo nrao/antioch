@@ -1,7 +1,8 @@
 # simple enough: if there isn't entries marking an import in the recent past,
 # send a warning
-# TBF: someday we need to move a lot of this stuff in antioch/admin into
+# Someday we need to move a lot of this stuff in antioch/admin into
 # nell, or some common code sharing spot.
+# Story: https://www.pivotaltracker.com/story/show/14223967
 
 import pg
 import settings
@@ -16,7 +17,7 @@ def hasRecentImport():
 
     dbname = "weather"
     query = "select max(date) from import_times;"
-    last_import = None
+    last_import = hours_since_last_import = None
     ok = False
     
     now = datetime.utcnow().replace(second = 0
@@ -36,23 +37,22 @@ def hasRecentImport():
            ok = True
     c.close()
     
-    print "hasRecentImport: ", ok
-    return ok
+    print "hasRecentImport: ", ok, hours_since_last_import, tolerance_hours
+    return (ok, hours_since_last_import, tolerance_hours)
 
-def sendWarning():
+def sendWarning(since_hrs, tolerance_hrs):
 
     to_list = ['pmargani@nrao.edu'
-             , 'ashelton@nrao.edu'
              , 'mclark@nrao.edu'
              , 'rcreager@nrao.edu'
              , 'mmccarty@nrao.edu'
              , 'rmaddale@nrao.edu'
              ]
-    # TBF: more detailed comments here?
-    subject = "Warning: Weather has not been imported recently"
+    subject = "Warning: Weather has not been imported for %5.2f hours" % since_hrs
     body = """
-    Warning: Weather has not been imported recently
-    """
+    Warning: Weather has not been imported for %5.2f hours.
+    Warnings sent after %5.2f hours.
+    """ % (since_hrs, tolerance_hrs)
 
     emailer = emailNotifier(smtp = "smtp.gb.nrao.edu"
                           , frm  = "dss@gb.nrao.edu")
@@ -64,8 +64,9 @@ def sendWarning():
 def check():
      
     # if the DB doesn't have a recent import, start spamming.
-    if not hasRecentImport():
-        sendWarning()
+    ok, since_hrs, tolerance_hrs = hasRecentImport()
+    if not ok:
+        sendWarning(since_hrs, tolerance_hrs)
 
 if __name__ == "__main__":
      check()    

@@ -36,7 +36,7 @@
 >     cfg  <- defaultConfig
 >     let cfg' = cfg {
 >         hostname   = "localhost"
->       , email      = "nubgames@gmail.com" -- TBF: should we change this?
+>       , email      = "helpdesk-dss@gb.nrao.edu" -- How is this used?
 >       , listenAddr = addr
 >       , listenPort = salviaListenerPort 
 >       }
@@ -60,4 +60,4 @@
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
 >         , ("/moc",           getMOCHandler cnn)  
 >       ] $ hError NotFound
->     liftIO $ disconnect cnn   -- TBF important? some of the above use pre-connected DSSData methods!?
+>     liftIO $ disconnect cnn   

@@ -5,6 +5,22 @@ from datetime import *
 
 class WeatherHealth:
 
+    """
+    As the name implies, this class is responsible for checking/maintaining the health of a 
+    Weather database.  It includes an entry point, from which, checks can be
+    made and a report produced.  One may want to run these checks after
+    updating a DB or producing a new one.  Checks include:
+       * bad values
+       * missing forecast times
+       * missing forecast weather dates
+       * missing gbt weather dates
+       * and more!
+    There are also methods available for improving the health of a DB: 
+       * cleaning up unsused dates
+       * filling gaps of various sizes
+       * use w/ caution!
+    """
+
     def __init__(self, dbname, filename = None):
 
         self.dtFormat = "%Y-%m-%d %H:%M:%S"
@@ -234,7 +250,8 @@ class WeatherHealth:
             r = self.cnn.query(query)
             self.badValues[col] = len(r.dictresult())
      
-        # TBF: we know that beforee 2005-02-02 there's a bunch of bad stuff
+        # NOTE: we know that beforee 2005-02-02 there's a bunch of bad stuff
+        # but most DBs don't start before 2006-01-01
         columns = ['opacity', 'tsys']
         for col in columns:
             query = """
@@ -251,7 +268,8 @@ class WeatherHealth:
 
     def checkGbtWeatherBadValues(self):
 
-        #  TBF: right now ALL irradicance values are NULL
+        #  Note: right now ALL irradicance values are NULL
+        #  Once new Pyrgeometer is up, we can start checking it.
         q = """
         SELECT * FROM gbt_weather 
         WHERE
@@ -267,12 +285,9 @@ class WeatherHealth:
     def report(self):
         "After the DB has been checked, anything interesting in the results?"
 
-        # TBF: print this all to a file as well
-
         self.add("Report: \n")
 
         self.add("Possible missing Forecast Times: \n")
-        #self.add("%s\n" % self.missingForecastTimes)
         for m in self.missingForecastTimes:
             self.add("Missing FTs between %s and %s\n" % (m[0], m[1]))
         
@@ -318,7 +333,7 @@ class WeatherHealth:
 
         self.add("GBT Weather Bad Values: \n")
         for col, count in self.badValues.items():
-            if col in ["wind_speed"]: # TBF: irradiance? 
+            if col in ["wind_speed"]: # Note: irradiance is still not available
                 self.add("Column %s has %d bad values\n" % (col, count))
 
     def fillGaps(self):

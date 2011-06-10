@@ -2,7 +2,7 @@
 
 > import Antioch.DateTime
 > import Data.Function (on)
-> import Data.List     (find)
+> import Data.List     (find, (\\))
 > import Data.Ix
 
 > type Frequency = Float   -- GHz
@@ -44,6 +44,10 @@ Ex: [K or L] and [K or S], or [[Receiver]].  In this form, all
 
 > type ReceiverGroup = [Receiver]
 
+Very often we'll want to cycle through *almost* all the receivers (you wouldn't want to calculate stringency for NoiseSource, would you?).
+
+> allRcvrs = [Rcvr_RRI .. RcvrArray18_26] \\ [Zpectrometer]
+
 Note: some of the bands specified below are simply for our own purposes,
 such as: P
 
@@ -53,11 +57,6 @@ such as: P
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
 > data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing | Commissioning deriving (Ord, Eq, Show, Read)
-
-TBF: Initially, Open, Fixed, and Windowed all share the same contents.
-Ideally, we need to evolve these as we go and add new items and remove
-useless items. Until the need arises to use different types, we will
-use a single data structure for all sessions.
 
 > data Session = Session {
 >     sId         :: Int
@@ -267,9 +266,12 @@ Tying the knot.
 >     (<=) = (<=) `on` startTime
 >     (>=) = (>=) `on` startTime
 
-TBF: Until scoring settles down, we want an equality operator for periods that
+Since scoring can change often, we want an equality operator for periods that
 ignores their numerical scores.  Note that equality between different periods
-is slightly arbitrary.
+is slightly arbitrary.  Here we define equality as depending on:
+   * session id
+   * startTime
+   * duration
 
 > instance Eq Period where
 >     (==) = periodsEqual

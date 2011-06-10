@@ -22,11 +22,14 @@
 
 import smtplib
 from datetime import datetime
-# TBF: copied this from nell, and didn't want to have to cp TimeAgent too
-# - long term solution is probably to put all this crap into nell.
-#import TimeAgent
 
 class emailNotifier:
+
+    """
+    This class is responsible for sending emails.
+    Note: it was copied over from nell, which in turn was copied
+    over from something in sparrow.
+    """
 
     def __init__(self, smtp = None, frm = None, to = None):
         

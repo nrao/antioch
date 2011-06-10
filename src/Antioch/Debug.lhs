@@ -1,7 +1,3 @@
-This module contains methods to help the user better understand how sessions
-were scored and how that scoring influenced the scheduling of the telescope.
-
-TBF, WTF: these functions are verbose and need to be consistent!
 
 > module Antioch.Debug where
 
@@ -11,6 +7,11 @@ TBF, WTF: these functions are verbose and need to be consistent!
 > import Antioch.Weather
 > import Antioch.Utilities (rad2hrs)
 > import Control.Monad.RWS.Strict
+> import Data.Array
+> import Data.Array.ST
+
+This module contains methods to help the user better understand how sessions
+were scored and how that scoring influenced the scheduling of the telescope.
 
 Extract the debugging info that was relevant at a specific date and time.
 
@@ -29,78 +30,13 @@ Organize traces by date and time.
 >       where
 >         (prev, (Timestamp dt' : next)) = break isTimestamp trace
 
-Reconstruct the scoring function that was in place at a specific date and time.
-
-> {-
-> getScoring          :: DateTime -> [Trace] -> Scoring ScoreFunc
-> getScoring dt trace = do
->     tell [Timestamp dt]
->     let accessor s = (round . rad2hrs . ra $ s) `mod` 24
->     raPressure   <- genRightAscensionPressure' accessor raFactors
->     freqPressure <- genFrequencyPressure' freqFactors
->     genScore' raPressure freqPressure
->   where
->     trace' = findTrace dt trace
->     (FreqPressureHistory freqFactors : _) = getFreqPressureHistory trace'
->     (RaPressureHistory   raFactors   : _) = getRaPressureHistory trace'
-> -}
-
-Reconstruct the factors that were used in scoring a given period.
-
-> {-
-> getFactors            :: ReceiverSchedule -> [Trace] -> Period -> IO Factors
-> getFactors rs trace p = do
->     w <- getWeather (Just dt)
->     runScoring w rs $ do
->         sf <- getScoring dt trace
->         sf dt (session p)
->   where
->     dt = pForecast p
-> -}
-
-> getCanceledPeriods :: [Trace] -> [Period]
-> getCanceledPeriods trace = canceled
->   where
->     canceled' = getCancellationHistory trace
->     canceled  = [getCancellation c | c <- canceled']
-
-> getFreqPressureHistory :: [Trace] -> [Trace]
-> getFreqPressureHistory = filter isFreqPressureHistory
-
-> getFreqPressureBinHistory :: [Trace] -> [Trace]
+> getFreqPressureBinHistory, getFreqPressureHistory, getRaPressureHistory, getTimestampHistory, getCancellationHistory, getWindowPeriodsHistory :: [Trace] -> [Trace]
+> getFreqPressureHistory    = filter isFreqPressureHistory
 > getFreqPressureBinHistory = filter isFreqPressureBinHistory
-
-> getRaPressureHistory :: [Trace] -> [Trace]
-> getRaPressureHistory = filter isRaPressureHistory
-
-> getTimestampHistory :: [Trace] -> [Trace]
-> getTimestampHistory = filter isTimestamp
-
-> getCancellationHistory :: [Trace] -> [Trace]
-> getCancellationHistory = filter isCancellation
-
-> getWindowPeriodsHistory :: [Trace] -> [Trace]
-> getWindowPeriodsHistory = filter isWindowPeriods
-
-> getWindowPeriodsFromTrace :: [Trace] -> [(Window, Maybe Period, Period)]
-> getWindowPeriodsFromTrace trace = whs
->   where
->     whs' = getWindowPeriodsHistory trace
->     whs  = [getWindowPeriods w | w <- whs']
-
-TBF: add types sometime ...
-
-> getCancellation (Cancellation period) = period
-
-> getTimestamp (Timestamp dt) = dt
-
-> getFreqPressure (FreqPressureHistory fp) = fp
-
-> getFreqPressureBin (FreqPressureBinHistory fpb) = fpb
-
-> getRaPressure (RaPressureHistory rp) = rp
-
-> getWindowPeriods (WindowPeriods wh) = wh
+> getRaPressureHistory      = filter isRaPressureHistory
+> getTimestampHistory       = filter isTimestamp
+> getCancellationHistory    = filter isCancellation
+> getWindowPeriodsHistory   = filter isWindowPeriods
 
 > isTimestamp (Timestamp _) = True
 > isTimestamp _             = False
@@ -121,6 +57,32 @@ TBF: add types sometime ...
 > isWindowPeriods (WindowPeriods _) = True
 > isWindowPeriods _                 = False
 
+> getCancellation :: Trace -> Period
+> getCancellation (Cancellation period) = period
+
+> getTimestamp :: Trace -> DateTime
+> getTimestamp (Timestamp dt) = dt
+
+> getFreqPressure :: Trace -> Array Band Float
+> getFreqPressure (FreqPressureHistory fp) = fp
+
+> getFreqPressureBin :: Trace -> Array Band (Int, Int)
+> getFreqPressureBin (FreqPressureBinHistory fpb) = fpb
+
+> getRaPressure :: Trace -> Array Int Float
+> getRaPressure (RaPressureHistory rp) = rp
+
+> getWindowPeriods (WindowPeriods wh) = wh
+> getWindowPeriodsFromTrace :: [Trace] -> [(Window, Maybe Period, Period)]
+> getWindowPeriodsFromTrace trace = whs
+>   where
+>     whs' = getWindowPeriodsHistory trace
+>     whs  = [getWindowPeriods w | w <- whs']
+> getCanceledPeriods :: [Trace] -> [Period]
+> getCanceledPeriods trace = canceled
+>   where
+>     canceled' = getCancellationHistory trace
+>     canceled  = [getCancellation c | c <- canceled']
 
 Find the total amount of unused time in the schedule.
 

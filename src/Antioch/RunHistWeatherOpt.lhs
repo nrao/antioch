@@ -142,7 +142,7 @@ number of lines.
 >     fileContents <- readFile file 
 >     return $ map read $ lines fileContents
 
-TBF: is there a better way to do this: now we can only use 2 or 3 cores
+Note: is there a better way to do this: now we can only use 2 or 3 cores
 , which is actually pretty realistic, but still ...
 
 Combination of results is simple: take the average of the stringencies

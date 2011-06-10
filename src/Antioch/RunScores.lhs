@@ -38,10 +38,6 @@ Other outside factors that affect scoring, but are more or less invariant in the
    * Receiver Temperatures
    * Receiver Schedule
 
-TBFs:
-   * Score.scorePeriod & Score.scoreSession should be able to share code, and put the IO Monad part into this module.
-   # Can Score.bestDuration also be sharing w/ scorePeriod & scoreSession better?
-
 NOTE: to make these functions accessable to unit testing:
    * the projects are passed in - this makes the unit tests independent of the projects DB; unit tests create what they need and pass it in, while the Server simply gives the results from 'getProjects'
    * test parameter - if set to True, Weather is *not* NOW, but given the origin from something predictable (like earliest period start time), and receiver schedule is ignored.  Thus we can get consistent unit test results.
@@ -156,7 +152,7 @@ Example params:
 >     let rfi         = fromJust . fromJust . lookup "rfi" $ params
 >     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
 >     let blackout    = fromJust . fromJust . lookup "blackout" $ params
->     -- TBF: filer #1
+>     -- Using the flags from above, what optional scoring factors should we include? 
 >     let sfs = catMaybes [if rfi == "true" then Nothing else Just needsLowRFI
 >                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
 >                        , if blackout == "true" then Nothing else Just observerAvailable
@@ -165,7 +161,8 @@ Example params:
 >     let backup = fromJust . fromJust . lookup "backup" $ params
 >     -- include completed sessions?
 >     let completed = fromJust . fromJust . lookup "completed" $ params
->     -- TBF: filter #2
+>     -- Using the above two flags, construct the list of filters to apply against our
+>     -- pool of candidate sessions
 >     let filter = catMaybes . concat $ [
 >             if completed == "true" then [Nothing] else [Just hasTimeSchedulable, Just isNotComplete]
 >           , [Just isNotMaintenance]
@@ -187,9 +184,10 @@ Example params:
 > 
 >     -- find the nominees
 >     nominees <- liftIO $ runScoring w rs rt $ do
->         -- TBF: apply filter #1
+>         -- generate the scoring function, adding on whatever optional scoring functions were
+>         -- selected from above
 >         sf <- genPartScore dt sfs . scoringSessions dt undefined $ ss
->         -- TBF: apply filter #2
+>         -- apply the filter we constructed from above
 >         durations <- bestDurations sf dt lower upper $ schedSessions ss
 >         return durations
 >     return nominees

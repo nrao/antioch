@@ -9,7 +9,7 @@
 > import Antioch.Debug
 > import Antioch.Statistics (scheduleHonorsFixed)
 > import Antioch.Generators (internalConflicts)
-> import Data.List (sort, find)
+> import Data.List (sort, find, nub)
 > import Data.Maybe
 > import Control.OldException
 > import Test.HUnit
@@ -27,7 +27,169 @@
 >   , test_updateSessions
 >   , test_periodInWindow'
 >   , test_filterDupUnpubPeriods
+>   , test_getNewlyScheduledWindowInfo
+>   , test_findNotCompleteWindows
+>   , test_getWindowInfo
+>   , test_getWindows
+>   , test_getWindow
+>   , test_newlyPublished
+>   , test_updateSessionPeriods
+>   , test_updatePublishedPeriods
 >                  ]
+
+
+> test_updatePublishedPeriods = TestCase $ do
+>     -- no-op
+>     let result = updatePublishedPeriods [] history
+>     -- remember that identity between periods is just on:
+>     -- session id, start time, duration
+>     assertEqual "test_updatePublishedPeriods 1" history result
+>     let states = take 5 $ repeat Pending
+>     assertEqual "test_updatePublishedPeriods 2" states (map pState result)
+>     -- update one of the periods
+>     let result = updatePublishedPeriods [published] history
+>     -- this still passes because it doesn't check the pState
+>     assertEqual "test_updatePublishedPeriods 3" history result
+>     -- make sure the last one gets published!
+>     let states = [Pending,Pending,Pending,Pending,Scheduled]
+>     assertEqual "test_updatePublishedPeriods 4" states (map pState result)
+>   where
+>     history = concatMap periods $ getWindowedPSessions ++ [testWindow3]
+>     w3period = (head . periods $ testWindow3) 
+>     published = w3period {pState = Scheduled, pDuration = duration w3period}
+>     
+>
+
+> test_updateSessionPeriods = TestCase $ do
+>     -- no-op: nothing gets published, canceled, or created
+>     let result = updateSessionPeriods s [] [] []
+>     assertEqual "test_updateSessionPeriods 1" ps result
+>     assertEqual "test_updateSessionPeriods 2" Pending (pState . head $ result)
+>     -- publish the sessions' one default period
+>     let result = updateSessionPeriods s [published] [] []
+>     assertEqual "test_updateSessionPeriods 3" ps result
+>     assertEqual "test_updateSessionPeriods 4" Scheduled (pState . head $ result)
+>     -- cancel the default period
+>     let result = updateSessionPeriods s [] [p] []
+>     assertEqual "test_updateSessionPeriods 5" [] result
+>     -- cancel the default period and add a chosen period
+>     let result = updateSessionPeriods s [] [p] [newP]
+>     assertEqual "test_updateSessionPeriods 5" [newP] result
+>   where
+>     s = testWindow3
+>     ps = periods s
+>     p = head . periods $ s
+>     dur = duration p
+>     published = p { pState = Scheduled, pDuration = dur }
+>     newP = defaultPeriod { peId = 124 , startTime = fromGregorian 2006 10 20 17 30 0 , duration = 4*60    }
+
+> test_newlyPublished = TestCase $ do
+>   assertEqual "test_newlyPublished 1" True (newlyPublished [pendingPeriod] scheduledPeriod)
+>   assertEqual "test_newlyPublished 2" False (newlyPublished [pendingPeriod] pendingPeriod)
+>   assertEqual "test_newlyPublished 1" True (newlyPublished history scheduledPeriod)
+>   assertEqual "test_newlyPublished 2" False (newlyPublished history pendingPeriod)
+>     where
+>   pendingPeriod = head $ periods testWindow3
+>   scheduledPeriod = pendingPeriod {pState = Scheduled}
+>   history = concatMap periods $ getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+
+
+The input to this test must be setup to be like the input found where
+it is called in Simulate.lhs: that is, we have just created a new 
+schedule with 'pack' and are trying to see how that affects the
+unaltered list of input sessions.
+
+> test_getNewlyScheduledWindowInfo = TestCase $ do
+>     let winInfo = getNewlyScheduledWindowInfo ss [p]
+>     assertEqual "getNewlyScheduledWindowInfo" 1 (length winInfo)
+>     let result = map (\(w, c, d) -> (wId w, peId . fromJust $ c, peId d)) winInfo 
+>     assertEqual "getNewlyScheduledWindowInfo" [(123, 300, 121)] result 
+>   where
+>     -- the input to pack; assuming no pre-scheduled periods
+>     ss = getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+>     -- the output from pack: a chosen period for testWindow3
+>     p = defaultPeriod { session = testWindow3
+>                       , peId = 300
+>                       , startTime = fromGregorian 2006 10 13 17 30 0 
+>                       , duration = 4*60 }
+>     
+
+> test_findNotCompleteWindows = TestCase $ do
+>     let psWs = findNotCompleteWindows ss ps
+>     let result = map (\(p, w) -> (peId p, wId w)) psWs
+>     assertEqual "findNotCompleteWindows" exp result 
+>   where
+>     -- contains just one complete window (wId = 132)
+>     ss = getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+>     ps = concatMap periods ss
+>     exp = [(100,121),(101,122),(200,131),(121,123)]
+
+> test_getDefaultPeriods = TestCase $ do
+>     let pIds = map peId $ getDefaultPeriods ss ws
+>     assertEqual "getDefaultPeriods" expPids pIds 
+>   where
+>     ss = getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+>     ws = concatMap windows ss
+>     expPids = [100,101,200,201,121]
+
+The input to this test must be setup to be like the input found where
+it is called in Simulate.lhs: that is, we have just created a new 
+schedule with 'pack' and are trying to see how that affects the
+unaltered list of input sessions.
+
+> test_getWindowInfo_2 = TestCase $ do
+>     let wInfo = getWindowInfo ss ps 
+>     let wIds = map (\(w, c, d) -> wId w) $ wInfo 
+>     assertEqual "test_getWindowInfo_2 1" [121,122,131,132,123] wIds
+>     let defaultIds = map (\(w, c, d) -> peId d) $ wInfo 
+>     assertEqual "test_getWindowInfo_2 3"  [100,101,200,201,121] defaultIds
+>     let chosen = map (\(w, c, d) -> c) $ wInfo 
+>     assertEqual "test_getWindowInfo_2 2"  (take 4 $ repeat Nothing) (take 4 chosen)
+>     assertEqual "test_getWindowInfo_2 2"  300 (peId . fromJust . last $ chosen)
+>   where
+>     -- input to pack
+>     ss = getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+>     -- output from pack: all the default periods, except for the one
+>     -- from testWindow3, but with a chosen for that session
+>     p = defaultPeriod { session = testWindow3
+>                       , peId = 300
+>                       , startTime = fromGregorian 2006 10 13 17 30 0 
+>                       , duration = 4*60 }
+>     ps = (concatMap periods getWindowedPSessions) ++ [p]
+
+> test_getWindowInfo = TestCase $ do
+>     let wInfo = getWindowInfo ss ps
+>     let wIds = map (\(w, c, d) -> wId w) $ wInfo 
+>     assertEqual "test_getWindowInfo 1" expWids wIds
+>     let chosen = nub . sort $ map (\(w, c, d) -> c) $ wInfo 
+>     assertEqual "test_getWindowInfo 2"  [Nothing] chosen
+>     let defaultIds = map (\(w, c, d) -> peId d) $ wInfo 
+>     assertEqual "test_getWindowInfo 3"  expPids defaultIds
+>   where
+>     ss = getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+>     ps = sort $ concatMap periods ss 
+>     pIds = map peId ps
+>     expWids = [131,121,132,123,122] 
+>     expPids = [200,100,201,121,101]
+
+> test_getWindows = TestCase $ do
+>     let wIds = map wId $ getWindows ss ps
+>     assertEqual "test_getWindow" exp wIds
+>   where
+>     ss = getOpenPSessions ++ getWindowedPSessions ++ [testWindow3]
+>     ps = sort $ concatMap periods ss
+>     pIds = map peId ps
+>     exp = [131,121,132,123,122]  
+
+> test_getWindow = TestCase $ do
+>     let wIds = map wId $ map (getWindow ss) ps
+>     assertEqual "test_getWindow" exp wIds
+>   where
+>     ss = getWindowedPSessions ++ [testWindow3]
+>     ps = sort $ concatMap periods ss
+>     pIds = map peId ps
+>     exp = [131,121,132,123,122]  
+>     
 
 Attempt to see if the old test_sim_pack still works:
 
@@ -483,16 +645,30 @@ Test Utilities:
 > tw1 = findPSessionByName "TestWindowed1"
 > tw2 = findPSessionByName "TestWindowed2"
 
-TBF try:
-
-Prelude Data.IORef> z <- newIORef (\x -> x)
-Prelude Data.IORef> y <- newIORef (\x -> x)
-Prelude Data.IORef> z == z
-True
-Prelude Data.IORef> z == y
-False
-
-http://stackoverflow.com/questions/1717553/pointer-equality-in-haskell
+> testWindow3 = makeSession s' [w] [p]
+>     where
+>   p = defaultPeriod { peId = 121 , startTime = fromGregorian 2006 10 23 17 30 0 , duration = 4*60    }
+>   w = defaultWindow {
+>           wId = 123
+>         , wRanges = [(fromGregorian' 2006 10 10, fromGregorian' 2006 10 25)]
+>         , wPeriodId = Just 121
+>         , wTotalTime = 4*60
+>                     }
+>   s' = defaultSession { sId = 123
+>       , sName = "TestWindowed3"
+>       , windows = [w]
+>       , periods = [p]
+>       , sAllottedT = 2*4*60
+>       , sAllottedS = 2*4*60
+>       , minDuration = 4*60
+>       , maxDuration = 4*60
+>       , frequency = 1.1
+>       , ra = hrs2rad 14.3
+>       , dec = deg2rad 13.3
+>       , receivers = [[Rcvr1_2]]
+>       , band = L
+>       , sType = Windowed
+>       }
 
 > isSessionKnotted :: Session -> Bool
 > isSessionKnotted s = all (\f -> f s) [pknots]
