@@ -3,7 +3,7 @@
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.DateTime
-> import Antioch.Filters        (filterHistory, typeWindowed)
+> import Antioch.Filters        (truncateHistory, typeWindowed)
 > import Antioch.Utilities
 > import Antioch.Score          (elevation, radecel2ha)
 > import System.Random   
