@@ -654,7 +654,18 @@ Scale the wind speed by 1.5 to account for weather differences between
 > atmosphericStabilityLimit dt s = do
 >   w <- weather
 >   di <- liftIO $ irradiance w dt
->   boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+>   tsys' <- liftIO $ tsys w dt ( frequency s)
+>   if usesMustang s then atmStabGas tsys' else atmStab di
+>   where
+>      atmStabGas tsys = boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimitMustang tsys (goodAtmStb s) (elevation dt s)
+>      atmStab di = 
+>        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+
+> calculateAtmStabilityLimitMustang :: Maybe Float -> Bool -> Float -> Maybe Bool
+> calculateAtmStabilityLimitMustang tsys useGas el = do
+>   tsys' <- tsys
+>   let atmStb = tsys' / (sin el)
+>   return $ if useGas then (atmStb < 35) else (atmStb < 50)
 
 > calculateAtmStabilityLimit :: Maybe Float -> ObservingType -> Frequency -> Maybe Bool
 > calculateAtmStabilityLimit di ot f = do

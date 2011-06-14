@@ -88,6 +88,7 @@ such as: P
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
 >   , guaranteed  :: Bool
+>   , goodAtmStb  :: Bool
 >   } deriving Show
 
 > instance Eq Session where
@@ -312,6 +313,7 @@ Simple Functions for Periods:
 >   , xi          = 1.0
 >   , elLimit     = Nothing
 >   , guaranteed  = True 
+>   , goodAtmStb  = False 
 >   }
 
 > defaultObserver = Observer {

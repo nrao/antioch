@@ -41,6 +41,9 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     , test_toDateRangesFromInfo_1
 >     , test_toDateRangesFromInfo_2
 >     , test_toDateRangesFromInfo_3
+>     , test_addLSTExclusion
+>     , test_invertLSTIn
+>     , test_goodAtmStb
 >     ]
 
 > test_getPeriodStates = TestCase $ do
@@ -298,7 +301,7 @@ Test a specific session's attributes:
 >       lstEx'  = [(1.0, 3.0)]
 >       lstEx'' = [(1.0, 3.0), (6.0, 9.0)]
 
-> test_invertIn = TestCase $ do
+> test_invertLSTIn = TestCase $ do
 >   let result = invertIn [] []
 >   assertEqual "test_invertIn empty" [] result
 >   let result = invertIn [2] [6]
@@ -309,6 +312,14 @@ Test a specific session's attributes:
 >   assertEqual "test_invertIn multiple" [(0.0,6.0),(10.0,12.0),(14.0,24.0)] result
 >   let result = invertIn [0, 12] [10, 24]
 >   assertEqual "test_invertIn multiple" [(10.0,12.0)] result
+
+> test_goodAtmStb = TestCase $ do
+>   ps <- getProjects
+>   let ss = sessions $ head ps
+>   let gas1 = goodAtmStb $ head ss
+>   assertEqual "test_goodAtmStb 1" False gas1
+>   let gas2 = goodAtmStb $ head (tail ss)
+>   assertEqual "test_goodAtmStb 2" True gas2
 
 Test Utilities: 
 

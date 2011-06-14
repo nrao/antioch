@@ -498,6 +498,8 @@ For now, just set:
    * transit flag
    * xi factor
    * elevation limit 
+   * guaranteed
+   * good atmospheric stability
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
@@ -506,6 +508,7 @@ For now, just set:
 >     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
 >     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
 >     | n == "Not Guaranteed"  = s { guaranteed = not . fromSql $ pBool }   
+>     | n == "Good Atmospheric Stabililty" = s { goodAtmStb = fromSql $ pBool }   
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName
