@@ -271,7 +271,7 @@ tracking efficiency vs frequency
 
 > trackObsEffData' :: [Float] -> Float -> DateTime -> Bool -> [Maybe Float]
 > trackObsEffData' fs w dt m = do
->    map (trackingObservingEfficiency (Just w) dt m) fs
+>    map (trackingObservingEfficiency (Just w) dt m 0.0) fs
 
 Stringency versus frequency for elevation = 25,35,50,75,90 deg,
 all receivers, and obs type = cont.

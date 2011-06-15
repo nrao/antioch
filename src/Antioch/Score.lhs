@@ -232,9 +232,11 @@ Equation 9
 > surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" . Just $ surfaceObservingEfficiency' dt (frequency s)
 
 Equation 14
+Note that when the default value of the source size is used (0.0) this 
+equation is simply 740.0 / f
 
-> halfPwrBeamWidth :: Frequency -> Frequency
-> halfPwrBeamWidth f = 740.0 / f
+> halfPwrBeamWidthObserved :: Frequency -> Arcsec -> Frequency
+> halfPwrBeamWidthObserved f srcSize = sqrt $ srcSize^2 + (740.0 / f)^2
 
 > rmsTE :: DateTime -> Float
 > rmsTE dt = if isPTCSDayTime roundToHalfPast dt then trErrSigmaDay else trErrSigmaNight
@@ -245,20 +247,21 @@ Equation 14
 
 > trackingEfficiency dt s = do
 >   wind <- getRealOrForecastedWind dt
->   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesMustang s) (frequency s)
+>   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesMustang s) (frequency s) (sourceSize s)
 
-> trackingObservingEfficiency :: Maybe Float -> DateTime -> Bool -> Frequency -> Maybe Float
-> trackingObservingEfficiency wind dt mustang freq = do
+> trackingObservingEfficiency :: Maybe Float -> DateTime -> Bool -> Frequency -> Arcsec -> Maybe Float
+> trackingObservingEfficiency wind dt mustang freq srcSize = do
 >     wind' <- wind
 >                                                          -- Equation:
->     let f = trackErr dt wind' freq                       -- from 13
->     let fmin = trErrSigmaNight / (halfPwrBeamWidth freq) -- 13a
->     let fv = trackErrArray wind' freq                    -- from 16
->     let fvmin = epsilonZero / (halfPwrBeamWidth freq)    -- 17b
+>     let f = trackErr dt wind' freq srcSize               -- from 13
+>     let fmin = trErrSigmaNight / (hpbw)                  -- 13a
+>     let fv = trackErrArray wind' freq srcSize            -- from 16
+>     let fvmin = epsilonZero / (hpbw)                     -- 17b
 >     if mustang then return $ renormalize fvmin fv        -- 17a
 >                else return $ renormalize fmin f          -- 12a
 >   where
 >     renormalize fn fd = ((calculateTE fn) / (calculateTE fd))^2
+>     hpbw = halfPwrBeamWidthObserved freq srcSize
 
 Base of exponential Equation 12
 
@@ -639,32 +642,36 @@ Use different constants for MOC.
 >     -- w <- weather
 >     -- wind' <- liftIO $ gbt_wind w dt
 >     wind' <- getRealOrForecastedWind dt
->     boolean "trackingErrorLimit" $ calculateTRELimit maxTrackErr maxTrackErrArray wind' dt s 
+>     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
+> {-
 >       where
 >         maxTrackErr      = 0.2  -- Equation 25
 >         maxTrackErrArray = 0.4  -- Equation 26
+> -}
 >     
 
 Equation 13
 
-> trackErr :: DateTime -> Float -> Frequency -> Float
-> trackErr dt w f = rmsTrackingError dt w / (halfPwrBeamWidth f)
+> trackErr :: DateTime -> Float -> Frequency -> Arcsec -> Float
+> trackErr dt w f size = rmsTrackingError dt w / (halfPwrBeamWidthObserved f size)
 
 Equation 16
 
-> trackErrArray :: Float -> Frequency -> Float
-> trackErrArray w f = variableTrackingError w / (halfPwrBeamWidth f)
+> trackErrArray :: Float -> Frequency -> Arcsec -> Float
+> trackErrArray w f size = variableTrackingError w / (halfPwrBeamWidthObserved f size)
 
-> calculateTRELimit :: Float -> Float -> Maybe Float -> DateTime -> Session -> Maybe Bool
-> calculateTRELimit maxTrackErr maxTrackErrArray wind dt s = do
+> calculateTRELimit :: Maybe Float -> DateTime -> Session -> Maybe Bool
+> calculateTRELimit wind dt s = do
 >     wind' <- wind
->     let f  = trackErr dt wind' (frequency s)
->     let fv = trackErrArray wind' (frequency s)
->     let limit = if usesMustang s then if fv <= maxTrackErrArray then True
+>     let f  = trackErr dt wind' (frequency s) (sourceSize s)
+>     let fv = trackErrArray wind' (frequency s) (sourceSize s)
+>     let limit = if usesMustang s then if fv <= threshold then True
 >                                                                 else False
->                                  else if f  <= maxTrackErr then True
+>                                  else if f  <= threshold then True
 >                                                            else False
 >     return limit
+>   where
+>     threshold = trkErrThreshold s
 
 Equation 11
 

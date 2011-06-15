@@ -512,6 +512,8 @@ For now, just set:
 >     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
 >     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
 >     | n == "Not Guaranteed"  = s { guaranteed = not . fromSql $ pBool }   
+>     | n == "Source Size"     = s { sourceSize = fromSql pFlt }
+>     | n == "Tr Err Limit"    = s { trkErrThreshold = fromSql pFlt }
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName
