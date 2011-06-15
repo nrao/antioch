@@ -470,8 +470,10 @@ observing parameters, etc.
 
 > populateSession :: Connection -> Session -> IO Session
 > populateSession cnn s = do
->     s'  <- setObservingParameters cnn s
->     s'' <- updateRcvrs cnn s'
+>     -- order here is important:
+>     s' <- updateRcvrs cnn s
+>     -- need to know what rcvrs are used when setting observing params
+>     s'' <- setObservingParameters cnn s'
 >     ps <- getPeriods cnn s''
 >     ws <- getWindows cnn s''
 >     es <- getElectives cnn s''
@@ -486,15 +488,18 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters :: Connection -> Session -> IO Session
 > setObservingParameters cnn s = do
 >   result <- quickQuery' cnn query xs 
->   let s' = setObservingParameters' s result
->   s'' <- setLSTExclusion cnn s'
->   return s''
+>   -- set the correct default value for the track error threshold first
+>   let s' = s { trkErrThreshold = getThresholdDefault s }
+>   let s'' = setObservingParameters' s' result
+>   s''' <- setLSTExclusion cnn s''
+>   return s'''
 >     where
 >       xs = [toSql . sId $ s]
 >       query = "SELECT p.name, p.type, op.string_value, op.integer_value, op.float_value, \
 >              \ op.boolean_value, op.datetime_value \
 >              \ FROM observing_parameters AS op, parameters AS p \
 >              \ WHERE p.id = op.parameter_id AND op.session_id = ?" 
+>       getThresholdDefault s = if usesMustang s then trkErrThresholdFilledArrays else trkErrThresholdSparseArrays
 
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
@@ -504,6 +509,9 @@ For now, just set:
    * transit flag
    * xi factor
    * elevation limit 
+   * guaranteed flag
+   * source size
+   * tracking error threshold
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
