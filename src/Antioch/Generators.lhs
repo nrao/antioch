@@ -229,7 +229,12 @@ to 0, unique ids are produced in GenerateSchedule where needed.
 >                , backup         = bk
 >                -- default Open Session have one period, want none here
 >                , periods        = []
+>                , trkErrThreshold = getTrkErrThreshold r
 >                }
+
+> getTrkErrThreshold :: Receiver -> Float
+> getTrkErrThreshold Rcvr_PAR = trkErrThresholdFilledArrays
+> getTrkErrThreshold _        = trkErrThresholdSparseArrays
 
 Method for producing a generic, initial Fixed Session.  Various
 fields are modified in GenerateSchedule where more information
@@ -279,6 +284,7 @@ is available.
 >                , backup         = bk
 >                , sType          = Fixed
 >                , oType          = otype
+>                , trkErrThreshold = getTrkErrThreshold r
 >                }
 
 Method for producing a generic, initial Windowed Session.  Various
@@ -329,6 +335,7 @@ is available.
 >                , backup         = bk
 >                , sType          = Windowed
 >                , oType          = otype
+>                , trkErrThreshold = getTrkErrThreshold r
 >                }
 
 This is only for use with the scheduleMinDuration strategy.  We want
