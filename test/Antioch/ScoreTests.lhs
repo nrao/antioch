@@ -1262,10 +1262,10 @@ Equation 16
 
 >     assertEqual "test_trackingErrorLimit 2.5" 0.0 result
 >     -- now test a continuum session
->     let s' = findPSessionByName "MH"
->     let s = s' { oType = Continuum
->                , trkErrThreshold = trkErrThresholdContinuum
->                }
+>     let s = findPSessionByName "MH"
+>     --let s = s' { oType = Continuum
+>     --           , trkErrThreshold = trkErrThresholdContinuum
+>     --           }
 >     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s)
 >     assertEqual "test_trackingErrorLimit 3" 0.0 result
 >     -- Now really raise the threshold, and watch it pass.

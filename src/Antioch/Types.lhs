@@ -327,14 +327,14 @@ Simple Functions for Periods:
 >   , elLimit     = Nothing
 >   , guaranteed  = True 
 >   , sourceSize  = 0.0
->   , trkErrThreshold = trkErrThresholdSpectralLine 
+>   , trkErrThreshold = trkErrThresholdSparseArrays 
 >   }
 
 Defaults for the Tracking Error Threshold parameter:
 
-> trkErrThresholdSpectralLine, trkErrThresholdContinuum :: Float
-> trkErrThresholdSpectralLine = 0.2
-> trkErrThresholdContinuum    = 0.4
+> trkErrThresholdSparseArrays, trkErrThresholdFilledArrays :: Float
+> trkErrThresholdSparseArrays = 0.2
+> trkErrThresholdFilledArrays = 0.4
 
 > defaultObserver = Observer {
 >     oId          = 0 
