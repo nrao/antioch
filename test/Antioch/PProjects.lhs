@@ -3,6 +3,7 @@
 >       pTestProjects
 >     , findPSessionByName
 >     , findPSessionsByName
+>     , getPPeriods
 >     , getPSessionId
 >     , getOpenPSessions
 >     , getWindowedPSessions
@@ -364,6 +365,9 @@ Utilities:
 
 > findPSessionsByName :: String -> [Session]
 > findPSessionsByName name = filter (\s' -> (sName s')==name) (concatMap sessions pTestProjects) 
+
+> getPPeriods :: [Period]
+> getPPeriods = concat . map periods . concat . map sessions $ pTestProjects
 
 Assumes we have unique names.  
 

@@ -213,6 +213,24 @@ Variables:
 >     where
 >   hrEarlyDt = addMinutes (-60) dt
 
+Returns the period ids of those given periods whose MOCs fail.
+
+> runMOCfailures :: [Period] -> Bool -> IO [Int]
+> runMOCfailures ps test = do
+>   w <- if test then getWeatherTest $ Just (hrEarlyDt dt) else getWeather Nothing
+>   rs <- if test then return [] else getReceiverSchedule $ Just dt
+>   rt <- getReceiverTemperatures
+>   res <- mapM (\(st, dur, s) -> runScoring w rs rt $ minimumObservingConditions st dur s) args
+>   return . map fst . filter (\(i, b) -> not $ maybe True id b) . zip [peId p | p <-ps] $ res
+>     where
+>       dt = startTime . head $ ps
+>       hrEarlyDt dt = addMinutes (-60) dt
+>       args = [(startTime p, pDuration p, session p) | p <- ps]
+
+> runPeriodMOC :: Period -> Bool -> IO (Maybe Bool)
+> runPeriodMOC p test = do
+>     runMOC (startTime p) (duration p) (session p) test
+
 Utilities:
 
 > raise :: (Period, Maybe Session) -> Maybe (Period, Session)

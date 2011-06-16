@@ -375,7 +375,7 @@ _____________________________________________________________________________
 >                             | otherwise = do
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
->     Nothing -> return False
+>     Nothing    -> return False
 >     Just moc'  -> return moc'
 >   where
 >     isNotWindowed = not . isWindowed

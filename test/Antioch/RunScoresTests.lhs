@@ -22,6 +22,10 @@
 >   , test_runFactors
 >   , test_runNominees
 >   , test_runMOC
+>   -- <<<<<<< Updated upstream
+>   , test_runMOCfailures
+>   -- >>>>>> Stashed changes
+>   , test_runPeriodMOC
 >     ]
 
 > test_runScorePeriods = TestCase $ do
@@ -170,7 +174,7 @@
 >     -- origin to be an hour earlier then the passed in time.
 >     let dt = fromGregorian 2006 10 13 16 0 0
 >     mocs <- mapM (runMOC' dt) sess
->     assertEqual "test_minimumObservingConditions" expected mocs
+>     assertEqual "test_runMOC" expected mocs
 >   where
 >     runMOC' dt s = do
 >       Just moc <- runMOC dt 30 s True -- test param == True!
@@ -179,9 +183,30 @@
 >     sess = concatMap (\name -> findPSessionsByName name) names
 >     expected = [False,True,True,True,True,False,True]
 
+> test_runMOCfailures = TestCase $ do
+>   res <- runMOCfailures ps True
+>   assertEqual "test_runMOCfailures" [6,7] res
+>     where
+>       ps = map (\(p, i) -> p {peId = i}) . zip getPPeriods $ [1..]
+
+> test_runPeriodMOC = TestCase $ do
+>     mocs <- mapM runPeriodMOC' periods
+>     assertEqual "test_runPeriodMOC" expected mocs
+>   where
+>     dt = fromGregorian 2006 10 13 16 0 0
+>     periods = [defaultPeriod {startTime = dt
+>                             , duration  = 30
+>                             , session   = s} | s <- sess]
+>     runPeriodMOC' p = do
+>       Just moc <- runPeriodMOC p True -- test param == True!
+>       return moc
+>     names = ["GB","CV","LP","TX","VA","WV","AS"]
+>     sess = concatMap (\name -> findPSessionsByName name) names
+>     expected = [False,True,True,True,True,False,True]
+
 Utilities:
 
-TBF: *almost* identical to ScoreTests's pSessions.
+Note these are *almost* identical to ScoreTests's pSessions.
 
 > pSessions = zipWith6 genPSess tots useds ras bands grades ids
 >   where tots   = [12*60, 18*60, 10*60, 20*60]

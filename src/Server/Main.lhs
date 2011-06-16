@@ -58,6 +58,7 @@
 >         , ("/score",         scoreHandler cnn)  
 >         , ("/factors",       getFactorsHandler cnn)  
 >         , ("/periods",       periodsHandler cnn) -- Example, not used
+>         , ("/mocs",          getMOCsHandler cnn)  
 >         , ("/moc",           getMOCHandler cnn)  
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn   -- TBF important? some of the above use pre-connected DSSData methods!?

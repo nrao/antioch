@@ -144,7 +144,7 @@ would be 03/13/2011 00:00 <= on site < 3/16/2011 00:00.
 
 
 Required Friends need to be available for observing, they are
-subtely different then our list of observers, though use the same
+subtly different then our list of observers, though use the same
 data type.
 
 > getProjectRequiredFriends :: Int -> Connection -> IO [Observer]
@@ -349,7 +349,7 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 > getSession :: Int -> Connection -> IO Session
 > getSession sessionId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
->   let s' = toSessionData $ result!!0
+>   let s' = toSessionData $ result !! 0
 >   s <- updateRcvrs cnn s' 
 >   return s
 >     where
@@ -706,6 +706,38 @@ A single Window can have mutliple date ranges associated with it.
 >                        then fromSqlMinutes durHrs
 >                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 >                     }
+
+Retrieve all the scheduled periods within the given time range
+-- usually the scheduling range -- that may be cancelled just
+prior to observing.
+
+> getDiscretionaryPeriods :: Connection -> DateTime -> Minutes -> IO [Period]
+> getDiscretionaryPeriods cnn dt dur = do 
+>   result <- quickQuery' cnn query xs 
+>   -- get periods except for its session field
+>   let ps' = toPeriodList result
+>   -- get associated sessions
+>   ss <- mapM (flip getSessionFromPeriod cnn) . map peId $ ps'
+>   -- you complete me
+>   let ps = map (\(p, s) -> p {session = s}) . zip ps' $ ss
+>   -- but only want Open and Windowed periods, i.e., discretionary
+>   return $ sort $ filter (\p -> (sType . session $ p) `elem` [Open, Windowed]) ps
+>   where
+>     xs = [toSql . toSqlString $ dt, toSql .toSqlString . addMinutes dur $ dt]
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup FROM periods AS p, period_states AS state WHERE state.id = p.state_id AND state.abbreviation = 'S' AND p.start >= ? AND p.start < ?;"
+>     toPeriodList = map toPeriod
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:[]) =
+>       defaultPeriod { peId = fromSql id
+>                     , startTime = sqlToDateTime start
+>                     , duration = fromSqlMinutes durHrs
+>                     , pScore = fromSql score
+>                     , pState = deriveState . fromSql $ state
+>                     , pForecast = sqlToDateTime forecast
+>                     , pBackup = fromSql backup
+>                     , pDuration = fromSqlMinutes durHrs
+>                     }
+>     toSessionId (id:sid:start:durHrs:score:state:forecast:backup:[]) = fromSql sid
+
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt

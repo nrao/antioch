@@ -20,6 +20,7 @@ instructions in admin/genDssTestDatagase.py.
 
 > tests = TestList [
 >       test_fetchPeriods
+>     , test_getDiscretionaryPeriods
 >     , test_getWindows
 >     , test_getPeriods
 >     , test_getProjects
@@ -314,6 +315,21 @@ example in comments.
 >   assertEqual "test_fetchPeriods" ps ps' 
 >     where
 >       dt = fromGregorian 2006 1 1 0 0 0
+
+> test_getDiscretionaryPeriods = TestCase $ do
+>   cnn <- connect
+>   let dt = fromGregorian 2006 7 9 12 0 0
+>   let dur = 12*24*60
+>   s <- getSession 2 cnn
+>   let exp = [defaultPeriod {peId = 2
+>                           , session = s
+>                           , startTime = fromGregorian 2006 7 10 0 0 0
+>                           , pState = Scheduled
+>                           , pDuration = 120
+>                           , duration = 120}]
+>   res <- getDiscretionaryPeriods cnn dt dur
+>   assertEqual "test_getDiscretionaryPeriods_1" exp res
+
 
 > fromFloat2Sql :: Float ->  SqlValue
 > fromFloat2Sql = toSql
