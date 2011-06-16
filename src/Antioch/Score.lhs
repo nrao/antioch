@@ -1488,9 +1488,9 @@ Basic Utility that populates the scoring tab
 > factorToString :: Factor -> String
 > factorToString factor = (show factor) ++ "\n" 
 
-TBF: this is a cheap way of checking the receiver type.
+Note: this is a cheap way of checking the receiver type.
 We need to be checking for filled arrays (when we have
-more than one) ...
+more than one).  Right now Mustang is the only filled array we have.
 
 > usesMustang :: Session -> Bool
 > usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)
