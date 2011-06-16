@@ -129,7 +129,7 @@ across several layers.
 >     dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
 
-TBF: HACK HACK - this really should be in Filters, but it requires
+Note - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.
 Filter out of the history any elective periods that shouldn't
 stay on the schedule.
@@ -175,7 +175,7 @@ same elective as the give period.
 >                             then True
 >                             else elem (fromJust mge) ep
 
-TBF: HACK HACK - this really should be in Filters, but it requires
+Note - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.
 Filter out of the history any default periods that:
    * belong to non-guaranteed sessions
