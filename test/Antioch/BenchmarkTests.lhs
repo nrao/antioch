@@ -42,7 +42,7 @@
 >   let execTime = fromIntegral (stop-start)  -- / 1.0e3
 >   putStrLn $ name ++ " Execution Speed: " ++ show execTime ++ " ns"
 
-TBF: It seems that laziness leads to some of the tests executing in NO time.
+It seems that laziness leads to some of the tests executing in NO time.
 So write to dev/nell to force some execution to take place.
 
 > forceExec :: String -> IO ()
@@ -230,9 +230,9 @@ More sessions, for longer
 >       xs = replicate 97 Nothing -- 24 blank hours
 >       enoughTime = 10000
 >       scores1 = (replicate 50 1.0) ++ (replicate 50 0.0)
->       i1s = map (\id -> Item id 1 2 4 1 enoughTime enoughTime 8 o [] scores1 []) [0 .. 100]
+>       i1s = map (\id -> Item id id 1 2 4 1 enoughTime enoughTime 8 o [] scores1 []) [0 .. 100]
 >       scores2 = (replicate 50 0.0) ++ (replicate 50 1.0)
->       i2s = map (\id -> Item id 1 3 6 1 enoughTime enoughTime 6 o [] scores2 []) [101 .. 200]
+>       i2s = map (\id -> Item id id 1 3 6 1 enoughTime enoughTime 6 o [] scores2 []) [101 .. 200]
 >       ys = i1s ++ i2s
 >   
 > benchmark_packWorker_2 :: IO ()
@@ -247,9 +247,9 @@ More sessions, for longer
 >       --dur = 24 * 60
 >       xs = replicate 97 Nothing -- 24 blank hours
 >       scores1 = (replicate 50 1.0) ++ (replicate 50 0.0)
->       i1s = map (\id -> Item id 1 2 4 1 5 5 8 o [] scores1 []) [0 .. 100]
+>       i1s = map (\id -> Item id id 1 2 4 1 5 5 8 o [] scores1 []) [0 .. 100]
 >       scores2 = (replicate 50 0.0) ++ (replicate 50 1.0)
->       i2s = map (\id -> Item id 1 3 6 1 10 10 6 o [] scores2 []) [101 .. 200]
+>       i2s = map (\id -> Item id id 1 3 6 1 10 10 6 o [] scores2 []) [101 .. 200]
 >       ys = i1s ++ i2s
 
 This benchmark test is not very reliable, since it relies on randomly generated

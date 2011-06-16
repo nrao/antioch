@@ -22,10 +22,6 @@ See https://safe.nrao.edu/wiki/bin/view/GB/Software/DSSPackingAlgorithm
 > numSteps :: Minutes -> Int
 > numSteps = (`div` quarter)
 
-TBF: we are not honoring the following session attributes as we pack:
-   * time between
-   * schedule time <= allotted time
-
 `Pack` is the top-level driver function.  It is primarily concerned
 with converting between our internal data structures and the external
 representation of sessions and telescope periods.  Given a start time
@@ -134,6 +130,7 @@ Convert an open session `s` into a schedulable item by scoring it with
 >     let force = if sum scores > 0.0 then True else False
 >     return $! force `seq` Item {
 >         iId      = s
+>       , iSessId  = sId s
 >       , iProj    = pId . project $ s
 >       , iMinDur  = numSteps . minDuration $ s
 >       , iMaxDur  = numSteps $ min (maxDuration s) (sAvailT s)
@@ -203,9 +200,12 @@ were built up from multiple Candidates in the first place.
 Note that this does not honor for pre-scheduled periods, this value
 is restored later in pack.
 
-TBF: when scheduling is sparse, and there are lots of Nothing's in the input to this
+Story: https://www.pivotaltracker.com/story/show/14219719
+When scheduling is sparse, and there are lots of Nothing's in the input to this
 function, the optimal schedule is not being picked because we are always picking
 the last candidate, which may NOT necessarily have the largest accumulated score!
+
+This function must traverse the list of candiates exactly as queryPast does.
 
 > unwind :: [Maybe (Candidate a)] -> [Candidate a]
 > unwind = unwind' []
@@ -232,6 +232,7 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 
 > data Item a = Item {
 >     iId      :: !a
+>   , iSessId  :: !Int
 >   , iProj    :: !Int
 >   , iMinDur  :: !Int
 >   , iMaxDur  :: !Int
@@ -244,6 +245,38 @@ available scoring periods: ?? (iFuture) and ?? (iPast) scores.
 >   , iFuture  :: ![Score]
 >   , iPast    :: ![Score]
 >   } deriving (Eq, Show)
+
+> defaultItem = Item {
+>     iId      = 0
+>   , iSessId  = 0
+>   , iProj    = 0 
+>   , iMinDur  = 0 
+>   , iMaxDur  = 0 
+>   , iOvhdDur = 0 
+>   , iSTimAv  = 0 
+>   , iPTimAv  = 0 
+>   , iTimeBt  = 0 
+>   , iTrType  = Optional 
+>   , iTrnsts   = []
+>   , iFuture   = []
+>   , iPast     = []
+>   }
+
+A convenient way of displaying Items, since we often don't want to see the entire
+session.  However, this string can be used to cut and past into unit tests to 
+create new Items.  Note: trying to create an instance of Show Item causes complications
+since it's a parameterized data structure.
+
+> showItem :: Item Session -> String
+> showItem i = "Item {iId = defaultSession {sId = " ++ ssId ++ "}, iProj = " ++ ssId ++ ", iMinDur = " ++ sMin ++", iMaxDur = " ++ sMax ++ ", iOvhdDur = 1, iSTimAv = " ++ sS ++ ", iPTimAv = " ++ sP ++ ", iTimeBt = " ++ sTB ++ ", iTrType = Optional, iTrnsts = [], iFuture = " ++ futures ++ ", iPast = []}"
+>     where
+>       ssId = show . sId . iId $ i
+>       sMin = show . iMinDur $ i
+>       sMax = show . iMaxDur $ i
+>       sS  = show . iSTimAv $ i
+>       sP  = show . iPTimAv $ i
+>       sTB = show . iTimeBt $ i
+>       futures = show . iFuture $ i
 
 The function *candidates*, defined below, generates a series of candidates
 representing all the possible periods which end at a specified time
@@ -342,35 +375,53 @@ all the previous slots ('past'), return the count of previously 'sUsed' time
 for the item, 'pUsed' time for its project, and the 'separate'ion between
 the current item's period and any previous periods.  Note the returned
 separate value only applies if a previous candidate of item was found, i.e.,
-'sUsed' > 0.
-TBF Note: the returned list (vs) at the end of the tuple is for debugging
-purposes.  It was last used during development on 6/15/09.  It should be
-removed if not used in a month or so.
+'sUsed' > 0, otherwise it is set to (-1). This function must traverse the
+list of candiates exactly as unwind does.
 
 > queryPast :: (Eq a) => Item a -> [Maybe (Candidate a)] -> Int -> (Int, Int, Int, [Int])
-> queryPast item past dur = queryPast' item . drop (dur - 1) $ past
+> queryPast item past dur = queryPast' (0,     0,     (-1),       []) item . drop (dur - 1) $ past
 
-> queryPast' :: (Eq a) => Item a -> [Maybe (Candidate a)] -> (Int, Int, Int, [Int])
-> --queryPast' item   past     -> (pUsed, sUsed, separate)
-> queryPast'   item   [Nothing] = (0,     0,     0,       [])
-> queryPast'   item (c:cs)
->     | isNothing c               = (sUsed, pUsed, 1 + separate, step:vs)
->     | itemSId == candidateSId   = (newSUsed, newPUsed, 0, step:vs)
->     | otherwise                 = if sUsed > 0
->                                   then (newSUsed, newPUsed, dur + separate, step:vs)
->                                   else (newSUsed, newPUsed,       separate, step:vs)
+> queryPast' :: (Eq a) => (Int, Int, Int, [Int]) -> Item a -> [Maybe (Candidate a)] -> (Int, Int, Int, [Int])
+> -- Sentinel signals termination, already got the answer, so just return
+> -- the tuple.
+> queryPast' (sUsed, pUsed, separate, steps) item [Nothing]       = (sUsed, pUsed, separate, steps)
+> -- No candidate, skip it noting the hole in the steps field of the return tuple.
+> queryPast' (sUsed, pUsed, separate, steps) item (Nothing:cs)    = queryPast' (sUsed, pUsed, separate, 1:steps) item cs
+> -- Two candiates in a row, use the one with the larger score, i.e., update
+> -- the return tuple and continue.
+> queryPast' (sUsed, pUsed, separate, steps) item cs@(Just c : cs'@(Just c' : _))
+>         | cScore c' > cScore c  = queryPast' (sUsed,  pUsed,  separate,     1:steps) item cs' 
+>         | otherwise             = queryPast' (sUsed', pUsed', separate', step:steps) item (drop step cs)
 >   where
+>     step = min ((length cs) - 1) dur
+>     dur  = cDuration c
 >     itemSId = iId item
->     candidateSId = cId (fromJust c)
+>     candidateSId = cId c
 >     itemPId = iProj item
->     candidatePId = cProj (fromJust c)
->     step = min (length cs) dur - 1
->     dur = cDuration (fromMaybe (defaultCandidate {cId = itemSId, cDuration = 1}) c)
->     (sUsed, pUsed, separate, vs) = queryPast' item (drop step cs)
->     newPUsed | itemPId == candidatePId   = dur + pUsed
->              | otherwise                 = pUsed
->     newSUsed | itemSId == candidateSId   = dur + sUsed
->              | otherwise                 = sUsed
+>     candidatePId = cProj c
+>     pUsed' | itemPId == candidatePId   = dur + pUsed
+>            | otherwise                 = pUsed
+>     sUsed' | itemSId == candidateSId   = dur + sUsed
+>            | otherwise                 = sUsed
+>     separate' | itemSId == candidateSId   = if separate == (-1) then sum steps else separate
+>               | otherwise                 = separate
+> -- Default case: have a candidate followed by whatever, update the
+> -- return tuple and continue.
+> queryPast' (sUsed, pUsed, separate, steps) item cs@(Just c : _) =
+>                                   queryPast' (sUsed', pUsed', separate', step:steps) item (drop step cs)
+>   where
+>     step = min ((length cs) - 1) dur
+>     dur  = cDuration c
+>     itemSId = iId item
+>     candidateSId = cId c
+>     itemPId = iProj item
+>     candidatePId = cProj c
+>     pUsed' | itemPId == candidatePId   = dur + pUsed
+>            | otherwise                 = pUsed
+>     sUsed' | itemSId == candidateSId   = dur + sUsed
+>            | otherwise                 = sUsed
+>     separate' | itemSId == candidateSId   = if separate == (-1) then sum steps else separate
+>               | otherwise                 = separate
 
 Given possible scores (using Maybe) over a range of a session's durations,
 generate a list of possible candidates corresponding to the scores.

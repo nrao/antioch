@@ -84,9 +84,8 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >             -- simulate observing
 >             newSched'' <- scheduleBackups sf Pack sessions newSched' start (24 * 60 * 1)
 >             -- write any scheduled windows to the trace
->             let newWinInfo= getWindowInfo sessions newSched''
->             let oldWinInfo = getWindowPeriodsFromTrace trace
->             mapM (\w -> tell [WindowPeriods w]) (newWinInfo\\oldWinInfo)
+>             let winInfo = getNewlyScheduledWindowInfo sessions newSched''
+>             mapM (\w -> tell [WindowPeriods w]) winInfo
 >             return $ newSched''
 >
 >         -- This writeFile is a necessary hack to force evaluation
@@ -122,6 +121,17 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
+
+> getNewlyScheduledWindowInfo :: [Session] -> [Period] -> [(Window, Maybe Period, Period)]
+> getNewlyScheduledWindowInfo ss ps = getWindowInfo ss $ map fst $ findNotCompleteWindows ss ps
+
+Find those windows that are newly scheduled; that is, they are not complete yet.
+
+> findNotCompleteWindows :: [Session] -> [Period] -> [(Period, Window)]
+> findNotCompleteWindows ss ps = filterNotCmp $ zip wps (getWindows ss wps)
+>   where
+>     wps = filter (typeWindowed . session) ps
+>     filterNotCmp = filter (\(p,w) -> not . wComplete $ w) 
 
 For the given list of sessions and periods
 
@@ -203,7 +213,6 @@ to future trimesters.
 
 If the given period is found in the given list of periods, compare
 their states.  Used for finding what periods just got published.
-TBF: needs unit test
 
 > newlyPublished :: [Period] -> Period -> Bool 
 > newlyPublished history p = case find (==p) history of
@@ -298,7 +307,6 @@ For a given session, and it's:
    * existing periods to publish
    * canceled periods to remove
 Returns the sessions new periods (ready for makeSession).
-TBF: needs unit test
 
 > updateSessionPeriods :: Session -> [Period] -> [Period] -> [Period] -> [Period]
 > updateSessionPeriods s published canceled newPs = sort $ updatePublishedPeriods published $ (removeCanceled s canceled) ++ newPs
@@ -308,7 +316,6 @@ periods, with periods that appear in the published list updated (published)
 Note: the given list of published periods do not have to be for the same
 session as the other periods, since identity for periods depends on 
 the parent session.
-TBF: needs unit test
 
 > updatePublishedPeriods :: [Period] -> [Period] -> [Period]
 > updatePublishedPeriods published ps = map (publish published) ps

@@ -122,14 +122,13 @@ Equation 7
 >         let atmosphericOpacity' = atmosphericOpacity y za in
 >         systemNoiseTemperature' (fromJust trx) x atmosphericOpacity') tk zod else Nothing
 
-TBF what problem is this function solving, and why rndZa???
-
 > systemNoiseTemperaturePrime :: Weather -> ReceiverTemperatures -> DateTime -> Session -> IO (Maybe Float)
 > systemNoiseTemperaturePrime w rt dt s = runScoring w [] rt $ do
 >     zod <- zenithOpacity dt s
 >     tk  <- kineticTemperature dt s
 >     trx <- liftIO $ getRcvrTemperature rt s
 >     let za  = zenithAngle dt s
+>     -- Round off to the nearest degree to align with hist. min. opacities
 >     let rndZa = deg2rad . realToFrac . round . rad2deg $ za
 >     return $ if (isJust trx) then liftM2 (\x y ->
 >         let atmosphericOpacity' = atmosphericOpacity y za in
@@ -194,9 +193,6 @@ Equation 5
 >     za = pi/2 - el
 >     num = (cos za - sin dec * sin gbtLat')
 >     denom = (cos gbtLat' * cos dec)
-
-Given a certain Ra & Dec and their transit time, will the given time range
-TBF: this was moved from Statistic to here, but it needs a better home.
 
 > elevationFromZenith :: Period -> Float
 > elevationFromZenith p =
@@ -904,12 +900,10 @@ close to periods scheduled in previous calls to Pack.
 > enoughTimeBetween :: ScoreFunc
 > enoughTimeBetween dt s = boolean "enoughTimeBetween" . Just $ enoughTimeBetween' dt s
 
-TBF: what to really do in case of overlaps?
-
 > enoughTimeBetween' :: DateTime -> Session -> Bool
 > enoughTimeBetween' dt s | (timeBetween s) == 0 = True
 >                         | (length . periods $ s) == 0 = True
->                         | overlapsPeriod dt s = False -- TBF WTF?
+>                         | overlapsPeriod dt s = False
 >                         | otherwise = (timeBetweenRecentPeriod dt s) >= (timeBetween s)
 >   where
 >     overlapsPeriod dt s = any (inPeriod dt) (periods s)
@@ -924,21 +918,6 @@ future as well.
 >   where
 >     absoluteTimeDiff dt1 dt2 = abs $ diffMinutes dt1 dt2
 >     times s = concatMap (\p -> [startTime p, endTime p]) $ periods s
-
-Some receivers are up for a limited time only.  Sessions that need these
-types of receivers and have an A grade will get a boost so that they
-have a better chance of being scheduled while the receiver is available.
-
-> receiverBoost :: ScoreFunc
-> receiverBoost _ s = factor "receiverBoost" . Just $ if receiverBoost' s then 1.05 else 1.0
-
-> receiverBoost' :: Session -> Bool
-> receiverBoost' s | (grade s) < 3.8     = False
->                  | otherwise           =
->   any (\rg -> all (\r -> elem r boostRcvrs) rg) rgs
->   where
->     rgs = receivers s
->     boostRcvrs = [Rcvr_1070, Rcvr_342, Rcvr_450, Rcvr_800] --TBF: may change 
 
 Scoring utilities
 
@@ -969,7 +948,7 @@ This is for use when determining best backups to run in simulations.
 Note: because this is not used in real scheduling then the fact
 that it does not assume zero for the overhead quarters does not matter.
 
-> avgScoreForTimeRealWind  :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
+> avgScoreForTimeRealWind :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
 > avgScoreForTimeRealWind sf dt dur s = do
 >     w  <- weather
 >     w' <- liftIO $ newWeather w (Just dt)
@@ -978,8 +957,8 @@ that it does not assume zero for the overhead quarters does not matter.
 >       0 -> return 0.0
 >       otherwise -> return $ sumScores scores / (fromIntegral . length $ scores)
 >   where
->     -- TBF:  Using the measured wind speed for scoring in the future
->     -- is unrealistic, but damn convenient!
+>     -- Using the measured wind speed for scoring in the future
+>     -- is unrealistic, but damn convenient! Only used for simulations.
 >     numQtrs = dur `div` quarter
 >     times = [(q*quarter) `addMinutes` dt | q <- [0..(numQtrs-1)]]
 >     sumScores scores = case dropWhile (>0.0) scores of
@@ -1019,7 +998,7 @@ minutes              weighted mean score              weighted mean score (VLB)
 > activeScores :: Session -> [Score] -> [Score]
 > activeScores s ss = drop (getOverhead s) ss
 
-TBF The fact that we have to pass in session is a kluge resulting from the
+The fact that we have to pass in session is a kluge resulting from the
 fact that we have not tied the knots properly among projects, sessions,
 and periods.
 
@@ -1037,15 +1016,16 @@ and periods.
 >     return $ eval fs
 >   dts = [(i*quarter) `addMinutes` st | i <- [0..(((duration p) `div` quarter)-1)]]
 
-FYI, this function has no unit tests, possibly because it is never used!
-TBF WTF OMG BBQ: scorePeriod & scoreSession look like they could really 
+This function has no unit tests, possibly because it is only used
+to generate expected values in unit testing.
+WTF OMG BBQ: scorePeriod & scoreSession look like they could really 
 share a lot of code, simply by passing in the Score ScoreFunc (genScore 
-vs. genPeriodScore).
+vs. genPeriodScore), but since it is used for unit testing, the two
+implementations act as a check.
 
 > scoreSession :: DateTime -> Minutes -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO Score
 > scoreSession st dur s ss w rs rt = do
 >   scores <- mapM scoreSession' $ dts
->   -- TBF should this check only be done on that tail?
 >   let retval = if 0.0 `elem` (activeScores s scores)
 >                then 0.0
 >                else weightedMeanScore (oType s) scores
@@ -1070,18 +1050,15 @@ Compute the average score for a given session over an interval.
 Note: because this is not used in scheduling with Pack then the fact
 that it does not assume zero for the first quarter does not matter.
 
-> averageScore :: BestScore
-> averageScore sf dt s = do
+> averageScore' :: BestScore
+> averageScore' sf dt s = do
 >     score <- totalScore sf dt dur s
 >     return $! score / fromIntegral (dur `div` quarter)
 >   where
 >     dur = minDuration s
 
-TBF: reverse the names of these two averageScore functions.
-This is the more generic one, using dur that is passed in.
-
-> averageScore' :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
-> averageScore' sf dt dur s = do
+> averageScore :: ScoreFunc -> DateTime -> Minutes -> Session -> Scoring Score 
+> averageScore sf dt dur s = do
 >     score <- totalScore sf dt dur s
 >     return $! score / fromIntegral (dur `div` quarter)
 
@@ -1459,7 +1436,7 @@ for, pForecast).
 >     factorPeriod' sf dt = sf dt (session p)
 >     dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
-Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
+Basic Utility that populates the scoring tab
 
 > scoringInfo :: Session -> [Session] -> DateTime -> Minutes -> ReceiverSchedule -> IO ()
 > scoringInfo s ss dt dur rs = do
@@ -1490,7 +1467,8 @@ Basic Utility that attempts to emulate the Beta Test's Scoring Tab:
 > factorToString factor = (show factor) ++ "\n" 
 
 TBF: this is a cheap way of checking the receiver type.
-We need to be checking for filled arrays ...
+We need to be checking for filled arrays (when we have
+more than one) ...
 
 > usesMustang :: Session -> Bool
 > usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)

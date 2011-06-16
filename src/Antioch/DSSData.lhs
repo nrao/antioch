@@ -1,9 +1,9 @@
 > module Antioch.DSSData where
 
 > import Antioch.DateTime
+> import Antioch.DBUtilities
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB, dssHost, databasePort)
 > import Antioch.DSSReversion            (putPeriodReversion)
 > import Antioch.Utilities
@@ -27,15 +27,14 @@
 >     projs <- mapM (populateProject cnn) projs' 
 >     return projs
 
-TBF: get rid of the allotment table join here, and refactor it out to a 
-separate query, to deal with multiple allotments (different grades)
-
 > fetchProjectData :: Connection -> IO [Project]
 > fetchProjectData cnn = handleSqlError $ do
 >   result <- quickQuery' cnn query []
 >   return $ toProjectDataList result
 >     where
->       query = "SELECT p.id, p.pcode, s.semester, p.thesis, p.complete FROM semesters AS s, projects AS p WHERE s.id = p.semester_id ORDER BY p.pcode"
+>       query = "SELECT p.id, p.pcode, s.semester, p.thesis, p.complete \
+>              \ FROM semesters AS s, projects AS p \
+>              \ WHERE s.id = p.semester_id ORDER BY p.pcode"
 >       toProjectDataList = map toProjectData
 >       toProjectData (id:pcode:semester:thesis:comp:[]) = 
 >         defaultProject {
@@ -73,11 +72,7 @@ data structure.  These facts come from two sources:
    2. BOS web service:
       * observer on site dates (GB reservation date)
 
-TBF: currently no observer black out date tables
-TBF: We currently cannot link info in the DSS database to the id's used in the
-BOS web services to retrieve reservation dates.
-
-TBF: Beware original_id, pst_id,  and contact_instructions
+Note: Beware original_id, pst_id,  and contact_instructions
 in the User table can be null.
 
 > getProjectObservers :: Int -> Connection -> IO [Observer]
@@ -101,7 +96,9 @@ Sets the basic Observer Data Structure info
 >   return $ toObserverList result 
 >     where
 >       xs = [toSql projId]
->       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id FROM investigators AS inv, users AS u WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
+>       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id \
+>              \ FROM investigators AS inv, users AS u \
+>              \ WHERE u.id = inv.user_id AND inv.observer AND inv.project_id = ?"
 >       toObserverList = map toObserver
 >       toObserver (id:first:last:sanc:pid:[]) = 
 >         defaultObserver 
@@ -110,12 +107,6 @@ Sets the basic Observer Data Structure info
 >           , lastName = fromSql last
 >           , sanctioned = fromSql sanc
 >           , pstId = fromSqlInt pid }
-
-TBF: use this if we need to pull username from PST mirror, if ever.
-
-> fromSqlUserName :: SqlValue -> String
-> fromSqlUserName SqlNull = ""
-> fromSqlUserName name    = fromSql name
 
 Takes Observers with basic info and gets the extras: blackouts, reservations
 
@@ -137,11 +128,22 @@ would be 03/13/2011 00:00 <= on site < 3/16/2011 00:00.
 >   return $ toBlackoutDatesList result
 >     where
 >       xs = [toSql . oId $ obs]
->       query = "SELECT b.start_date, b.end_date, r.repeat, b.until FROM blackouts AS b, repeats AS r WHERE r.id = b.repeat_id AND user_id = ?"
->       toBlackoutDatesList = concatMap toBlackoutDates
+>       query = "SELECT b.start_date, b.end_date, r.repeat, b.until \
+>              \ FROM blackouts AS b, repeats AS r \
+>              \ WHERE r.id = b.repeat_id AND user_id = ?"
+
+> toBlackoutDatesList = concatMap toBlackoutDates
+>     where
 >       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
-
-
+>
+>       -- These two methods define the start and end of blackouts in case of NULLs in the DB.
+>       sqlToBlackoutStart SqlNull = blackoutsStart
+>       sqlToBlackoutStart dt      = sqlToDateTime dt 
+>       sqlToBlackoutEnd SqlNull = blackoutsEnd
+>       sqlToBlackoutEnd dt      = sqlToDateTime dt 
+>       -- When converting repeats to a list of dates, when do these dates start and end?
+>       blackoutsStart = fromGregorian 2009 9 1 0 0 0
+>       blackoutsEnd   = fromGregorian 2010 2 1 0 0 0
 
 Required Friends need to be available for observing, they are
 subtly different then our list of observers, though use the same
@@ -159,7 +161,9 @@ data type.
 >   return $ toObserverList result 
 >     where
 >       xs = [toSql projId]
->       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id FROM friends AS f, users AS u WHERE u.id = f.user_id AND f.required AND f.project_id = ?"
+>       query = "SELECT u.id, u.first_name, u.last_name, u.sanctioned, u.pst_id \
+>              \ FROM friends AS f, users AS u \
+>              \ WHERE u.id = f.user_id AND f.required AND f.project_id = ?"
 >       toObserverList = map toObserver
 >       toObserver (id:first:last:sanc:pid:[]) = 
 >         defaultObserver 
@@ -178,7 +182,6 @@ blackouts just like blackouts are read in for an observer.
 >   if b then getProjectBlackouts' cnn projId else return $ []
 
 Reads in blackouts for a given project.
-TBF: refactor so that this method shares code with getObserverBlackouts
 
 > getProjectBlackouts' :: Connection -> Int -> IO [DateRange]
 > getProjectBlackouts' cnn projId = do
@@ -186,9 +189,9 @@ TBF: refactor so that this method shares code with getObserverBlackouts
 >   return $ toBlackoutDatesList result
 >     where
 >       xs = [toSql projId]
->       query = "SELECT b.start_date, b.end_date, r.repeat, b.until FROM blackouts AS b, repeats AS r WHERE r.id = b.repeat_id AND project_id = ?"
->       toBlackoutDatesList = concatMap toBlackoutDates
->       toBlackoutDates (s:e:r:u:[]) = toDateRangesFromInfo (sqlToBlackoutStart s) (sqlToBlackoutEnd e) (fromSql r) (sqlToBlackoutEnd u)
+>       query = "SELECT b.start_date, b.end_date, r.repeat, b.until \
+>              \ FROM blackouts AS b, repeats AS r \
+>              \ WHERE r.id = b.repeat_id AND project_id = ?"
 
 Does the given project (by Id) allow blackouts?  Check the flag.
 
@@ -198,24 +201,6 @@ Does the given project (by Id) allow blackouts?  Check the flag.
 >   return $ fromSql . head . head $ result
 >     where
 >       query = "SELECT blackouts FROM projects WHERE id = ?"
-
-
-When converting repeats to a list of dates, when do these dates start and end?
-
-> blackoutsStart = fromGregorian 2009 9 1 0 0 0
-> blackoutsEnd   = fromGregorian 2010 2 1 0 0 0
-
-These two methods define the start and end of blackouts in case of NULLs in the
-DB.  TBF: this is only good for 09C, but I don't think NULLs are allowed
-any more.
-
-> sqlToBlackoutStart :: SqlValue -> DateTime
-> sqlToBlackoutStart SqlNull = blackoutsStart
-> sqlToBlackoutStart dt = sqlToDateTime dt 
-
-> sqlToBlackoutEnd :: SqlValue -> DateTime
-> sqlToBlackoutEnd SqlNull = blackoutsEnd
-> sqlToBlackoutEnd dt = sqlToDateTime dt 
 
 Convert from a description of the blackout to the actual dates
 
@@ -236,9 +221,9 @@ Convert from a description of the blackout to the actual dates
 > toMonthlyDateRanges start end until | start > until = []
 >                                     | otherwise = (start, end):(toMonthlyDateRanges (addMonth start) (addMonth end) until)
 
-TBF: the BOS service still isn't working!  So, instead of investing more time
-into a dead language, we are simply reading these from an intermediate table
-in the DSS DB.
+Note: We have had trouble connecting to the BOS service from Haskell.  So, instead 
+of investing more time into a dead language, we are simply reading these from an 
+intermediate table in the DSS DB.
 
 > getObserverReservations :: Connection -> Observer -> IO [DateRange]
 > getObserverReservations cnn obs = do 
@@ -253,21 +238,20 @@ in the DSS DB.
 We must query for the allotments separately, because if a Project has alloted
 time for more then one grade (ex: 100 A hrs, 20 B hrs), then that will be
 two allotments, and querying w/ a join will duplicate the project.
-TBF: field ignore_grade in Allotment table can be null.
 
 > getProjectAllotments :: Int -> Connection -> IO [(Minutes, Minutes, Grade)]
 > getProjectAllotments projId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
 >   return $ toAllotmentList result 
 >     where
->       query = "SELECT a.total_time, a.max_semester_time, a.grade FROM allotment AS a, projects AS p, projects_allotments AS pa WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
+>       query = "SELECT a.total_time, a.max_semester_time, a.grade \
+>              \ FROM allotment AS a, projects AS p, projects_allotments AS pa \
+>              \ WHERE p.id = pa.project_id AND a.id = pa.allotment_id AND p.id = ?"
 >       xs = [toSql projId]
 >       toAllotmentList = map toAllotment
 >       toAllotment (ttime:mstime:grade:[]) = (fromSqlMinutes ttime, fromSqlMinutes mstime, fromSql grade)
 
-TBF: WTF! In Antioch, do we need to be taking into account grades at the 
-project level?  For now, we are ignoring grade and summing the different
-hours togethor to get the total time.
+We are ignoring grade and summing the different hours together to get the total time.
 
 > setProjectAllotments :: Project -> [(Minutes, Minutes, Grade)] -> Project
 > setProjectAllotments p [] = p
@@ -275,9 +259,11 @@ hours togethor to get the total time.
 >     setProjectAllotments (p {pAllottedT = (pAllottedT p) + t
 >                            , pAllottedS = (pAllottedS p) + s} ) xs
 
-TBF: if a session is missing any of the tables in the below query, it won't
-get picked up!!!
-TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
+Note: If a session is missing any of the tables in the below query, it won't
+get picked up, since this is a default inner join query.  The database
+health report should pickup sessions with incomplete information.  Here
+we will ignore them since session like these should not be consider for
+scheduling until they are properly defined.
 
 > getSessions :: Int -> Connection -> IO [Session]
 > getSessions projId cnn = handleSqlError $ do 
@@ -286,7 +272,23 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   ss <- mapM (updateRcvrs cnn) ss' 
 >   return ss
 >     where
->       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, stype.type, otype.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS stype, observing_types AS otype WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = stype.id AND s.observing_type_id = otype.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND s.project_id = ?;"
+>       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, \
+>                              \ s.time_between, s.frequency, a.total_time, \
+>                              \ a.max_semester_time, a.grade, t.horizontal, \
+>                              \ t.vertical, st.enabled, st.authorized, \
+>                              \ st.backup, st.complete, stype.type, \
+>                              \ otype.type \
+>                              \ FROM sessions AS s, allotment AS a, targets AS t, \
+>                              \ status AS st, session_types AS stype, \
+>                              \ observing_types AS otype \
+>                              \ WHERE a.id = s.allotment_id AND \
+>                              \ t.session_id = s.id AND s.status_id = st.id AND \
+>                              \ s.session_type_id = stype.id AND \
+>                              \ s.observing_type_id = otype.id AND \
+>                              \ s.frequency IS NOT NULL AND \
+>                              \ t.horizontal IS NOT NULL AND \
+>                              \ t.vertical IS NOT NULL AND \
+>                              \ s.project_id = ?;"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
 >       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:oty:[]) = 
@@ -320,7 +322,15 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   s <- updateRcvrs cnn s' 
 >   return s
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type, periods AS p WHERE s.id = p.session_id AND a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, \
+>              \ s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, \
+>              \ t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type \
+>              \ FROM sessions AS s, allotment AS a, targets AS t, status AS st, \
+>              \ session_types AS type, periods AS p \
+>              \ WHERE s.id = p.session_id AND \
+>              \ a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND \
+>              \ s.session_type_id = type.id AND s.frequency IS NOT NULL AND \
+>              \ t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
 >       xs = [toSql periodId]
 >       toSessionDataList = map toSessionData
 >       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
@@ -333,11 +343,11 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime 
 >           , sAllottedS  = fromSqlMinutes stime 
->           , ra = fromSql h -- TBF: assume all J200? For Carl's DB, YES!
+>           , ra = fromSql h -- assume all J2000? Story: https://www.pivotaltracker.com/story/show/13828493.
 >           , dec = fromSql v  
 >           , grade = fromSql grade
->           , receivers = [] -- TBF: does scoring support the logic structure!
->           , periods = [] -- TBF, no history in Carl's DB
+>           , receivers = []
+>           , periods = [] -- Note:, no history in Carl's DB
 >           , enabled = fromSql e
 >           , authorized = fromSql a
 >           , backup = fromSql b
@@ -353,7 +363,13 @@ TBF, BUG: Session (17) BB261-01 has no target, so is not getting imported.
 >   s <- updateRcvrs cnn s' 
 >   return s
 >     where
->       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type FROM sessions AS s, allotment AS a, targets AS t, status AS st, session_types AS type WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND s.session_type_id = type.id AND s.id = ?"
+>       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, \
+>              \ s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, \
+>              \ t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type \
+>              \ FROM sessions AS s, allotment AS a, targets AS t, status AS st, \
+>              \ session_types AS type \
+>              \ WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND \
+>              \ s.session_type_id = type.id AND s.id = ?"
 >       xs = [toSql sessionId]
 >       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
@@ -402,26 +418,6 @@ value of the right type.
 > sqlHrsToMinutes :: SqlValue -> Minutes
 > sqlHrsToMinutes hrs = hrsToMinutes . sqlHrsToHrs' $ hrs
 
-TBF: is this totaly legit?  and should it be somewhere else?
-
-> deriveBand :: Float -> Band
-> deriveBand freq |                freq <= 2.0   = L
-> deriveBand freq | freq > 2.0  && freq <= 3.0   = S
-> deriveBand freq | freq > 3.0  && freq <= 7.0   = C
-> deriveBand freq | freq > 7.0  && freq <= 11.0  = X
-> deriveBand freq | freq > 11.0 && freq <= 17.0  = U
-> deriveBand freq | freq > 17.0 && freq <= 26.0  = K
-> deriveBand freq | freq > 26.0 && freq <= 40.0  = A
-> deriveBand freq | freq > 40.0 && freq <= 50.0  = Q
-> deriveBand freq | otherwise                    = W
-
-> deriveState :: String -> StateType
-> deriveState s
->   | s == "P"  = Pending
->   | s == "S"  = Scheduled
->   | s == "C"  = Complete
->   | otherwise = Deleted
-
 > toSessionType :: SqlValue -> SessionType
 > toSessionType val = read . toUpperFirst $ fromSql val
 >   where
@@ -435,7 +431,7 @@ TBF: is this totaly legit?  and should it be somewhere else?
 Given a Session, find the Rcvrs for each Rcvr Group.
 This is a separate func, and not part of the larger SQL in getSessions
 in part because if there are *no* rcvrs, that larger SQL would not return
-*any* result (TBF: this bug is still there w/ the tragets)
+*any* result 
 Note, start_date in Receiver_Schedule table can be null.
 
 > updateRcvrs :: Connection -> Session -> IO Session
@@ -460,7 +456,9 @@ Note, start_date in Receiver_Schedule table can be null.
 >   return $ toRcvrList s result
 >   where
 >     xs = [toSql id]
->     query = "SELECT r.name FROM receivers as r, receiver_groups_receivers as rgr WHERE rgr.receiver_id = r.id AND rgr.receiver_group_id = ?"
+>     query = "SELECT r.name \
+>              \ FROM receivers as r, receiver_groups_receivers as rgr \
+>              \ WHERE rgr.receiver_id = r.id AND rgr.receiver_group_id = ?"
 >     toRcvrList s = map (toRcvr s)
 >     toRcvr s [x] = toRcvrType s x
 
@@ -469,16 +467,16 @@ Note, start_date in Receiver_Schedule table can be null.
 
 Here, we gather additional information about a session: periods, windows,
 observing parameters, etc.
-TBF: why aren't we getting the rcvr info here?
 
 > populateSession :: Connection -> Session -> IO Session
 > populateSession cnn s = do
->     s' <- setObservingParameters cnn s
->     ps <- getPeriods cnn s'
->     ws <- getWindows cnn s'
->     es <- getElectives cnn s'
->     let s'' = s' { electives = es }
->     return $ makeSession s'' ws ps
+>     s'  <- setObservingParameters cnn s
+>     s'' <- updateRcvrs cnn s'
+>     ps <- getPeriods cnn s''
+>     ws <- getWindows cnn s''
+>     es <- getElectives cnn s''
+>     let s''' = s'' { electives = es }
+>     return $ makeSession s''' ws ps
 
 The following recursive patterns work for setting the observing params
 that are one-to-one between the DB and the Session (ex: Night Time -> low rfi).  However,
@@ -493,7 +491,10 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 >   return s''
 >     where
 >       xs = [toSql . sId $ s]
->       query = "SELECT p.name, p.type, op.string_value, op.integer_value, op.float_value, op.boolean_value, op.datetime_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND op.session_id = ?" 
+>       query = "SELECT p.name, p.type, op.string_value, op.integer_value, op.float_value, \
+>              \ op.boolean_value, op.datetime_value \
+>              \ FROM observing_parameters AS op, parameters AS p \
+>              \ WHERE p.id = op.parameter_id AND op.session_id = ?" 
 
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
@@ -537,43 +538,55 @@ flags - so we'll have to collapse the DB's 2 types into our 1.
 >   result <- quickQuery' cnn query' xs --Inclusion
 >   return $ addLSTExclusion' False s' result
 >     where
->       -- TBF: for some reason, I need to have 'Exclude' & 'Include' in
->       -- the query strings: putting it in xs causes an SQL error ???
 >       xs = [toSql . sId $ s]
->       query = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND op.session_id = ?" 
->       query' = "SELECT p.name, op.float_value FROM observing_parameters AS op, parameters AS p WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND op.session_id = ?" 
+>       query = "SELECT p.name, op.float_value \
+>              \ FROM observing_parameters AS op, parameters AS p \
+>              \ WHERE p.id = op.parameter_id AND p.name LIKE 'LST Exclude%' AND \
+>              \ op.session_id = ? \
+>              \ order by op.id" 
+>       query' = "SELECT p.name, op.float_value \
+>              \ FROM observing_parameters AS op, parameters AS p \
+>              \ WHERE p.id = op.parameter_id AND p.name LIKE 'LST Include%' AND \
+>              \ op.session_id = ? \
+>              \ order by op.id" 
 
 The 'ex' flag determines whether we are importing LST Exclusion ranges
 or Inclusion ranges.
 
 > addLSTExclusion' :: Bool -> Session -> [[SqlValue]] -> Session
-> addLSTExclusion' _ s []        = s
-> addLSTExclusion' ex s sqlValues = s { lstExclude = (lstExclude s) ++ [lstRange ex sqlValues] }  
+> addLSTExclusion' _ s []         = s
+> addLSTExclusion' ex s sqlValues = s { lstExclude = (lstExclude s) ++ lstRanges ex sqlValues }  
 
 If we are importing the inclusion range, then reversing the endpoints makes
 it an exclusion range.
 
-> lstRange :: Bool -> [[SqlValue]] -> (Float, Float)
-> lstRange ex sqlValues = if ex then (low, hi) else (hi, low) 
->   where
->     (low, hi) = lstRangeLow ex sqlValues $ lstRangeHi ex sqlValues
+> invertIn :: [Float] -> [Float] -> [(Float, Float)]
+> invertIn [] []      = []
+> invertIn [l] [h]    = if l == 0 then [(h, 24)] else [(0, l), (h, 24)]
+> invertIn lows highs = filter (\x-> (not $ (0,0) == x) && (not $ (24.0, 24.0) == x)) $ splitIn $ 0:(zipConcat $ zip lows highs)++[24]
 
-> lstRangeHi :: Bool -> [[SqlValue]] -> Float
-> lstRangeHi ex sqlValues = lstRangeHi' . head $ filter (isLSTName n) sqlValues
+> zipConcat :: [(Float, Float)] -> [Float]
+> zipConcat []     = []
+> zipConcat (x:xs) = fst x : snd x : zipConcat xs
+
+> splitIn :: [Float] -> [(Float, Float)]
+> splitIn []        = []
+> splitIn (x:y:xys) = (x, y) : splitIn xys
+
+> lstRanges :: Bool -> [[SqlValue]] -> [(Float, Float)]
+> lstRanges ex sqlValues = if ex then (zip lows highs) else (invertIn lows highs)
 >   where
->     n = if ex then "LST Exclude Hi" else "LST Include Hi"
->     lstRangeHi' (pName:pHi:[]) = fromSql pHi
+>     lows   = lstSplit ex "Low" sqlValues
+>     highs  = lstSplit ex "Hi" sqlValues
+
+> lstSplit :: Bool -> String -> [[SqlValue]] -> [Float]
+> lstSplit ex dir sqlValues = map lstRange' $ filter (isLSTName n) sqlValues
+>   where
+>     n = if ex then "LST Exclude " ++ dir else "LST Include " ++ dir
+>     lstRange' (pName:pValue:[]) = fromSql pValue
 
 > isLSTName :: String -> [SqlValue] -> Bool
 > isLSTName name (pName:pFloat:[]) = (fromSql pName) == name
-
-> lstRangeLow :: Bool -> [[SqlValue]] -> Float -> (Float, Float)
-> lstRangeLow ex sqlValues hiValue = (lowValue, hiValue)
->   where
->     n = if ex then "LST Exclude Low" else "LST Include Low"
->     lowValue = lstRangeLow' . head $ filter (isLSTName n) sqlValues
->     --isLow (pName:pFloat:[]) = (fromSql pName) == "LST Exclude Low"
->     lstRangeLow' (pName:pLow:[]) = fromSql pLow
 
 > getElectives :: Connection -> Session -> IO [Electives]
 > getElectives cnn s = do
@@ -665,7 +678,12 @@ A single Window can have mutliple date ranges associated with it.
 >   where
 >     xs = [toSql . wId $ w]
 >     -- don't pick up deleted periods!
->     query = "SELECT state.abbreviation, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, pa.not_billable FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.window_id = ?;"
+>     query = "SELECT state.abbreviation, pa.scheduled, pa.other_session_weather, \
+>              \ pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, \
+>              \ pa.lost_time_rfi, pa.lost_time_other, pa.not_billable \
+>              \ FROM periods AS p, period_states AS state, periods_accounting AS pa \
+>              \ WHERE state.id = p.state_id AND state.abbreviation != 'D' AND \
+>              \ pa.id = p.accounting_id AND p.window_id = ?;"
 >     toTotalTimeBilled = map toTimeBilled
 >     toTimeBilled (state:sch:osw:osr:oso:ltw:ltr:lto:nb:[]) =
 >        if (deriveState . fromSql $ state) == Pending
@@ -685,7 +703,13 @@ A single Window can have mutliple date ranges associated with it.
 >     st = sType s
 >     xs = [toSql . sId $ s]
 >     -- don't pick up deleted periods!
->     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, pa.not_billable FROM periods AS p, period_states AS state, periods_accounting AS pa WHERE state.id = p.state_id AND state.abbreviation != 'D' AND pa.id = p.accounting_id AND p.session_id = ?;"
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, \
+>              \ p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, \
+>              \ pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, \
+>              \ pa.not_billable \
+>              \ FROM periods AS p, period_states AS state, periods_accounting AS pa \
+>              \ WHERE state.id = p.state_id AND state.abbreviation != 'D' AND \
+>              \ pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
 >     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:osw:osr:oso:ltw:ltr:lto:nb:[]) =
 >       defaultPeriod { peId = fromSql id
@@ -752,7 +776,7 @@ prior to observing.
 >   return ()
 
 Here we add a new period to the database.  
-Initialize the Period in the Pending state (state_id = 1).
+Initialize the Period in the Pending state.
 Since Antioch is creating it,
 we will set the Period_Accounting.scheduled field
 and the associated receviers using the session's receivers.
@@ -764,8 +788,11 @@ and the associated receviers using the session's receivers.
 >   -- is this period part of a window?
 >   let window = find (periodInWindow p) (windows . session $ p)
 >   let winId = if (isNothing window) then SqlNull else (toSql . wId . fromJust $ window)
+>   -- what should the id be for the pending state?
+>   periodStates <- getPeriodStates cnn
+>   let pendingStateId = getPeriodStateId Pending periodStates
 >   -- now for the period itself
->   quickQuery' cnn query (xs accounting_id winId) 
+>   quickQuery' cnn query (xs accounting_id winId pendingStateId) 
 >   commit cnn
 >   pId <- getNewestID cnn "periods"
 >   -- init the rcvrs associated w/ this period
@@ -774,10 +801,10 @@ and the associated receviers using the session's receivers.
 >   --updateWindow cnn p
 >   commit cnn
 >   -- finally, track changes in the DB by filling in the reversion tables
->   putPeriodReversion cnn p accounting_id
+>   putPeriodReversion cnn p accounting_id pendingStateId
 >   commit cnn
 >     where
->       xs a w = [toSql . sId . session $ p
+>       xs a w stateId = [toSql . sId . session $ p
 >              , toSql $ (toSqlString . startTime $ p) 
 >              , minutesToSqlHrs . duration $ p
 >              , toSql . pScore $ p
@@ -785,8 +812,9 @@ and the associated receviers using the session's receivers.
 >              , toSql . pBackup $ p
 >              , toSql a
 >              , w
+>              , toSql stateId
 >             ]
->       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, window_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, false);"
+>       query = "INSERT INTO periods (session_id, start, duration, score, forecast, backup, accounting_id, window_id, state_id, moc_ack) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, false);"
 
 When we create a period, we are going to associate the rcvrs from the session
 to it's period (they can be changed later by schedulers)
@@ -812,16 +840,6 @@ Creates a new entry in the periods_receivers table.
 >                       ]
 >       query = "INSERT INTO periods_receivers (period_id, receiver_id) VALUES (?, ?);"
 
-You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
-
-> getRcvrId :: Connection -> Receiver -> IO Int
-> getRcvrId cnn rcvr = do
->     result <- quickQuery' cnn query xs
->     return $ fromSql . head . head $ result 
->   where
->     query = "SELECT id FROM receivers WHERE name = ?;"
->     xs = [toSql . show $ rcvr]
-
 > updateWindow :: Connection -> Period -> IO ()
 > updateWindow cnn p = handleSqlError $ do
 >   -- select the period to get its period id
@@ -833,7 +851,8 @@ You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
 >                        -- update window with the period_id
 >                        else updateWindow' cnn periodId (wId . fromJust $ window)
 >     where
->       pquery = "SELECT p.id FROM periods AS p WHERE p.session_id = ? AND p.start = ? AND p.duration = ?;"
+>       pquery = "SELECT p.id FROM periods AS p \
+>              \ WHERE p.session_id = ? AND p.start = ? AND p.duration = ?;"
 >       pxs = [toSql . sId . session $ p
 >            , toSql . toSqlString . startTime $ p
 >            , minutesToSqlHrs . duration $ p
@@ -870,10 +889,12 @@ Change the state of all given periods to Deleted.
 > movePeriodsToDeleted :: [Period] -> IO ()
 > movePeriodsToDeleted ps = do
 >   cnn <- connect
->   result <- mapM (movePeriodToDeleted cnn) ps
+>   periodStates <- getPeriodStates cnn
+>   let deletedId = getPeriodStateId Deleted periodStates
+>   result <- mapM (movePeriodToDeleted cnn deletedId) ps
 >   return ()
 >     where
->   movePeriodToDeleted cnn p = movePeriodToState cnn (peId p) 3
+>   movePeriodToDeleted cnn stateId p = movePeriodToState cnn (peId p) stateId
 
 Changes the state of a Period.
 
@@ -885,6 +906,25 @@ Changes the state of a Period.
 >     where
 >       query = "UPDATE periods SET state_id = ? WHERE id = ?;"
 >       xs = [toSql stateId, toSql periodId]
+
+Retrieves from the DB a mapping of row id to period state.
+
+> getPeriodStates :: Connection -> IO ([(Int, StateType)])
+> getPeriodStates cnn = do
+>     r <- quickQuery' cnn query xs
+>     return $ map toStates r
+>   where
+>     xs = []
+>     query = "SELECT abbreviation, id FROM period_states;"
+>     toStates (ab:id:[]) = (fromSql id, deriveState . fromSql $ ab)
+
+Given a period state and the mapping to the states primary ID in the DB,
+returns the appropriate primary ID.
+
+> getPeriodStateId :: StateType -> [(Int, StateType)] -> Int
+> getPeriodStateId periodState mapping = fst . fromJust $ find findState mapping
+>   where
+>     findState (id, state) = state == periodState
 
 Utilities
 

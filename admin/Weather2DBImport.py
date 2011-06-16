@@ -119,7 +119,7 @@ class Weather2DBImport:
                 """ % (column, value, rowId)
         self.c.query(query)
 
-    def backfill(self, column, callback):
+    def backfill(self, column, callback, test = False):
         """
         Generic method for looking for null values in the weather table,
         and updating those rows with the appropriate value from the 
@@ -134,12 +134,15 @@ class Weather2DBImport:
             # watch for NaN values
             if v and v == v:
                 results.append((id, dtStr, v))
-                self.updateRow(id, column, v)
+                if not test:
+                    self.updateRow(id, column, v)
         return results 
    
-    def backfillWind(self):
+    def backfillWind(self, test = False):
         return self.backfill("wind_speed"
-                           , self.weatherData.getLastHourMedianWindSpeeds)
+                           , self.weatherData.getLastHourMedianWindSpeeds
+                           , test)
+
     
     def backfillIrradiance(self):
         return self.backfill("irradiance"

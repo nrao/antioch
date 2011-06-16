@@ -27,15 +27,17 @@ import settings
 setup_environ(settings)
 
 from datetime                  import datetime
-from sesshuns.models           import *
-from nell.tools.TimeAccounting import TimeAccounting
+from scheduler.models          import *
+from utilities.TimeAccounting  import TimeAccounting
+from utilities.receiver        import ReceiverCompile
+from utilities                 import TimeAgent
 
 def create_project(fdata):
     project = Project()
     fproj_type = fdata.get("type", "science")
-    p_type     = first(Project_Type.objects.filter(type = fproj_type))
+    p_type     = Project_Type.objects.get(type = fproj_type)
     fsemester  = fdata.get("semester", "09C")
-    semester   = first(Semester.objects.filter(semester = fsemester))
+    semester   = Semester.objects.get(semester = fsemester)
 
     project.semester         = semester
     project.project_type     = p_type
@@ -64,7 +66,7 @@ def create_project(fdata):
         pa = Project_Allotment(project = project, allotment = a)
         pa.save()
 
-    project.save() # TBF needed?
+    project.save() 
     return project
 
 def create_lst_exclusion(sesshun, fdata):
@@ -72,8 +74,8 @@ def create_lst_exclusion(sesshun, fdata):
     Converts the json representation of the LST exclude flag
     to the model representation.
     """
-    lowParam = first(Parameter.objects.filter(name="LST Exclude Low"))
-    hiParam  = first(Parameter.objects.filter(name="LST Exclude Hi"))
+    lowParam = Parameter.objects.get(name="LST Exclude Low")
+    hiParam  = Parameter.objects.get(name="LST Exclude Hi")
     
     # json dict string representation
     lst_ex_string = fdata.get("lst_ex", None)
@@ -100,7 +102,7 @@ def create_lst_exclusion(sesshun, fdata):
 
 def save_receivers(sesshun, proposition):
     abbreviations = [r.abbreviation for r in Receiver.objects.all()]
-    # TBF catch errors and report to user
+    # this will fail loudly, so users will notice if there's a problem
     rc = ReceiverCompile(abbreviations)
     ands = rc.normalize(proposition)
     for ors in ands:
@@ -126,10 +128,8 @@ def create_session(sesshun, project, fdata):
     fobstype = fdata.get("science", "testing")
     proj_code = fdata.get("pcode", "Test-Project")
 
-    st = first(Session_Type.objects.filter(type = fsestype).all()
-             , Session_Type.objects.all()[0])
-    ot = first(Observing_Type.objects.filter(type = fobstype).all()
-             , Observing_Type.objects.all()[0])
+    st = Session_Type.objects.get(type = fsestype)
+    ot = Observing_Type.objects.get(type = fobstype)
 
     sesshun.project          = project
     sesshun.session_type     = st
@@ -165,8 +165,7 @@ def create_session(sesshun, project, fdata):
     save_receivers(sesshun, proposition)
     
     systemName = fdata.get("coord_mode", "J2000")
-    system = first(System.objects.filter(name = systemName).all()
-                 , System.objects.all()[0])
+    system = System.objects.get(name = systemName)
 
     v_axis = fdata.get("source_v", 0.0)
     h_axis = fdata.get("source_h", 0.0)
@@ -206,7 +205,7 @@ def create_period(sesshun, fdata):
     period.start = fdata.get("start", datetime(2006, 5, 11, 12, 0, 0))
     period.duration = fdata.get("duration", 1.0)
     stateAbbr = fdata.get("state", "P")
-    period.state = first(Period_State.objects.filter(abbreviation=stateAbbr))
+    period.state = Period_State.objects.get(abbreviation=stateAbbr)
     window = fdata.get("window", None)
     period.window_id = window.id if window is not None else None
     elective = fdata.get("elective", None)

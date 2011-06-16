@@ -23,7 +23,8 @@
 >   args <- getArgs
 >   (stgStr, dir, beginStr, numDaysStr, name, maintStr, typesStr, backlogStr) <- simulateOpts args
 >   putStrLn $ printf "Running simulation '%s' using strategy %s for %s days, output to directory %s\n" name stgStr numDaysStr dir
->   -- TBF: error checking on these values
+>   -- error checking on these values
+>   -- Story: https://www.pivotaltracker.com/story/show/14123373
 >   let start = fromJust . fromSqlString $ (beginStr ++ " 00:00:00")
 >   let numDays = read numDaysStr :: Int
 >   let stg = read stgStr :: StrategyName

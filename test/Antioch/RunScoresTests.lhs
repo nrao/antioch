@@ -10,6 +10,7 @@
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunScores
+> import Antioch.ScoreTests (pSessions)
 
 > import Test.HUnit
 > import Data.List
@@ -22,9 +23,7 @@
 >   , test_runFactors
 >   , test_runNominees
 >   , test_runMOC
->   -- <<<<<<< Updated upstream
 >   , test_runMOCfailures
->   -- >>>>>> Stashed changes
 >   , test_runPeriodMOC
 >     ]
 
@@ -67,7 +66,7 @@
 >   scores = [1.6321898,1.6325561,1.6327252,1.632888]
 >   exp = ((sum $ tail scores) / 4.0)::Score 
 >   startDt = fromGregorian 2006 2 1 0 30 0
->   s = head pSessions
+>   s = head pSessions'
 >   sessId = sId s
 >   p = defaultPeriod { session = s
 >                       , startTime = startDt
@@ -76,7 +75,7 @@
 >                       }
 >   s' = makeSession s [] [p]
 >   proj = defaultProject
->   projs = [makeProject proj 0 0 pSessions]
+>   projs = [makeProject proj 0 0 pSessions']
 
 > test_runFactors = TestCase $ do
 >   let dt = fromGregorian 2006 9 2 14 30 0
@@ -84,7 +83,7 @@
 >   let s = s' { sId = 555}
 >   let dur = 15::Minutes
 >   let proj = defaultProject
->   let projs = [makeProject proj 1000 1000 ([s] ++ pSessions)]
+>   let projs = [makeProject proj 1000 1000 ([s] ++ pSessions')]
 >   -- Here we try to get the same results as ScoreTests.test_scoreFactors & test_scoreElements
 >   -- and we can, except for pressures and some project info
 >   (sess, factors) <- runFactors 555 dt dur projs True
@@ -95,7 +94,7 @@
 >   -- now make sure wband doesn't blow this up
 >   let sw = s { sId = 556, receivers = [[Rcvr68_92]] }
 >   let proj = defaultProject
->   let projs = [makeProject proj 1000 1000 ([sw] ++ pSessions)]
+>   let projs = [makeProject proj 1000 1000 ([sw] ++ pSessions')]
 >   (sess, factors) <- runFactors 556 dt dur projs True
 >   assertEqual "test_runFactors 3" 1 (length factors)
 >   assertEqual "test_runFactors 4" 32 (length . head $ factors)
@@ -207,23 +206,8 @@
 Utilities:
 
 Note these are *almost* identical to ScoreTests's pSessions.
+Add id's to the test sessions from ScoreTests.lhs:
 
-> pSessions = zipWith6 genPSess tots useds ras bands grades ids
->   where tots   = [12*60, 18*60, 10*60, 20*60]
->         useds  = [ 2*60,  8*60,  5*60, 12*60]
->         ras    = [  5.4,  10.1,   4.9,  18.1]
->         bands  = [    L,     C,     X,     L]
->         grades = [4.0, 4.0, 4.0, 4.0]
->         ids    = [340, 341, 342, 343]
->         genPSess t u ra b g i = defaultSession {
->             sId = i
->           , sAllottedS = t
->           , sAllottedT = t
->           , periods = [defaultPeriod {duration = u
->                                     , pState = Scheduled
->                                     , pDuration = u}]
->           , ra = hrs2rad ra
->           , band = b
->           , grade = g
->           , receivers = [[Rcvr1_2]] 
->         }
+> pSessions' = map addId $ zip [340,341,342,343] pSessions
+>   where
+>     addId (id, s) = s {sId = id }

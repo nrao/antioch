@@ -21,7 +21,36 @@
 >    , test_inCancelRange
 >    , test_scheduleBackup
 >    , test_replaceWithBackup
+>    , test_evalSimPeriodMOC
+>    , test_evalSimBackup
 >                  ]
+
+> test_evalSimPeriodMOC = TestCase $ do
+>     w <- getWeatherTest Nothing
+>     rt <- getReceiverTemperatures
+>     moc <- runScoring w [] rt $ evalSimPeriodMOC p1
+>     assertEqual "test_evalSimPeriodMOC 1" (Just False) moc
+>     moc <- runScoring w [] rt $ evalSimPeriodMOC p2 
+>     assertEqual "test_evalSimPeriodMOC 2" (Just True) moc
+>  where
+>     p1 = head testPeriods
+>     p2 = last testPeriods
+
+> test_evalSimBackup = TestCase $ do
+>     w <- getWeatherTest Nothing
+>     rt <- getReceiverTemperatures
+>     score <- runScoring w [] rt $ do
+>         sf <- genScore (startTime p1) [s]
+>         evalSimBackup sf p1 s
+>     assertEqual "test_evalSimBackup 1" 0.0 score
+>     score <- runScoring w [] rt $ do 
+>         sf <- genScore (startTime p2) [s]
+>         evalSimBackup sf p2 s
+>     assertEqual "test_evalSimBackup 2" 9.626644 score
+>  where
+>     p1 = head testPeriods
+>     p2 = last testPeriods
+>     s = session p1
 
 > test_replaceWithBackup = TestCase $ do
 >   w <- getWeatherTest . Just $ dt
@@ -125,4 +154,18 @@
 >     dt4 = fromGregorian 2004 1 1 0 0 0
 >     dt5 = fromGregorian 2008 1 1 0 0 0
 
+
+Utilities:
+
+> testPeriods :: [Period]
+> testPeriods = [p1, p2]
+>   where
+>     s = head $ findPSessionsByName "GB"
+>     dt = fromGregorian 2006 2 1 0 0 0
+>     dt2 = fromGregorian 2006 2 2 0 0 0
+>     p1 = defaultPeriod { session = s
+>                        , startTime = dt 
+>                        , duration = 2*60
+>                        }
+>     p2 = p1 {startTime = dt2}
 

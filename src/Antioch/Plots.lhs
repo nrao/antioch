@@ -22,9 +22,8 @@ Where n0 specifies the number of values at and below the value of b0, and
       n1 specifies the number of values at and below the value of b1, etc.
 Unfortunetly, these plot routines don't interpret histograms this way. It 
 seems that they shift everything to the right by half a bin.
-TBF: In addition, I (PRM) can't make heads or tails of what's going on when
-irregularly spaced bins are used, so right now we are only supporting
-regularly spaced bins.
+Note: currently, irregularly spaced bins aren not supported.  Since it seems
+noone is asking for this yet, this is not a problem.
 
 > adjustHistData      :: [(Float, Float)] -> [(Float, Float)]
 > adjustHistData xs
@@ -34,9 +33,6 @@ regularly spaced bins.
 >     adjust (x, y) = (x - step, y)
 >     step = (x2 - x1) / 2.0
 >     ((x1, _) : (x2, _) : _) = xs
-> -- TBF: irregularly spaced bins don't seem to work???
-> --adjustHistData (x:[])  = []
-> --adjustHistData (x1:x2:xs) = (b1 - ((b2 - b1)/2.0), v1):adjustHistData (x2:xs)
 
 Line plots
 

@@ -63,6 +63,24 @@ Ranges for all receivers: copied from the DSS database.
 >     (RcvrArray18_26, (17.0, 27.5)),
 >     (Rcvr68_92,      (66.0, 94.0))]
 
+> deriveBand :: Float -> Band
+> deriveBand freq |                freq <= 2.0   = L
+> deriveBand freq | freq > 2.0  && freq <= 3.0   = S
+> deriveBand freq | freq > 3.0  && freq <= 7.0   = C
+> deriveBand freq | freq > 7.0  && freq <= 11.0  = X
+> deriveBand freq | freq > 11.0 && freq <= 17.0  = U
+> deriveBand freq | freq > 17.0 && freq <= 26.0  = K
+> deriveBand freq | freq > 26.0 && freq <= 40.0  = A
+> deriveBand freq | freq > 40.0 && freq <= 50.0  = Q
+> deriveBand freq | otherwise                    = W
+
+> deriveState :: String -> StateType
+> deriveState s
+>   | s == "P"  = Pending
+>   | s == "S"  = Scheduled
+>   | s == "C"  = Complete
+>   | otherwise = Deleted
+
 --------------------------------------------------------------------
 
 > deg2rad :: Float -> Float
@@ -235,9 +253,10 @@ Get all the session periods that are within the given window
 > showList' :: Show a => [a] -> String
 > showList' = unlines . map show
 
-TBF: this is called *trimester2startDT* because it only handles dates
+Note: this is called *trimester2startDT* because it only handles dates
 before 2011, before we switched to *semesters*, so don't change the
-name till we can get this right.
+name till we can get this right.  This is only used in post-simulation
+checks, so we don't need the more general function yet.
 
 Here we make any year > 2010 return Nothing as a reminder that this is
 NOT semester2startDT - that still needs to be coded.

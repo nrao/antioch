@@ -24,19 +24,12 @@
 > import Antioch.DateTime
 > import Antioch.RunDailySchedule
 
-> scheduleAndRedirectHandler :: Handler ()
-> scheduleAndRedirectHandler = hMethodRouter [
->        (POST, runScheduleAndRedirect)
->      -- POST only works because trying to get params from a GET will hang
->      -- , (GET,  runScheduleAndRedirect) 
->     ] $ hError NotFound
-
 Get params from the URL that can then be used to run the simulator
 for the given date range.
 
 > runSchedule :: StateT Context IO ()
 > runSchedule = do
->     -- parse params; TBF: why does this look different from others?
+>     -- parse params; Note: this look different from other param parsing.
 >     bytes <- contents
 >     let params   = maybe [] id $ bytes >>= parseQueryParams . L.unpack
 >     let params'  = getKeyValuePairs params
@@ -61,43 +54,12 @@ for the given date range.
 >   where
 >     getKeyValuePairs pairs = [(key, value) | (key, Just value) <- pairs]
 
-Just like the name says: run the schedule, then redirect to a new page.
-
-> runScheduleAndRedirect :: StateT Context IO ()
-> runScheduleAndRedirect = do
->     runSchedule
->     -- now redirect caller back to the scheduling page
->     hRedirect getSchedulingPage 
-
-> {-
-
-TBF: currently, a date time string entered in a form's text box gets parsed
-as (example): "2009-06-20 00%3A00%3A00".  To avoid the issue with the time,
-we are rounding off to the nearest day.
-
-> schedule :: [(String, String)] -> IO ()
-> schedule params = dailySchedulePack start days
->   where
->     tz    = getParam "tz" params
->     time  = if tz == "UTC" then "00:00:00" else "05:00:00" -- TBF: ET??? 
->     start = case start' of
->                 Just dt -> dt
->                 _       -> fromGregorian 2009 6 1 0 0 0 
->     start'' = take 10 $ getParam "start" params
->     start' = fromSqlString $ start'' ++ " " ++ time
->     days'  = read (getParam "duration" params)::Int
->     days   = if (days' == 0) then 0 else (days' - 1)
-> -}
-
 > getParam :: String -> [(String, String)] -> String
 > getParam key params = case pair of
 >              Just pair -> snd pair
 >              _      -> ""
 >   where
 >     pair = find (\x -> ((fst x) == key)) params 
-
-> getSchedulingPage ::URI
-> getSchedulingPage = fromJust . parseURI $ "http://trent.gb.nrao.edu:" ++ (show proxyListenerPort) ++ "/schedule" --"/sessions/schedule"
 
 > runSchedulerHandler :: Handler ()
 > runSchedulerHandler         = hMethodRouter [

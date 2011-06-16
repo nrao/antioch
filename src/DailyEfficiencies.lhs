@@ -1,12 +1,7 @@
 > module Main where
 
 > import Antioch.DateTime
-> --import Antioch.Schedule
-> --import Antioch.Score
-> --import Antioch.Simulate
-> --import Antioch.Reports
 > import Antioch.RunSimulation
-> --import SimulateOpts
 
 > import System.Environment
 > import Text.Printf
@@ -19,6 +14,7 @@
 >   let start = fromJust . fromSqlString . head $ args
 >   let numDaysStr = last args
 >   putStrLn $ printf "Running daily efficiencies from %s for %s days, plots to current directory\n" (toSqlString start) numDaysStr 
->   -- TBF: error checking on these values
+>   -- error checking on these values
+>   -- Story: https://www.pivotaltracker.com/story/show/14123373
 >   let numDays = read numDaysStr::Int
 >   runDailyEfficiencies start numDays True -- start days simInput

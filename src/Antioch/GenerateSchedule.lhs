@@ -3,7 +3,7 @@
 > import Antioch.Generators
 > import Antioch.Types
 > import Antioch.DateTime
-> import Antioch.Filters        (truncateHistory)
+> import Antioch.Filters        (truncateHistory, typeWindowed)
 > import Antioch.Utilities
 > import Antioch.Score          (elevation, radecel2ha)
 > import System.Random   
@@ -113,17 +113,6 @@ Horizon defined at 5 degrees.
 > validElev el | ((deg2rad 5.0) <= el) && (el <= (deg2rad 90.0)) = True
 >              | otherwise = False
 
-Horizon defined at 0 degrees.
-
-> validRaDecTime' :: Float -> Float -> DateTime -> Bool
-> validRaDecTime' ra dec dt = validElev $ elevation dt s'
->   where
->     s' = defaultSession {ra = ra, dec = dec}
-
-> validElev' :: Radians -> Bool
-> validElev' el | ((deg2rad 0.0) <= el) && (el <= (deg2rad 90.0)) = True
->              | otherwise = False
-
 For a given list of periods, create appropriate projects & sessions for them.
 The id is passed along so that each session can have a unique id.
 For now keep it real simple - a single proj & sess for each period
@@ -195,7 +184,7 @@ Generate a period that starts with the given time range.
 
 > genFixedPeriod :: DateTime -> Int -> Gen Period
 > genFixedPeriod start days = do
->   day <- choose (1, days)
+>   day <- choose (1, days - 1)
 >   hour <- choose (0, 23)
 >   qtrs <- choose (1*4, 8*4) -- 1 to 8 hrs 
 >   let dur = qtrs * 15
@@ -250,7 +239,7 @@ the given number of days.
 >   intervalDays <- choose (15, days)
 >   return (numWindows, intervalDays)
 >                       | days > 10 && days <= 30 = do -- days < 30
->   let minDays = days `div` 4 
+>   let minDays = days `div` 3 
 >   numWindows <- choose (3,10)
 >   intervalDays <- choose (minDays, days)
 >   return (numWindows, intervalDays)
@@ -305,9 +294,7 @@ needed, and their spacing.
 >     forAll genStartTime $ \dt ->
 >     let end = addHours (365*24) dt
 >         trs = generate 0 g $ getValidTransitRanges dt int num end (ra, dec)
->     in (length trs) > 1
->     -- TBF why does this stronger test fail?
->     --in all (validRaDecTime' ra dec) . concat . map times $ trs
+>     in all (validRaDecTime ra dec) . concat . map times $ trs
 >   where 
 >     g = mkStdGen 1
 >     int = 15
@@ -320,16 +307,17 @@ horizon). Note the duration could be forced to zero.
 
 > getValidTransitRange :: (Radians, Radians) -> DateTime -> Gen (DateTime, Minutes)
 > getValidTransitRange (ra, dec) day = do
->   durQtrs <-  if haQtrs <= 0
+>   durQtrs <-  if haQtrs < 3
 >               then return 0
->               else choose ((1*4), min (8*4) haQtrs) -- 1 to 8 hours
->   let start = (qtrs2mins $ (-durQtrs) `div` 2) `addMinutes` dtTrans
+>               -- subtract 2 quarters to guarantee stays within HA (fudge)
+>               else choose ((1*4), min (8*4) (haQtrs - 2)) -- 1 to 8 hours
+>   let start = (-(qtrs2mins (durQtrs `div` 2))) `addMinutes` dtTrans
 >   let duration = qtrs2mins durQtrs
 >   return (start, duration)
 >     where
 >       dtTrans = roundToQuarter $ lstHours2utc day (rad2hrs ra)
 >       el = 5.0
->       haQtrs  = round2quarter . round . (*60.0) . rad2hrs . (*2.0) . radecel2ha (ra, dec) . deg2rad $ el
+>       haQtrs  = flip div quarter . round . (*60.0) . rad2hrs . (*2.0) . radecel2ha (ra, dec) . deg2rad $ el
 >       qtrs2mins = (*quarter)
 
 > prop_raDecTransitsGiveValidElevations = forAll (genRaDec 'g') $ \(ra', dec') -> (validElev $  elevation (lstHours2utc dt (rad2hrs ra')) defaultSession {ra = ra', dec = dec'}) 
@@ -452,6 +440,35 @@ many of the criteria in Filters.lhs: activeWindows:
 
 > allValidSimWindows :: [Session] -> Bool
 > allValidSimWindows wss = all (==True) $ map (validSimulatedWindows) wss
+
+Once valid simulated windows get scheduled in the simulator, they should
+all be complete, with either:
+   * no chosen period
+   * only one chosen period, with duration equal to the original duration
+Since getting the original default periods duration could be a pain,
+we will instead just check that the sum of all periods in the session
+equals it's allotted time.
+
+> validScheduledWindows :: [Session] -> [Period] -> Bool
+> validScheduledWindows ss ps = (validScheduledWindowedTime wss ps) && (validNumWindows wss ps)
+>   where
+>     wss = filter typeWindowed ss
+
+> validNumWindows :: [Session] -> [Period] -> Bool
+> validNumWindows ss ps = all (==True) $ map (validNumWindows' ps) ss
+>   where
+>     validNumWindows' ps s = (length . windows $ s) == (length (getPeriods ps s))
+>     getPeriods ps s = filter (\p -> (sId . session $ p) == (sId s)) ps
+
+> validScheduledWindowedTime :: [Session] -> [Period] -> Bool
+> validScheduledWindowedTime ss ps = all (==True) $ map (validScheduledWindowedTime' ps) ss
+>   -- where
+>   --  wss = filter isTypeWindowed ss
+
+> validScheduledWindowedTime' :: [Period] -> Session -> Bool
+> validScheduledWindowedTime' ps s = (sAllottedT s) == (sum $ map duration ps')
+>   where
+>     ps' = filter (\p -> (sId . session $ p) == (sId s)) ps
 
 Creates a maintenance project with a year's worth of pre-scheduled periods
 reflecting a realistic maintenance schedule.

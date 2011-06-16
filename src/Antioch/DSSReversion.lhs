@@ -3,7 +3,6 @@
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Score
-> import Antioch.Reservations
 > import Antioch.Settings                (dssDataDB)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
@@ -21,15 +20,15 @@ to do what the django-reversion package does down at the DB level.
 In practice, this means filling out the reversion_revision and reversion_version
 tables in the correct manner.
 
-> putPeriodReversion :: Connection -> Period -> Int -> IO ()
-> putPeriodReversion cnn p accntId = do
+> putPeriodReversion :: Connection -> Period -> Int -> Int -> IO ()
+> putPeriodReversion cnn p accntId stateId = do
 >     -- make a new reversion_revision entry
 >     -- and get it's ID
 >     revisionId <- putPeriodRevision cnn
 >     -- make an entry for the period accounting table
 >     putPeriodAccountingVersion cnn p revisionId accntId
 >     -- make an entry for the period table
->     putPeriodVersion cnn p revisionId accntId
+>     putPeriodVersion cnn p revisionId accntId stateId
 >     return ()
 
 Create a new revision entry that marks a change for right now, due to 
@@ -69,13 +68,13 @@ in the reversion_version table if it had been created in Django:
 
 This should replicate the django.core.serialize product for a Period.
 
-> putPeriodVersion :: Connection -> Period -> Int -> Int -> IO ()
-> putPeriodVersion cnn p revisionId accntId = do
+> putPeriodVersion :: Connection -> Period -> Int -> Int -> Int -> IO ()
+> putPeriodVersion cnn p revisionId accntId stateId = do
 >     quickQuery' cnn query xs
 >     commit cnn
 >   where
 >     query = "INSERT INTO reversion_version (revision_id, object_id, content_type_id, format, serialized_data, object_repr, type) VALUES (?, ?, 59, 'json', ?, ?, 1)"
->     serialData = serializePeriod p accntId
+>     serialData = serializePeriod p accntId stateId
 >     objRepr = representPeriod p
 >     xs = [toSql revisionId, toSql . peId $ p, toSql serialData, toSql objRepr]
 
@@ -83,15 +82,15 @@ This should replicate the django.core.serialize product for a Period.
 Example:
  serializePeriod p = "[{\"pk\": 3685, \"model\": \"sesshuns.period\", \"fields\": {\"score\": 66.0, \"moc_ack\": false, \"forecast\": \"2010-03-23 17:30:00\", \"start\": \"2010-03-23 00:00:00\", \"state\": 1, \"session\": 339, \"duration\": 1.0, \"accounting\": 4099, \"backup\": false}}]"
 
-> serializePeriod :: Period -> Int -> String
-> serializePeriod p accntId =  "[{\"pk\": " ++ pk ++ ", \"model\": \"scheduler.period\", \"fields\": {\"score\": " ++ sc ++ ", \"moc_ack\": " ++ moc ++ ", \"forecast\": \"" ++ forecast ++ "\", \"start\": \"" ++ start ++ "\", \"state\": " ++ state ++ ", \"session\": " ++ sessionId ++ ", \"duration\": " ++ dur ++ ", \"accounting\": " ++ accountingId ++ ", \"backup\": " ++ backup ++ "}}]"
+> serializePeriod :: Period -> Int -> Int -> String
+> serializePeriod p accntId stateId =  "[{\"pk\": " ++ pk ++ ", \"model\": \"scheduler.period\", \"fields\": {\"score\": " ++ sc ++ ", \"moc_ack\": " ++ moc ++ ", \"forecast\": \"" ++ forecast ++ "\", \"start\": \"" ++ start ++ "\", \"state\": " ++ state ++ ", \"session\": " ++ sessionId ++ ", \"duration\": " ++ dur ++ ", \"accounting\": " ++ accountingId ++ ", \"backup\": " ++ backup ++ "}}]"
 >   where
 >     pk = show . peId $ p
 >     sc = show . pScore $ p
 >     moc = "false" -- We can hardcode this because it's a new period!
 >     forecast = toSqlString . pForecast $ p
 >     start = toSqlString . startTime $ p
->     state = show . stateTypeToPK . pState $ p
+>     state = show stateId 
 >     sessionId = show . sId . session $ p
 >     dur = show . duration $ p
 >     accountingId = show accntId 
@@ -121,15 +120,6 @@ Need this special function because Show Bool gives "True" and "False"
 
 > toSqlBool :: Bool -> String
 > toSqlBool bool = if bool then "true" else "false"
-
-TBF: simple mapping, but static - perhaps it should read the DB to get
-these period state Primary Keys?
-
-> stateTypeToPK :: StateType -> Int
-> stateTypeToPK stateType | stateType == Pending   = 1
->                         | stateType == Scheduled = 2
->                         | stateType == Deleted   = 3
->                         | stateType == Complete  = 4
 
 This should replicate the __str__ method for the Django Period Model:
 

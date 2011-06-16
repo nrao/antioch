@@ -49,7 +49,7 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
 >     (rs, ss, projs, history') <- if simInput then simulatedInput dt days maint open fixed windowed backlog else dbInput dt
->     let rs = [] -- TBF
+>     let rs = [] -- We aren't simulating w/ receiver schedule yet.
 >     -- print . show $ rs
 >     -- print . show $ ss
 >     -- print . show $ projs

@@ -113,19 +113,19 @@ similar test in SimulationTests.
 >       w      <- getWeatherTest . Just $ dt
 >       (s, score) <- runScoring w [] rt $ do
 >           sf <- genScore dt sess
->           best (averageScore sf dt2) sess 
+>           best (averageScore' sf dt2) sess 
 >       assertEqual "ScheduleTests_test_best1" expSession1 s
 >       assertEqual "ScheduleTests_test_best2" expScore1 score
 >       -- make sure it can handle just one session
 >       (s, score) <- runScoring w [] rt $ do
 >           sf <- genScore dt sess
->           best (averageScore sf dt2) [(head sess)] 
+>           best (averageScore' sf dt2) [(head sess)] 
 >       assertEqual "ScheduleTests_test_best3" expSession2 s
 >       assertEqual "ScheduleTests_test_best4" expScore2 score
 >       -- does not handle no sessions, this produces and error
 >       --(s, score) <- runScoring w [] rt $ do
 >       --    sf <- genScore dt sess
->       --    (best (averageScore sf dt2) []) 
+>       --    (best (averageScore' sf dt2) []) 
 >       --assertEqual "ScheduleTests_test_best" True True
 >   where
 >     sess = getOpenPSessions
@@ -136,7 +136,8 @@ similar test in SimulationTests.
 >     dt  = fromGregorian 2006 2 1 0 0 0
 >     dt2 = fromGregorian 2006 2 1 4 0 0
 
-TBF: constrain has not been fully implemented yet
+Note: constrain has not been fully implemented yet - but it's only used for 
+the deprecated Strategies, not Pack (so who cares)!
 
 > test_constrain = TestCase $ do
 >     assertEqual "ScheduleTests_test_constrain_1" ss (constrain [] ss)
@@ -327,7 +328,7 @@ TBF: constrain has not been fully implemented yet
 >       -- now disallow them
 >       s2 = defaultSession { sId = 1, timeBetween = 1 * 60 }
 >       ps2 = map (mkPeriod s2) [dt1, dt2]
->       badTb1 = [(0, ((ps2!!0), (ps2!!1)))]
+>       badTb1 = [(15, ((ps2!!0), (ps2!!1)))]
 >       -- more complex, but allowed
 >       dt3 = fromGregorian 2006 1 1 2 0 0
 >       dt4 = fromGregorian 2006 1 1 3 0 0
@@ -340,7 +341,7 @@ TBF: constrain has not been fully implemented yet
 >       ps4_1 = map (mkPeriod s2) [dt1, dt3, dt4]
 >       ps4_2 = map (mkPeriod s1) [dt2, dt5, dt6]
 >       ps4 = sort $ ps4_1 ++ ps4_2
->       badTb2 = [(0, ((ps4_1!!1), (ps4_1!!2)))]
+>       badTb2 = [(15, ((ps4_1!!1), (ps4_1!!2)))]
 >       
 
 > test_disobeySessionAlloted = TestCase $ do
