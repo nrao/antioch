@@ -94,8 +94,8 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 3 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects3" 6000 (pAllottedT . head $ ps)  
+>     assertEqual "test_getProjects4" 4 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
@@ -103,8 +103,9 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     assertEqual "test_getProjects10" 6 (length allPeriods)    
 >     assertEqual "test_getProjects11" [[Rcvr8_10]] (receivers . head $ ss)
 >     assertEqual "test_getProjects12" True (guaranteed . head $ ss)
->     assertEqual "test_getProjects13" 1 (length . electives . last $ ss)
->     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives . last $ ss)
+>     let elecS = ss!!2
+>     assertEqual "test_getProjects13" 1 (length . electives $ elecS)
+>     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives $ elecS)
 >     assertEqual "test_getProjects15" 1 (length . observers . head $ ps)
 >     assertEqual "test_getProjects16" 1 (length . requiredFriends . head $ ps)
 >     assertEqual "test_getProjects17" obsBlackouts ( blackouts . head . observers . head $ ps) 
@@ -120,7 +121,7 @@ once and has a total time that is the sum of the grade hrs.
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09A-001") projs
 >   assertEqual "test_sAllottedT_1" 1 (length ps)
->   assertEqual "test_sAllottedT_2" 0 (pAllottedT . head $ ps)
+>   assertEqual "test_sAllottedT_2" 6000 (pAllottedT . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -166,7 +167,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes` start | q <- [0..16]]
->       expScores = [0.0,0.71830034,0.723035,0.72897196,0.7306815,0.73508745,0.7376189,0.73988056,0.7450153,0.7467272,0.7482739,0.74967504,0.74223655,0.74284345,0.74342054,0.74397194,0.7436074]
+>       expScores = [0.0,1.0626621,1.0696664,1.0784497,1.0809788,1.087497,1.0912421,1.094588,1.1021845,1.1047171,1.1070054,1.1090782,1.0980735,1.0989712,1.099825,1.1006408,1.1001016]
 
 Test a specific session's attributes:
 
