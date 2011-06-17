@@ -181,6 +181,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >       , dec = deg2rad 10.4
 >       , receivers = [[Rcvr_PAR]]
 >       , band = W
+>       , trkErrThreshold = trkErrThresholdFilledArrays
 >       }
 >
 >   , defaultSession {
@@ -224,6 +225,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >       , receivers = [[Rcvr_PAR]]
 >       , band = W
 >       , sType = Windowed
+>       , trkErrThreshold = trkErrThresholdFilledArrays
 >       }
 >
 >   , defaultSession {

@@ -31,6 +31,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > type Minutes   = Int
 > type Score     = Float
 > type Radians   = Float
+> type Arcsec    = Float
 > type Grade     = Float
 > type SemesterName  = String
 
@@ -110,6 +111,8 @@ such as: P
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
 >   , guaranteed  :: Bool
+>   , sourceSize  :: Arcsec
+>   , trkErrThreshold :: Float
 >   } deriving Show
 
 > instance Eq Session where
@@ -345,7 +348,15 @@ Simple Functions for Periods:
 >   , xi          = 1.0
 >   , elLimit     = Nothing
 >   , guaranteed  = True 
+>   , sourceSize  = 0.0
+>   , trkErrThreshold = trkErrThresholdSparseArrays 
 >   }
+
+Defaults for the Tracking Error Threshold parameter:
+
+> trkErrThresholdSparseArrays, trkErrThresholdFilledArrays :: Float
+> trkErrThresholdSparseArrays = 0.2
+> trkErrThresholdFilledArrays = 0.4
 
 > defaultObserver = Observer {
 >     oId          = 0 
