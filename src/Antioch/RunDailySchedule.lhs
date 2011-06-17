@@ -56,7 +56,10 @@ Note, if this is a test:
 >     w <- if test then getWeatherTest Nothing else getWeather Nothing
 >     rt <- getReceiverTemperatures
 >     -- now get all the input from the DB
->     (rs, ss, projs, all_history) <- dbInput dt
+>     rs <- getReceiverSchedule $ Just dt
+>     projs <- getProjects
+>     let ss = concatMap sessions projs
+>     let all_history = sort $ concatMap periods ss
 >     -- only periods in (wholly or partially) in the scheduling range
 >     let current_history = truncateHistory all_history dt (days + 1) 
 >     quietPrint test False "original history: "
@@ -200,17 +203,4 @@ Filter out of the history any default periods that:
 >       case r of
 >         True -> return $ [p]
 >         False -> return []
-
-
-TBF: HACK HACK - dbInput is in RunSimulation too!
-Get everything we need from the Database.
-
-> dbInput :: DateTime -> IO (ReceiverSchedule, [Session], [Project], [Period])
-> dbInput dt = do
->     rs <- getReceiverSchedule $ Just dt
->     projs <- getProjects
->     let ss = concatMap sessions projs
->     let history = sort $ concatMap periods ss
->     return $ (rs, ss, projs, history)
-
 
