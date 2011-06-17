@@ -103,7 +103,7 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     assertEqual "test_getProjects10" 6 (length allPeriods)    
 >     assertEqual "test_getProjects11" [[Rcvr8_10]] (receivers . head $ ss)
 >     assertEqual "test_getProjects12" True (guaranteed . head $ ss)
->     let elecS = ss!!2
+>     let elecS = head $ filter (\s -> (sName s) == "GBT09A-001-04") ss
 >     assertEqual "test_getProjects13" 1 (length . electives $ elecS)
 >     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives $ elecS)
 >     assertEqual "test_getProjects15" 1 (length . observers . head $ ps)
