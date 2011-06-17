@@ -1,9 +1,32 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.RunDailyScheduleTests where
 
 > import Antioch.DateTime
 > import Antioch.Types
 > import Antioch.Weather              (getWeatherTest)
 > import Antioch.Score
+> import Antioch.Schedule
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunDailySchedule
 > import Antioch.PProjects
@@ -12,7 +35,40 @@
 > tests = TestList [
 >      test_periodObsAvailable
 >    , test_filterElectives
+>    , test_runDailySchedule
 >     ]
+
+> test_runDailySchedule = TestCase $ do
+>   -- schedule where there are no pre-scheduled periods, and one 
+>   -- open session can get scheduled a lot
+>   (newPeriods, periodsToDelete) <- runDailySchedule Pack dt1 2 True
+>   assertEqual "test_runDailySchedule 1" 4 (length newPeriods)
+>   assertEqual "test_runDailySchedule 2" 0 (length periodsToDelete)
+>   assertEqual "test_runDailySchedule 3" exp newPeriods
+>   -- now schedule before the start of the rx schedule (nobody
+>   -- can get scheduled), and a pre-scheduled period gets deleted.
+>   (newPeriods, periodsToDelete) <- runDailySchedule Pack dt2 2 True
+>   assertEqual "test_runDailySchedule 4" 0 (length newPeriods)
+>   assertEqual "test_runDailySchedule 5" 1 (length periodsToDelete)
+>   assertEqual "test_runDailySchedule 6" exp2 periodsToDelete
+>     where
+>       dt1 = fromGregorian 2006 6 1 0 0 0 
+>       dt2 = fromGregorian 2006 1 1 0 0 0 
+>       ranges = [(fromGregorian 2006 6 1  1 45 0, 480)
+>               , (fromGregorian 2006 6 1 19 30 0, 480)
+>               , (fromGregorian 2006 6 2 11 30 0, 480)
+>               , (fromGregorian 2006 6 3  5 15 0, 480)
+>                ]
+>       s = defaultSession { sName = "GBT09A-001-05", sId = 4 }
+>       mkPeriod (dt, dur) = defaultPeriod { session = s
+>                                          , startTime = dt
+>                                          , duration = dur
+>                                          }
+>       exp = map mkPeriod ranges
+>       s2 = defaultSession { sName = "GBT09A-001-02", sId = 1 }
+>       exp2 = [defaultPeriod { session = s2
+>                             , startTime = fromGregorian 2006 1 1 0 0 0
+>                             , duration = 240 } ]
 
 > test_periodObsAvailable = TestCase $ do
 >   assertEqual "test_periodObsAvailable_1" False (periodObsAvailable p1 [s])

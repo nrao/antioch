@@ -1,3 +1,25 @@
+# Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+# 
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+# 
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+# 
+# Correspondence concerning GBT software should be addressed as follows:
+#       GBT Operations
+#       National Radio Astronomy Observatory
+#       P. O. Box 2
+#       Green Bank, WV 24944-0002 USA
+
 # Steps in creating a new dss_unit_tests for antioch:
 # 
 # The database dss_unit_tests is used for unit tests in DSSDataTests
@@ -12,7 +34,7 @@
 #     Run: python manage.py syncdb
 #       reply no to question "Would you like to create one now? (yes/no):"
 #     Run: psql -U dss new_dss_unit_tests <populate_db.sql
-# 3) In directory antioch/admin:
+# 3) In directory antioch/src:
 #     Run: updateRcvrTemps new_dss_unit_tests
 # 4) In directory nell:
 #     Copy: cp antioch/admin/genDssTestDatabase.py admin
@@ -313,6 +335,17 @@ def populate_project1():
     #  )
     #proj = create_project(fdata)
     proj = Project.objects.get(pcode = "GBT09A-001")
+    # give the Project enough time to get scheduled
+    a = Allotment(psc_time = 100.0
+                , total_time = 100.0
+                , max_semester_time = 80.0
+                , grade             = 4.0
+                  )
+    a.save()
+    pa = Project_Allotment(project = proj, allotment = a)
+    pa.save()
+
+
     sess = Sesshun(project = proj)
     fdata = dict(
         type       = "open"
@@ -441,6 +474,31 @@ def populate_project1():
       , elective   = elective
       )
     create_period(sess, fdata)
+    # finally, create an Open Session that can easily get scheduled
+    sess = Sesshun(project = proj)
+    fdata = dict(
+        type       = "open"
+      , name       = "GBT09A-001-05"
+      , freq       = 1.1
+      , req_max    =  8.0
+      , req_min    =  2.0
+      , between    = 8.0 
+      , PSC_time   = 100.0 # plenty of time
+      , total_time = 100.0
+      , sem_time   = 100.0
+      , grade      = 4.0
+      , receiver   = u'L'
+      , coord_mode = "J2000"
+      , source_v   = 1.5
+      , source_h   = 0.0
+      , source     = "always up"
+      , lst_ex     = None
+      )
+    create_session(sess, proj, fdata)
+    # make sure this session is enabled & authorized
+    sess.status.enabled = True
+    sess.status.authorized = True
+    sess.status.save()
 
     # create some observers and friends for this project
     fdata = dict(
