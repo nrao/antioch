@@ -87,7 +87,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   , test_scienceGrade
 >   , test_projectCompletion
 >   , test_politicalFactors
->   , test_halfPwrBeamWidth
+>   , test_halfPwrBeamWidthObserved
 >   , test_calculateTE
 >   , test_trackingObservingEfficiency
 >   , test_trackingEfficiency
@@ -1188,8 +1188,11 @@ Equation 23
 
 Equation 14
 
-> test_halfPwrBeamWidth = TestCase $ do
->     assertEqual "test_halfPwrBeamWidth" 33.035713 (halfPwrBeamWidth 22.4)
+> test_halfPwrBeamWidthObserved = TestCase $ do
+>     assertEqual "test_halfPwrBeamWidthObserved 1" 33.035713 (halfPwrBeamWidthObserved 22.4 0.0)
+>     assertEqual "test_halfPwrBeamWidthObserved 2" 33.039497 (halfPwrBeamWidthObserved 22.4 0.5)
+>     assertEqual "test_halfPwrBeamWidthObserved 3" 33.050846 (halfPwrBeamWidthObserved 22.4 1.0)
+>     assertEqual "test_halfPwrBeamWidthObserved 4" 501.09018 (halfPwrBeamWidthObserved 22.4 500.0)
 
 > test_calculateTE = TestCase $ do
 >     assertEqual "test_calculateTE 1" 1.4436142    (calculateTE  0.4)
@@ -1199,10 +1202,12 @@ Equation 14
 Equation 12
 
 > test_trackingObservingEfficiency = TestCase $ do
->     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99909395)  (trackingObservingEfficiency wind1 dt1 False freq1)
->     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 True freq1)
->     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9980345)  (trackingObservingEfficiency wind2 dt2 False freq2)
->     assertEqual "test_trackingObservingEfficiency 4" (Just 0.99860287)  (trackingObservingEfficiency wind2 dt2 True freq2)
+>     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99909395)  (trackingObservingEfficiency wind1 dt1 False freq1 size1)
+>     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 True freq1 size1)
+>     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9980345)  (trackingObservingEfficiency wind2 dt2 False freq2 size1)
+>     assertEqual "test_trackingObservingEfficiency 4" (Just 0.99860287)  (trackingObservingEfficiency wind2 dt2 True freq2 size1)
+>     assertEqual "test_trackingObservingEfficiency 5" (Just 0.9986031)  (trackingObservingEfficiency wind2 dt2 True freq2 size2)
+>     assertEqual "test_trackingObservingEfficiency 6" (Just 0.99985194)  (trackingObservingEfficiency wind2 dt2 True freq2 size3)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -1210,6 +1215,9 @@ Equation 12
 >        dt2 = fromGregorian 2006 9 2 14 30 0
 >        wind1 = Just 1.2388499
 >        wind2 = Just 5.2077017
+>        size1 = 0.0
+>        size2 = 1.0
+>        size3 = 500.0
 
 > test_trackingEfficiency = TestCase $ do
 >     let sess = findPSessionByName "LP"
@@ -1225,8 +1233,12 @@ Equation 12
 Equation 13
 
 > test_trackErr = TestCase $ do
->     assertEqual "test_trackErr 1" 2.4107518e-2 (trackErr dt1 wind1 freq1)
->     assertEqual "test_trackErr 2" 2.4898745e-2 (trackErr dt2 wind2 freq2)
+>     assertEqual "test_trackErr 1" 2.4107518e-2 (trackErr dt1 wind1 freq1 size1)
+>     assertEqual "test_trackErr 2" 2.4898745e-2 (trackErr dt2 wind2 freq2 size1)
+>     assertEqual "test_trackErr 3" 2.4104953e-2 (trackErr dt1 wind1 freq1 size2)
+>     assertEqual "test_trackErr 4" 2.4897065e-2 (trackErr dt2 wind2 freq2 size2)
+>     assertEqual "test_trackErr 5" 6.372248e-3 (trackErr dt1 wind1 freq1 size3)
+>     assertEqual "test_trackErr 6" 8.103259e-3 (trackErr dt2 wind2 freq2 size3)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -1234,22 +1246,30 @@ Equation 13
 >        dt2 = fromGregorian 2006 9 2 14 30 0
 >        wind1 = 1.2388499
 >        wind2 = 5.2077017
+>        size1 = 0.0
+>        size2 = 2.0
+>        size3 = 500.0
 
 Equation 16
 
 > test_trackErrArray = TestCase $ do
->     assertEqual "test_trackErrArray 1" 8.829199e-3 (trackErrArray wind1 freq1)
->     assertEqual "test_trackErrArray 2" 1.7345414e-2 (trackErrArray wind2 freq2)
+>     assertEqual "test_trackErrArray 1" 8.829199e-3 (trackErrArray wind1 freq1 size1)
+>     assertEqual "test_trackErrArray 2" 1.7345414e-2 (trackErrArray wind2 freq2 size1)
+>     assertEqual "test_trackErrArray 3" 2.3337882e-3 (trackErrArray wind1 freq1 size2)
+>     assertEqual "test_trackErrArray 4" 5.6450386e-3 (trackErrArray wind2 freq2 size2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
 >        wind1 = 1.2388499
 >        wind2 = 5.2077017
+>        size1 = 0.0
+>        size2 = 500.0
 
 > test_trackingErrorLimit = TestCase $ do
+>     -- two spectral line sessions
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     let sess = findPSessionByName "LP"
->     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sess)
+>     assertScoringResult' "test_trackingErrorLimit 1" Nothing 1.0 (trackingErrorLimit dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >     rt <- getReceiverTemperatures
@@ -1257,7 +1277,26 @@ Equation 16
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s)
->     assertEqual "test_trackingErrorLimit" 1.0 result
+>     assertEqual "test_trackingErrorLimit 2" 1.0 result
+>     -- now make it impossible for it to pass
+>     let s2 = s { trkErrThreshold = 0.0 }
+>     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s2)
+
+>     assertEqual "test_trackingErrorLimit 2.5" 0.0 result
+>     -- now test a continuum session
+>     let s = findPSessionByName "MH"
+>     --let s = s' { oType = Continuum
+>     --           , trkErrThreshold = trkErrThresholdContinuum
+>     --           }
+>     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s)
+>     assertEqual "test_trackingErrorLimit 3" 0.0 result
+>     -- Now really raise the threshold, and watch it pass.
+>     -- Lower the bar, so to speak (0.4 -> 0.6)
+>     let s2 = s { trkErrThreshold = 0.6 }
+>     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s2)
+>     assertEqual "test_trackingErrorLimit 4" 1.0 result
+
+>     
 
 > test_positionFactors = TestCase $ do
 >     let dt = fromGregorian 2006 9 2 14 30 0
