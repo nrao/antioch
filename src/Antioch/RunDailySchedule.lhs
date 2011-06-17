@@ -38,43 +38,54 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Data.Maybe (fromJust, isNothing, listToMaybe)
 > import Control.Monad (filterM)
 
-> runDailySchedulePack :: DateTime -> Int -> IO ()
-> runDailySchedulePack dt days = runDailySchedule Pack dt days
+> runDailySchedulePack :: DateTime -> Int -> IO ([Period], [Period])
+> runDailySchedulePack dt days = runDailySchedule Pack dt days False
 
 This is simply a wrapper for dailySchedule that takes care of the inputs
 and outputs:
    * read data from the DB
    * call dailySchedule
    * write new periods to the DB
+Note, if this is a test:
+   * don't print all that shit
+   * don't actually write anything to the test DB
 
-> runDailySchedule :: StrategyName -> DateTime -> Int -> IO ()
-> runDailySchedule strategyName dt days = do
->     w <- getWeather Nothing
+> runDailySchedule :: StrategyName -> DateTime -> Int -> Bool -> IO ([Period],[Period])
+> runDailySchedule strategyName dt days test = do
+>     --w <- getWeather Nothing
+>     w <- if test then getWeatherTest Nothing else getWeather Nothing
 >     rt <- getReceiverTemperatures
 >     -- now get all the input from the DB
 >     (rs, ss, projs, all_history) <- dbInput dt
 >     -- only periods in (wholly or partially) in the scheduling range
 >     let current_history = truncateHistory all_history dt (days + 1) 
->     print "original history: "
->     printList current_history
+>     quietPrint test False "original history: "
+>     quietPrint test True current_history
 >     -- remove non-viable periods
->     scheduling_history <- filterHistory w rs rt current_history ss projs
+>     scheduling_history <- filterHistory w rs rt current_history ss projs test
 >     schd <- runScoring w rs rt $ do
 >         sf <- genScore dt . scoringSessions dt undefined $ ss
->         dailySchedule sf strategyName dt days scheduling_history ss False
->     print . length $ schd
->     printList schd
+>         dailySchedule sf strategyName dt days scheduling_history ss test
+>     --print . length $ schd
+>     quietPrint test True schd
 >     -- new schedule to DB; only write the new periods
 >     let newPeriods = schd \\ scheduling_history
->     print "writing new periods to DB: " 
->     printList newPeriods
->     putPeriods newPeriods
+>     quietPrint test False "writing new periods to DB: " 
+>     quietPrint test True newPeriods
+>     -- only write to DB if we aren't testing
+>     if not test then putPeriods newPeriods else putStrLn ""
 >     -- do we need to remove any failed electives or default periods?
->     print "moving to deleted: "
 >     periods <- filterMaintenancePeriods $ current_history \\ scheduling_history
 >     let periodsToDelete = periods
->     printList periodsToDelete
->     movePeriodsToDeleted periodsToDelete
+>     quietPrint test False "moving to deleted: "
+>     quietPrint test True periodsToDelete
+>     -- only write to DB if we aren't testing
+>     if not test then movePeriodsToDeleted periodsToDelete else putStrLn ""
+>     return (newPeriods, periodsToDelete)
+
+If we're running tests and/or trying to be quiet, we don't want to print
+
+> quietPrint t l x = if t then putStrLn "" else (if l then printList x else print x)
 
 Filter out deprecated periods:
    * unused elective periods
@@ -82,16 +93,16 @@ Filter out deprecated periods:
    * inactive periods
    * blacked-out periods
 
-> filterHistory w rs rt history ss projs = do
+> filterHistory w rs rt history ss projs quiet = do
 >     -- Filter out periods from disabled/unauthorized sessions.
 >     history'inactive <- filterInactivePeriods history
->     print "original history - inactive"
->     printList history'inactive
+>     quietPrint quiet False "original history - inactive"
+>     quietPrint quiet True history'inactive
 >
 >     -- Filter out periods having inadequate representation.
 >     let history'no_observer = filter (flip periodObsAvailable ss) history'inactive
->     print "original history - inactive - no observers: "
->     printList history'no_observer
+>     quietPrint quiet False "original history - inactive - no observers: "
+>     quietPrint quiet True history'no_observer
 >
 >     -- Filter out failing elective periods.
 >     -- Note: Really, this should be done inside dailySchedule so
@@ -99,17 +110,17 @@ Filter out deprecated periods:
 >     -- but it's so much simpler to do it here, and I doubt
 >     -- simulations will need to cover electives.  so there.
 >     history'electives <- filterElectives w rs rt history'no_observer
->     print "original history - inactive - no observers - electives: "
->     printList history'electives
+>     quietPrint quiet False "original history - inactive - no observers - electives: "
+>     quietPrint quiet True history'electives
 >
 >     -- Filter out default periods of non-guaranteed, windowed
 >     -- sessions if they fail MOC.
 >     history'defaulted <- filterDefaultPeriods w rs rt history'electives
->     print "original history - inactive - no observers - electives - default: "
->     printList history'defaulted
+>     quietPrint quiet False "original history - inactive - no observers - electives - default: "
+>     quietPrint quiet True history'defaulted
 >
 >     let scheduling_history = history'defaulted
->     print "Also scheduling around the above periods."
+>     quietPrint quiet False "Also scheduling around the above periods."
 >
 >     return scheduling_history
 

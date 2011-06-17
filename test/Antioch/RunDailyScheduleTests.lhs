@@ -26,6 +26,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Types
 > import Antioch.Weather              (getWeatherTest)
 > import Antioch.Score
+> import Antioch.Schedule
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunDailySchedule
 > import Antioch.PProjects
@@ -34,7 +35,40 @@ Correspondence concerning GBT software should be addressed as follows:
 > tests = TestList [
 >      test_periodObsAvailable
 >    , test_filterElectives
+>    , test_runDailySchedule
 >     ]
+
+> test_runDailySchedule = TestCase $ do
+>   -- schedule where there are no pre-scheduled periods, and one 
+>   -- open session can get scheduled a lot
+>   (newPeriods, periodsToDelete) <- runDailySchedule Pack dt1 2 True
+>   assertEqual "test_runDailySchedule 1" 4 (length newPeriods)
+>   assertEqual "test_runDailySchedule 2" 0 (length periodsToDelete)
+>   assertEqual "test_runDailySchedule 3" exp newPeriods
+>   -- now schedule before the start of the rx schedule (nobody
+>   -- can get scheduled), and a pre-scheduled period gets deleted.
+>   (newPeriods, periodsToDelete) <- runDailySchedule Pack dt2 2 True
+>   assertEqual "test_runDailySchedule 4" 0 (length newPeriods)
+>   assertEqual "test_runDailySchedule 5" 1 (length periodsToDelete)
+>   assertEqual "test_runDailySchedule 6" exp2 periodsToDelete
+>     where
+>       dt1 = fromGregorian 2006 6 1 0 0 0 
+>       dt2 = fromGregorian 2006 1 1 0 0 0 
+>       ranges = [(fromGregorian 2006 6 1  1 45 0, 480)
+>               , (fromGregorian 2006 6 1 19 30 0, 480)
+>               , (fromGregorian 2006 6 2 11 30 0, 480)
+>               , (fromGregorian 2006 6 3  5 15 0, 480)
+>                ]
+>       s = defaultSession { sName = "GBT09A-001-05", sId = 4 }
+>       mkPeriod (dt, dur) = defaultPeriod { session = s
+>                                          , startTime = dt
+>                                          , duration = dur
+>                                          }
+>       exp = map mkPeriod ranges
+>       s2 = defaultSession { sName = "GBT09A-001-02", sId = 1 }
+>       exp2 = [defaultPeriod { session = s2
+>                             , startTime = fromGregorian 2006 1 1 0 0 0
+>                             , duration = 240 } ]
 
 > test_periodObsAvailable = TestCase $ do
 >   assertEqual "test_periodObsAvailable_1" False (periodObsAvailable p1 [s])

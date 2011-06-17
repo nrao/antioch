@@ -72,7 +72,8 @@ for the given date range.
 >
 >     -- schedule something! 
 >     liftIO $ print (fromSeconds start)
->     liftIO $ runDailySchedulePack start days
+>     (schedule, deleted) <- liftIO $ runDailySchedulePack start days
+>     liftIO $ putStrLn ""
 >   where
 >     getKeyValuePairs pairs = [(key, value) | (key, Just value) <- pairs]
 
