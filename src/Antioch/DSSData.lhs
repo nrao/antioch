@@ -534,6 +534,7 @@ For now, just set:
    * guaranteed flag
    * source size
    * tracking error threshold
+   * keyhole
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
@@ -544,6 +545,7 @@ For now, just set:
 >     | n == "Not Guaranteed"  = s { guaranteed = not . fromSql $ pBool }   
 >     | n == "Source Size"     = s { sourceSize = fromSql pFlt }
 >     | n == "Tr Err Limit"    = s { trkErrThreshold = fromSql pFlt }
+>     | n == "Keyhole"         = s { keyhole = fromSql pBool }
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName

@@ -113,6 +113,7 @@ such as: P
 >   , guaranteed  :: Bool
 >   , sourceSize  :: Arcsec
 >   , trkErrThreshold :: Float
+>   , keyhole     :: Bool
 >   } deriving Show
 
 > instance Eq Session where
@@ -350,6 +351,7 @@ Simple Functions for Periods:
 >   , guaranteed  = True 
 >   , sourceSize  = 0.0
 >   , trkErrThreshold = trkErrThresholdSparseArrays 
+>   , keyhole     = False 
 >   }
 
 Defaults for the Tracking Error Threshold parameter:

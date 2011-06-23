@@ -102,6 +102,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   , test_inWindows
 >   , test_scoreElements
 >   , test_zenithAngleLimit
+>   , test_keyholeLimit
 >   , test_rmsTrackingError
 >   , test_variableTrackingError
 >   , test_surfaceObservingEfficiency'
@@ -1341,7 +1342,7 @@ Equation 16
 >     let dur = 15::Minutes
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 22 (length . head $ factors)
 >     mapM_ (assertFactor factors) exp 
 >   where
 >     lookup' factors name = fromJust . fromJust . lookup name . head $ factors
@@ -1413,7 +1414,7 @@ Equation 16
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     rt <- getReceiverTemperatures
 >     factors <- scoreElements s w rt pSessions dt dur []
->     assertEqual "test_scoreElements 1" 31 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 32 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -1429,6 +1430,23 @@ Equation 16
 >     let dt = fromGregorian 2006 10 15 0 0 0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sess)
+
+> test_keyholeLimit = TestCase $ do
+>     let dt = fromGregorian 2006 10 15 0 0 0
+>     let lst = hrs2rad . utc2lstHours $ dt 
+>     let sess = findPSessionByName "LP"
+>     let sess'  = sess {ra = lst
+>                      , dec = 0.22 -- Close to zenith
+>                       }
+>     let sess'' = sess {ra = lst
+>                      , dec = 0.22 -- Close to zenith
+>                      , keyhole = True}
+>     let sess''' = sess'' {ra = lst
+>                         , dec = -0.56 -- Outside the keyhole
+>                       }
+>     assertScoringResult' "test_keyholeLimit ignored" Nothing 1.0 (keyholeLimit dt sess')
+>     assertScoringResult' "test_keyholeLimit not ignored" Nothing 0.0 (keyholeLimit dt sess'')
+>     assertScoringResult' "test_keyholeLimit not ignored but outside" Nothing 1.0 (keyholeLimit dt sess''')
 
 Equation 11
 
