@@ -98,34 +98,56 @@ Correspondence concerning GBT software should be addressed as follows:
 >   results <- cleanElectives w rs rt [] aeps
 >   -- result <- mapM (goodElective' w rs rt) [ mkPeriod es2 d 60 4 | d <- dates]
 >   -- printList $ [(toSqlString d, r) | (d, r) <- zip dates result]
->   let exp = [7, 6]
+>   -- Period 11 is retained because it is the last period of a guaranteed
+>   -- elective, 7 and 6 are retained because they are the first periods
+>   -- of their respective electives to pass the moc threshold.
+>   let exp = [11, 7, 6]
 >   let res = [peId p | p <- results]
 >   assertEqual "test_filterElectives_1" exp res
->   let aps = ((mkPeriod gb (fromGregorian 2006 10 13 12 0 0) 60 2):ps)
->   results <- filterElectives w rs rt aps
->   let exp = [2, 6, 7]
+>   results <- filterElectives w rs rt ps
+>   -- Same as test 1 above except period 9 is retained because it is
+>   -- already scheduled, but it does not prevent 7 from being scheduled
+>   -- since previously scheduled periods in themselves to not deactivate
+>   -- other pending periods of its elective.
+>   let exp = [11, 6, 7, 9]
 >   let res = [peId p | p <- results]
 >   assertEqual "test_filterElectives_2" exp res
 >     where
->       mkPeriod s dt dur id = defaultPeriod { session   = s
->                                            , startTime = dt
->                                            , duration  = dur
->                                            , peId      = id
->                                            }
->       gb = head $ findPSessionsByName "GB"
->       cv = head $ findPSessionsByName "CV"
+>       -- just some sugar to help make a period
+>       mkPeriod s dt dur st id = defaultPeriod { session    = s
+>                                               , startTime  = dt
+>                                               , duration   = dur
+>                                               , pState     = st
+>                                               , peId       = id
+>                                               }
+>       -- create electives
 >       e1 = Electives 1 False [3, 5, 7] 
 >       e2 = Electives 2 False [4, 6, 8] 
->       es1 = gb { sType = Elective, electives = [e1], sId = 100 }
->       es2 = cv { sType = Elective, electives = [e2], sId = 101}
->       dt = fromGregorian 2006 10 15 0 0 0
->       ps = [mkPeriod es1 (fromGregorian 2006 10 13 17 0 0) 60 3 -- bad
->           , mkPeriod es2 (fromGregorian 2006 10 13 23 0 0) 60 4 -- bad
->           , mkPeriod es1 (fromGregorian 2006 10 14 13 0 0) 60 5 -- bad
->           , mkPeriod es2 (fromGregorian 2006 10 15  9 0 0) 60 6 -- good
->           , mkPeriod es1 (fromGregorian 2006 10 15 14 0 0) 60 7 -- good
->           , mkPeriod es2 (fromGregorian 2006 10 15 23 0 0) 60 8 -- bad
+>       e3 = Electives 1 False [10, 11]
+>       -- create session "templates"
+>       gb = head $ findPSessionsByName "GB"
+>       cv = head $ findPSessionsByName "CV"
+>       es1' = gb { sType = Elective, electives = [e1], sId = 100, guaranteed = False }
+>       es2' = cv { sType = Elective, electives = [e2], sId = 101, guaranteed = False}
+>       es3' = gb { sType = Elective, electives = [e3], sId = 102, guaranteed = True }
+>       -- create periods
+>       ps = [
+>          mkPeriod es1' (fromGregorian 2006 10 13 17 0 0) 60 Pending 3 -- bad
+>        , mkPeriod es2' (fromGregorian 2006 10 13 23 0 0) 60 Pending 4 -- bad
+>        , mkPeriod es1' (fromGregorian 2006 10 14 13 0 0) 60 Pending 5 -- bad
+>        , mkPeriod es2' (fromGregorian 2006 10 15  9 0 0) 60 Pending 6 -- good
+>        , mkPeriod es1' (fromGregorian 2006 10 15 14 0 0) 60 Pending 7 -- good
+>        , mkPeriod es2' (fromGregorian 2006 10 15 23 0 0) 60 Pending 8 -- bad
+>        , mkPeriod es1' (fromGregorian 2006 10 16 17 0 0) 60 Scheduled 9 -- good
+>        , mkPeriod es3' (fromGregorian 2006 10 13 17 0 0) 60 Pending 10 -- bad
+>        , mkPeriod es3' (fromGregorian 2006 10 14 13 0 0) 60 Pending 11 -- bad
 >            ]
+>       -- construct final sessions with most their knots tied
+>       es1 = makeSession es1' [] . filter (\p -> elem (peId p) [3, 5, 7, 9]) $ ps
+>       es2 = makeSession es2' [] . filter (\p -> elem (peId p) [4, 6, 8]) $ ps
+>       es3 = makeSession es3' [] . filter (\p -> elem (peId p) [10, 11]) $ ps
+>       -- debugging stuff:
+>       -- dt = fromGregorian 2006 10 15 0 0 0
 >       -- dates = [d | d <- [dt, (60 `addMinutes` dt) .. ((24*60) `addMinutes` dt)]]
 >       -- goodElective' w rs rt p = runScoring w rs rt $ goodElective p
 

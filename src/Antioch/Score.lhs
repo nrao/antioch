@@ -333,36 +333,36 @@ to ease the debugging process.
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
 
 Periods from Elective Sessions should not run if they don't pass
-MOC, unless they are guaranteed, and this is the last period in 
-the elective group.
+MOC, unless they are guaranteed and are the last period in 
+the elective.
 
 > goodElective :: Period -> Scoring (Bool)
-> goodElective p | isScheduledElective p = return True
->                | isGuaranteedElective p = return True
+> --goodElective p | isScheduledElective p = return True
+> goodElective p | isGuaranteed p = return True
 >                | otherwise = do
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
->     isElective = typeElective . session
->     isScheduledElective p = (isElective p) && (pState p == Scheduled)
->     isGuaranteedElective p = (isElective p) && (guaranteed . session $ p) && (isLastPeriodOfElective p) 
+>     isScheduled p = pState p == Scheduled
+>     isGuaranteed p = (guaranteed . session $ p) && (isLastPeriodOfElective p) 
 >     dt = startTime p
 >     dur = duration p
 >     s = session p
 
 
-The last periods in a group of periods (Elective) needs special 
-consideration: if it's session is NOT guaranteed time, then there's
-a chance even the last periods won't observe.
+The last (pending) period of an Elective requires special
+consideration: if it's session is NOT guaranteed time,
+then there's a chance even the last periods won't observe.
 
 > isLastPeriodOfElective :: Period -> Bool
-> isLastPeriodOfElective p = isLastPeriod p elec
+> isLastPeriodOfElective ep = isPending && (isLastPeriod ep elec)
 >   where 
->     pid = peId p
->     elecs = electives . session $ p
->     periodInElective e = any (==pid) (ePeriodIds e) 
+>     isPending = (pState ep) == Pending
+>     pid = peId ep
+>     elecs = electives . session $ ep
+>     periodInElective e = any (== pid) (ePeriodIds e) 
 >     elecs' = filter periodInElective elecs  
 >     elec = if (length elecs') == 1 then Just . head $ elecs' else Nothing
 

@@ -746,10 +746,10 @@ weather (gbt or forecasted) is being used:
 >   rt <- getReceiverTemperatures
 >   result <- mapM (goodElective' w rs rt) ps
 >   assertEqual "test_goodElective_1" exp result
->   -- move the third period from False to True by making it scheduled
+>   -- make third period scheduled
 >   let scheduledPeriod = (mkPeriod es1 dt 60 3) { pState = Scheduled }
 >   result <- mapM (goodElective' w rs rt) [scheduledPeriod]
->   assertEqual "test_goodElective_2" [True] result
+>   assertEqual "test_goodElective_2" [False] result
 >   -- move the period #5 from True to False by making it NOT guaranteed
 >   let es2' = es1 { guaranteed = False }
 >   let ps' = [mkPeriod es2' dt 60 5]

@@ -44,7 +44,6 @@ Correspondence concerning GBT software should be addressed as follows:
 >    , test_projectBlackedOut
 >    , test_filterDisabledPeriods
 >    , test_filterInactivePeriods
->    , test_filterMaintenancePeriods
 >   ]
 
 > test_projectBlackedOut = TestCase $ do
@@ -118,12 +117,6 @@ Correspondence concerning GBT software should be addressed as follows:
 >                             , duration  = 2 * 60
 >                             , pDuration = 2 * 60
 >                              }
-
-> test_filterMaintenancePeriods = TestCase $ do
->   result <- filterMaintenancePeriods [p1, p2, p3, p4, p5]
->   assertEqual "test_filterMaintenancePeriods" [p1, p3, p4, p5] result
->     where
->       (p1: p2: p3: p4: p5: []) = getTestPeriods
 
 > test_filterDisabledPeriods = TestCase $ do
 >   result <- filterDisabledPeriods [p1, p2, p3, p4, p5]
