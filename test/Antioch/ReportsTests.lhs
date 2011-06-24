@@ -64,7 +64,7 @@ If it doesn't blow up, it passes
 >   -- make sure new plots and text report are there
 >   fs <- getFiles "." ".png"
 >   -- how many plots did we make?
->   assertEqual "test_runSim" 43 (length fs)
+>   assertEqual "test_runSim" 44 (length fs)
 >   finalTxtFiles <- getFiles "." ".txt"
 >   assertEqual "test_runSim 2" 1 ((length finalTxtFiles) - (length originalTxtFiles))
 >   -- clean up any simulation files

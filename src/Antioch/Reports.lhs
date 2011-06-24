@@ -61,6 +61,24 @@ Correspondence concerning GBT software should be addressed as follows:
 >     isPBand bandName p = (band . session $ p) == bandName
 >     psBand periods bandName = filter (isPBand bandName) periods 
 
+simBandClosed
+
+percentage of sessions completed by band.
+
+> plotBandClosed :: StatsPlot
+> plotBandClosed fn n ss _ _ = do
+>     histogramPlots attrs $ zip titles [byBand] --zip bands (repeat 50.0)]
+>   where
+>     t = "Percent Closed Sessions by Band" ++ n
+>     x =  "Band [" ++ (intercalate "," $ map show bandRange) ++ "]" --[L, S, C, X, U, K, A, Q]"
+>     y = "Percentage Closed"
+>     titles = [Just "Closed"]
+>     attrs = (histAttrs t x y fn)
+>     byBand = [((+1) . fromIntegral . fromEnum $ b, d) | (b, d) <- sessionClosedBand' ss]
+>     numSessByBand = zip bandRange $ map (fromIntegral . length) $ sessionsByBand ss
+>     sessionClosedBand' ss = map mkPercent $ zip (sessionClosedBand ss) numSessByBand
+>     mkPercent ((b1, closed), (b2, total)) = if b1 == b2 then (b1, (closed/total) * 100.0) else (b1, -1.0)
+
 simFracTime 
 
 > plotFractionalTime              :: StatsPlot
@@ -1087,6 +1105,7 @@ The standard list of plots (that need no extra input).
 >  , plotTPDurVsFreqBin     $ rootPath ++ "/simTPFreq.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
+>  , plotBandClosed         $ rootPath ++ "/simBandClosed.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"

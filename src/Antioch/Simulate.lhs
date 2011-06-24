@@ -74,9 +74,9 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
             * all newly scheduled periods added, and canceled ones removed
    * call next iteration with updated parameters - go back to the top!
 
-> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace])
+> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace], [Session])
 > simulateDailySchedule rs start packDays simDays history sessions quiet test schedule trace
->     | packDays > simDays = return (schedule, trace)
+>     | packDays > simDays = return (schedule, trace, sessions)
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
 >         -- you MUST create the weather here, so that each iteration of 
@@ -135,12 +135,15 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         let defaultsToDelete = dps \\ wps
 >         let condemned = cs ++ defaultsToDelete
 >         let sessions'' = updateSessions sessions' newlyScheduledPeriods newlyPublishedPeriods condemned ws
+>         -- now that each session has their periods & windows updated
+>         -- we can check their time remaining and complete them if need be
+>         let sessions''' = map reconcileTimeRemaining sessions''
 >         -- updating the history to be passed to the next sim. iteration
 >         -- is actually non-trivial
 >         let newHistory = updateHistory history newSched condemned 
 
 >         -- move on to the next day in the simulation!
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions'' quiet test newHistory $! (trace ++ newTrace)
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions''' quiet test newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 
@@ -357,6 +360,28 @@ This filters out duplicate, unpublished periods.
 >     fop (p:q:ps) ls
 >         | p == q              = isPub p q : fop ps ls
 >         | otherwise           = p : fop (q:ps) ls
+
+How to deal with 'loose change'?  Depending on how much time the given
+Session has left, either just close it, or adjust the min duration so 
+that this session has a chance of getting scheduled one more time
+(and *then* get closed).
+For evaluating the complete status, the simulations must follow this simple rule:
+    * when the remaining time of a session is > 0.75 hrs, lower the sessions' min duration to the remaining time so that this session can get scheduled one last time.
+    * if remaining time < 0.75 hrs, set complete to True 
+
+> reconcileTimeRemaining :: Session -> Session
+> reconcileTimeRemaining s | (sRemainT s) < threshold = s { sClosed = True } 
+>                          | otherwise = adjustMinDuration s (sRemainT s)
+>   where
+>     threshold = 45::Minutes
+
+For use w/ reconcileTimeRemaining.  Lower the sessions min duration if 
+the time remaining is less then it so that the session can get scheduled
+one last time.
+
+> adjustMinDuration :: Session -> Minutes -> Session
+> adjustMinDuration s remaining | remaining >= (minDuration s) = s
+>                               | otherwise = s { minDuration = remaining }
 
 Utilities:
 

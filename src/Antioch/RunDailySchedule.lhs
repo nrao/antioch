@@ -163,7 +163,6 @@ simulations will need to cover electives.  so there.
 > filterElectives w rs rt ps = do
 >   geps <- cleanElectives w rs rt [] eps
 >   --return . sort . (++) neps $ geps
->   print ("filterElectives", map peId ps, map peId neps, map peId geps, map peId seps)
 >   return . sort . concat $ [neps, geps, seps]
 >     where
 >       (eps', neps) = partition (typeElective . session) ps

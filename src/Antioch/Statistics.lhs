@@ -383,6 +383,13 @@ Compare allocated hours by frequency to observed hours by frequency.
 > sessionAvBand :: [Session] -> [(Band, Float)]
 > sessionAvBand = histogram bandRange . ((fractionalHours . availableTime) `vs` band)
 
+What is the number of sessions in each band that are closed?
+
+> sessionClosedBand :: [Session] -> [(Band, Float)]
+> sessionClosedBand ss = histogram bandRange $ closedVsBand ss -- . ((fractionalHours . sAllottedT) `vs` band)
+>   where
+>     closedVsBand ss = map (\(b, t) -> if t then (b,1.0::Float) else (b,0.0::Float)) $ sClosed `vs` band $ ss
+
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 
 >     histogram bandRange . (effSchdMins `vs` (band . session . fst)) $ zip ps es
