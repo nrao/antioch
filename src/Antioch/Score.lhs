@@ -661,7 +661,7 @@ If the keyhole flag is set to false always return true.
 > keyholeLimit dt s = 
 >    boolean "keyholeLimit" . Just $ not (((elevation dt s ) >= threshold) && keyhole s)
 >  where
->    threshold = if usesMustang s then 0.43333 else 0.4444
+>    threshold = if usesMustang s then 1.36135 else 1.39626
 
 For scheduling, use the specified tracking errors below.
 Use different constants for MOC.
