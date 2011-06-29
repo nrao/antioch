@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.Statistics where
 
 > import Antioch.DateTime   (fromGregorian, toGregorian, DateTime
@@ -360,6 +382,13 @@ Compare allocated hours by frequency to observed hours by frequency.
 
 > sessionAvBand :: [Session] -> [(Band, Float)]
 > sessionAvBand = histogram bandRange . ((fractionalHours . availableTime) `vs` band)
+
+What is the number of sessions in each band that are closed?
+
+> sessionClosedBand :: [Session] -> [(Band, Float)]
+> sessionClosedBand ss = histogram bandRange $ closedVsBand ss -- . ((fractionalHours . sAllottedT) `vs` band)
+>   where
+>     closedVsBand ss = map (\(b, t) -> if t then (b,1.0::Float) else (b,0.0::Float)) $ sClosed `vs` band $ ss
 
 > periodEfficiencyByBand :: [Period] -> [Float] -> [(Band, Float)]
 > periodEfficiencyByBand ps es = 

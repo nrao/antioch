@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.Types where
 
 > import Antioch.DateTime
@@ -9,6 +31,7 @@
 > type Minutes   = Int
 > type Score     = Float
 > type Radians   = Float
+> type Arcsec    = Float
 > type Grade     = Float
 > type SemesterName  = String
 
@@ -89,6 +112,9 @@ such as: P
 >   , elLimit     :: Maybe Radians 
 >   , guaranteed  :: Bool
 >   , goodAtmStb  :: Bool
+>   , sourceSize  :: Arcsec
+>   , trkErrThreshold :: Float
+>   , keyhole     :: Bool
 >   } deriving Show
 
 > instance Eq Session where
@@ -169,6 +195,17 @@ in case the Sesshun does not have guaranteed time.
 > instance Show Electives where
 >     show e = "Elective (" ++ (show . eId $ e) ++ ")"
 
+> defaultElective = Electives {
+>     eId        = 0
+>   , eComplete  = False
+>   , ePeriodIds = []
+>    }
+
+> getElective :: Period -> Maybe Electives
+> getElective p = find (\e -> elem peid . ePeriodIds $ e) . electives . session $ p
+>   where
+>     peid = peId p
+
 Need to calculate a windowed session's opportunities from its observation details.
 
 Tying the knot.
@@ -208,7 +245,7 @@ Tying the knot.
 > type DateRange = (DateTime, DateTime)
 
 > inDateRange :: DateTime -> DateRange -> Bool
-> inDateRange dt r = start < dt && dt < end
+> inDateRange dt r = start <= dt && dt < end
 >   where
 >     start = fst r
 >     end   = snd r
@@ -314,7 +351,16 @@ Simple Functions for Periods:
 >   , elLimit     = Nothing
 >   , guaranteed  = True 
 >   , goodAtmStb  = False 
+>   , sourceSize  = 0.0
+>   , trkErrThreshold = trkErrThresholdSparseArrays 
+>   , keyhole     = False 
 >   }
+
+Defaults for the Tracking Error Threshold parameter:
+
+> trkErrThresholdSparseArrays, trkErrThresholdFilledArrays :: Float
+> trkErrThresholdSparseArrays = 0.2
+> trkErrThresholdFilledArrays = 0.4
 
 > defaultObserver = Observer {
 >     oId          = 0 

@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.ScoreTests where
 
 > import Antioch.DateTime
@@ -38,6 +60,8 @@
 >   , test_minTsys'
 >   , test_minimumObservingConditions
 >   , test_goodElective
+>   , test_goodDefaultPeriod
+>   , test_goodDefaultWindowedPeriod
 >   , test_isLastPeriodOfElective
 >   , test_getRealOrForecastedWind
 >   , test_observingEfficiency
@@ -63,7 +87,7 @@
 >   , test_scienceGrade
 >   , test_projectCompletion
 >   , test_politicalFactors
->   , test_halfPwrBeamWidth
+>   , test_halfPwrBeamWidthObserved
 >   , test_calculateTE
 >   , test_trackingObservingEfficiency
 >   , test_trackingEfficiency
@@ -78,6 +102,7 @@
 >   , test_inWindows
 >   , test_scoreElements
 >   , test_zenithAngleLimit
+>   , test_keyholeLimit
 >   , test_rmsTrackingError
 >   , test_variableTrackingError
 >   , test_surfaceObservingEfficiency'
@@ -723,17 +748,17 @@ weather (gbt or forecasted) is being used:
 >   rt <- getReceiverTemperatures
 >   result <- mapM (goodElective' w rs rt) ps
 >   assertEqual "test_goodElective_1" exp result
->   -- move the third period from False to True by making it scheduled
+>   -- make third period scheduled
 >   let scheduledPeriod = (mkPeriod es1 dt 60 3) { pState = Scheduled }
 >   result <- mapM (goodElective' w rs rt) [scheduledPeriod]
->   assertEqual "test_goodElective_2" [True] result
->   -- move the period #5 from True to False by making it NOT gauranteed
+>   assertEqual "test_goodElective_2" [False] result
+>   -- move the period #5 from True to False by making it NOT guaranteed
 >   let es2' = es1 { guaranteed = False }
 >   let ps' = [mkPeriod es2' dt 60 5]
 >   result <- mapM (goodElective' w rs rt) ps'
 >   assertEqual "test_goodElective_3" [False] result
 >     where
->   exp = [True, True, False, True, True, True]
+>   exp = [False, True, False, True, True, True]
 >   mkPeriod s dt dur id = defaultPeriod { session   = s
 >                                        , startTime = dt
 >                                        , duration  = dur
@@ -756,6 +781,42 @@ weather (gbt or forecasted) is being used:
 >       , mkPeriod es2 dt 60 6 -- last
 >        ]
 >   goodElective' w rs rt p = runScoring w rs rt $ goodElective p
+
+> test_goodDefaultWindowedPeriod = TestCase $ do
+>   w <- getWeatherTest . Just $ fromGregorian 2006 2 1 0 0 0
+>   let rs = []
+>   rt <- getReceiverTemperatures
+>   -- easy case - all open sessions
+>   result <- mapM (goodDefaultWindowedPeriod' w rs rt) ps1
+>   assertEqual "test_goodDefaultWindowedPeriod_1" [True, True] result
+>   -- now do it again, but with a guaranteed session
+>   result <- mapM (goodDefaultWindowedPeriod' w rs rt) ps2
+>   assertEqual "test_goodDefaultWindowedPeriod_2" [True, True, True, False] result
+>   -- now try a non-guaranteed session, and see what happens
+>   result <- mapM (goodDefaultWindowedPeriod' w rs rt) ps3
+>   assertEqual "test_goodDefaultWindowedPeriod_3" [True, True, True, False, False] result
+>     where
+>   mkPeriod s dt dur id = defaultPeriod { session   = s
+>                                        , startTime = dt
+>                                        , duration  = dur
+>                                        , peId      = id
+>                                        }
+>   gb = head $ findPSessionsByName "GB"
+>   cv = head $ findPSessionsByName "CV"
+>   goodDefaultWindowedPeriod' w rs rt p = runScoring w rs rt $ goodDefaultWindowedPeriod p
+>   dt = fromGregorian 2006 10 13 16 0 0
+>   ps1 = [mkPeriod gb dt 60 1, mkPeriod cv dt 60 2]
+>   ranges = [(fromGregorian' 2006 10 22, fromGregorian' 2006 10 27)]
+>   dpId = 100
+>   dpId2 = 200
+>   win = defaultWindow { wRanges = ranges, wPeriodId = Just dpId, wTotalTime = 60 }
+>   ws = gb { sType = Windowed, windows = [win], sId = 200, guaranteed = True }
+>   defaultPd = mkPeriod ws dt 60 dpId
+>   ps2 = ps1 ++ [defaultPd, defaultPd {peId = 88}] -- add non-default
+>   --ps2 = ps1 ++ [defaultPd]
+>   ws2 = gb { sType = Windowed, windows = [win], sId = 300, guaranteed = False }
+>   defaultPd2 = mkPeriod ws2 dt 60 dpId2
+>   ps3 = ps2 ++ [defaultPd2]
 >   
 
 > test_goodDefaultPeriod = TestCase $ do
@@ -767,10 +828,10 @@ weather (gbt or forecasted) is being used:
 >   assertEqual "test_goodDefaultPeriod_1" [True, True] result
 >   -- now do it again, but with a guaranteed session
 >   result <- mapM (goodDefaultPeriod' w rs rt) ps2
->   assertEqual "test_goodDefaultPeriod_2" [True, True, True] result
+>   assertEqual "test_goodDefaultPeriod_2" [True, True, True, False] result
 >   -- now try a non-guaranteed session, and see what happens
 >   result <- mapM (goodDefaultPeriod' w rs rt) ps3
->   assertEqual "test_goodDefaultPeriod_3" [True, True, True, False] result
+>   assertEqual "test_goodDefaultPeriod_3" [True, True, True, False, False] result
 >     where
 >   mkPeriod s dt dur id = defaultPeriod { session   = s
 >                                        , startTime = dt
@@ -788,7 +849,8 @@ weather (gbt or forecasted) is being used:
 >   win = defaultWindow { wRanges = ranges, wPeriodId = Just dpId, wTotalTime = 60 }
 >   ws = gb { sType = Windowed, windows = [win], sId = 200, guaranteed = True }
 >   defaultPd = mkPeriod ws dt 60 dpId
->   ps2 = ps1 ++ [defaultPd]
+>   ps2 = ps1 ++ [defaultPd, defaultPd {peId = 88}] -- add non-default
+>   --ps2 = ps1 ++ [defaultPd]
 >   ws2 = gb { sType = Windowed, windows = [win], sId = 300, guaranteed = False }
 >   defaultPd2 = mkPeriod ws2 dt 60 dpId2
 >   ps3 = ps2 ++ [defaultPd2]
@@ -1128,8 +1190,11 @@ Equation 23
 
 Equation 14
 
-> test_halfPwrBeamWidth = TestCase $ do
->     assertEqual "test_halfPwrBeamWidth" 33.035713 (halfPwrBeamWidth 22.4)
+> test_halfPwrBeamWidthObserved = TestCase $ do
+>     assertEqual "test_halfPwrBeamWidthObserved 1" 33.035713 (halfPwrBeamWidthObserved 22.4 0.0)
+>     assertEqual "test_halfPwrBeamWidthObserved 2" 33.039497 (halfPwrBeamWidthObserved 22.4 0.5)
+>     assertEqual "test_halfPwrBeamWidthObserved 3" 33.050846 (halfPwrBeamWidthObserved 22.4 1.0)
+>     assertEqual "test_halfPwrBeamWidthObserved 4" 501.09018 (halfPwrBeamWidthObserved 22.4 500.0)
 
 > test_calculateTE = TestCase $ do
 >     assertEqual "test_calculateTE 1" 1.4436142    (calculateTE  0.4)
@@ -1139,10 +1204,12 @@ Equation 14
 Equation 12
 
 > test_trackingObservingEfficiency = TestCase $ do
->     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99909395)  (trackingObservingEfficiency wind1 dt1 False freq1)
->     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 True freq1)
->     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9980345)  (trackingObservingEfficiency wind2 dt2 False freq2)
->     assertEqual "test_trackingObservingEfficiency 4" (Just 0.99860287)  (trackingObservingEfficiency wind2 dt2 True freq2)
+>     assertEqual "test_trackingObservingEfficiency 1" (Just 0.99909395)  (trackingObservingEfficiency wind1 dt1 False freq1 size1)
+>     assertEqual "test_trackingObservingEfficiency 2" (Just 0.99999285)  (trackingObservingEfficiency wind1 dt1 True freq1 size1)
+>     assertEqual "test_trackingObservingEfficiency 3" (Just 0.9980345)  (trackingObservingEfficiency wind2 dt2 False freq2 size1)
+>     assertEqual "test_trackingObservingEfficiency 4" (Just 0.99860287)  (trackingObservingEfficiency wind2 dt2 True freq2 size1)
+>     assertEqual "test_trackingObservingEfficiency 5" (Just 0.9986031)  (trackingObservingEfficiency wind2 dt2 True freq2 size2)
+>     assertEqual "test_trackingObservingEfficiency 6" (Just 0.99985194)  (trackingObservingEfficiency wind2 dt2 True freq2 size3)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -1150,6 +1217,9 @@ Equation 12
 >        dt2 = fromGregorian 2006 9 2 14 30 0
 >        wind1 = Just 1.2388499
 >        wind2 = Just 5.2077017
+>        size1 = 0.0
+>        size2 = 1.0
+>        size3 = 500.0
 
 > test_trackingEfficiency = TestCase $ do
 >     let sess = findPSessionByName "LP"
@@ -1165,8 +1235,12 @@ Equation 12
 Equation 13
 
 > test_trackErr = TestCase $ do
->     assertEqual "test_trackErr 1" 2.4107518e-2 (trackErr dt1 wind1 freq1)
->     assertEqual "test_trackErr 2" 2.4898745e-2 (trackErr dt2 wind2 freq2)
+>     assertEqual "test_trackErr 1" 2.4107518e-2 (trackErr dt1 wind1 freq1 size1)
+>     assertEqual "test_trackErr 2" 2.4898745e-2 (trackErr dt2 wind2 freq2 size1)
+>     assertEqual "test_trackErr 3" 2.4104953e-2 (trackErr dt1 wind1 freq1 size2)
+>     assertEqual "test_trackErr 4" 2.4897065e-2 (trackErr dt2 wind2 freq2 size2)
+>     assertEqual "test_trackErr 5" 6.372248e-3 (trackErr dt1 wind1 freq1 size3)
+>     assertEqual "test_trackErr 6" 8.103259e-3 (trackErr dt2 wind2 freq2 size3)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
@@ -1174,22 +1248,30 @@ Equation 13
 >        dt2 = fromGregorian 2006 9 2 14 30 0
 >        wind1 = 1.2388499
 >        wind2 = 5.2077017
+>        size1 = 0.0
+>        size2 = 2.0
+>        size3 = 500.0
 
 Equation 16
 
 > test_trackErrArray = TestCase $ do
->     assertEqual "test_trackErrArray 1" 8.829199e-3 (trackErrArray wind1 freq1)
->     assertEqual "test_trackErrArray 2" 1.7345414e-2 (trackErrArray wind2 freq2)
+>     assertEqual "test_trackErrArray 1" 8.829199e-3 (trackErrArray wind1 freq1 size1)
+>     assertEqual "test_trackErrArray 2" 1.7345414e-2 (trackErrArray wind2 freq2 size1)
+>     assertEqual "test_trackErrArray 3" 2.3337882e-3 (trackErrArray wind1 freq1 size2)
+>     assertEqual "test_trackErrArray 4" 5.6450386e-3 (trackErrArray wind2 freq2 size2)
 >      where
 >        freq1 = 5.4
 >        freq2 = 4.3
 >        wind1 = 1.2388499
 >        wind2 = 5.2077017
+>        size1 = 0.0
+>        size2 = 500.0
 
 > test_trackingErrorLimit = TestCase $ do
+>     -- two spectral line sessions
 >     let dt = fromGregorian 2006 10 15 12 0 0
 >     let sess = findPSessionByName "LP"
->     assertScoringResult' "test_trackingErrorLimit" Nothing 1.0 (trackingErrorLimit dt sess)
+>     assertScoringResult' "test_trackingErrorLimit 1" Nothing 1.0 (trackingErrorLimit dt sess)
 >     -- pTestProjects session CV
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 1 1 0 0
 >     rt <- getReceiverTemperatures
@@ -1197,7 +1279,26 @@ Equation 16
 >     let ss = concatMap sessions pTestProjects
 >     let s = findPSessionByName "CV"
 >     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s)
->     assertEqual "test_trackingErrorLimit" 1.0 result
+>     assertEqual "test_trackingErrorLimit 2" 1.0 result
+>     -- now make it impossible for it to pass
+>     let s2 = s { trkErrThreshold = 0.0 }
+>     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s2)
+
+>     assertEqual "test_trackingErrorLimit 2.5" 0.0 result
+>     -- now test a continuum session
+>     let s = findPSessionByName "MH"
+>     --let s = s' { oType = Continuum
+>     --           , trkErrThreshold = trkErrThresholdContinuum
+>     --           }
+>     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s)
+>     assertEqual "test_trackingErrorLimit 3" 0.0 result
+>     -- Now really raise the threshold, and watch it pass.
+>     -- Lower the bar, so to speak (0.4 -> 0.6)
+>     let s2 = s { trkErrThreshold = 0.6 }
+>     [(_, Just result)] <- runScoring w [] rt (trackingErrorLimit dt s2)
+>     assertEqual "test_trackingErrorLimit 4" 1.0 result
+
+>     
 
 > test_positionFactors = TestCase $ do
 >     let dt = fromGregorian 2006 9 2 14 30 0
@@ -1242,7 +1343,7 @@ Equation 16
 >     let dur = 15::Minutes
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     factors <- scoreFactors s w pSessions dt dur []
->     assertEqual "test_scoreFactors 1" 21 (length . head $ factors)
+>     assertEqual "test_scoreFactors 1" 22 (length . head $ factors)
 >     mapM_ (assertFactor factors) exp 
 >   where
 >     lookup' factors name = fromJust . fromJust . lookup name . head $ factors
@@ -1314,7 +1415,7 @@ Equation 16
 >     w <- getWeatherTest . Just $ fromGregorian 2006 9 2 14 30 0 -- pick earlier
 >     rt <- getReceiverTemperatures
 >     factors <- scoreElements s w rt pSessions dt dur []
->     assertEqual "test_scoreElements 1" 31 (length . head $ factors)
+>     assertEqual "test_scoreElements 1" 32 (length . head $ factors)
 >     let haLimit = fromJust . fromJust . lookup "hourAngleLimit" . head $ factors
 >     assertEqual "test_scoreElements 2" 1.0 haLimit
 >     let fPress = fromJust . fromJust . lookup "frequencyPressure" . head $ factors
@@ -1330,6 +1431,23 @@ Equation 16
 >     let dt = fromGregorian 2006 10 15 0 0 0
 >     let sess = findPSessionByName "LP"
 >     assertScoringResult' "test_zenithAngleLimit" Nothing 0.0 (zenithAngleLimit dt sess)
+
+> test_keyholeLimit = TestCase $ do
+>     let dt = fromGregorian 2006 10 15 0 0 0
+>     let lst = hrs2rad . utc2lstHours $ dt 
+>     let sess = findPSessionByName "LP"
+>     let sess'  = sess {ra = lst
+>                      , dec = 0.52 -- Close to zenith
+>                       }
+>     let sess'' = sess {ra = lst
+>                      , dec = 0.52 -- Close to zenith
+>                      , keyhole = True}
+>     let sess''' = sess'' {ra = lst
+>                         , dec = -0.56 -- Outside the keyhole
+>                       }
+>     assertScoringResult' "test_keyholeLimit ignored" Nothing 1.0 (keyholeLimit dt sess')
+>     assertScoringResult' "test_keyholeLimit not ignored" Nothing 0.0 (keyholeLimit dt sess'')
+>     assertScoringResult' "test_keyholeLimit not ignored but outside" Nothing 1.0 (keyholeLimit dt sess''')
 
 Equation 11
 
@@ -1990,25 +2108,28 @@ Like test_obsAvailbe, but with required friends
 >       
 
 > test_observerOnSite = TestCase $ do
->   assertEqual "test_observerOnSite_1" True  (obsOnSite dt  s1)
->   assertEqual "test_observerOnSite_2" False (obsOnSite dt2 s1)
->   assertEqual "test_observerOnSite_3" False (obsOnSite dt3 s1)
->   assertEqual "test_observerOnSite_4" True  (obsOnSite dt  s2)
->   assertEqual "test_observerOnSite_5" False (obsOnSite dt2 s2)
->   assertEqual "test_observerOnSite_6" True  (obsOnSite dt3 s2)
+>   assertEqual "test_observerOnSite_1" True  (onSiteObsAvailable dt  s1)
+>   assertEqual "test_observerOnSite_2" False (onSiteObsAvailable dt2 s1)
+>   assertEqual "test_observerOnSite_3" False (onSiteObsAvailable dt3 s1)
+>   assertEqual "test_observerOnSite_4" True  (onSiteObsAvailable dt  s2)
+>   assertEqual "test_observerOnSite_5" False (onSiteObsAvailable dt2 s2)
+>   assertEqual "test_observerOnSite_6" True  (onSiteObsAvailable dt3 s2)
+>   assertEqual "test_observerOnSite_7" False  (onSiteObsAvailable dt4 s2)
 >     where
 >       dt  = fromGregorian 2006 2 1  0 0 0
 >       dt2 = fromGregorian 2006 2 7  0 0 0
 >       dt3 = fromGregorian 2006 2 11 0 0 0
+>       dt4 = fromGregorian 2006 1 31 0 0 0
 >       rs  = [(fromGregorian 2006 1 31 0 0 0, fromGregorian 2006 2 2 0 0 0)]
 >       o   = defaultObserver
->       o2  = defaultObserver { reservations = rs }
+>       o2  = defaultObserver { blackouts = bs, reservations = rs }
 >       pr1 = defaultProject { observers = [o,o2] }
 >       s1  = defaultSession { project = pr1 }
 >       rs2 = [(fromGregorian 2006 2 10 0 0 0, fromGregorian 2006 2 12 0 0 0)]
 >       o3  = defaultObserver { reservations = rs2 }
 >       pr2 = defaultProject { observers = [o2, o3] }
 >       s2  = defaultSession { project = pr2 }
+>       bs  = [(fromGregorian 2006 1 30 0 0 0, fromGregorian 2006 2 1 0 0 0)]
 
 > test_scorePeriodOverhead = TestCase $ do
 >   -- do explicitly what scorePeriod is supposed to do

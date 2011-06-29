@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.DSSData where
 
 > import Antioch.DateTime
@@ -5,6 +27,7 @@
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Settings                (dssDataDB, dssHost, databasePort)
+> import Antioch.SLALib (slaGaleq)
 > import Antioch.DSSReversion            (putPeriodReversion)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
@@ -116,6 +139,12 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 >     res <- getObserverReservations cnn observer
 >     return observer { blackouts = bs, reservations = res }
 
+Note that start_date and end_date refer respectively to the check-in
+and check-out dates, e.g., a person with a start_date of 03/13/2011
+and an end_date of 03/15/2011 would spend two nights in Green Bank,
+the nights of 03/13/2011 and 03/14/2011. Therefore the time range
+would be 03/13/2011 00:00 <= on site < 3/16/2011 00:00.
+
 > getObserverBlackouts :: Connection -> Observer -> IO [DateRange]
 > getObserverBlackouts cnn obs = do
 >   result <- quickQuery' cnn query xs
@@ -140,7 +169,7 @@ Takes Observers with basic info and gets the extras: blackouts, reservations
 >       blackoutsEnd   = fromGregorian 2010 2 1 0 0 0
 
 Required Friends need to be available for observing, they are
-subtely different then our list of observers, though use the same
+subtly different then our list of observers, though use the same
 data type.
 
 > getProjectRequiredFriends :: Int -> Connection -> IO [Observer]
@@ -268,24 +297,24 @@ scheduling until they are properly defined.
 >     where
 >       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, \
 >                              \ s.time_between, s.frequency, a.total_time, \
->                              \ a.max_semester_time, a.grade, t.horizontal, \
+>                              \ a.max_semester_time, a.grade, sy.name, t.horizontal, \
 >                              \ t.vertical, st.enabled, st.authorized, \
 >                              \ st.backup, st.complete, stype.type, \
 >                              \ otype.type \
 >                              \ FROM sessions AS s, allotment AS a, targets AS t, \
 >                              \ status AS st, session_types AS stype, \
->                              \ observing_types AS otype \
+>                              \ observing_types AS otype, systems as sy\
 >                              \ WHERE a.id = s.allotment_id AND \
 >                              \ t.session_id = s.id AND s.status_id = st.id AND \
 >                              \ s.session_type_id = stype.id AND \
->                              \ s.observing_type_id = otype.id AND \
+>                              \ s.observing_type_id = otype.id AND t.system_id = sy.id AND \
 >                              \ s.frequency IS NOT NULL AND \
 >                              \ t.horizontal IS NOT NULL AND \
 >                              \ t.vertical IS NOT NULL AND \
->                              \ s.project_id = ?;"
+>                              \ s.project_id = ? order by s.id;"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:oty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:sys:h:v:e:a:b:c:sty:oty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -295,8 +324,8 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime
 >           , sAllottedS  = fromSqlMinutes stime
->           , ra = fromSql h 
->           , dec = fromSql v  
+>           , ra = ra
+>           , dec = dec
 >           , grade = fromSql grade
 >           , receivers = [] 
 >           , periods = [] -- no history in Carl's DB
@@ -308,6 +337,11 @@ scheduling until they are properly defined.
 >           , sType = toSessionType sty
 >           , oType = toObservingType oty
 >         }
+>           where
+>               horz = fromSql h
+>               vert = fromSql v
+>               (ra, dec) = 
+>                   if (fromSql sys) == "Galactic" then (slaGaleq horz vert) else (horz, vert)
 
 > getSessionFromPeriod :: Int -> Connection -> IO Session
 > getSessionFromPeriod periodId cnn = handleSqlError $ do 
@@ -317,17 +351,18 @@ scheduling until they are properly defined.
 >   return s
 >     where
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, \
->              \ s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, \
+>              \ s.frequency, a.total_time, a.max_semester_time, a.grade, sy.name, t.horizontal, \
 >              \ t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type \
 >              \ FROM sessions AS s, allotment AS a, targets AS t, status AS st, \
->              \ session_types AS type, periods AS p \
+>              \ session_types AS type, periods AS p, systems AS sy \
 >              \ WHERE s.id = p.session_id AND \
->              \ a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND \
->              \ s.session_type_id = type.id AND s.frequency IS NOT NULL AND \
->              \ t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
+>              \ a.id = s.allotment_id AND t.session_id = s.id AND t.system_id = sy.id \
+>              \ AND s.status_id = st.id AND s.session_type_id = type.id \
+>              \ AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND \
+>              \ t.vertical IS NOT NULL AND p.id = ? order by s.id"
 >       xs = [toSql periodId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:sys:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -337,8 +372,8 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime 
 >           , sAllottedS  = fromSqlMinutes stime 
->           , ra = fromSql h -- assume all J2000? Story: https://www.pivotaltracker.com/story/show/13828493.
->           , dec = fromSql v  
+>           , ra = ra
+>           , dec = dec
 >           , grade = fromSql grade
 >           , receivers = []
 >           , periods = [] -- Note:, no history in Carl's DB
@@ -349,23 +384,28 @@ scheduling until they are properly defined.
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
+>           where
+>               horz = fromSql h
+>               vert = fromSql v
+>               (ra, dec) = 
+>                   if (fromSql sys) == "Galactic" then (slaGaleq horz vert) else (horz, vert)
 
 > getSession :: Int -> Connection -> IO Session
 > getSession sessionId cnn = handleSqlError $ do 
 >   result <- quickQuery' cnn query xs 
->   let s' = toSessionData $ result!!0
+>   let s' = toSessionData $ result !! 0
 >   s <- updateRcvrs cnn s' 
 >   return s
 >     where
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, \
->              \ s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, \
+>              \ s.frequency, a.total_time, a.max_semester_time, a.grade, sy.name, t.horizontal, \
 >              \ t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type \
 >              \ FROM sessions AS s, allotment AS a, targets AS t, status AS st, \
->              \ session_types AS type \
+>              \ session_types AS type, systems As sy\
 >              \ WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND \
->              \ s.session_type_id = type.id AND s.id = ?"
+>              \ s.session_type_id = type.id AND t.system_id = sy.id AND s.id = ? order by s.id"
 >       xs = [toSql sessionId]
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:sys:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -375,8 +415,8 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime
 >           , sAllottedS  = fromSqlMinutes stime
->           , ra = fromSql h 
->           , dec = fromSql v  
+>           , ra = ra
+>           , dec = dec
 >           , grade = fromSql grade
 >           , receivers = [] 
 >           , periods = [] -- no history in Carl's DB
@@ -387,6 +427,11 @@ scheduling until they are properly defined.
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
+>           where
+>               horz = fromSql h
+>               vert = fromSql v
+>               (ra, dec) = 
+>                   if (fromSql sys) == "Galactic" then (slaGaleq horz vert) else (horz, vert)
 
 Since the Session data structure does not support Nothing, when we get NULLs
 from the DB (Carl didn't give it to us), then we need some kind of default
@@ -464,8 +509,10 @@ observing parameters, etc.
 
 > populateSession :: Connection -> Session -> IO Session
 > populateSession cnn s = do
->     s'  <- setObservingParameters cnn s
->     s'' <- updateRcvrs cnn s'
+>     -- order here is important:
+>     s' <- updateRcvrs cnn s
+>     -- need to know what rcvrs are used when setting observing params
+>     s'' <- setObservingParameters cnn s'
 >     ps <- getPeriods cnn s''
 >     ws <- getWindows cnn s''
 >     es <- getElectives cnn s''
@@ -480,15 +527,18 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 > setObservingParameters :: Connection -> Session -> IO Session
 > setObservingParameters cnn s = do
 >   result <- quickQuery' cnn query xs 
->   let s' = setObservingParameters' s result
->   s'' <- setLSTExclusion cnn s'
->   return s''
+>   -- set the correct default value for the track error threshold first
+>   let s' = s { trkErrThreshold = getThresholdDefault s }
+>   let s'' = setObservingParameters' s' result
+>   s''' <- setLSTExclusion cnn s''
+>   return s'''
 >     where
 >       xs = [toSql . sId $ s]
 >       query = "SELECT p.name, p.type, op.string_value, op.integer_value, op.float_value, \
 >              \ op.boolean_value, op.datetime_value \
 >              \ FROM observing_parameters AS op, parameters AS p \
 >              \ WHERE p.id = op.parameter_id AND op.session_id = ?" 
+>       getThresholdDefault s = if usesMustang s then trkErrThresholdFilledArrays else trkErrThresholdSparseArrays
 
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 
@@ -498,8 +548,11 @@ For now, just set:
    * transit flag
    * xi factor
    * elevation limit 
-   * guaranteed
    * good atmospheric stability
+   * guaranteed flag
+   * source size
+   * tracking error threshold
+   * keyhole
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
@@ -509,6 +562,9 @@ For now, just set:
 >     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
 >     | n == "Not Guaranteed"  = s { guaranteed = not . fromSql $ pBool }   
 >     | n == "Good Atmospheric Stabililty" = s { goodAtmStb = fromSql $ pBool }   
+>     | n == "Source Size"     = s { sourceSize = fromSql pFlt }
+>     | n == "Tr Err Limit"    = s { trkErrThreshold = fromSql pFlt }
+>     | n == "Keyhole"         = s { keyhole = fromSql pBool }
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName
@@ -596,10 +652,10 @@ it an exclusion range.
 >     query = "SELECT id, complete FROM electives WHERE session_id = ?;"
 >     toElectiveList = map toElective
 >     toElective(id:comp:[]) =
->       Electives { eId = fromSql id
->                 , eComplete = fromSql comp 
->                 , ePeriodIds = [] -- for later
->                }
+>       Electives {eId = fromSql id
+>                , eComplete = fromSql comp 
+>                , ePeriodIds = [] -- for later
+>                 }
 
 > getElectivePeriods :: Connection -> Electives -> IO (Electives)
 > getElectivePeriods cnn elec = do
@@ -727,6 +783,38 @@ A single Window can have mutliple date ranges associated with it.
 >                        then fromSqlMinutes durHrs
 >                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
 >                     }
+
+Retrieve all the scheduled periods within the given time range
+-- usually the scheduling range -- that may be cancelled just
+prior to observing.
+
+> getDiscretionaryPeriods :: Connection -> DateTime -> Minutes -> IO [Period]
+> getDiscretionaryPeriods cnn dt dur = do 
+>   result <- quickQuery' cnn query xs 
+>   -- get periods except for its session field
+>   let ps' = toPeriodList result
+>   -- get associated sessions
+>   ss <- mapM (flip getSessionFromPeriod cnn) . map peId $ ps'
+>   -- you complete me
+>   let ps = map (\(p, s) -> p {session = s}) . zip ps' $ ss
+>   -- but only want Open and Windowed periods, i.e., discretionary
+>   return $ sort $ filter (\p -> (sType . session $ p) `elem` [Open, Windowed]) ps
+>   where
+>     xs = [toSql . toSqlString $ dt, toSql .toSqlString . addMinutes dur $ dt]
+>     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, p.forecast, p.backup FROM periods AS p, period_states AS state WHERE state.id = p.state_id AND state.abbreviation = 'S' AND p.start >= ? AND p.start < ?;"
+>     toPeriodList = map toPeriod
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:[]) =
+>       defaultPeriod { peId = fromSql id
+>                     , startTime = sqlToDateTime start
+>                     , duration = fromSqlMinutes durHrs
+>                     , pScore = fromSql score
+>                     , pState = deriveState . fromSql $ state
+>                     , pForecast = sqlToDateTime forecast
+>                     , pBackup = fromSql backup
+>                     , pDuration = fromSqlMinutes durHrs
+>                     }
+>     toSessionId (id:sid:start:durHrs:score:state:forecast:backup:[]) = fromSql sid
+
 
 > sqlToDateTime :: SqlValue -> DateTime
 > sqlToDateTime dt = fromJust . fromSqlString . fromSql $ dt

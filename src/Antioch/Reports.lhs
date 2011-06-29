@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.Reports where
 
 > import Antioch.DateTime
@@ -38,6 +60,24 @@
 >   where
 >     isPBand bandName p = (band . session $ p) == bandName
 >     psBand periods bandName = filter (isPBand bandName) periods 
+
+simBandClosed
+
+percentage of sessions completed by band.
+
+> plotBandClosed :: StatsPlot
+> plotBandClosed fn n ss _ _ = do
+>     histogramPlots attrs $ zip titles [byBand] --zip bands (repeat 50.0)]
+>   where
+>     t = "Percent Closed Sessions by Band" ++ n
+>     x =  "Band [" ++ (intercalate "," $ map show bandRange) ++ "]" --[L, S, C, X, U, K, A, Q]"
+>     y = "Percentage Closed"
+>     titles = [Just "Closed"]
+>     attrs = (histAttrs t x y fn)
+>     byBand = [((+1) . fromIntegral . fromEnum $ b, d) | (b, d) <- sessionClosedBand' ss]
+>     numSessByBand = zip bandRange $ map (fromIntegral . length) $ sessionsByBand ss
+>     sessionClosedBand' ss = map mkPercent $ zip (sessionClosedBand ss) numSessByBand
+>     mkPercent ((b1, closed), (b2, total)) = if b1 == b2 then (b1, (closed/total) * 100.0) else (b1, -1.0)
 
 simFracTime 
 
@@ -271,7 +311,7 @@ tracking efficiency vs frequency
 
 > trackObsEffData' :: [Float] -> Float -> DateTime -> Bool -> [Maybe Float]
 > trackObsEffData' fs w dt m = do
->    map (trackingObservingEfficiency (Just w) dt m) fs
+>    map (trackingObservingEfficiency (Just w) dt m 0.0) fs
 
 Stringency versus frequency for elevation = 25,35,50,75,90 deg,
 all receivers, and obs type = cont.
@@ -1065,6 +1105,7 @@ The standard list of plots (that need no extra input).
 >  , plotTPDurVsFreqBin     $ rootPath ++ "/simTPFreq.png"
 >  , plotBandPressureBinPastTime $ rootPath ++ "/simBandPBinPastTime.png"
 >  , plotBandPressureBinRemainingTime $ rootPath ++ "/simBandPBinRemainingTime.png"
+>  , plotBandClosed         $ rootPath ++ "/simBandClosed.png"
 >   ]
 >   where
 >     n = if name == "" then "" else " (" ++ name ++ ")"

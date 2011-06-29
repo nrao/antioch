@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Server.PeriodFactors (
 >     getPeriodFactorsHandler
 >   , getPeriodFactors
@@ -72,7 +94,6 @@ score of the specified period.
 >     -- it's possible the time they gave for the start of the period
 >     -- is wrong: there's no period that starts then?
 >     let maybePeriod = if (length psCandidates == 0) then Nothing else Just . head $ psCandidates
->     liftIO $ print $ "got period: " ++ (show maybePeriod)
 >     -- if you've found a period for the given time, use it's start time & dur;
 >     -- otherwise, use the passed in start & dur.
 >     let weatherDt = if isJust maybePeriod then pForecast . fromJust $ maybePeriod else dt

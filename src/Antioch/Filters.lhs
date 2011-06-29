@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.Filters where
 
 > import Antioch.DateTime
@@ -13,8 +35,8 @@ we care about: those that fall in between the dates we are simulating for.
 We do this, because otherwise the reports at the end of the simulations will
 be confused and raise false alarams.
 
-> filterHistory :: [Period] -> DateTime -> Int -> [Period]
-> filterHistory ps start daysDur = filter overlie' ps
+> truncateHistory :: [Period] -> DateTime -> Int -> [Period]
+> truncateHistory ps start daysDur = filter overlie' ps
 >   where
 >     overlie' p = overlie start (daysDur*24*60) p
 
@@ -23,15 +45,6 @@ be confused and raise false alarams.
 > typeWindowed s = sType s == Windowed
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
-
-> filterMaintenancePeriods :: [Period] -> IO ([Period])
-> filterMaintenancePeriods ps = concatMapM nonMaintenance ps
->   where
->     nonMaintenance p = do
->       let state = oType (session p ) == Maintenance
->       case state of
->         False -> return $ [p]
->         True  -> return []
 
 > filterDisabledPeriods :: [Period] -> IO ([Period])
 > filterDisabledPeriods ps = concatMapM enabledPeriod ps
@@ -46,8 +59,8 @@ be confused and raise false alarams.
 > filterInactivePeriods ps = concatMapM activePeriod ps
 >   where
 >     activePeriod p = do
->       let state = not (not (isAuthorized undefined undefined $ session p) &&
->                            (pState p == Pending))
+>       let state = ((enabled $ session p) && (authorized $ session p)) ||
+>                   (pState p /= Pending)
 >       case state of
 >         True -> return $ [p]
 >         False -> return []

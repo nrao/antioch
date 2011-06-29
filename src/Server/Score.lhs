@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Server.Score (
 >     scoreHandler
 >   ) where
@@ -46,13 +68,11 @@ http://trent.gb.nrao.edu:9051/score/periods?pids=6957&pids=6931&pids=6939
 >     -- Interpret options: pids
 >     let spids = (catMaybes . map snd $ params)::[String]
 >     let pids = urlToPids spids
->     liftIO $ print pids
 >
 >     -- compute the scores 
 >     projs <- liftIO getProjects
 >     retvals <- liftIO $ runScorePeriods pids projs False
->     liftIO $ print retvals
-
+>
 >     -- send them back
 >     jsonHandler $ makeObj [("scores", scoresListToJSValue retvals)]
 
@@ -75,7 +95,6 @@ http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A4
 >     -- compute the score
 >     projs <- liftIO getProjects
 >     score <- liftIO $ runScoreSession id dt dur projs False
->     liftIO $ print ("getSScore score: ", score)
 >     
 >      -- send it back
 >     jsonHandler $ makeObj [("score", showJSON score)]

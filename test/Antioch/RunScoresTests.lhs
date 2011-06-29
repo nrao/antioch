@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 
 > module Antioch.RunScoresTests where
 
@@ -23,6 +45,8 @@
 >   , test_runFactors
 >   , test_runNominees
 >   , test_runMOC
+>   , test_runMOCfailures
+>   , test_runPeriodMOC
 >     ]
 
 > test_runScorePeriods = TestCase $ do
@@ -86,7 +110,7 @@
 >   -- and we can, except for pressures and some project info
 >   (sess, factors) <- runFactors 555 dt dur projs True
 >   assertEqual "test_runFactors 0" 1 (length factors)
->   assertEqual "test_runFactors 1" 32 (length . head $ factors)
+>   assertEqual "test_runFactors 1" 33 (length . head $ factors)
 >   assertEqual "test_runFactors 2" sess s
 >   mapM_ (assertFactor factors) exp 
 >   -- now make sure wband doesn't blow this up
@@ -95,7 +119,7 @@
 >   let projs = [makeProject proj 1000 1000 ([sw] ++ pSessions')]
 >   (sess, factors) <- runFactors 556 dt dur projs True
 >   assertEqual "test_runFactors 3" 1 (length factors)
->   assertEqual "test_runFactors 4" 32 (length . head $ factors)
+>   assertEqual "test_runFactors 4" 33 (length . head $ factors)
 >   assertEqual "test_runFactors 5" sess sw
 >       where
 >     lookup' factors name = fromJust . fromJust . lookup name . head $ factors
@@ -171,7 +195,7 @@
 >     -- origin to be an hour earlier then the passed in time.
 >     let dt = fromGregorian 2006 10 13 16 0 0
 >     mocs <- mapM (runMOC' dt) sess
->     assertEqual "test_minimumObservingConditions" expected mocs
+>     assertEqual "test_runMOC" expected mocs
 >   where
 >     runMOC' dt s = do
 >       Just moc <- runMOC dt 30 s True -- test param == True!
@@ -180,8 +204,30 @@
 >     sess = concatMap (\name -> findPSessionsByName name) names
 >     expected = [False,True,True,True,True,False,True]
 
+> test_runMOCfailures = TestCase $ do
+>   res <- runMOCfailures ps True
+>   assertEqual "test_runMOCfailures" [6,7] res
+>     where
+>       ps = map (\(p, i) -> p {peId = i}) . zip getPPeriods $ [1..]
+
+> test_runPeriodMOC = TestCase $ do
+>     mocs <- mapM runPeriodMOC' periods
+>     assertEqual "test_runPeriodMOC" expected mocs
+>   where
+>     dt = fromGregorian 2006 10 13 16 0 0
+>     periods = [defaultPeriod {startTime = dt
+>                             , duration  = 30
+>                             , session   = s} | s <- sess]
+>     runPeriodMOC' p = do
+>       Just moc <- runPeriodMOC p True -- test param == True!
+>       return moc
+>     names = ["GB","CV","LP","TX","VA","WV","AS"]
+>     sess = concatMap (\name -> findPSessionsByName name) names
+>     expected = [False,True,True,True,True,False,True]
+
 Utilities:
 
+Note these are *almost* identical to ScoreTests's pSessions.
 Add id's to the test sessions from ScoreTests.lhs:
 
 > pSessions' = map addId $ zip [340,341,342,343] pSessions

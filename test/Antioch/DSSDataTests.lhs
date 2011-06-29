@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.DSSDataTests where
 
 > import Antioch.DateTime
@@ -27,6 +49,7 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 
 > tests = TestList [
 >       test_fetchPeriods
+>     , test_getDiscretionaryPeriods
 >     , test_getWindows
 >     , test_getPeriods
 >     , test_getPeriodStates
@@ -36,6 +59,7 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     , test_makeSession
 >     , test_scoreDSSData
 >     , test_session2
+>     , test_sessionGal
 >     , test_session_scores
 >     , test_totaltime
 >     , test_toDateRangesFromInfo_1
@@ -70,13 +94,14 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 > test_getProjects = TestCase $ do
 >     ps <- getProjects 
 >     let ss = concatMap sessions ps
+>     let ss' = reverse . tail $ reverse ss
 >     let allPeriods = sort $ concatMap periods $ ss
 >     assertEqual "test_getProjects1" 1 (length ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
->     assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 3 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects3" 6000 (pAllottedT . head $ ps)  
+>     assertEqual "test_getProjects4" 5 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
@@ -84,8 +109,9 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     assertEqual "test_getProjects10" 6 (length allPeriods)    
 >     assertEqual "test_getProjects11" [[Rcvr8_10]] (receivers . head $ ss)
 >     assertEqual "test_getProjects12" True (guaranteed . head $ ss)
->     assertEqual "test_getProjects13" 1 (length . electives . last $ ss)
->     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives . last $ ss)
+>     let elecS = head $ filter (\s -> (sName s) == "GBT09A-001-04") ss
+>     assertEqual "test_getProjects13" 1 (length . electives $ elecS)
+>     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives $ elecS)
 >     assertEqual "test_getProjects15" 1 (length . observers . head $ ps)
 >     assertEqual "test_getProjects16" 1 (length . requiredFriends . head $ ps)
 >     assertEqual "test_getProjects17" obsBlackouts ( blackouts . head . observers . head $ ps) 
@@ -101,7 +127,7 @@ once and has a total time that is the sum of the grade hrs.
 >   projs <- getProjects
 >   let ps = filter (\p -> (pName p) == "GBT09A-001") projs
 >   assertEqual "test_sAllottedT_1" 1 (length ps)
->   assertEqual "test_sAllottedT_2" 0 (pAllottedT . head $ ps)
+>   assertEqual "test_sAllottedT_2" 6000 (pAllottedT . head $ ps)
 
 Makes sure that there is nothing so wrong w/ the import of data that a given
 session scores zero through out a 24 hr period.
@@ -147,7 +173,7 @@ from the database.
 >       --start = fromGregorian 2006 6 6 3 0 0 -- 11 PM ET
 >       start = fromGregorian 2006 6 6 6 30 0
 >       times = [(15*q) `addMinutes` start | q <- [0..16]]
->       expScores = [0.0,0.71830034,0.723035,0.72897196,0.7306815,0.73508745,0.7376189,0.73988056,0.7450153,0.7467272,0.7482739,0.74967504,0.74223655,0.74284345,0.74342054,0.74397194,0.7436074]
+>       expScores = [0.0,1.0626621,1.0696664,1.0784497,1.0809788,1.087497,1.0912421,1.094588,1.1021845,1.1047171,1.1070054,1.1090782,1.0980735,1.0989712,1.099825,1.1006408,1.1001016]
 
 Test a specific session's attributes:
 
@@ -172,6 +198,103 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_15" X (band s)
 >   assertEqual "test_session2_16" False (lowRFI s)
 >   assertEqual "test_session2_17" 1 (length . lstExclude $ s)
+
+> test_sessionGal = TestCase $ do
+>   ps <- getProjects 
+>   let ss = concatMap sessions ps
+>   let s = head $ filter (\s -> (sName s == "GBT09A-001-Gal")) ss
+>   assertEqual "test_sessionGal_1" 3.0 (grade s)
+>   assertEqual "test_sessionGal_2" Open (sType s)
+>   assertEqual "test_sessionGal_3" 5 (sId s)
+>   assertEqual "test_sessionGal_4" "GBT09A-001-Gal" (sName s)
+>   assertEqual "test_sessionGal_5" "GBT09A-001" (pName . project $ s)
+>   assertEqual "test_sessionGal_6" "09A" (semester . project $ s)
+>   assertEqual "test_sessionGal_7" 210 (sAllottedT s)
+>   assertEqual "test_sessionGal_8" 180 (minDuration s)
+>   assertEqual "test_sessionGal_9" 210 (maxDuration s)
+>   assertEqual "test_sessionGal_10" 0 (timeBetween s)
+>   assertEqual "test_sessionGal_11" 9.3 (frequency s)
+>   assertEqual "test_sessionGal_12" 4.4592996  (ra s)
+>   assertEqual "test_sessionGal_13" (-0.91732764) (dec s)
+>   assertEqual "test_sessionGal_14" [[Rcvr8_10]] (receivers s)
+>   assertEqual "test_sessionGal_15" X (band s)
+>   assertEqual "test_sessionGal_16" False (lowRFI s)
+>   assertEqual "test_sessionGal_17" 1 (length . lstExclude $ s)
+
+Perhaps these should be Quick Check properities, but the input is not 
+generated: it's the input we want to test, really.
+
+> test_getProjectsProperties = TestCase $ do
+>   ps <- getProjects
+>   let ss = concatMap sessions ps
+>   let allPeriods = sort $ concatMap periods ss 
+>   assertEqual "test_getProjects_properties_1" True (all validProject ps)  
+>   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
+>   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
+>   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == 3.0) ss) )
+>   assertEqual "test_getProjects_properties_5" 46 (length $ filter lowRFI ss)
+>   let lsts = filter (\s -> (length . lstExclude $ s) > 0) ss
+>   assertEqual "test_getProjects_properties_6" 4 (length lsts)
+>   assertEqual "test_getProjects_properties_7" [(15.0,21.0)] (lstExclude . head $ lsts)
+>   assertEqual "test_getProjects_properties_8" [(14.0,9.0)] (lstExclude . last $ lsts)
+>   -- TBF, BUG: Session (17) BB261-01 has no target, 
+>   -- so is not getting imported.
+>   assertEqual "test_getProjects_properties_9" 255 (length ss)  
+>   assertEqual " " True True
+>     where
+>       validProject proj = "0" == (take 1 $ semester proj)
+>       validSession s = (maxDuration s) >= (minDuration s)
+>                    -- TBF!! &&  (sAllottedT s)     >= (minDuration s)
+>                     &&  (validRA s) && (validDec s)
+>       validPeriods allPeriods = not . internalConflicts $ allPeriods
+
+> test_putPeriods = TestCase $ do
+>   r1 <- getNumRows "periods"
+>   putPeriods [p1]
+>   r2 <- getNumRows "periods"
+>   cleanup "periods"
+>   assertEqual "test_putPeriods" True (r2 == (r1 + 1)) 
+>     where
+>       dt = fromGregorian 2006 1 1 0 0 0
+>       p1 = defaultPeriod { session = defaultSession { sId = 1 }
+>                          , startTime = dt
+>                          , pScore = 0.0
+>                          , pForecast = dt }
+
+> test_movePeriodsToDeleted = TestCase $ do
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   let exp = [Pending,Scheduled,Pending,Pending]
+>   assertEqual "test_movePeriods_1" exp (map pState ps) 
+>   -- move all to deleted
+>   movePeriodsToDeleted ps
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   --let exp = [Deleted,Deleted,Deleted,Deleted]
+>   -- won't pick them up from DB since they are deleted
+>   assertEqual "test_movePeriods_2" [] ps 
+>   -- move them back
+>   cnn <- connect
+>   movePeriodToState cnn 1 1 
+>   movePeriodToState cnn 2 2 
+>   movePeriodToState cnn 3 1 
+>   movePeriodToState cnn 4 1 
+>   -- make sure the moved back okay
+>   projs <- getProjects
+>   let ps = concatMap periods $ concatMap sessions projs
+>   assertEqual "test_movePeriods_3" exp (map pState ps) 
+
+Kluge, data base has to be prepped manually for test to work, see
+example in comments.
+
+> test_populateWindowedSession = TestCase $ do
+>   cnn <- connect
+>   s <- getSession sId cnn
+>   ios <- populateSession cnn s
+>   assertEqual "test_populateWindowedSession 1" s ios
+>     where
+>       sId =  194  -- just placeholders
+>       pId = 1760
 
 > mkSqlLst  :: Int -> DateTime -> Int -> Int -> Int -> Int -> String -> [SqlValue]
 > mkSqlLst id strt dur def per pid st =
@@ -234,6 +357,21 @@ Test a specific session's attributes:
 >   assertEqual "test_fetchPeriods" ps ps' 
 >     where
 >       dt = fromGregorian 2006 1 1 0 0 0
+
+> test_getDiscretionaryPeriods = TestCase $ do
+>   cnn <- connect
+>   let dt = fromGregorian 2006 7 9 12 0 0
+>   let dur = 12*24*60
+>   s <- getSession 2 cnn
+>   let exp = [defaultPeriod {peId = 2
+>                           , session = s
+>                           , startTime = fromGregorian 2006 7 10 0 0 0
+>                           , pState = Scheduled
+>                           , pDuration = 120
+>                           , duration = 120}]
+>   res <- getDiscretionaryPeriods cnn dt dur
+>   assertEqual "test_getDiscretionaryPeriods_1" exp res
+
 
 > fromFloat2Sql :: Float ->  SqlValue
 > fromFloat2Sql = toSql

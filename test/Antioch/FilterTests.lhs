@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.FilterTests where
 
 > import Antioch.DateTime
@@ -21,7 +43,7 @@
 >    , test_adjustWindowSessionDuration
 >    , test_projectBlackedOut
 >    , test_filterDisabledPeriods
->    , test_filterMaintenancePeriods
+>    , test_filterInactivePeriods
 >   ]
 
 > test_projectBlackedOut = TestCase $ do
@@ -51,39 +73,62 @@
 >       s3  = defaultSession { project = p2}
 
 > getTestPeriods :: [Period]
-> getTestPeriods = [p1, p2, p3]
+> getTestPeriods = [p1, p2, p3, p4, p5]
 >     where
 >       mproj = defaultProject { pName = "Maintenance" }
 >       proj  = defaultProject { pName = "test project" }
->       msess = defaultSession { project = mproj, oType = Maintenance}
->       sess  = defaultSession { project = proj, oType = SpectralLine, enabled = False}
->       p1    = defaultPeriod { session = sess
+>       msess = defaultSession { project = mproj, sName = "maint", oType = Maintenance}
+>       sesse = defaultSession { project = proj, sName = "disabled", oType = SpectralLine, enabled = False}
+>       sessa = defaultSession { project = proj, sName = "unauthorized", oType = SpectralLine, authorized = False}
+>       sess  = defaultSession { project = proj, sName = "active", oType = SpectralLine}
+>       -- not enabled
+>       p1    = defaultPeriod { peId = 1
+>                             , session = sesse
 >                             , startTime = fromGregorian 2011 4 1 0 0 0
 >                             , duration  = 2 * 60
 >                             , pDuration = 2 * 60
 >                              }
->       p2    = defaultPeriod { session = msess
+>       -- maintenance
+>       p2    = defaultPeriod { peId = 2
+>                             , session = msess
 >                             , startTime = fromGregorian 2011 4 1 2 0 0
 >                             , duration  = 8 * 60
 >                             , pDuration = 8 * 60
 >                              }
->       p3    = defaultPeriod { session = sess
+>       -- not enabled
+>       p3    = defaultPeriod { peId = 3
+>                             , session = sesse
+>                             , startTime = fromGregorian 2011 4 1 10 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+>       -- not authorized
+>       p4    = defaultPeriod { peId = 4
+>                             , session = sessa
+>                             , startTime = fromGregorian 2011 4 1 10 0 0
+>                             , duration  = 2 * 60
+>                             , pDuration = 2 * 60
+>                              }
+>       -- scheduled
+>       p5    = defaultPeriod { peId = 5
+>                             , session = sess
+>                             , pState = Scheduled
 >                             , startTime = fromGregorian 2011 4 1 10 0 0
 >                             , duration  = 2 * 60
 >                             , pDuration = 2 * 60
 >                              }
 
-> test_filterMaintenancePeriods = TestCase $ do
->   result <- filterMaintenancePeriods [p1, p2, p3]
->   assertEqual "test_filterMaintenancePeriods" [p1, p3] result
->     where
->       (p1: p2: p3: []) = getTestPeriods
-
 > test_filterDisabledPeriods = TestCase $ do
->   result <- filterDisabledPeriods [p1, p2, p3]
->   assertEqual "test_filterDisabledPeriod" [p2] result
+>   result <- filterDisabledPeriods [p1, p2, p3, p4, p5]
+>   assertEqual "test_filterDisabledPeriod" [p2, p4, p5] result
 >     where
->       (p1: p2: p3: []) = getTestPeriods
+>       (p1: p2: p3: p4: p5: []) = getTestPeriods
+
+> test_filterInactivePeriods = TestCase $ do
+>   result <- filterInactivePeriods [p1, p2, p3, p4, p5]
+>   assertEqual "test_filterInactivePeriod" [p2, p5] result
+>     where
+>       (p1: p2: p3: p4: p5: []) = getTestPeriods
 
 > test_sim_timeLeft = TestCase $ do
 >   -- dt1 => 09B, dt* => 09A

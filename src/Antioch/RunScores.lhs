@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.RunScores where
 
 > import Antioch.DateTime
@@ -7,6 +29,7 @@
 > import Antioch.Score
 > import Antioch.Filters
 > import Antioch.HardwareSchedule
+> import Antioch.Utilities         -- debug
 
 > import Control.Monad.Trans (liftIO)
 > import Data.Maybe
@@ -81,8 +104,6 @@ Variables:
 >     scores <- sequence $ map (\(p, s) -> scorePeriod p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
 >     -- match the scores backup w/ their period Ids
 >     return $ zip (map (peId . fst) tsps) scores
-
-
 
 Computes the current score of a given Session (identified by ID) over
 the given time range, to be found in the given list of Projects.  Example usage: a period is changed or newly created (?) via the Nell server.
@@ -211,6 +232,24 @@ Variables:
 >   return moc
 >     where
 >   hrEarlyDt = addMinutes (-60) dt
+
+Returns the period ids of those given periods whose MOCs fail.
+
+> runMOCfailures :: [Period] -> Bool -> IO [Int]
+> runMOCfailures ps test = do
+>   w <- if test then getWeatherTest $ Just (hrEarlyDt dt) else getWeather Nothing
+>   rs <- if test then return [] else getReceiverSchedule $ Just dt
+>   rt <- getReceiverTemperatures
+>   res <- mapM (\(st, dur, s) -> runScoring w rs rt $ minimumObservingConditions st dur s) args
+>   return . map fst . filter (\(i, b) -> not $ maybe True id b) . zip [peId p | p <-ps] $ res
+>     where
+>       dt = startTime . head $ ps
+>       hrEarlyDt dt = addMinutes (-60) dt
+>       args = [(startTime p, pDuration p, session p) | p <- ps]
+
+> runPeriodMOC :: Period -> Bool -> IO (Maybe Bool)
+> runPeriodMOC p test = do
+>     runMOC (startTime p) (duration p) (session p) test
 
 Utilities:
 

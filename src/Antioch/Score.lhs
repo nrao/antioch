@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > {-# OPTIONS -XFlexibleContexts #-}
 
 > module Antioch.Score where
@@ -18,7 +40,8 @@
 > import Data.Array.ST
 > import Data.Foldable      (foldr')
 > import Data.List
-> import Data.Maybe         (fromMaybe, isJust, isNothing, fromJust, catMaybes)
+> import Data.Maybe         (fromMaybe, isJust, isNothing, fromJust
+>                          , catMaybes, listToMaybe)
 > import Test.QuickCheck hiding (frequency)
 > import System.IO.Unsafe (unsafePerformIO)
 > import System.Random
@@ -231,9 +254,11 @@ Equation 9
 > surfaceObservingEfficiency dt s = factor "surfaceObservingEfficiency" . Just $ surfaceObservingEfficiency' dt (frequency s)
 
 Equation 14
+Note that when the default value of the source size is used (0.0) this 
+equation is simply 740.0 / f
 
-> halfPwrBeamWidth :: Frequency -> Frequency
-> halfPwrBeamWidth f = 740.0 / f
+> halfPwrBeamWidthObserved :: Frequency -> Arcsec -> Frequency
+> halfPwrBeamWidthObserved f srcSize = sqrt $ srcSize^2 + (740.0 / f)^2
 
 > rmsTE :: DateTime -> Float
 > rmsTE dt = if isPTCSDayTime roundToHalfPast dt then trErrSigmaDay else trErrSigmaNight
@@ -244,20 +269,21 @@ Equation 14
 
 > trackingEfficiency dt s = do
 >   wind <- getRealOrForecastedWind dt
->   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesMustang s) (frequency s)
+>   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesMustang s) (frequency s) (sourceSize s)
 
-> trackingObservingEfficiency :: Maybe Float -> DateTime -> Bool -> Frequency -> Maybe Float
-> trackingObservingEfficiency wind dt mustang freq = do
+> trackingObservingEfficiency :: Maybe Float -> DateTime -> Bool -> Frequency -> Arcsec -> Maybe Float
+> trackingObservingEfficiency wind dt mustang freq srcSize = do
 >     wind' <- wind
 >                                                          -- Equation:
->     let f = trackErr dt wind' freq                       -- from 13
->     let fmin = trErrSigmaNight / (halfPwrBeamWidth freq) -- 13a
->     let fv = trackErrArray wind' freq                    -- from 16
->     let fvmin = epsilonZero / (halfPwrBeamWidth freq)    -- 17b
+>     let f = trackErr dt wind' freq srcSize               -- from 13
+>     let fmin = trErrSigmaNight / (hpbw)                  -- 13a
+>     let fv = trackErrArray wind' freq srcSize            -- from 16
+>     let fvmin = epsilonZero / (hpbw)                     -- 17b
 >     if mustang then return $ renormalize fvmin fv        -- 17a
 >                else return $ renormalize fmin f          -- 12a
 >   where
 >     renormalize fn fd = ((calculateTE fn) / (calculateTE fd))^2
+>     hpbw = halfPwrBeamWidthObserved freq srcSize
 
 Base of exponential Equation 12
 
@@ -271,7 +297,7 @@ set the origin of the weather to one hour before the start of the period,
 ensure that subsequent Scoring calls will use this weather, *then* call 
 this function.
 
-TBF: equation ? in Memo 5.?
+Equation 24a in Memo 5.3
 
 The final boolean value is a comparison of the average of the non-overhead
 quarter factors compared to the adjusted Min. Obs. Efficiency.  Those
@@ -307,67 +333,100 @@ to ease the debugging process.
 > adjustedMinObservingEff minObs = exp(-0.05 + 1.5*log(minObs))
 
 Periods from Elective Sessions should not run if they don't pass
-MOC, unless they are gauranteed, and this is the last period in 
-the elective group.
+MOC, unless they are guaranteed and are the last period in 
+the elective.
 
 > goodElective :: Period -> Scoring (Bool)
-> goodElective p | isNotElective p = return True
->                | isScheduledElective p = return True
->                | isGuaranteedElective p = return True
+> --goodElective p | isScheduledElective p = return True
+> goodElective p | isGuaranteed p = return True
 >                | otherwise = do
->   -- check for gauranteed?
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
 >     Nothing -> return False
 >     Just moc'  -> return moc'
 >   where
->     isNotElective = not . typeElective . session
->     isElective = typeElective . session
->     isScheduledElective p = (isElective p) && (pState p == Scheduled)
->     isGuaranteedElective p = (isElective p) && (guaranteed . session $ p) && (isLastPeriodOfElective p) 
+>     isScheduled p = pState p == Scheduled
+>     isGuaranteed p = (guaranteed . session $ p) && (isLastPeriodOfElective p) 
 >     dt = startTime p
 >     dur = duration p
 >     s = session p
 
 
-The last periods in a group of periods (Electives) needs special 
-consideration: if it's session is NOT gauranteed time, then there's
-a chance even the last periods won't observe.
+The last (pending) period of an Elective requires special
+consideration: if it's session is NOT guaranteed time,
+then there's a chance even the last periods won't observe.
 
 > isLastPeriodOfElective :: Period -> Bool
-> isLastPeriodOfElective p = isLastPeriod p elec
+> isLastPeriodOfElective ep = isPending && (isLastPeriod ep elec)
 >   where 
->     pid = peId p
->     elecs = electives . session $ p
->     periodInElective e = any (==pid) (ePeriodIds e) 
+>     isPending = (pState ep) == Pending
+>     pid = peId ep
+>     elecs = electives . session $ ep
+>     periodInElective e = any (== pid) (ePeriodIds e) 
 >     elecs' = filter periodInElective elecs  
 >     elec = if (length elecs') == 1 then Just . head $ elecs' else Nothing
 
 > isLastPeriod :: Period -> Maybe Electives -> Bool
-> isLastPeriod p me | isNothing me = False
->                   | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
+> isLastPeriod p me
+>     | isNothing me = False
+>     | otherwise    = (peId p) == (last . ePeriodIds . fromJust $ me)
 
-Default Periods of Windows from non-guaranteed Sessions should not
-run if they don't pass MOC.  So we must enforce this matrix:
-
-|             |  *guaranteed*                    | *non-guaranteed* |
-| has default |	The default period is scheduled. | The default period is scheduled if it meets minimum observing conditions |
-| no default | NA                                | As previosuly in the window, the session must compete for a time slot. |
+Default Periods of Windows or Electives from non-guaranteed Sessions should
+not run if they don't pass MOC.  So we must enforce this matrix:
+_____________________________________________________________________________
+|             |  *guaranteed*      | *non-guaranteed*                       |
+_____________________________________________________________________________
+| has default |	The default or last| The default period is scheduled if     |
+| or last     | is scheduled.      | it meets minimum observing conditions. |
+_____________________________________________________________________________
+| no default  | NA                 | As earlier the session must            |
+| or last     |                    | compete for a time slot.               |
+|___________________________________________________________________________|
 
 > goodDefaultPeriod :: Period -> Scoring (Bool)
-> goodDefaultPeriod p | isNotWindowed p = return True
->                     | isScheduledWindow p = return True
->                     | isGuaranteedWindow p = return True
->                     | otherwise = do
+> goodDefaultPeriod p = do
+>     w <- goodDefaultWindowedPeriod p
+>     e <- goodDefaultElectivePeriod p
+>     return $ w && e
+
+> goodDefaultWindowedPeriod :: Period -> Scoring (Bool)
+> goodDefaultWindowedPeriod p | isNotWindowed p = return True
+>                             | isScheduledWindow p = return True
+>                             | isGuaranteedWindow p = return True
+>                             | otherwise = do
 >   moc <- minimumObservingConditions dt dur s
 >   case moc of
->     Nothing -> return False
+>     Nothing    -> return False
 >     Just moc'  -> return moc'
 >   where
 >     isNotWindowed = not . isWindowed
 >     isWindowed = typeWindowed . session
 >     isScheduledWindow p = (isWindowed p) && (pState p == Scheduled)
->     isGuaranteedWindow p = (isWindowed p) && (guaranteed . session $ p) 
+>     isGuaranteedWindow p =
+>         (isWindowed p) &&
+>         (guaranteed . session $ p) &&
+>         (elem (Just . peId $ p) [wPeriodId w | w <- windows . session $ p])
+>     dt = startTime p
+>     dur = duration p
+>     s = session p
+
+> goodDefaultElectivePeriod :: Period -> Scoring (Bool)
+> goodDefaultElectivePeriod p | isNotElective p = return True
+>                             | isScheduledElective p = return True
+>                             | isGuaranteedElective p = return True
+>                             | otherwise = do
+>   moc <- minimumObservingConditions dt dur s
+>   case moc of
+>     Nothing -> return False
+>     Just moc'  -> return moc'
+>   where
+>     isNotElective = not . isElective
+>     isElective = typeElective . session
+>     isScheduledElective p = (isElective p) && (pState p == Scheduled)
+>     isGuaranteedElective p =
+>         (isElective p) &&
+>         (guaranteed . session $ p) &&
+>         (elem (Just . peId $ p) [listToMaybe . reverse . ePeriodIds $ e | e <- electives . session $ p])
 >     dt = startTime p
 >     dur = duration p
 >     s = session p
@@ -558,6 +617,7 @@ Equation 22a
 > observingEfficiencyLimit  :: ScoreFunc
 > hourAngleLimit            :: ScoreFunc
 > zenithAngleLimit          :: ScoreFunc
+> keyholeLimit              :: ScoreFunc
 > trackingErrorLimit        :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
@@ -596,6 +656,13 @@ Equation 24
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
 
+If the keyhole flag is set to false always return true.
+
+> keyholeLimit dt s = 
+>    boolean "keyholeLimit" . Just $ not (((elevation dt s ) >= threshold) && keyhole s)
+>  where
+>    threshold = if usesMustang s then 1.36135 else 1.39626
+
 For scheduling, use the specified tracking errors below.
 Use different constants for MOC.
 
@@ -605,32 +672,36 @@ Use different constants for MOC.
 >     -- w <- weather
 >     -- wind' <- liftIO $ gbt_wind w dt
 >     wind' <- getRealOrForecastedWind dt
->     boolean "trackingErrorLimit" $ calculateTRELimit maxTrackErr maxTrackErrArray wind' dt s 
+>     boolean "trackingErrorLimit" $ calculateTRELimit wind' dt s 
+> {-
 >       where
 >         maxTrackErr      = 0.2  -- Equation 25
 >         maxTrackErrArray = 0.4  -- Equation 26
+> -}
 >     
 
 Equation 13
 
-> trackErr :: DateTime -> Float -> Frequency -> Float
-> trackErr dt w f = rmsTrackingError dt w / (halfPwrBeamWidth f)
+> trackErr :: DateTime -> Float -> Frequency -> Arcsec -> Float
+> trackErr dt w f size = rmsTrackingError dt w / (halfPwrBeamWidthObserved f size)
 
 Equation 16
 
-> trackErrArray :: Float -> Frequency -> Float
-> trackErrArray w f = variableTrackingError w / (halfPwrBeamWidth f)
+> trackErrArray :: Float -> Frequency -> Arcsec -> Float
+> trackErrArray w f size = variableTrackingError w / (halfPwrBeamWidthObserved f size)
 
-> calculateTRELimit :: Float -> Float -> Maybe Float -> DateTime -> Session -> Maybe Bool
-> calculateTRELimit maxTrackErr maxTrackErrArray wind dt s = do
+> calculateTRELimit :: Maybe Float -> DateTime -> Session -> Maybe Bool
+> calculateTRELimit wind dt s = do
 >     wind' <- wind
->     let f  = trackErr dt wind' (frequency s)
->     let fv = trackErrArray wind' (frequency s)
->     let limit = if usesMustang s then if fv <= maxTrackErrArray then True
+>     let f  = trackErr dt wind' (frequency s) (sourceSize s)
+>     let fv = trackErrArray wind' (frequency s) (sourceSize s)
+>     let limit = if usesMustang s then if fv <= threshold then True
 >                                                                 else False
->                                  else if f  <= maxTrackErr then True
+>                                  else if f  <= threshold then True
 >                                                            else False
 >     return limit
+>   where
+>     threshold = trkErrThreshold s
 
 Equation 11
 
@@ -767,41 +838,48 @@ Returns list of receivers that will be up at the given time.
 
 More Scoring Factors not covered in Memo 5.2
 
-Is there an observer on site for this time and session?
+Is there an observer on site for this time and session,
+and not blacked out?
 Important, because on site observers get a boost.
 
 > observerOnSite :: ScoreFunc
-> observerOnSite dt s = factor "observerOnSite" . Just $ if (obsOnSite dt s) then 1.5 else 1.0
-
-> obsOnSite :: DateTime -> Session -> Bool
-> obsOnSite dt s = any (isOnSite dt) (obs s)
->   where 
->     obs s = observers . project $ s
->     isOnSite dt o = any (inDateRange dt) (reservations o) 
+> observerOnSite dt s = factor "observerOnSite" . Just $ if (onSiteObsAvailable dt s) then 1.5 else 1.0
 
 Is there an observer available for this time and session?
-Rules (observer available if): 
-   * if a single observer is on site (ignore their black outs)
-   * if a single sancioned observer is not blacked out
+An observer is available if): 
+   * an observer is on site and is not blacked out
+   * a sanctioned observer is not blacked out
+
+> isObsOnSite :: DateTime -> Observer -> Bool
+> isObsOnSite dt o = any (inDateRange dt) (reservations o) 
+
+> isObsBlackedOut :: DateTime -> Observer -> Bool
+> isObsBlackedOut dt o = any (inDateRange dt) (blackouts o) 
 
 > observerAvailable :: ScoreFunc
 > observerAvailable dt s = boolean "observerAvailable" . Just $ obsAvailable dt s
 
 > obsAvailable :: DateTime -> Session -> Bool
-> obsAvailable dt s = ((obsOnSite dt s) || (remoteObsAvailable dt s)) && (requiredFriendsAvailable dt s)
+> obsAvailable dt s = ((onSiteObsAvailable dt s) ||
+>                      (remoteObsAvailable dt s)) &&
+>                     (requiredFriendsAvailable dt s)
 
 > remoteObsAvailable :: DateTime -> Session -> Bool
 > remoteObsAvailable dt s = not $ allObsBlackedOut dt obs
 >   where
 >     obs = filter sanctioned $ observers . project $ s
 
-Note that this will return True if there are NO observers, but this case
-is handled by previously filtering out observerless sessions.
+> onSiteObsAvailable :: DateTime -> Session -> Bool
+> onSiteObsAvailable dt s = not $ allObsBlackedOut dt obs
+>   where
+>     obs = filter (isObsOnSite dt) $ observers . project $ s
+
+Note that this will return True in the trivial case when there
+are NO observers, but this case is handled by previously filtering
+out observerless sessions using hasObservers.
 
 > allObsBlackedOut :: DateTime -> [Observer] -> Bool
-> allObsBlackedOut dt obs = all (isBlackedOut dt) obs
->   where 
->     isBlackedOut dt obs = any (inDateRange dt) (blackouts obs)
+> allObsBlackedOut dt obs = all (isObsBlackedOut dt) obs
 
 > requiredFriendsAvailable :: DateTime -> Session -> Bool
 > requiredFriendsAvailable dt s = not $ anyObsBlackedOut dt friends
@@ -1275,6 +1353,7 @@ for to generate new periods.
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
+>       , keyholeLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , scienceGrade
@@ -1312,6 +1391,7 @@ vacancy control panel.
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
+>       , keyholeLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , scienceGrade
@@ -1353,6 +1433,7 @@ scores of zero.
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
+>       , keyholeLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , scienceGrade
@@ -1436,9 +1517,9 @@ Basic Utility that populates the scoring tab
 > factorToString :: Factor -> String
 > factorToString factor = (show factor) ++ "\n" 
 
-TBF: this is a cheap way of checking the receiver type.
+Note: this is a cheap way of checking the receiver type.
 We need to be checking for filled arrays (when we have
-more than one) ...
+more than one).  Right now Mustang is the only filled array we have.
 
 > usesMustang :: Session -> Bool
 > usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)

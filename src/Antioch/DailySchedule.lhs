@@ -1,3 +1,25 @@
+Copyright (C) 2011 Associated Universities, Inc. Washington DC, USA.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+
+Correspondence concerning GBT software should be addressed as follows:
+      GBT Operations
+      National Radio Astronomy Observatory
+      P. O. Box 2
+      Green Bank, WV 24944-0002 USA
+
 > module Antioch.DailySchedule where
 
 > import Antioch.DateTime
@@ -39,8 +61,8 @@ artificial boundaries (as we see with calling a strategy multiple times for
 each day, as in simulations).
 
 An additional attempt at avoiding artificial boundaries is the way in which 
-the endpoint for our scheduling is determined: we run the strategy from 7 AM
-EST to 7 AM EST + some overhead, then ignore the periods scheduled into the 
+the endpoint for our scheduling is determined: we run the strategy from 8 AM
+EST to 8 AM EST + some overhead, then ignore the periods scheduled into the 
 overhead until we have a reasonable boundary condition at the end of the 24
 hour scheduling period.
 
@@ -56,7 +78,7 @@ hour scheduling period.
 >     endTime <- liftIO $ getEndTime dt days workStartMinutes
 >     let dur = endTime `diffMinutes` dt 
 >     liftIO . pr quiet $ "Daily Schedule, from " ++ (show . toSqlString $ dt) ++ " to " ++ (show . toSqlString $ endTime) ++ " (UTC)." 
->     let history' = filterHistory history dt (days + 1)
+>     let history' = truncateHistory history dt (days + 1)
 >     liftIO $ pr quiet $ "scheduling around periods: "
 >     liftIO $ prl quiet $ history'
 >     -- schedule with a buffer
