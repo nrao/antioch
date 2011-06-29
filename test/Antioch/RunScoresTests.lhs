@@ -110,7 +110,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   -- and we can, except for pressures and some project info
 >   (sess, factors) <- runFactors 555 dt dur projs True
 >   assertEqual "test_runFactors 0" 1 (length factors)
->   assertEqual "test_runFactors 1" 32 (length . head $ factors)
+>   assertEqual "test_runFactors 1" 33 (length . head $ factors)
 >   assertEqual "test_runFactors 2" sess s
 >   mapM_ (assertFactor factors) exp 
 >   -- now make sure wband doesn't blow this up
@@ -119,7 +119,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   let projs = [makeProject proj 1000 1000 ([sw] ++ pSessions')]
 >   (sess, factors) <- runFactors 556 dt dur projs True
 >   assertEqual "test_runFactors 3" 1 (length factors)
->   assertEqual "test_runFactors 4" 32 (length . head $ factors)
+>   assertEqual "test_runFactors 4" 33 (length . head $ factors)
 >   assertEqual "test_runFactors 5" sess sw
 >       where
 >     lookup' factors name = fromJust . fromJust . lookup name . head $ factors

@@ -617,6 +617,7 @@ Equation 22a
 > observingEfficiencyLimit  :: ScoreFunc
 > hourAngleLimit            :: ScoreFunc
 > zenithAngleLimit          :: ScoreFunc
+> keyholeLimit              :: ScoreFunc
 > trackingErrorLimit        :: ScoreFunc
 > atmosphericStabilityLimit :: ScoreFunc
 
@@ -654,6 +655,13 @@ Equation 24
 
 > zenithAngleLimit dt s =
 >    boolean "zenithAngleLimit" . Just $ zenithAngle dt s < deg2rad 85.0
+
+If the keyhole flag is set to false always return true.
+
+> keyholeLimit dt s = 
+>    boolean "keyholeLimit" . Just $ not (((elevation dt s ) >= threshold) && keyhole s)
+>  where
+>    threshold = if usesMustang s then 1.36135 else 1.39626
 
 For scheduling, use the specified tracking errors below.
 Use different constants for MOC.
@@ -1334,6 +1342,7 @@ for to generate new periods.
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
+>       , keyholeLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , scienceGrade
@@ -1371,6 +1380,7 @@ vacancy control panel.
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
+>       , keyholeLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , scienceGrade
@@ -1412,6 +1422,7 @@ scores of zero.
 >       , observingEfficiencyLimit
 >       , (hourAngleLimit' . fmap snd) effs
 >       , zenithAngleLimit
+>       , keyholeLimit
 >       , trackingErrorLimit
 >       , atmosphericStabilityLimit
 >       , scienceGrade
