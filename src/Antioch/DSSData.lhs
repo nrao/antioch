@@ -27,6 +27,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Types
 > import Antioch.Score
 > import Antioch.Settings                (dssDataDB, dssHost, databasePort)
+> import Antioch.SLALib (slaGaleq)
 > import Antioch.DSSReversion            (putPeriodReversion)
 > import Antioch.Utilities
 > import Control.Monad.Trans             (liftIO)
@@ -296,24 +297,24 @@ scheduling until they are properly defined.
 >     where
 >       query = "SELECT DISTINCT s.id, s.name, s.min_duration, s.max_duration, \
 >                              \ s.time_between, s.frequency, a.total_time, \
->                              \ a.max_semester_time, a.grade, t.horizontal, \
+>                              \ a.max_semester_time, a.grade, sy.name, t.horizontal, \
 >                              \ t.vertical, st.enabled, st.authorized, \
 >                              \ st.backup, st.complete, stype.type, \
 >                              \ otype.type \
 >                              \ FROM sessions AS s, allotment AS a, targets AS t, \
 >                              \ status AS st, session_types AS stype, \
->                              \ observing_types AS otype \
+>                              \ observing_types AS otype, systems as sy\
 >                              \ WHERE a.id = s.allotment_id AND \
 >                              \ t.session_id = s.id AND s.status_id = st.id AND \
 >                              \ s.session_type_id = stype.id AND \
->                              \ s.observing_type_id = otype.id AND \
+>                              \ s.observing_type_id = otype.id AND t.system_id = sy.id AND \
 >                              \ s.frequency IS NOT NULL AND \
 >                              \ t.horizontal IS NOT NULL AND \
 >                              \ t.vertical IS NOT NULL AND \
->                              \ s.project_id = ?;"
+>                              \ s.project_id = ? order by s.id;"
 >       xs = [toSql projId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:oty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:sys:h:v:e:a:b:c:sty:oty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -323,8 +324,8 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime
 >           , sAllottedS  = fromSqlMinutes stime
->           , ra = fromSql h 
->           , dec = fromSql v  
+>           , ra = ra
+>           , dec = dec
 >           , grade = fromSql grade
 >           , receivers = [] 
 >           , periods = [] -- no history in Carl's DB
@@ -336,6 +337,11 @@ scheduling until they are properly defined.
 >           , sType = toSessionType sty
 >           , oType = toObservingType oty
 >         }
+>           where
+>               horz = fromSql h
+>               vert = fromSql v
+>               (ra, dec) = 
+>                   if (fromSql sys) == "Galactic" then (slaGaleq horz vert) else (horz, vert)
 
 > getSessionFromPeriod :: Int -> Connection -> IO Session
 > getSessionFromPeriod periodId cnn = handleSqlError $ do 
@@ -345,17 +351,18 @@ scheduling until they are properly defined.
 >   return s
 >     where
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, \
->              \ s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, \
+>              \ s.frequency, a.total_time, a.max_semester_time, a.grade, sy.name, t.horizontal, \
 >              \ t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type \
 >              \ FROM sessions AS s, allotment AS a, targets AS t, status AS st, \
->              \ session_types AS type, periods AS p \
+>              \ session_types AS type, periods AS p, systems AS sy \
 >              \ WHERE s.id = p.session_id AND \
->              \ a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND \
->              \ s.session_type_id = type.id AND s.frequency IS NOT NULL AND \
->              \ t.horizontal IS NOT NULL AND t.vertical IS NOT NULL AND p.id = ?"
+>              \ a.id = s.allotment_id AND t.session_id = s.id AND t.system_id = sy.id \
+>              \ AND s.status_id = st.id AND s.session_type_id = type.id \
+>              \ AND s.frequency IS NOT NULL AND t.horizontal IS NOT NULL AND \
+>              \ t.vertical IS NOT NULL AND p.id = ? order by s.id"
 >       xs = [toSql periodId]
 >       toSessionDataList = map toSessionData
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:sys:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -365,8 +372,8 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime 
 >           , sAllottedS  = fromSqlMinutes stime 
->           , ra = fromSql h -- assume all J2000? Story: https://www.pivotaltracker.com/story/show/13828493.
->           , dec = fromSql v  
+>           , ra = ra
+>           , dec = dec
 >           , grade = fromSql grade
 >           , receivers = []
 >           , periods = [] -- Note:, no history in Carl's DB
@@ -377,6 +384,11 @@ scheduling until they are properly defined.
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
+>           where
+>               horz = fromSql h
+>               vert = fromSql v
+>               (ra, dec) = 
+>                   if (fromSql sys) == "Galactic" then (slaGaleq horz vert) else (horz, vert)
 
 > getSession :: Int -> Connection -> IO Session
 > getSession sessionId cnn = handleSqlError $ do 
@@ -386,14 +398,14 @@ scheduling until they are properly defined.
 >   return s
 >     where
 >       query = "SELECT s.id, s.name, s.min_duration, s.max_duration, s.time_between, \
->              \ s.frequency, a.total_time, a.max_semester_time, a.grade, t.horizontal, \
+>              \ s.frequency, a.total_time, a.max_semester_time, a.grade, sy.name, t.horizontal, \
 >              \ t.vertical, st.enabled, st.authorized, st.backup, st.complete, type.type \
 >              \ FROM sessions AS s, allotment AS a, targets AS t, status AS st, \
->              \ session_types AS type \
+>              \ session_types AS type, systems As sy\
 >              \ WHERE a.id = s.allotment_id AND t.session_id = s.id AND s.status_id = st.id AND \
->              \ s.session_type_id = type.id AND s.id = ?"
+>              \ s.session_type_id = type.id AND t.system_id = sy.id AND s.id = ? order by s.id"
 >       xs = [toSql sessionId]
->       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:h:v:e:a:b:c:sty:[]) = 
+>       toSessionData (id:name:mind:maxd:between:freq:ttime:stime:grade:sys:h:v:e:a:b:c:sty:[]) = 
 >         defaultSession {
 >             sId = fromSql id 
 >           , sName = fromSql name
@@ -403,8 +415,8 @@ scheduling until they are properly defined.
 >           , timeBetween = fromSqlMinutes' between 0
 >           , sAllottedT  = fromSqlMinutes ttime
 >           , sAllottedS  = fromSqlMinutes stime
->           , ra = fromSql h 
->           , dec = fromSql v  
+>           , ra = ra
+>           , dec = dec
 >           , grade = fromSql grade
 >           , receivers = [] 
 >           , periods = [] -- no history in Carl's DB
@@ -415,6 +427,11 @@ scheduling until they are properly defined.
 >           , sClosed = fromSql c
 >           , sType = toSessionType sty
 >         }
+>           where
+>               horz = fromSql h
+>               vert = fromSql v
+>               (ra, dec) = 
+>                   if (fromSql sys) == "Galactic" then (slaGaleq horz vert) else (horz, vert)
 
 Since the Session data structure does not support Nothing, when we get NULLs
 from the DB (Carl didn't give it to us), then we need some kind of default

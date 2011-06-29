@@ -474,6 +474,7 @@ def populate_project1():
       , elective   = elective
       )
     create_period(sess, fdata)
+
     # finally, create an Open Session that can easily get scheduled
     sess = Sesshun(project = proj)
     fdata = dict(
@@ -499,6 +500,29 @@ def populate_project1():
     sess.status.enabled = True
     sess.status.authorized = True
     sess.status.save()
+
+    #  Galactic Coordinate Session
+    sess = Sesshun(project = proj)
+    fdata = dict(
+        type       = "open"
+      , science    = "spectral line"
+      , name       = "GBT09A-001-Gal"
+      , freq       = 9.3
+      , req_max    =  3.5
+      , req_min    =  3.0
+      , between    = None
+      , PSC_time   = 3.5
+      , total_time = 3.5
+      , sem_time   = 2.0
+      , grade      = 3.0
+      , receiver   = u'X'
+      , coord_mode = "Galactic"
+      , source_v   = -0.11362094
+      , source_h   = 5.861688
+      , source     = "Sag A"
+      , lst_ex     = "2.00-4.00"
+      )
+    create_session(sess, proj, fdata)
 
     # create some observers and friends for this project
     fdata = dict(
