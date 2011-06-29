@@ -1436,10 +1436,10 @@ Equation 16
 >     let lst = hrs2rad . utc2lstHours $ dt 
 >     let sess = findPSessionByName "LP"
 >     let sess'  = sess {ra = lst
->                      , dec = 0.22 -- Close to zenith
+>                      , dec = 0.52 -- Close to zenith
 >                       }
 >     let sess'' = sess {ra = lst
->                      , dec = 0.22 -- Close to zenith
+>                      , dec = 0.52 -- Close to zenith
 >                      , keyhole = True}
 >     let sess''' = sess'' {ra = lst
 >                         , dec = -0.56 -- Outside the keyhole
