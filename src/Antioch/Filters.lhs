@@ -46,15 +46,6 @@ be confused and raise false alarams.
 > typeFixed s = sType s == Fixed
 > typeElective s = sType s == Elective
 
-> filterMaintenancePeriods :: [Period] -> IO ([Period])
-> filterMaintenancePeriods ps = concatMapM nonMaintenance ps
->   where
->     nonMaintenance p = do
->       let state = oType (session p ) == Maintenance
->       case state of
->         False -> return $ [p]
->         True  -> return []
-
 > filterDisabledPeriods :: [Period] -> IO ([Period])
 > filterDisabledPeriods ps = concatMapM enabledPeriod ps
 >   where

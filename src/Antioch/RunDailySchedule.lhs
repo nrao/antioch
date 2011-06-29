@@ -52,7 +52,6 @@ Note, if this is a test:
 
 > runDailySchedule :: StrategyName -> DateTime -> Int -> Bool -> IO ([Period],[Period])
 > runDailySchedule strategyName dt days test = do
->     --w <- getWeather Nothing
 >     w <- if test then getWeatherTest Nothing else getWeather Nothing
 >     rt <- getReceiverTemperatures
 >     -- now get all the input from the DB
@@ -66,10 +65,11 @@ Note, if this is a test:
 >     quietPrint test True current_history
 >     -- remove non-viable periods
 >     scheduling_history <- filterHistory w rs rt current_history ss projs test
+>     quietPrint test False "scheduling history: "
+>     quietPrint test True scheduling_history
 >     schd <- runScoring w rs rt $ do
 >         sf <- genScore dt . scoringSessions dt undefined $ ss
 >         dailySchedule sf strategyName dt days scheduling_history ss test
->     --print . length $ schd
 >     quietPrint test True schd
 >     -- new schedule to DB; only write the new periods
 >     let newPeriods = schd \\ scheduling_history
@@ -78,8 +78,7 @@ Note, if this is a test:
 >     -- only write to DB if we aren't testing
 >     if not test then putPeriods newPeriods else putStrLn ""
 >     -- do we need to remove any failed electives or default periods?
->     periods <- filterMaintenancePeriods $ current_history \\ scheduling_history
->     let periodsToDelete = periods
+>     let periodsToDelete =  current_history \\ scheduling_history
 >     quietPrint test False "moving to deleted: "
 >     quietPrint test True periodsToDelete
 >     -- only write to DB if we aren't testing
@@ -97,40 +96,48 @@ Filter out deprecated periods:
    * blacked-out periods
 
 > filterHistory w rs rt history ss projs quiet = do
+>     -- Shield maintenance periods from filtering
+>     let (history_maintenance, history_nonmaintenance) =
+>             partition (\p -> (oType . session $ p) == Maintenance) history
+>     quietPrint quiet False "history_maintenance"
+>     quietPrint quiet True history_maintenance
+>     quietPrint quiet False "history_nonmaintenance"
+>     quietPrint quiet True history_nonmaintenance
+>
 >     -- Filter out periods from disabled/unauthorized sessions.
->     history'inactive <- filterInactivePeriods history
->     quietPrint quiet False "original history - inactive"
+>     history'inactive <- filterInactivePeriods history_nonmaintenance
+>     quietPrint quiet False "original history - maintenance - inactive"
 >     quietPrint quiet True history'inactive
 >
 >     -- Filter out periods having inadequate representation.
 >     let history'no_observer = filter (flip periodObsAvailable ss) history'inactive
->     quietPrint quiet False "original history - inactive - no observers: "
+>     quietPrint quiet False "original history - maintenance - inactive - no observers: "
 >     quietPrint quiet True history'no_observer
 >
 >     -- Filter out failing elective periods.
->     -- Note: Really, this should be done inside dailySchedule so
->     -- that electives can be covered by simualtions as well,
->     -- but it's so much simpler to do it here, and I doubt
->     -- simulations will need to cover electives.  so there.
 >     history'electives <- filterElectives w rs rt history'no_observer
->     quietPrint quiet False "original history - inactive - no observers - electives: "
+>     quietPrint quiet False "original history - maintenance - inactive - no observers - electives: "
 >     quietPrint quiet True history'electives
 >
 >     -- Filter out default periods of non-guaranteed, windowed
 >     -- sessions if they fail MOC.
 >     history'defaulted <- filterDefaultPeriods w rs rt history'electives
->     quietPrint quiet False "original history - inactive - no observers - electives - default: "
+>     quietPrint quiet False "original history - maintenance - inactive - no observers - electives - default: "
 >     quietPrint quiet True history'defaulted
 >
->     let scheduling_history = history'defaulted
->     quietPrint quiet False "Also scheduling around the above periods."
+>     -- Return maintenance periods into the mix
+>     let scheduling_history =
+>             sort . concat $ [history'defaulted, history_maintenance]
+>     quietPrint quiet False "original history - inactive - no observers - electives - default: "
+>     quietPrint quiet True scheduling_history
 >
 >     return scheduling_history
 
 Determines whether some observer, any observer is available for
 the entire length of the period.  We need the pool of sessions
 because the programmers never could figure out how to tie knots
-across several layers.
+across several layers.  The gist is that the session referenced
+by a period contains an empty period list!
 
 > periodObsAvailable :: Period -> [Session] -> Bool
 > periodObsAvailable p ss =
@@ -147,13 +154,20 @@ Note - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.
 Filter out of the history any elective periods that shouldn't
 stay on the schedule.
+Note: Really, this should be done inside dailySchedule so
+that electives can be covered by simualtions as well,
+but it's so much simpler to do it here, and I doubt
+simulations will need to cover electives.  so there.
 
 > filterElectives :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period] -> IO [Period]
 > filterElectives w rs rt ps = do
 >   geps <- cleanElectives w rs rt [] eps
->   return . sort . (++) neps $ geps
+>   --return . sort . (++) neps $ geps
+>   print ("filterElectives", map peId ps, map peId neps, map peId geps, map peId seps)
+>   return . sort . concat $ [neps, geps, seps]
 >     where
->       (eps, neps) = partition (typeElective . session) ps
+>       (eps', neps) = partition (typeElective . session) ps
+>       (seps, eps) = partition (\p -> (pState p) == Scheduled) eps'
 
 Search a list of elective periods, and whenever a "good" elective is
 found, i.e., one which will be placed on the schedule for the
@@ -178,7 +192,9 @@ meets the MOC.
 >         runScoring w rs rt $ goodElective p
 
 Remove all the periods in the list of elective periods which share the
-same elective as the give period.
+same elective as the give period. Note that the function does not need
+sessions because though not all the knots are tied, the session found
+through the period does have the list electives.
 
 > cleanElectives' :: Period -> [Period] -> [Period]
 > cleanElectives' gep aeps = do
