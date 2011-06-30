@@ -20,7 +20,7 @@
 #       P. O. Box 2
 #       Green Bank, WV 24944-0002 USA
 
-from   SamplerData     import SamplerData
+from   utilities.SamplerData     import SamplerData
 from   mx              import DateTime
 import numpy
 from datetime import datetime, timedelta

@@ -4,12 +4,6 @@
 #python tests/TestWeatherData.py
 #python tests/TestPyrgeometerData.py
 #python tests/TestWeather2DBImport.py
-#python tests/TestCleoDBImport.py
-cd utilities
-runtests
-cd ../gbtWeather
-runtests
-cd ../forecasts
-runtests
+python tests/TestCleoDBImport.py
 
 
