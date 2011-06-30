@@ -23,9 +23,9 @@
 from DBImport        import DBImport
 from os              import listdir, system
 from datetime        import datetime, timedelta
-from emailNotifier   import emailNotifier
+from utilities.emailNotifier   import emailNotifier
 import sys
-import TimeAgent
+from utilities import TimeAgent
 import pg
 import settings
 
