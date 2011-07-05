@@ -20,7 +20,7 @@
 #       P. O. Box 2
 #       Green Bank, WV 24944-0002 USA
 
-from   SamplerData     import SamplerData
+from   utilities.SamplerData     import SamplerData
 from   mx              import DateTime
 import numpy
 from datetime import datetime, timedelta
@@ -32,18 +32,18 @@ Y1 = 1
 Y2 = 2
 MJD2DATETIME = (2400000.5 - 1721424.5)
 
-class WeatherData(SamplerData):
+class PyrgeometerData(SamplerData):
 
     """
-    This class uses SamplerData to retrieve wind speeds from the sampler
+    This class uses SamplerData to retrieve Pyrgeometer values from the sampler
     2 log files and insert them into the DSS weather database.
     """
 
     def __init__(self):
 
-        SamplerData.__init__(self, "Weather-Weather2-weather2")
+        SamplerData.__init__(self, "Pyrgeometer-Pyrgeometer-monitorData")
 
-    def getWindData(self, dates, cols, exprs):
+    def getData(self, dates, cols, exprs):
         """
         Function to get sampler data
            dates: start/stop times year,month,day,hour,minute,second
@@ -55,15 +55,18 @@ class WeatherData(SamplerData):
         """
         return self.GetPlotData(dates,cols,exprs)
 
-    def getWindVelocity(self, dates):
+    def getDownwardIrradiance(self, dates):
         """
-        Returns the wind velocities (m/s), with timestamps, recorded between the
-        given dates.
+        Returns the downward irradiance (W/m^2), with timestamps, 
+        recorded between the given dates.
         """
-        return self.getWindData(dates, (0,1), ('X','Y1'))
+        return self.getData(dates, (0,4), ('X','Y1'))
 
-    def getLastHourMedianWindSpeeds(self, now = None):
-
+    def getLastHourMedianDownwardIrradiance(self, now = None):
+        """
+        Returns median of downward irradiance values over an hour period.
+        """
+        
         if now is None:
             now = datetime.utcnow()
 
@@ -71,15 +74,14 @@ class WeatherData(SamplerData):
         start = now - timedelta(hours=1)
         dates = (start.utctimetuple()[:6], now.utctimetuple()[:6])
 
-        # get mjd, windvel (m/s)
-        mjd, wind = self.getWindVelocity(dates)
+        # get mjd, downward irradianc (W/m^2)
+        mjd, di = self.getDownwardIrradiance(dates)
 
-        return numpy.median(wind)
+        return numpy.median(di)
 
-    def getHourDanaMedianSpeeds(self, dt):
+    def getHourMedianDownwardIrradiance(self, dt):
         """
-        Compute Dana Balser's (@Registered Trademark) 
-        special median of an hours worth of data, centered at the given time.
+        Median of an hours worth of data, centered at the given time.
         """
 
         # dates centered around the given time
@@ -87,28 +89,7 @@ class WeatherData(SamplerData):
         end   = dt + timedelta(minutes = 30)
         dates = (start.utctimetuple()[:6], end.utctimetuple()[:6])
 
-        # get mjd, windvel (m/s)
-        mjd, wind = self.getWindVelocity(dates)
+        # get mjd, downward irradianc (W/m^2)
+        mjd, di = self.getDownwardIrradiance(dates)
 
-        return self.danaMedian(wind)
-
-    def danaMedian(self, data):
-        """
-        Compute Dana Balser's (@Registered Trademark) special median.
-        See DSPN6.1.  Data is assumed to be at 1 Hz.
-        """
-
-        stepSize = 20
-        fraction = 0.1 # get the 90% highest median
-        length = len(data)
-        steps = length / stepSize
-        targetIndex = int(steps - (fraction * steps))
-        stepMedians = []
-        for i in range(steps):
-            start = i*stepSize
-            stop = start + stepSize
-            stepData = data[start:stop]
-            stepMedians.append(numpy.median(stepData))
-        stepMedians.sort()
-        return stepMedians[targetIndex]
-
+        return numpy.median(di)

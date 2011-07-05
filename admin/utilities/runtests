@@ -1,0 +1,6 @@
+#! /bin/bash
+python tests/TestSolarHeating.py
+python tests/TestSamplerData.py
+
+
+
