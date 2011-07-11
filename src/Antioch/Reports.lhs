@@ -364,7 +364,7 @@ for elevation = 90 deg, all receivers.
 >   ms <- mapM (tstr w r) . getRcvrFreqIndices $ r
 >   return $ map (\t -> maybe 0.0 id t) ms
 >     where
->       tstr w r f = totalStringency w (fromIntegral (f `div` 1000)) el r ot
+>       tstr w r f = totalStringency w (fromIntegral (f `div` 1000)) el r ot False
 
 average observing efficiency vs frequency
 

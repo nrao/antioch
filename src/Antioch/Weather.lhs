@@ -61,7 +61,7 @@ for each different table we are pulling values from.
 >   , gbt_irradiance  :: DateTime -> IO (Maybe Float)  -- 
 >   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
 >   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
->   , totalStringency :: Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
+>   , totalStringency :: Frequency -> Radians -> Receiver -> ObservingType -> Bool -> IO (Maybe Float)
 >   , minOpacity      :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
 >   , minTSysPrime    :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
 >   , newWeather      :: Maybe DateTime -> IO Weather
@@ -470,9 +470,9 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >             modifyIORef cache $ M.insert key val
 >             return val
               
-> getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> IO (Maybe Float)
-> getTotalStringency cache conn frequency elevation rcvr obsType = do
->     result <- withCache key cache $ fetchTotalStringency conn freqIdx elevIdx rcvr obsType 
+> getTotalStringency :: IORef (M.Map (Int, Int, String, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> ObservingType -> Bool -> IO (Maybe Float)
+> getTotalStringency cache conn frequency elevation rcvr obsType gas = do
+>     result <- withCache key cache $ fetchTotalStringency conn freqIdx elevIdx rcvr obsType gas
 >     -- print ("getTotalStringency", frequency, freqIdx, elevation, elevIdx, result)
 >     return result
 >   where
@@ -481,18 +481,29 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >     isCont = if obsType == Continuum then 1 else 0
 >     key     = (freqIdx, elevIdx, show rcvr, isCont)
 
-> fetchTotalStringency :: Connection -> Int -> Int -> Receiver -> ObservingType -> IO (Maybe Float)
-> fetchTotalStringency conn freqIdx elevIdx rcvr obsType = do
+> fetchTotalStringency :: Connection -> Int -> Int -> Receiver -> ObservingType -> Bool -> IO (Maybe Float)
+> fetchTotalStringency conn freqIdx elevIdx rcvr obsType gas = do
 >   rcvrId <- getRcvrId conn rcvr
 >   obsTypeId <- getObservingTypeId conn obsType'
->   getFloat conn query [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId]
+>   stringency <- getFloat conn query (xs freqIdx elevIdx rcvrId obsTypeId gas)
+>   if isJust stringency && (isInfinite . fromJust $ stringency) then return $ Just 10000 else return stringency
 >     where
 >       obsType'
 >         | obsType == Continuum    = Continuum
 >         | otherwise               = SpectralLine
->       query   = "SELECT total FROM stringency\n\
->                 \WHERE frequency = ? AND elevation = ?\n\
->                 \AND receiver_id = ? AND observing_type_id = ?"
+>       query  
+>         | rcvr == Rcvr_PAR = "SELECT s.total FROM stringency as s \
+>                              \LEFT OUTER JOIN stringency_parameters as sp \
+>                              \ON sp.stringency_id = s.id \
+>                              \WHERE s.frequency = ? AND s.elevation = ? \
+>                              \AND s.receiver_id = ? AND s.observing_type_id = ? \
+>                              \AND sp.gas = ?"
+>         | otherwise        = "SELECT total FROM stringency \
+>                              \WHERE frequency = ? AND elevation = ? \
+>                              \AND receiver_id = ? AND observing_type_id = ?"
+>       xs freqIdx elevIdx rcvrId obsTypeId gas
+>         | rcvr == Rcvr_PAR = [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId, toSql gas]
+>         | otherwise        = [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId]
 
 > getMinOpacity :: IORef (M.Map (Int, Int) (Maybe Float)) -> Connection -> Frequency -> Radians -> Receiver -> IO (Maybe Float)
 > getMinOpacity cache conn frequency elevation rcvr = do
@@ -655,7 +666,7 @@ Note some of the limitations to this Quick Check property:
 >         return [wind w target
 >             , opacity w target f
 >             , tsys w target f
->             , totalStringency w f el Rcvr1_2 SpectralLine
+>             , totalStringency w f el Rcvr1_2 SpectralLine False
 >             , minTSysPrime w f el Rcvr1_2
 >             ]
 
