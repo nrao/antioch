@@ -87,8 +87,9 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >     -- get the (pids, scores) to update in the DB
 >     let hscores = filter filterHistoricalScore retvals
 >     liftIO $ print ("hscores to write to DB: ", hscores)
+>     now <- liftIO $ getCurrentTime
 >     -- update them
->     liftIO $ mapM updatePeriodScore' hscores
+>     liftIO $ mapM (updatePeriodScore' now) hscores
 >
 >     -- get the (pids, mocs) to update in the DB
 >     -- update them
@@ -102,7 +103,7 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >  where
 >    filterHistoricalScore (_, _, hscore, _) = isJust hscore
 >    filterMOC (_, _, _, moc) = isJust moc
->    updatePeriodScore' (pId, score, hscore, moc) = updatePeriodScore cnn pId (fromJust hscore)
+>    updatePeriodScore' dt (pId, score, hscore, moc) = updatePeriodScore cnn pId dt (fromJust hscore)
 >    updatePeriodMOC' (pId, score, hscore, moc) = updatePeriodMOC cnn pId (fromJust moc)
 
 > scoresListToJSValue :: [(Int, Score, Maybe Score, Maybe Bool)] -> JSValue

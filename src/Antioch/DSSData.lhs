@@ -978,14 +978,14 @@ returns the appropriate primary ID.
 >   where
 >     findState (id, state) = state == periodState
 
-> updatePeriodScore :: Connection -> Int -> Score -> IO ()
-> updatePeriodScore cnn pId score = handleSqlError $ do
+> updatePeriodScore :: Connection -> Int -> DateTime -> Score -> IO ()
+> updatePeriodScore cnn pId dt score = handleSqlError $ do
 >   result <- quickQuery' cnn query xs
 >   commit cnn
 >   return ()
 >     where
->       query = "UPDATE periods SET score = ? WHERE id = ?;"
->       xs = [toSql score, toSql pId]
+>       query = "UPDATE periods SET score = ?, forecast = ? WHERE id = ?;"
+>       xs = [toSql score, toSql . toSqlString $ dt, toSql pId]
 
 > updatePeriodMOC :: Connection -> Int -> Bool -> IO ()
 > updatePeriodMOC cnn pId moc = handleSqlError $ do
