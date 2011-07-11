@@ -67,6 +67,8 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 
 > updatePeriods :: Connection -> StateT Context IO ()
 > updatePeriods cnn = do
+>     liftIO $ print "updatePeriods"
+> 
 >     params <- hParameters
 >     liftIO $ print params
 >
