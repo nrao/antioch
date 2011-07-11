@@ -68,6 +68,73 @@ Now for the the indiviual functions:
 
 ----------------------------------------------------------
 
+Computes:
+   * the current scores for all the given Periods (identified by ID)
+   * the historical score of any Period that needs it, and saves this to the DB
+   * the MOC of any Period that needs it, and saves this to the DB
+
+Example usage: Period Explorer
+
+ Variables:
+    * Weather - weather for NOW.
+    * Scoring Factors - genPeriodScore, genScore
+    * Session Pool - scoringSessions
+
+> runUpdatePeriods :: [Int] -> [Project] -> Bool -> IO ([(Int, Score, Maybe Score, Maybe Bool)])
+> runUpdatePeriods pids projs test = do
+>
+>     -- get all the sessions and periods for these projects
+>     let ss = concatMap sessions projs
+>     let ps = concatMap periods ss
+>
+>     -- target periods
+>     let tps = filter (\p -> (peId p) `elem` pids) ps
+>     -- associated target sessions
+>     let tss = map (\p -> (find (\s -> (sId . session $ p) == (sId s)) ss)) tps
+>     -- target (period, session) sets
+>     let tsps = catMaybes . map raise . zip tps $ tss
+>
+>     -- get the earliest start time for rcvr schedule
+>     let start = minimum $ map startTime tps
+>
+>     -- set up invariant part of the scoring environment
+>     -- NOTE: if it's a test, use same weather and rcvr schedule.
+>     w <- if test then getWeatherTest $ Just start else getWeather Nothing
+>     rs <- if test then return [] else liftIO $ getReceiverSchedule . Just $ start
+>     rt <- liftIO $ getReceiverTemperatures
+>
+>     -- compute current scores
+>     scores <- sequence $ map (\(p, s) -> scorePeriod p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
+>
+>     -- compute historical scores, where needed
+>     hscores <- sequence $ map (\(p, s) -> scoreSession' p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
+>
+>     -- compute MOCs, where needed
+>     mocs <- sequence $ map (\(p, s) -> evalMOC p s ) tsps
+>
+>     -- match the scores backup w/ their period Ids
+>     return $ zip4 (map (peId . fst) tsps) scores hscores mocs 
+
+Scores the session, only if it's needed.
+
+> scoreSession' :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO (Maybe Score)
+> scoreSession' p s ss w rs rt | (pScore p) == (-1.0) = do
+>   hscore <- scoreSession dt dur s ss w rs rt
+>   return $ Just hscore
+>                              | otherwise = return $ Nothing
+>   where
+>     dt = startTime p
+>     dur = duration p
+
+Evaluates the Period's MOC, again, only if needed.
+
+> evalMOC :: Period -> Session -> IO (Maybe Bool)
+> evalMOC p s | isNothing . pMoc $ p = runMOC dt dur s False
+>             | otherwise            = return Nothing 
+>   where
+>     dt = startTime p
+>     dur = duration p
+
 Computes the current scores for the given Periods (identified by ID), to
 be found in the given list of Projects.  
 Example usage: Period Explorer's current score column.
