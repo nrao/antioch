@@ -757,12 +757,12 @@ A single Window can have mutliple date ranges associated with it.
 >     query = "SELECT p.id, p.session_id, p.start, p.duration, p.score, state.abbreviation, \
 >              \ p.forecast, p.backup, pa.scheduled, pa.other_session_weather, pa.other_session_rfi, \
 >              \ pa.other_session_other, pa.lost_time_weather, pa.lost_time_rfi, pa.lost_time_other, \
->              \ pa.not_billable \
+>              \ pa.not_billable, p.moc \
 >              \ FROM periods AS p, period_states AS state, periods_accounting AS pa \
 >              \ WHERE state.id = p.state_id AND state.abbreviation != 'D' AND \
 >              \ pa.id = p.accounting_id AND p.session_id = ?;"
 >     toPeriodList = map toPeriod
->     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:osw:osr:oso:ltw:ltr:lto:nb:[]) =
+>     toPeriod (id:sid:start:durHrs:score:state:forecast:backup:sch:osw:osr:oso:ltw:ltr:lto:nb:moc:[]) =
 >       defaultPeriod { peId = fromSql id
 >                     , startTime = sqlToDateTime start --fromSql start
 >                     , duration = fromSqlMinutes durHrs
@@ -780,6 +780,7 @@ A single Window can have mutliple date ranges associated with it.
 >                        if (deriveState . fromSql $ state) == Pending  && (st /= Windowed) && (st /= Elective)
 >                        then fromSqlMinutes durHrs
 >                        else (fromSqlMinutes sch)  - (fromSqlMinutes osw) - (fromSqlMinutes osr) - (fromSqlMinutes oso) - (fromSqlMinutes ltw) -  (fromSqlMinutes ltr) - (fromSqlMinutes lto) - (fromSqlMinutes nb)
+>                     , pMoc = fromSql moc
 >                     }
 
 Retrieve all the scheduled periods within the given time range
@@ -977,6 +978,24 @@ returns the appropriate primary ID.
 >   where
 >     findState (id, state) = state == periodState
 
+> updatePeriodScore :: Connection -> Int -> Score -> IO ()
+> updatePeriodScore cnn pId score = handleSqlError $ do
+>   result <- quickQuery' cnn query xs
+>   commit cnn
+>   return ()
+>     where
+>       query = "UPDATE periods SET score = ? WHERE id = ?;"
+>       xs = [toSql score, toSql pId]
+
+> updatePeriodMOC :: Connection -> Int -> Bool -> IO ()
+> updatePeriodMOC cnn pId moc = handleSqlError $ do
+>   result <- quickQuery' cnn query xs
+>   commit cnn
+>   return ()
+>     where
+>       query = "UPDATE periods SET moc = ? WHERE id = ?;"
+>       xs = [toSql moc, toSql pId]
+ 
 Utilities
 
 What's the largest (i.e. newest) primary key in the given table?
