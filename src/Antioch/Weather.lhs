@@ -486,7 +486,7 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >   rcvrId <- getRcvrId conn rcvr
 >   obsTypeId <- getObservingTypeId conn obsType'
 >   stringency <- getFloat conn query (xs freqIdx elevIdx rcvrId obsTypeId gas)
->   if isJust stringency && (isInfinite . fromJust $ stringency) then return $ Just 10000 else return stringency
+>   if isJust stringency && ((isInfinite . fromJust $ stringency) || (fromJust stringency) > 10000) then return $ Just 10000 else return stringency
 >     where
 >       obsType'
 >         | obsType == Continuum    = Continuum

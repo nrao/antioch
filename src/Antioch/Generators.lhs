@@ -171,7 +171,7 @@ Only 20 percent of the low freq. sessions are backups
 >            else T.frequency [(25, return True), (75, return False)]
 
 > genGas :: Receiver -> Gen Bool
-> genGas Rcvr_PAR = T.frequency [(20, return True), (80, return False)]
+> genGas Rcvr_PAR = T.frequency [(75, return True), (25, return False)]
 > genGas _        = T.frequency [(0, return True), (100, return False)]
 
 > genMinTP freq = 
