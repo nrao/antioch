@@ -104,7 +104,7 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >    filterHistoricalScore (_, _, hscore, _) = isJust hscore
 >    filterMOC (_, _, _, moc) = isJust moc
 >    updatePeriodScore' dt (pId, score, hscore, moc) = updatePeriodScore cnn pId dt (fromJust hscore)
->    updatePeriodMOC' (pId, score, hscore, moc) = updatePeriodMOC cnn pId (fromJust moc)
+>    updatePeriodMOC' (pId, score, hscore, moc) = updatePeriodMOC cnn pId moc
 
 > scoresListToJSValue :: [(Int, Score, Maybe Score, Maybe Bool)] -> JSValue
 > scoresListToJSValue = JSArray . map scoresToJson
