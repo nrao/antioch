@@ -497,10 +497,10 @@ simply uses fetchAnyOpacityAndTsys to get data from the most recent forecast.
 >                              \ON sp.stringency_id = s.id \
 >                              \WHERE s.frequency = ? AND s.elevation = ? \
 >                              \AND s.receiver_id = ? AND s.observing_type_id = ? \
->                              \AND sp.gas = ?"
+>                              \AND sp.gas = ? LIMIT 1"
 >         | otherwise        = "SELECT total FROM stringency \
 >                              \WHERE frequency = ? AND elevation = ? \
->                              \AND receiver_id = ? AND observing_type_id = ?"
+>                              \AND receiver_id = ? AND observing_type_id = ? LIMIT 1"
 >       xs freqIdx elevIdx rcvrId obsTypeId gas
 >         | rcvr == Rcvr_PAR = [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId, toSql gas]
 >         | otherwise        = [toSql freqIdx, toSql elevIdx, toSql rcvrId, toSql obsTypeId]
