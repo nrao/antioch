@@ -987,7 +987,7 @@ returns the appropriate primary ID.
 >       query = "UPDATE periods SET score = ?, forecast = ? WHERE id = ?;"
 >       xs = [toSql score, toSql . toSqlString $ dt, toSql pId]
 
-> updatePeriodMOC :: Connection -> Int -> Bool -> IO ()
+> updatePeriodMOC :: Connection -> Int -> Maybe Bool -> IO ()
 > updatePeriodMOC cnn pId moc = handleSqlError $ do
 >   result <- quickQuery' cnn query xs
 >   commit cnn

@@ -24,12 +24,13 @@ Correspondence concerning GBT software should be addressed as follows:
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather
-> import Antioch.ReceiverTemperatures
+> import Antioch.Weather (getWeather, getWeatherTest, Weather)
+> import Antioch.ReceiverTemperatures (getReceiverTemperatures, ReceiverTemperatures) 
 > import Antioch.Score
 > import Antioch.Filters
-> import Antioch.HardwareSchedule
+> import Antioch.HardwareSchedule (getReceiverSchedule) 
 > import Antioch.Utilities         -- debug
+> import Antioch.DSSData 
 
 > import Control.Monad.Trans (liftIO)
 > import Data.Maybe
@@ -317,6 +318,44 @@ Returns the period ids of those given periods whose MOCs fail.
 > runPeriodMOC :: Period -> Bool -> IO (Maybe Bool)
 > runPeriodMOC p test = do
 >     runMOC (startTime p) (duration p) (session p) test
+
+Here is the one exception: a function NOT called from src/Server, but
+from the command line.  So, the outer layer will interact w/ the DB,
+so that the inner part we can unit test, like we've done above.
+
+> updateMOCs :: IO ([(Int, Maybe Bool)])
+> updateMOCs = do
+>     print "updateMOCs"
+>     (start, dur) <- getMOCTimeRange
+>     let end = addMinutes dur start
+>     print $ "MOC Range from : " ++ (show . toSqlString $ start) ++ " to: " ++ (show . toSqlString $ end)
+>     -- read from the DB
+>     cnn <- connect
+>     ps <- getDiscretionaryPeriods cnn  start dur
+>     print "Periods: "
+>     printList ps
+>     -- calcualte what we need
+>     mocs <- getCurrentMOCs ps False
+>     print "MOCs: "
+>     print mocs
+>     -- write to the DB
+>     mapM (updatePeriodMOC' cnn) mocs
+>     return mocs
+>   where
+>     updatePeriodMOC' cnn (pid, moc) = updatePeriodMOC cnn pid moc
+
+> getCurrentMOCs :: [Period] -> Bool -> IO ([(Int, Maybe Bool)])
+> getCurrentMOCs ps test = do
+>     mocs <- mapM (flip runPeriodMOC test) ps
+>     return $ zip (map peId ps) (mocs)
+> 
+
+> getMOCTimeRange :: IO ((DateTime, Minutes))
+> getMOCTimeRange = do
+>   now <- getCurrentTime
+>   let start = addMinutes (-30) now
+>   let dur = (2*24*60) + 30 -- 2 days + 30 mins
+>   return (start, dur)
 
 Utilities:
 
