@@ -456,7 +456,9 @@ example in comments.
 >   let ss = sessions $ head ps
 >   let gas1 = goodAtmStb $ head ss
 >   assertEqual "test_goodAtmStb 1" False gas1
->   let gas2 = goodAtmStb $ head (tail ss)
+>   print $ map sName ss
+>   print $ map goodAtmStb ss
+>   let gas2 = goodAtmStb $ ss!!4
 >   assertEqual "test_goodAtmStb 2" True gas2
 
 Test Utilities: 
