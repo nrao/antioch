@@ -111,6 +111,7 @@ such as: P
 >   , xi          :: Float
 >   , elLimit     :: Maybe Radians 
 >   , guaranteed  :: Bool
+>   , goodAtmStb  :: Bool
 >   , sourceSize  :: Arcsec
 >   , trkErrThreshold :: Float
 >   , keyhole     :: Bool
@@ -350,6 +351,7 @@ Simple Functions for Periods:
 >   , xi          = 1.0
 >   , elLimit     = Nothing
 >   , guaranteed  = True 
+>   , goodAtmStb  = False 
 >   , sourceSize  = 0.0
 >   , trkErrThreshold = trkErrThresholdSparseArrays 
 >   , keyhole     = False 

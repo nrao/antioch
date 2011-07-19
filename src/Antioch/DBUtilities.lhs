@@ -35,3 +35,11 @@ You've got a receiver, like Rcvr1_2, but what's it's Primary Key in the DB?
 >   where
 >     query = "SELECT id FROM receivers WHERE name = ?;"
 >     xs = [toSql . show $ rcvr]
+
+> getStrId :: Connection -> Int -> Int -> Int -> Int -> IO Int
+> getStrId cnn rcvrId obsTypeId freq elev = do
+>     result <- quickQuery' cnn query xs
+>     return $ fromSql . head . head $ result
+>   where
+>     query = "SELECT id FROM stringency where receiver_id = ? and observing_type_id = ? and frequency = ? and elevation = ? order by id desc limit 1"
+>     xs = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev]

@@ -447,8 +447,9 @@ _____________________________________________________________________________
 > stringency' w s = do
 >   case rcvr of
 >     Nothing  -> return Nothing
->     (Just r) -> totalStringency w freq elevation' r obsType
+>     (Just r) -> totalStringency w freq elevation' r obsType gas
 >   where
+>     gas  = goodAtmStb s
 >     freq = frequency s
 >     elevation' = pi/2 - zenithAngleAtTransit s
 >     rcvr = getPrimaryReceiver s
@@ -722,10 +723,66 @@ Scale the wind speed by 1.5 to account for weather differences between
 > epsilonZero :: Float
 > epsilonZero = 1.2
 
+> {-
 > atmosphericStabilityLimit dt s = do
 >   w <- weather
 >   di <- liftIO $ irradiance w dt
->   boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+>   let elev = elevation dt s
+>   tatmsys <- atmosphericSystemTemperature dt (frequency s) elev
+>   --if usesMustang s then atmStabGas tatmsys elev else atmStab di
+>   return $ do
+>     tatmsys' <- tatmsys
+>     --atmStabGas tatmsys' elev
+>     let atmStbLim = calculateAtmStabilityLimitMustang (goodAtmStb s) tatmsys' elev
+>     boolean "atmosphericStabilityLimit" $ Just atmStbLim
+>   --atmStabGas (fromJust tatmsys) elev
+>   where
+>      --atmStabGas tatmsys elev = 
+>      atmStab di = 
+>        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+> -}
+
+> atmosphericStabilityLimit dt s = do
+>   w <- weather
+>   di <- liftIO $ irradiance w dt
+>   let freq = frequency s
+>   zod <- zenithOpacity' dt freq
+>   tsys' <- liftIO $ tsys w dt freq
+>   let elev = elevation dt s
+>   if usesMustang s then atmStabGas elev zod tsys' else atmStab di
+>   where
+>      atmStabGas elev zod tsys = boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimitMustang (goodAtmStb s) elev zod tsys
+>      atmStab di = 
+>        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+
+> atmosphericSystemTemperature :: DateTime -> Float -> Float -> Scoring (Maybe Float)
+> atmosphericSystemTemperature dt freq elev = do
+>   w <- weather
+>   tk'  <- liftIO $ tsys w dt freq
+>   zod' <- zenithOpacity' dt freq
+>   let za = pi/2 - elev 
+>   return $ do
+>      tk <- tk'
+>      zod <- zod'
+>      let atmOpacity = atmosphericOpacity zod za
+>      return $ tk * (1 - exp (-atmOpacity))
+
+> {-
+> calculateAtmStabilityLimitMustang :: Bool -> Float -> Float -> Bool
+> calculateAtmStabilityLimitMustang useGas tatmsys elev = 
+>     if useGas then (atmStb < 35) else (atmStb < 50)
+>   where atmStb = tatmsys / (sin elev)
+> -}
+
+> calculateAtmStabilityLimitMustang :: Bool -> Float -> Maybe Float -> Maybe Float -> Maybe Bool
+> calculateAtmStabilityLimitMustang useGas elev zod tsys = do
+>   let za = 0 -- Using low opacity atmospheric system temperature, so we calcuate atmOpacity at zenith.
+>   zod' <- zod
+>   tk <- tsys
+>   let atmOpacity = atmosphericOpacity zod' za
+>   let tsys' = tk * (1 - exp (-atmOpacity))
+>   let atmStb = tsys' / (sin elev)
+>   return $ if useGas then (atmStb < 35) else (atmStb < 50)
 
 > calculateAtmStabilityLimit :: Maybe Float -> ObservingType -> Frequency -> Maybe Bool
 > calculateAtmStabilityLimit di ot f = do

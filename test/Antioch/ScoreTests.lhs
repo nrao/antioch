@@ -137,6 +137,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   , test_scoreVlbiPeriod
 >   , test_elevationLimit
 >   , test_atmosphericStability
+>   , test_calculateAtmStabilityLimitMustang
 >   , test_calculateAtmStabilityLimit
 >   ]
 
@@ -2264,10 +2265,24 @@ Like test_obsAvailbe, but with required friends
 >     assertEqual "test_atmosphericStability_1" 1.0 (eval fs)
 >     fs <- runScoring w [] rt $ atmosphericStabilityLimit dt s2  
 >     assertEqual "test_atmosphericStability_2" 1.0 (eval fs)
+>     fs <- runScoring w [] rt $ atmosphericStabilityLimit dt s3  
+>     assertEqual "test_atmosphericStability_3" 1.0 (eval fs)
 >   where
 >     s1 = defaultSession { dec = 1.5, oType = Continuum } -- always up
 >     dt = fromGregorian 2006 3 1 0 0 0
 >     s2 = defaultSession { dec = 1.5, oType = SpectralLine } -- always up
+>     s3 = defaultSession { ra = 3.99
+>                         , dec = 35.388
+>                         , frequency = 2.0
+>                         , oType = Continuum
+>                         , receivers = [[Rcvr_PAR]] 
+>                         , goodAtmStb = False  }
+
+> test_calculateAtmStabilityLimitMustang = TestCase $ do
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 35 no gas" (Just False) (calculateAtmStabilityLimitMustang False 0.7 (Just 1) (Just 35))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 30 no gas" (Just False) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 30))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 25 gas" (Just True) (calculateAtmStabilityLimitMustang False 0.7 (Just 1) (Just 25))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 20 gas" (Just True) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 20))
 
 > test_calculateAtmStabilityLimit = TestCase $ do
 >     assertEqual "test_calculateAtmStabilityLimit 1" (Just False) (calculateAtmStabilityLimit (Just 330) Continuum 2.1)
