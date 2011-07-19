@@ -563,6 +563,7 @@ For now, just set:
 >     | n == "Source Size"     = s { sourceSize = fromSql pFlt }
 >     | n == "Tr Err Limit"    = s { trkErrThreshold = fromSql pFlt }
 >     | n == "Keyhole"         = s { keyhole = fromSql pBool }
+>     | n == "Irradiance Threshold" = s { irThreshold = fromSql pFlt }
 >     | otherwise              = s  
 >   where
 >     n = fromSql pName
