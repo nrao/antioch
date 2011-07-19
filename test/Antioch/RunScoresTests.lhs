@@ -47,7 +47,39 @@ Correspondence concerning GBT software should be addressed as follows:
 >   , test_runMOC
 >   , test_runMOCfailures
 >   , test_runPeriodMOC
+>   , test_runUpdatePeriods
 >     ]
+
+> test_runUpdatePeriods = TestCase $ do
+>   scores <- runUpdatePeriods pids pTestProjects True
+>   assertEqual "test_runScorePeriods_1" exp scores
+>   scores <- runUpdatePeriods [450] projs True
+>   assertEqual "test_runScorePeriods_2" exp2 scores
+>     where
+>   -- try the periods in PProjects wich mostly score zero
+>   pids = [100, 101, 200, 201] -- from PProjects.lhs
+>   scores' = [0.0, 0.0, 2.126854, 0.0]::[Score]
+>   -- moc's are calculated since these are all currently Nothing
+>   mocs = [Just False, Just False, Just True, Just True]
+>   exp = zipWith3 mkScores pids scores' mocs
+>   mkScores pid score moc = (pid, score, Nothing, moc)
+>   -- now create a period that should score non-zero
+>   -- but init pMoc, and re-init the historical score
+>   s = defaultSession { receivers = [[Rcvr1_2]] 
+>                      , frequency = 1.1
+>                      , dec = 1.5 -- always up
+>                      }
+>   p = defaultPeriod { session = s
+>                     , startTime = fromGregorian 2006 2 1 0 30 0
+>                     , duration = 60
+>                     , peId = 450
+>                     , pScore = -1.0 -- *will* be recalced
+>                     , pMoc = Just True -- won't be recalced
+>                     }
+>   s' = makeSession s [] [p]
+>   proj = defaultProject
+>   projs = [makeProject proj 100 100 [s']]
+>   exp2 = [(450, 0.37846184, Just 0.37846184, Nothing)]
 
 > test_runScorePeriods = TestCase $ do
 >   scores <- runScorePeriods pids pTestProjects True

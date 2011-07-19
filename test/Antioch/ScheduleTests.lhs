@@ -80,7 +80,14 @@ similar test in SimulationTests.
 >           , fromGregorian 2006 2 1 17 15 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
+>     --exp = zipWith10 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs (repeat Nothing)
+>     exp = zipWith4 mkPeriod expSs dts durs scores 
+>     mkPeriod s dt dur score = defaultPeriod {
+>         session = s
+>       , startTime = dt
+>       , duration = dur
+>       , pScore = score
+>     }
 
 > test_schedMinDurationWithHistory = TestCase $ do
 >     w <- getWeatherTest $ Just wdt
@@ -94,7 +101,7 @@ similar test in SimulationTests.
 >     dt  = fromGregorian 2006 2  1  0 0 0
 >     wdt = fromGregorian 2006 1 31 12 0 0
 >     dur = 60 * 24 * 1
->     history = [Period 0 tx (fromGregorian 2006 2 1 2 30 0) 120 0.0 Pending dt False 120]
+>     history = [Period 0 tx (fromGregorian 2006 2 1 2 30 0) 120 0.0 Pending dt False 120 Nothing]
 >     ss' = getOpenPSessions
 >     ss = filter timeLeft ss'
 >     timeLeft s = ((sAllottedT s) - (sCommittedT s)) > (minDuration s)
@@ -110,7 +117,14 @@ similar test in SimulationTests.
 >           , fromGregorian 2006 2 1 17 15 0]
 >     durs = [120, 240, 240, 240, 240]
 >     scores = replicate 5 0.0
->     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
+>     --exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs (repeat Nothing)
+>     exp = zipWith4 mkPeriod expSs dts durs scores
+>     mkPeriod s dt dur score = defaultPeriod {
+>         session = s
+>       , startTime = dt
+>       , duration = dur
+>       , pScore = score
+>     }
 
 > test_schedMinDuration_starvation = TestCase $ do
 >     rt <- getReceiverTemperatures
@@ -127,8 +141,8 @@ similar test in SimulationTests.
 >     history = []
 >     s = (findPSessionByName "CV") {minDuration = 120, sAllottedT = 240}
 >     ss = [s]
->     exp = [Period 0 s (fromGregorian 2006 2 1 3 15 0) 120 0.0 Pending dt False 120
->          , Period 0 s (fromGregorian 2006 2 1 5 15 0) 120 0.0 Pending dt False 120]
+>     exp = [Period 0 s (fromGregorian 2006 2 1 3 15 0) 120 0.0 Pending dt False 120 Nothing
+>          , Period 0 s (fromGregorian 2006 2 1 5 15 0) 120 0.0 Pending dt False 120 Nothing]
 
 > test_best = TestCase $ do
 >       rt <- getReceiverTemperatures
@@ -173,7 +187,7 @@ the deprecated Strategies, not Pack (so who cares)!
 >     assertEqual "ScheduleTests_test_constrain_6" ss (constrain [] (bookedSession:ss))
 >     -- now confuse things by placing identical periods in both the
 >     -- periods list, *and* the session's periods
->     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period 0 s' dt 1 0.0 Pending dt False 1] (almostBookedSession:ss))
+>     assertEqual "ScheduleTests_test_constrain_7" (almostBookedSession:ss) (constrain [Period 0 s' dt 1 0.0 Pending dt False 1 Nothing] (almostBookedSession:ss))
 >     
 >   where
 >     dt  = fromGregorian 2006 2 1 0 0 0
@@ -182,9 +196,9 @@ the deprecated Strategies, not Pack (so who cares)!
 >     cv = findPSessionByName "CV"
 >     ssMinusCV = ss \\ [cv]
 >     s' = defaultSession {sId = 1000, sAllottedT = 2, minDuration = 1}
->     almostBookedSession = s' {periods = [Period 0 s' dt 1 0.0 Pending dt False 1]}
->     bookedSession = s' {periods = [Period 0 s' dt 1 0.0 Pending dt False 1, Period 0 s' dt2 1 0.0 Pending dt False 1]}
->     p1 = Period 0 cv dt (minDuration cv) 0.0 Pending dt False (minDuration cv)
+>     almostBookedSession = s' {periods = [Period 0 s' dt 1 0.0 Pending dt False 1 Nothing]}
+>     bookedSession = s' {periods = [Period 0 s' dt 1 0.0 Pending dt False 1 Nothing, Period 0 s' dt2 1 0.0 Pending dt False 1 Nothing]}
+>     p1 = Period 0 cv dt (minDuration cv) 0.0 Pending dt False (minDuration cv) Nothing
 >     maxNumTPs = (sAllottedT cv) `div` (minDuration cv)
 >     maxTPs' = replicate maxNumTPs p1
 >     dts = [(hr*60) `addMinutes` dt | hr <- [0..maxNumTPs]] --replicate maxNumTPs dt 

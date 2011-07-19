@@ -269,6 +269,7 @@ Tying the knot.
 >   , pForecast   :: DateTime
 >   , pBackup     :: Bool
 >   , pDuration   :: Minutes    -- billed time
+>   , pMoc        :: Maybe Bool
 >   } 
 
 > instance Show Period where
@@ -396,6 +397,7 @@ Defaults for the Tracking Error Threshold parameter:
 >   , pForecast   = fromGregorian' 2008 1 1
 >   , pBackup     = False
 >   , pDuration   = 0
+>   , pMoc        = Nothing
 >   }
 
 > defaultWindow  = Window {
