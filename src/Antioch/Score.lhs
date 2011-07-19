@@ -753,7 +753,7 @@ Scale the wind speed by 1.5 to account for weather differences between
 >   where
 >      atmStabGas elev zod tsys = boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimitMustang (goodAtmStb s) elev zod tsys
 >      atmStab di = 
->        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+>        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (irThreshold s) (oType s) (frequency s) 
 
 > atmosphericSystemTemperature :: DateTime -> Float -> Float -> Scoring (Maybe Float)
 > atmosphericSystemTemperature dt freq elev = do
@@ -784,13 +784,13 @@ Scale the wind speed by 1.5 to account for weather differences between
 >   let atmStb = tsys' / (sin elev)
 >   return $ if useGas then (atmStb < 35) else (atmStb < 50)
 
-> calculateAtmStabilityLimit :: Maybe Float -> ObservingType -> Frequency -> Maybe Bool
-> calculateAtmStabilityLimit di ot f = do
+> calculateAtmStabilityLimit :: Maybe Float -> Float -> ObservingType -> Frequency -> Maybe Bool
+> calculateAtmStabilityLimit di irThreshold ot f = do
 >   di' <- di
 >   return $ if ot == Continuum &&
 >               f > 2.0 &&
->               di' >= 300 then False
->                          else True
+>               di' >= irThreshold then False
+>                                  else True
 
 3.5 Other factors
 

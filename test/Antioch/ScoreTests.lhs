@@ -2285,10 +2285,10 @@ Like test_obsAvailbe, but with required friends
 >     assertEqual "test_calculateAtmStabilityLimitMustang tsys 20 gas" (Just True) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 20))
 
 > test_calculateAtmStabilityLimit = TestCase $ do
->     assertEqual "test_calculateAtmStabilityLimit 1" (Just False) (calculateAtmStabilityLimit (Just 330) Continuum 2.1)
->     assertEqual "test_calculateAtmStabilityLimit 2" (Just False) (calculateAtmStabilityLimit (Just 329) Continuum 2.1)
->     assertEqual "test_calculateAtmStabilityLimit 3" (Just True) (calculateAtmStabilityLimit (Just 330) SpectralLine 2.1)
->     assertEqual "test_calculateAtmStabilityLimit 4" (Just True) (calculateAtmStabilityLimit (Just 330) Continuum 1.9)
+>     assertEqual "test_calculateAtmStabilityLimit 1" (Just False) (calculateAtmStabilityLimit (Just 330) 300 Continuum 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 2" (Just False) (calculateAtmStabilityLimit (Just 329) 300 Continuum 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 3" (Just True) (calculateAtmStabilityLimit (Just 330) 300 SpectralLine 2.1)
+>     assertEqual "test_calculateAtmStabilityLimit 4" (Just True) (calculateAtmStabilityLimit (Just 330) 300 Continuum 1.9)
 
 > test_efficiency_below2GHz = TestCase $ do
 >     w <- getWeatherTest . Just $ wdt 
