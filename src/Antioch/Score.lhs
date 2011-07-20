@@ -723,25 +723,6 @@ Scale the wind speed by 1.5 to account for weather differences between
 > epsilonZero :: Float
 > epsilonZero = 1.2
 
-> {-
-> atmosphericStabilityLimit dt s = do
->   w <- weather
->   di <- liftIO $ irradiance w dt
->   let elev = elevation dt s
->   tatmsys <- atmosphericSystemTemperature dt (frequency s) elev
->   --if usesMustang s then atmStabGas tatmsys elev else atmStab di
->   return $ do
->     tatmsys' <- tatmsys
->     --atmStabGas tatmsys' elev
->     let atmStbLim = calculateAtmStabilityLimitMustang (goodAtmStb s) tatmsys' elev
->     boolean "atmosphericStabilityLimit" $ Just atmStbLim
->   --atmStabGas (fromJust tatmsys) elev
->   where
->      --atmStabGas tatmsys elev = 
->      atmStab di = 
->        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
-> -}
-
 > atmosphericStabilityLimit dt s = do
 >   w <- weather
 >   di <- liftIO $ irradiance w dt
@@ -767,21 +748,14 @@ Scale the wind speed by 1.5 to account for weather differences between
 >      let atmOpacity = atmosphericOpacity zod za
 >      return $ tk * (1 - exp (-atmOpacity))
 
-> {-
-> calculateAtmStabilityLimitMustang :: Bool -> Float -> Float -> Bool
-> calculateAtmStabilityLimitMustang useGas tatmsys elev = 
->     if useGas then (atmStb < 35) else (atmStb < 50)
->   where atmStb = tatmsys / (sin elev)
-> -}
-
 > calculateAtmStabilityLimitMustang :: Bool -> Float -> Maybe Float -> Maybe Float -> Maybe Bool
 > calculateAtmStabilityLimitMustang useGas elev zod tsys = do
 >   let za = 0 -- Using low opacity atmospheric system temperature, so we calcuate atmOpacity at zenith.
 >   zod' <- zod
 >   tk <- tsys
 >   let atmOpacity = atmosphericOpacity zod' za
->   let tsys' = tk * (1 - exp (-atmOpacity))
->   let atmStb = tsys' / (sin elev)
+>   let tsys'      = tk * (1 - exp (-atmOpacity))
+>   let atmStb     = tsys' / (sin elev)
 >   return $ if useGas then (atmStb < 35) else (atmStb < 50)
 
 > calculateAtmStabilityLimit :: Maybe Float -> Float -> ObservingType -> Frequency -> Maybe Bool

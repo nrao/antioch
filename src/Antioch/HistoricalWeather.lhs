@@ -99,9 +99,10 @@ minTsysEffective[jrx,jfreq,jelev] = min(tsysEffective[jrx,jfreq,jelev,])
 stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,jobs,jfreq,jelev])
 
 
-> start = fromGregorian 2008 1 1 0 0 0
-> end   = fromGregorian 2011 1 1 0 0 0
-> --end   = fromGregorian 2008 2 1 0 0 0
+> --start = fromGregorian 2008 1 1 0 0 0
+> --end   = fromGregorian 2011 1 1 0 0 0
+> start = fromGregorian 2006 1 1 0 0 0
+> end   = fromGregorian 2007 1 1 0 0 0
 > hours = (end `diffMinutes` start) `div` 60
 
 > updateHistoricalWeather :: IO ()
