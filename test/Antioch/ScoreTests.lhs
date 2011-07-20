@@ -2279,10 +2279,10 @@ Like test_obsAvailbe, but with required friends
 >                         , goodAtmStb = False  }
 
 > test_calculateAtmStabilityLimitMustang = TestCase $ do
->     assertEqual "test_calculateAtmStabilityLimitMustang tsys 35 no gas" (Just False) (calculateAtmStabilityLimitMustang False 0.7 (Just 1) (Just 35))
->     assertEqual "test_calculateAtmStabilityLimitMustang tsys 30 no gas" (Just False) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 30))
->     assertEqual "test_calculateAtmStabilityLimitMustang tsys 25 gas" (Just True) (calculateAtmStabilityLimitMustang False 0.7 (Just 1) (Just 25))
->     assertEqual "test_calculateAtmStabilityLimitMustang tsys 20 gas" (Just True) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 20))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 51 no gas" (Just False) (calculateAtmStabilityLimitMustang False 0.7 (Just 1) (Just 51))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 50 no gas" (Just True) (calculateAtmStabilityLimitMustang False 0.7 (Just 1) (Just 50))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 36 gas" (Just False) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 36))
+>     assertEqual "test_calculateAtmStabilityLimitMustang tsys 35 gas" (Just True) (calculateAtmStabilityLimitMustang True 0.7 (Just 1) (Just 35))
 
 > test_calculateAtmStabilityLimit = TestCase $ do
 >     assertEqual "test_calculateAtmStabilityLimit 1" (Just False) (calculateAtmStabilityLimit (Just 330) Continuum 2.1)
