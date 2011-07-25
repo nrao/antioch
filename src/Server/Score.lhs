@@ -24,36 +24,28 @@ Correspondence concerning GBT software should be addressed as follows:
 >     scoreHandler
 >   ) where
  
-> --import Control.Monad      (liftM)
 > import Control.Monad.Trans                   (liftIO)
 > import Control.Monad.State.Lazy              (StateT)
-> --import Control.Monad.RWS.Strict
-> --import Data.Record.Label
 > import Data.List                             (find)
 > import Data.Maybe                            (catMaybes)
-> --import Database.HDBC
 > import Database.HDBC.PostgreSQL              (Connection)
 > import Network.Protocol.Http
-> --import Network.Protocol.Uri
 > import Network.Salvia.Handlers.PathRouter    (hParameters)
 > import Network.Salvia.Handlers.PathRouter  (hPrefixRouter) -- trying
 > import Network.Salvia.Handlers.Error         (hError)
 > import Network.Salvia.Handlers.MethodRouter  (hMethodRouter)
 > import Network.Salvia.Httpd
-> --import qualified Data.ByteString.Lazy.Char8 as L
 > import Server.Json
-> --import Server.List
-> --import Antioch.Reports
-> --import Network.Protocol.Uri                  (parseQueryParams)
 > import Text.Printf
 > import Maybe                                 (fromJust)
+> import Database.HDBC
 > import Antioch.DateTime
 > import Antioch.DSSData                       (getProjects)
 > import Antioch.HardwareSchedule              (getReceiverSchedule)
 > import Antioch.Score
 > import Antioch.Filters
 > import Antioch.Types
-> import Antioch.Weather                       (getWeather, Weather)
+> import Antioch.Weather as W
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunScores
 
@@ -74,7 +66,15 @@ http://trent.gb.nrao.edu:9051/score/periods?pids=6957&pids=6931&pids=6939
 >     retvals <- liftIO $ runScorePeriods pids projs False
 >
 >     -- send them back
->     jsonHandler $ makeObj [("scores", scoresListToJSValue retvals)]
+>     jsonHandler $ makeObj [("scores",   scoresListToJSValue retvals)]
+
+> getRecentForecastTime :: IO String
+> getRecentForecastTime = do
+>   cnn <- W.connect
+>   rst <- liftIO $ quickQuery' cnn query []
+>   return . fromSql . head . head $ rst
+>     where
+>       query = "SELECT date FROM import_times ORDER BY date DESC LIMIT 1"
 
 Example URL:
 http://trent.gb.nrao.edu:8002/score/session?duration=195&start=2010-03-16+11%3A45%3A00&sid=666

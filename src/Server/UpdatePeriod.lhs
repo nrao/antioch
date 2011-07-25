@@ -31,7 +31,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > --import Data.Record.Label
 > import Data.List                             (find)
 > import Data.Maybe                            (maybeToList, catMaybes, isJust)
-> --import Database.HDBC
+> import Database.HDBC
 > import Database.HDBC.PostgreSQL              (Connection)
 > import Network.Protocol.Http
 > --import Network.Protocol.Uri
@@ -53,7 +53,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Score
 > import Antioch.Filters
 > import Antioch.Types
-> import Antioch.Weather                       (getWeather, Weather)
+> import Antioch.Weather as W
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunScores
 
@@ -79,32 +79,55 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >     -- get data from DB
 >     projs <- liftIO getProjects
 >
+>     -- what time is it?
+>     now <- liftIO $ getCurrentTime
+>
 >     -- compute the scores 
 >     retvals <- liftIO $ runUpdatePeriods pids projs False
 >     liftIO $ print ("runUpdatePeriods: ", retvals)
 >
+>     -- find the datetime for the forecast which feeds these scores
+>     lit <- liftIO $ getRecentForecastTime
+>     --liftIO . print . showJSON $ lit
+>
+>     -- determine if the forecast is current
+>     let ft = maybe 0 id $ fromSqlString lit
+>     let fresh = (diffMinutes ft now) < (8*60)
+>     --liftIO . print $ fresh
+>
 >     -- write some results back to DB
+>
 >     -- get the (pids, scores) to update in the DB
 >     let hscores = filter filterHistoricalScore retvals
 >     liftIO $ print ("hscores to write to DB: ", hscores)
->     now <- liftIO $ getCurrentTime
+>
 >     -- update them
 >     liftIO $ mapM (updatePeriodScore' now) hscores
 >
 >     -- get the (pids, mocs) to update in the DB
->     -- update them
 >     let mocs = filter filterMOC retvals
 >     liftIO $ print ("mocs to write to DB: ", mocs)
+>
 >     -- update them
 >     liftIO $ mapM updatePeriodMOC' mocs
 >
 >     -- send them back
->     jsonHandler $ makeObj [("scores", scoresListToJSValue retvals)]
+>     jsonHandler $ makeObj [("forecast", showJSON lit)
+>                          , ("fresh",    showJSON fresh)
+>                          , ("scores",   scoresListToJSValue retvals)]
 >  where
 >    filterHistoricalScore (_, _, hscore, _) = isJust hscore
 >    filterMOC (_, _, _, moc) = isJust moc
 >    updatePeriodScore' dt (pId, score, hscore, moc) = updatePeriodScore cnn pId dt (fromJust hscore)
 >    updatePeriodMOC' (pId, score, hscore, moc) = updatePeriodMOC cnn pId moc
+
+> getRecentForecastTime :: IO String
+> getRecentForecastTime = do
+>   cnn <- W.connect
+>   rst <- liftIO $ quickQuery' cnn query []
+>   return . fromSql . head . head $ rst
+>     where
+>       query = "SELECT date FROM import_times ORDER BY date DESC LIMIT 1"
 
 > scoresListToJSValue :: [(Int, Score, Maybe Score, Maybe Bool)] -> JSValue
 > scoresListToJSValue = JSArray . map scoresToJson
