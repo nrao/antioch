@@ -980,6 +980,21 @@ returns the appropriate primary ID.
 >   where
 >     findState (id, state) = state == periodState
 
+> updateCompletedSessions :: [Session] -> IO ()
+> updateCompletedSessions ss =  handleSqlError $ do
+>   cnn <- connect
+>   result <- mapM (updateSessionComplete cnn) ss
+>   return ()
+
+> updateSessionComplete :: Connection -> Session ->  IO ()
+> updateSessionComplete cnn s = handleSqlError $ do
+>   result <- quickQuery' cnn query xs
+>   commit cnn
+>   return ()
+>     where
+>       query = "UPDATE status SET complete = ? FROM sessions as s, status as st WHERE s.status_id = st.id and s.id = ?;"
+>       xs = [toSql . sClosed $ s, toSql . sId $ s]
+
 Utilities
 
 What's the largest (i.e. newest) primary key in the given table?
