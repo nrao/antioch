@@ -29,7 +29,7 @@
 import pg
 import settings
 from datetime import datetime
-from emailNotifier import emailNotifier
+from utilities.emailNotifier import emailNotifier
 
 def hasRecentImport():
 
