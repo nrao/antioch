@@ -66,8 +66,8 @@ in a temporary file.
 >         forM_ allRcvrs' $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
 >         forM_ allElevs' $ \elev -> do
->           getStringency stringencies rcvr freq elev Continuum dt
->           getStringency stringencies rcvr freq elev SpectralLine dt
+>           getStringency stringencies rcvr freq elev Continuum False dt
+>           getStringency stringencies rcvr freq elev SpectralLine False dt
 >     -- it's faster to put all the results in one giant string
 >     lns <- getStringencyLines stringencies hrs cnn
 >     -- then write it to file
@@ -82,18 +82,19 @@ in a temporary file.
 >     forM (getRcvrFreqIndices rcvr) $ \freq -> do
 >     forM allElevs' $ \elev -> do
 >     forM obsTypes' $ \obsType -> do 
->     getStringencyLine strs rcvr freq elev obsType hrs cnn
+>     --forM_ (getGas rcvr) $ \gas -> do
+>     getStringencyLine strs rcvr freq elev obsType False hrs cnn
 
 Given the map of our results, and all the elements of the key to that map,
 returns the string representation of the tuple of keys & value.  This form
 is taken so that it can be easily parsed by another program.  Ex:
 (8,2000,45,1,1.22)\n
 
-> getStringencyLine stringencies rcvr freq elev obstype hrs cnn = do
+> getStringencyLine stringencies rcvr freq elev obstype gas hrs cnn = do
 >     rcvrId <- getRcvrId cnn rcvr
 >     obsTypeId <- getObservingTypeId cnn obstype
->     let str = maybe (0.0 :: Float) (\c -> fromIntegral hrs / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
->     return $ (show (rcvrId, freq, elev, obsTypeId, str)) ++  "\n"
+>     let str = maybe (0.0 :: Float) (\c -> fromIntegral hrs / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype, gas) stringencies
+>     return $ (show (rcvrId, freq, elev, obsTypeId, gas, str)) ++  "\n"
 
 We simply need to create a filename that is semi-unique.  Ex:
 stringency2006-01-01.txt

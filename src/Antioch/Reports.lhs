@@ -41,7 +41,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Control.Monad.Trans (liftIO)
 > import Data.List (intercalate, sort, sortBy, (\\), nub
 >                 , find, unzip4, transpose, partition)
-> import Data.Maybe (catMaybes, fromJust, isJust, maybeToList)
+> import Data.Maybe (catMaybes, fromJust, isJust, isNothing, maybeToList)
 > import Text.Printf
 > import System.Random
 > import System.CPUTime
@@ -364,7 +364,7 @@ for elevation = 90 deg, all receivers.
 >   ms <- mapM (tstr w r) . getRcvrFreqIndices $ r
 >   return $ map (\t -> maybe 0.0 id t) ms
 >     where
->       tstr w r f = totalStringency w (fromIntegral (f `div` 1000)) el r ot
+>       tstr w r f = totalStringency w (fromIntegral (f `div` 1000)) el r ot False
 
 average observing efficiency vs frequency
 
@@ -592,7 +592,7 @@ simMinObsEff - minimum observing efficiency (stand alone plot for now)
 simFreqTime (circles, dt on x-axis)
 
 > plotFreqVsTime         :: StatsPlot
-> plotFreqVsTime fn n _ ps _ =
+> plotFreqVsTime fn n _ ps _ = 
 >     scatterPlot attrs $ zip (map fromIntegral $ historicalTime' ps) (historicalFreq ps)
 >   where
 >     t = "Frequency vs Time" ++ n
@@ -607,16 +607,17 @@ simFreqTime (circles, dt on x-axis)
 > plotFreqVsTimeFixed fn n ss ps tr = plotFreqVsTimeType Fixed fn n ss ps tr
 
 > plotFreqVsTimeWindowed         :: StatsPlot
-> plotFreqVsTimeWindowed fn n ss ps _ =
->     scatterPlots attrs $ [(Just "Default", zip (map fromIntegral $ historicalTime' dwps') (historicalFreq dwps')), (Just "Chosen", zip (map fromIntegral $ historicalTime' cwps') (historicalFreq cwps'))]
+> plotFreqVsTimeWindowed fn n ss ps tr = 
+>     scatterPlots attrs $ [(Just "Default", zip (map fromIntegral $ historicalTime'From dayOne dwps') (historicalFreq dwps')), (Just "Chosen", zip (map fromIntegral $ historicalTime'From dayOne cwps') (historicalFreq cwps'))]
 >   where
 >     t = "Freq vs Time for Windowed" ++ n
 >     x = "Time [days]"
 >     y = "Frequency [GHz]"
 >     attrs = (tail $ scatterAttrs t x y fn) ++ [YRange $ minMax freqRange] 
+>     dayOne = head . sort $ map startTime ps
 >     wps = filter (\p -> isType Windowed (session p)) ps
->     wss = getWindows ss wps
->     dwps = getDefaultPeriods ss wss
+>     -- retrieve from the trace only those default periods that got scheduled
+>     dwps = map (\(w, mcp, dp) -> dp) $ filter (\(w, mcp, dp) -> isNothing mcp) $ getWindowPeriodsFromTrace tr
 >     (dwps', cwps') = partition (\wp -> elem wp dwps) wps
 
 > plotFreqVsTimeType stype fn n _ ps _ =
@@ -1180,7 +1181,7 @@ The standard list of plots (that need no extra input).
 
 > reportScheduleChecks :: [Session] -> [Period] -> [(DateTime, Minutes)] -> [Period] -> String
 > reportScheduleChecks ss ps gaps history =
->     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, sTime, pTime, tb, scores, gs, ras, decs, elevs, rfiFlag, lstEx, trans, wins, winSchd, semStart]
+>     heading ++ "    " ++ intercalate "    " [overlaps, fixed, durs, sTime, pTime, tb, scores, gs, ras, decs, elevs, rfiFlag, lstEx, trans, winSchd, semStart]
 >   where
 >     heading = "Schedule Checks: \n"
 >     error = "WARNING: "
@@ -1201,7 +1202,6 @@ The standard list of plots (that need no extra input).
 >     lstEx = if (disobeyLSTExclusion psOpen) == [] then "LST Exclusion Ranges Honored\n" else error ++ "LST Exclusion Ranges NOT Honored: " ++ (show . disobeyLSTExclusion $ ps) ++ "\n"
 >     trans = if (disobeyTransit psOpen) == [] then "Transit Flags Honored\n" else error ++ "Transit Flags NOT Honored: " ++ (show . disobeyTransit $ psOpen) ++ "\n"
 >     psOpen = filter (\p -> (sType . session $ p) == Open) ps
->     wins = if (allValidSimWindows $ filter typeWindowed ss) then "Simulated Windows Valid\n" else "Simulated Windows NOT Valid!!!\n"
 >     winSchd = if (validScheduledWindows ss ps) then "Scheduled Windows Valid\n" else "Scheduled Windows NOT Valid!!!\n"
 >     semStart = if (disobeySemesterStart ps) == [] then "Periods start in correct semester.\n" else error ++ "Periods do NOT honor project semester: " ++ (show . disobeySemesterStart $ ps) ++ "\n"
 

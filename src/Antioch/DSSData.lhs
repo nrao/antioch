@@ -548,6 +548,7 @@ For now, just set:
    * transit flag
    * xi factor
    * elevation limit 
+   * good atmospheric stability
    * guaranteed flag
    * source size
    * tracking error threshold
@@ -563,7 +564,9 @@ For now, just set:
 >     | n == "Source Size"     = s { sourceSize = fromSql pFlt }
 >     | n == "Tr Err Limit"    = s { trkErrThreshold = fromSql pFlt }
 >     | n == "Keyhole"         = s { keyhole = fromSql pBool }
->     | otherwise              = s  
+>     | n == "Irradiance Threshold"        = s { irThreshold = fromSql pFlt }
+>     | n == "Good Atmospheric Stability"  = s { goodAtmStb = fromSql $ pBool }   
+>     | otherwise                          = s  
 >   where
 >     n = fromSql pName
 >     toTransit t = toTransitType . toTransitBool $ t 

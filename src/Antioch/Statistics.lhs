@@ -424,6 +424,11 @@ What is the number of sessions in each band that are closed?
 >     times = sort . map startTime $ ps
 >     tzero = head times
 
+> historicalTime'From :: DateTime -> [Period] -> [Int]
+> historicalTime'From tzero ps = map (minutesToDays . flip diffMinutes tzero) times
+>   where
+>     times = sort . map startTime $ ps
+
 > minutesToDays  min = min `div` (24 * 60)
 > fractionalDays min = fromIntegral min / (24.0 * 60.0)
 

@@ -57,17 +57,21 @@ Interim solution: comparisons use some type of bigbox weather database.
 > test_stringencyLimit = TestCase $ do
 >   w <- getWeatherTest $ Just dt
 >   rt <- getReceiverTemperatures
->   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 SpectralLine dt
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 SpectralLine False dt
 >   assertEqual "stringencyLimit 1" True sl
->   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 SpectralLine dt
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 SpectralLine False dt
 >   assertEqual "stringencyLimit 2" True sl
->   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 Continuum dt
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 25.0 Continuum False dt
 >   assertEqual "stringencyLimit 3" True sl
 >   -- lower the elevation a little, and watch the stringency fail
->   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 20.0 Continuum dt
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr2_3 2.0 20.0 Continuum False dt
 >   assertEqual "stringencyLimit 3.5" False sl
->   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 Continuum dt
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr40_52 45.0 45.0 Continuum False dt
 >   assertEqual "stringencyLimit 4" True sl
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr_PAR 45.0 45.0 Continuum True dt
+>   assertEqual "stringencyLimit 5" True sl
+>   sl <- runScoring w [] rt $ stringencyLimit Rcvr_PAR 45.0 45.0 Continuum False dt
+>   assertEqual "stringencyLimit 5" True sl
 >     where
 >   dt = fromGregorian 2006 6 1 1 0 0
 >   rcvr = Rcvr2_3
@@ -81,9 +85,9 @@ Interim solution: comparisons use some type of bigbox weather database.
 >   let freq = head $ getRcvrFreqIndices rcvr
 >   let elev = 45
 >   -- get one particular stringency
->   result <- runScoring w [] rts $ getStringency stringencies rcvr freq elev Continuum dt
+>   result <- runScoring w [] rts $ getStringency stringencies rcvr freq elev Continuum False dt
 >   strs <- readIORef stringencies
->   let str = Map.lookup (rcvr, freq, elev, Continuum) strs
+>   let str = Map.lookup (rcvr, freq, elev, Continuum, False) strs
 >   assertEqual "getStringency 1" (Just 1) str 
 
 > test_getMinEffSysTemp = TestCase $ do
