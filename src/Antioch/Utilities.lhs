@@ -259,6 +259,14 @@ Does a period lie within a window?
 >     ws = wStart w
 >     wd = wDuration w
 
+Does a period overlap with a window?
+
+> periodOverlapsWindow :: Period -> Window -> Bool
+> periodOverlapsWindow p w = overlie ws wd p
+>   where
+>     ws = wStart w
+>     wd = wDuration w
+
 Self-test: only works for real-data (see wPeriod)
 
 > validWindow :: Window -> Bool
