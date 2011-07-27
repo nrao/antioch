@@ -1408,14 +1408,14 @@ The standard list of plots (that need no extra input).
 >   where
 >     total = sum [pScore p * fromIntegral (duration p `div` 15) | p <- ps]
 
-> createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> Bool -> Bool -> IO ()
-> createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet test plots = do
+> createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> WeatherType -> Bool -> IO ()
+> createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet wType plots = do
 >     let gaps = findScheduleGaps dt dur schedule
 >     let canceled = getCanceledPeriods trace
 >     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
 >     -- calculate scheduled and observed efficiencies
->     w <- if test then getWeatherTest Nothing else getWeather Nothing
+>     w <- getWeatherType Nothing wType
 >     rt <- getReceiverTemperatures
 >     print "Calculating Period Observed Efficiences: "
 >     begin <- getCurrentTime

@@ -29,7 +29,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Statistics
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    (showList', printList, dt2semester, periodOverlapsWindow)
-> import Antioch.Weather      (Weather(..), getWeather, getWeatherTest)
+> import Antioch.Weather      (Weather(..), getWeatherType, WeatherType)
 > import Antioch.Schedule
 > import Antioch.DailySchedule
 > import Antioch.SimulateObserving
@@ -74,15 +74,17 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
             * all newly scheduled periods added, and canceled ones removed
    * call next iteration with updated parameters - go back to the top!
 
-> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> Bool -> [Period] -> [Trace] -> IO ([Period], [Trace], [Session])
-> simulateDailySchedule rs start packDays simDays history sessions quiet test schedule trace
+> simulateDailySchedule :: ReceiverSchedule -> DateTime -> Int -> Int -> [Period] -> [Session] -> Bool -> WeatherType -> [Period] -> [Trace] -> IO ([Period], [Trace], [Session])
+> simulateDailySchedule rs start packDays simDays history sessions quiet wType schedule trace
 >     | packDays > simDays = return (schedule, trace, sessions)
 >     | otherwise = do 
 >         liftIO $ putStrLn $ "Time: " ++ show (toGregorian' start) ++ " " ++ (show simDays) ++ "\r"
->         -- you MUST create the weather here, so that each iteration of 
+>         -- You MUST create the weather here, so that each iteration of 
 >         -- the simulation has a new date for the weather origin - this
 >         -- makes sure that the forecast types will be correct.
->         w <- if test then getWeatherTest $ Just start else getWeather $ Just start
+>         -- Different weather types can be used here: one for production 
+>         -- and normal sims, one for unit tests, and one for lookaheads
+>         w <- getWeatherType (Just start) wType
 >         rt <- getReceiverTemperatures
 >         -- make sure sessions from future semesters are unauthorized
 >         let sessions'' = authorizeBySemester sessions start
@@ -143,7 +145,7 @@ keep track of canceled periods and reconciled windows.  Here's a brief outline:
 >         let newHistory = updateHistory history newSched condemned 
 
 >         -- move on to the next day in the simulation!
->         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions''' quiet test newHistory $! (trace ++ newTrace)
+>         simulateDailySchedule rs (nextDay start) packDays (simDays - 1) newHistory sessions''' quiet wType newHistory $! (trace ++ newTrace)
 >   where
 >     nextDay dt = addMinutes (1 * 24 * 60) dt 
 

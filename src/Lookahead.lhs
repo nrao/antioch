@@ -54,4 +54,4 @@ Heres the entry point for running a 'lookahead' simulation.  This:
 >   -- Story: https://www.pivotaltracker.com/story/show/14123373
 >   let start = fromJust . fromSqlString $ (beginStr ++ " 00:00:00")
 >   let numDays = read numDaysStr :: Int
->   runLookahead start numDays dir name False False 
+>   runLookahead start numDays dir name True False 

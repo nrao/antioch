@@ -36,7 +36,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Types
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    
-> import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Weather
 > import Antioch.Debug
 > import Control.Monad.Writer
 > import Data.List
@@ -53,7 +53,7 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
    * days: num days of simulation
    * name: name of simulation (a label in report and plots)
    * quiet: sssh!
-   * test: if this is a test, use weatherTestDB
+   * test: if this is a test, use weatherTestDB, otherwise, the lookahead
 
 > runLookahead :: DateTime -> Int -> String -> String -> Bool -> Bool -> IO ()
 > runLookahead dt days outdir name quiet test = do
@@ -70,45 +70,22 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     printList history
 >     let total = sum $ map sAllottedT ss
 >     print ("total session time (mins): ", total, total `div` 60)
->     {-
->     let wss = filter typeWindowed ss
->     let badWinSessions = filter (not . validSimulatedWindows) wss
->     if (length badWinSessions == 0) then print "Simulated Windows OK" else do
->       print "Invalid Windows Detected; exiting simulation."
->       printList badWinSessions
->       printList $ concatMap windows badWinSessions
->       return ()
->     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
->     -}
 >     begin <- getCurrentTime
->     --let quiet = True
->     (results, trace, finalSess) <- simulateDailySchedule rs dt 2 days history ss quiet test [] []
+>     let wType = if test then TestWeather else LookaheadWeather
+>     (results, trace, finalSess) <- simulateDailySchedule rs dt 2 days history ss quiet wType [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
->     createPlotsAndReports name outdir now execTime dt days "Pack" finalSess results trace False rs history quiet test False 
+>     let plots = False -- the plots aren't needed and crash anyways
+>     createPlotsAndReports name outdir now execTime dt days "Pack" finalSess results trace False rs history quiet wType plots 
 >     -- new schedule to DB; only write the new periods
->     -- text reports 
->     --textReports name outdir now execTime dt days "Pack" finalSess results canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet
 >     let newPeriods = results \\ history
-> {-
->     print "history: "
->     printList history
->     print "results: "
->     printList results
-> -}
 >     print "new periods: "
 >     printList newPeriods
 >     putPeriods newPeriods (Just Scheduled)
->     -- but this creates new periods in the pending state; so publish them
->     --movePeriodsToScheduled newPeriods -- TBF: only for those scheduled periods 
 >     -- update sessions - many may now be completed;
->     -- here we aren't being very efficient - updating sessions that
->     -- might have even started off as closed.
->     --let completedSess = filter sClosed finalSess
->     --updateCompletedSessions completedSess
 >     let completedSess = filter (sessionLookaheadCompleted ss) finalSess
 >     print "sessions completed: "
 >     printList $ map sName completedSess
