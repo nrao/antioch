@@ -98,7 +98,8 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
->     createPlotsAndReports name outdir now execTime dt days (show strategyName) finalSess results trace simInput rs history quiet test 
+>     let plots = True -- yes, create the plots
+>     createPlotsAndReports name outdir now execTime dt days (show strategyName) finalSess results trace simInput rs history quiet test plots 
 >     -- new schedule to DB; only write the new periods
 >     --putPeriods $ results \\ history
 

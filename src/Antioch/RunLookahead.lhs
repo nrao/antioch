@@ -81,23 +81,45 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     -}
 >     begin <- getCurrentTime
->     let quiet = True
+>     --let quiet = True
 >     (results, trace, finalSess) <- simulateDailySchedule rs dt 2 days history ss quiet test [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
 >     -- post simulation analysis
->     --let quiet = True -- I don't think you every want this verbose?
->     --createPlotsAndReports name outdir now execTime dt days (show strategyName) finalSess results trace simInput rs history quiet test 
+>     let quiet = True -- I don't think you every want this verbose?
+>     createPlotsAndReports name outdir now execTime dt days "Pack" finalSess results trace False rs history quiet test False 
 >     -- new schedule to DB; only write the new periods
+>     -- text reports 
+>     --textReports name outdir now execTime dt days "Pack" finalSess results canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet
 >     let newPeriods = results \\ history
->     putPeriods newPeriods
+> {-
+>     print "history: "
+>     printList history
+>     print "results: "
+>     printList results
+> -}
+>     print "new periods: "
+>     printList newPeriods
+>     putPeriods newPeriods (Just Scheduled)
+>     -- but this creates new periods in the pending state; so publish them
+>     --movePeriodsToScheduled newPeriods -- TBF: only for those scheduled periods 
 >     -- update sessions - many may now be completed;
 >     -- here we aren't being very efficient - updating sessions that
 >     -- might have even started off as closed.
->     let completedSess = filter sClosed finalSess
+>     --let completedSess = filter sClosed finalSess
+>     --updateCompletedSessions completedSess
+>     let completedSess = filter (sessionLookaheadCompleted ss) finalSess
+>     print "sessions completed: "
+>     printList $ map sName completedSess
 >     updateCompletedSessions completedSess
->     
+
+Did this session go from not completed, to completed?
+
+> sessionLookaheadCompleted :: [Session] -> Session -> Bool
+> sessionLookaheadCompleted originalSess s = (sClosed s) && (not . sClosed $ origS)
+>   where
+>     origS = fromJust $ find (\s' -> (sId s') == (sId s)) originalSess
 
 > fakeWindows :: DateTime -> Int -> IO [Period]
 > fakeWindows dt days = fakeWindows' dt (24 * days)

@@ -671,7 +671,8 @@ get on, it has a high chance of being canceled.
 >     assertEqual "test_periodInWindow' 1" True (periodInWindow' p1 w)
 >     assertEqual "test_periodInWindow' 2" True (periodInWindow' p2 w)
 >     assertEqual "test_periodInWindow' 3" True (periodInWindow' p3 w)
->     assertEqual "test_periodInWindow' 4" False (periodInWindow' p4 w)
+>     assertEqual "test_periodInWindow' 4" True (periodInWindow' p4 w)
+>     assertEqual "test_periodInWindow' 5" False (periodInWindow' p5 w)
 >   where
 >     start = fromGregorian' 2009 2 8
 >     end   = fromGregorian' 2009 2 14
@@ -685,6 +686,8 @@ get on, it has a high chance of being canceled.
 >     p3 = p2 { startTime = pStart3 }
 >     pStart4 = fromGregorian 2009 2 7 23 30 0 
 >     p4 = p3 { startTime = pStart4 }
+>     pStart5 = fromGregorian 2009 2 7 22 30 0 
+>     p5 = p4 { startTime = pStart5 }
 
 Test Utilities:
 
