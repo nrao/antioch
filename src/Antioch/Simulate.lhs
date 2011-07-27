@@ -28,7 +28,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Types
 > import Antioch.Statistics
 > import Antioch.TimeAccounting
-> import Antioch.Utilities    (showList', printList, dt2semester, periodInWindow)
+> import Antioch.Utilities    (showList', printList, dt2semester, periodOverlapsWindow)
 > import Antioch.Weather      (Weather(..), getWeather, getWeatherTest)
 > import Antioch.Schedule
 > import Antioch.DailySchedule
@@ -190,7 +190,7 @@ a quarter before it's window starts.  This can happen because Pack
 ignores the 'overhead' of a session, which for most cases is just a quarter.
 
 > periodInWindow' :: Period -> Window -> Bool
-> periodInWindow' p w = periodInWindow p w'  
+> periodInWindow' p w = periodOverlapsWindow p w'  
 >   where
 >     start = addMinutes (-quarter) $ wStart w
 >     w' = w { wRanges = [(start, wEnd w)] }
