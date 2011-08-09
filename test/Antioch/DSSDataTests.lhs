@@ -68,6 +68,7 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     , test_addLSTExclusion
 >     , test_invertLSTIn
 >     , test_goodAtmStb
+>     , test_4mmTrkErrLimThreshold
 >     ]
 
 > test_getPeriodStates = TestCase $ do
@@ -101,11 +102,11 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 6000 (pAllottedT . head $ ps)  
->     assertEqual "test_getProjects4" 5 (length . sessions . head $ ps)  
+>     assertEqual "test_getProjects4" 6 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
 >     assertEqual "test_getProjects7" 1 (length . nub $ map (pId . project) $ ss) 
->     assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
+>     --assertEqual "test_getProjects9" [] (dropWhile (/=W) (map band ss))    
 >     assertEqual "test_getProjects10" 6 (length allPeriods)    
 >     assertEqual "test_getProjects11" [[Rcvr8_10]] (receivers . head $ ss)
 >     assertEqual "test_getProjects12" True (guaranteed . head $ ss)
@@ -459,6 +460,15 @@ example in comments.
 >   assertEqual "test_goodAtmStb 1" False gas1
 >   let gas2 = goodAtmStb $ ss!!4
 >   assertEqual "test_goodAtmStb 2" True gas2
+
+> test_4mmTrkErrLimThreshold = TestCase $ do
+>   ps <- getProjects
+>   cnn <- connect
+>   let ss = sessions $ head ps
+>   let trkErrLimThreshold = trkErrThreshold $ ss!!5
+>   let trkErrLimThreshold2 = trkErrThreshold $ ss!!4
+>   assertEqual "4mmTrkErrLimiThreshold" 0.4 trkErrLimThreshold
+>   assertEqual "4mmTrkErrLimiThreshold" 0.2 trkErrLimThreshold2
 
 Test Utilities: 
 

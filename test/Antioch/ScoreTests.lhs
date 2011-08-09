@@ -923,6 +923,18 @@ weather (gbt or forecasted) is being used:
 >      s3 = s1 {xi = 1.25}
 >      s4 = s1 {xi = 2.0}
 
+> test_observingEfficiency4mm = TestCase $ do
+>     w <- getWeatherTest . Just $ fromGregorian 2006 1 14 5 0 0
+>     rt <- getReceiverTemperatures
+>     fs <- runScoring w [] rt (observingEfficiency dt s1)
+>     assertEqual "test_observingEfficiency4mm_1" 0.9846228 (eval fs)
+>     where
+>      dt = fromGregorian 2006 10 15 12 0 0
+>      s1 = defaultSession {sAllottedT = 24*60, minDuration = 2*60
+>                         , maxDuration = 6*60, frequency = 70.0
+>                         , dec = 0.71, band = W
+>                         , receivers = [[Rcvr68_92]]}
+
 > test_observingEfficiency2 = TestCase $ do
 >     w <- getWeatherTest . Just $ fromGregorian 2006 10 14 8 0 0
 >     rt <- getReceiverTemperatures
