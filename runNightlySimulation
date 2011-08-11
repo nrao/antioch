@@ -1,0 +1,8 @@
+#!/bin/bash
+
+echo "Running nightly simulation."
+TODAYS_DATE=$(date +%Y-%m-%d)
+mkdir $TODAYS_DATE
+#simulate -s=Pack -o=$TODAYS_DATE -b=2009-02-01 -d=365 -n=test5_3 -t=50/25/25 -m=True -l=3000  > $TODAYS_DATE/simulationOutput.txt
+simulate -s=Pack -o=$TODAYS_DATE -b=2009-02-01 -d=365 -n=$TODAYS_DATE -t=60/10/30 -m=True -l=3000 > $TODAYS_DATE/simulationOutput.txt
+echo "Done running nightly simulation. See reports in $TODAYS_DATE"
