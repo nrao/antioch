@@ -45,8 +45,10 @@ Correspondence concerning GBT software should be addressed as follows:
 > import System.Random
 > import Test.QuickCheck hiding (promote, frequency)
 
+This performs a 'lookahead' simulation.
+
 This high-level function sets up all the input (sessions, periods, etc.), 
-passes it to simulateDailySchedule, and processes the output (ex: reports and plots are generated). 
+from the database specified in settings, passes it to simulateDailySchedule, and writes the results to the database again. 
 
    * outdir: where the plots and text report go
    * dt: starting datetime
@@ -60,11 +62,6 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     now <- getCurrentTime
 >     print $ "Scheduling for " ++ show days ++ " days."
 >     (rs, ss, projs, history') <- dbInput dt
->     -- print . show $ rs
->     -- print . show $ ss
->     -- print . show $ projs
->     -- print . show $ history'
->     --history'' <- fakeWindows dt days
 >     let history = truncateHistory history' dt days 
 >     print "pre-scheduled history: "
 >     printList history
@@ -98,22 +95,6 @@ Did this session go from not completed, to completed?
 >   where
 >     origS = fromJust $ find (\s' -> (sId s') == (sId s)) originalSess
 
-> fakeWindows :: DateTime -> Int -> IO [Period]
-> fakeWindows dt days = fakeWindows' dt (24 * days)
->   where
->     chunk = 10
->     fakeWindows' dt hours
->       | hours < chunk = return []
->       | otherwise     = do
->           r <- randomIO :: IO Float
->           if r < 0.4
->             then do
->               let p = defaultPeriod { startTime = dt, duration = 60 * chunk }
->               ps <- fakeWindows' (chunk `addHours` dt) (hours - chunk)
->               return $ p : ps
->             else
->               fakeWindows' (chunk `addHours` dt) (hours - chunk)
-
 
 Get everything we need from the Database.
 
@@ -125,39 +106,3 @@ Get everything we need from the Database.
 >     let history = sort $ concatMap periods ss
 >     return $ (rs, ss, projs, history)
 
-Get everything we need from the simulated input (Generators).
-Note how genSimTime works: here you specify lots of things about the input.
-
-NOTE: the last parameter to genSimTime is the hours of backlog, which you may want
-to change depending on how long the simulation is running.
-
-NOTE: The old simulations ran for 365 days using 255 projects, which came 
-out to be about 10,000 hours.
-
-> simulatedInput :: DateTime -> Int -> Bool -> Int -> Int -> Int -> Int -> IO (ReceiverSchedule, [Session], [Project], [Period])
-> simulatedInput start days maint open fixed windowed backlog = return $ (rs, ss, projs, history)
->   where
->     rs = [] -- [] means all rcvrs up all the time; [(DateTime, [Receiver])]
->     g = mkStdGen 1
->     -- genSimTime start numDays Maint? (open, fixed, windowed) backlogHrs
->     pc2frac i = (fromIntegral i) / 100.0
->     projs = generate 0 g $ genSimTime start days maint (pc2frac open, pc2frac fixed, pc2frac windowed) backlog 
->     --projs = generate 0 g $ genSimTime start days True (0.6, 0.1, 0.3) 0 
->     --projs = generate 0 g $ genSimTime start days False (1.0, 0.0, 0.0) 2000 
->     --projs = generate 0 g $ genProjects 255
->     ss' = concatMap sessions projs
->     -- assign Id's to the open sessions
->     maxId = maximum $ map sId ss'
->     ss  = (filter (not . typeOpen) ss') ++ (zipWith (\s n -> s {sId = n}) (filter typeOpen ss') [(maxId+1)..])
->     history = sort $ concatMap periods ss 
-
-> runDailyEfficiencies :: DateTime -> Int -> Bool -> IO [()]
-> runDailyEfficiencies dt days simInput = do
->     w <- getWeather Nothing
->     let g = mkStdGen 1
->     -- make number of projects independent of number of days
->     let projs = generate 0 g $ genProjects 255
->     let ss = concatMap sessions projs
->     print $ "Session Hours: " ++ (show $ sum (map sAllottedS ss))
->     print "Plotting daily mean efficiencies:"
->     plotEfficienciesByTime w ss dt days
