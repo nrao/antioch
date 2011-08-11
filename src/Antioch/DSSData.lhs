@@ -837,13 +837,15 @@ and the associated receviers using the session's receivers.
 
 > putPeriod :: Connection -> Maybe StateType -> Period -> IO ()
 > putPeriod cnn mstate p = do
->   -- make an entry in the periods_accounting table
->   accounting_id <- putPeriodAccounting cnn (duration p)
+>   -- what state to use?
+>   let state = if isNothing mstate then pState p else fromJust mstate
+>   -- make an entry in the periods_accounting table; if this period is 
+>   -- to be in the Scheduled state, init the time accounting's scheduled field
+>   let scheduled = if state == Scheduled then duration p else 0
+>   accounting_id <- putPeriodAccounting cnn scheduled
 >   -- is this period part of a window?
 >   let window = find (periodInWindow p) (windows . session $ p)
 >   let winId = if (isNothing window) then SqlNull else (toSql . wId . fromJust $ window)
->   -- what state to use?
->   let state = if isNothing mstate then pState p else fromJust mstate
 >   -- what should the id be for the state?
 >   periodStates <- getPeriodStates cnn
 >   let stateId = getPeriodStateId state periodStates
@@ -925,7 +927,8 @@ Creates a new entry in the periods_receivers table.
 > minutesToSqlHrs :: Minutes -> SqlValue
 > minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
 
-Creates a new period accounting row, and returns this new rows ID
+Creates a new period accounting row, and returns this new rows ID.  Note that the
+scheduled field's value is passed in.
 
 > putPeriodAccounting :: Connection -> Int -> IO Int
 > putPeriodAccounting cnn scheduled = do
@@ -933,9 +936,8 @@ Creates a new period accounting row, and returns this new rows ID
 >   result <- quickQuery' cnn queryId xsId
 >   return $ toId result
 >     where
->       -- now, scheduled gets set when period is published
->       xs = [] --[minutesToSqlHrs scheduled]
->       query = "INSERT INTO periods_accounting (scheduled, not_billable, other_session_weather, other_session_rfi, other_session_other, lost_time_weather, lost_time_rfi, lost_time_other, short_notice, description) VALUES (0.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0, '')"
+>       xs = [minutesToSqlHrs scheduled]
+>       query = "INSERT INTO periods_accounting (scheduled, not_billable, other_session_weather, other_session_rfi, other_session_other, lost_time_weather, lost_time_rfi, lost_time_other, short_notice, description) VALUES (?, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0, '')"
 >       xsId = []
 >       queryId = "SELECT MAX(id) FROM periods_accounting"
 >       toId [[x]] = fromSql x
@@ -993,11 +995,12 @@ returns the appropriate primary ID.
 
 > updateSessionComplete :: Connection -> Session ->  IO ()
 > updateSessionComplete cnn s = handleSqlError $ do
+>   print ("updating complete flag for session: ", sName s, sId s)
 >   result <- quickQuery' cnn query xs
 >   commit cnn
 >   return ()
 >     where
->       query = "UPDATE status SET complete = ? FROM sessions as s, status as st WHERE s.status_id = st.id and s.id = ?;"
+>       query = "UPDATE status SET complete = ? FROM sessions WHERE sessions.status_id = status.id and sessions.id = ?;"
 >       xs = [toSql . sClosed $ s, toSql . sId $ s]
 
 Utilities
