@@ -101,21 +101,19 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 
 
 > start = fromGregorian 2008 1 1 0 0 0
-> end   = fromGregorian 2009 1 1 0 0 0
+> end   = fromGregorian 2011 1 1 0 0 0
 > hours = (end `diffMinutes` start) `div` 60
 
 > updateHistoricalWeather :: IO ()
 > updateHistoricalWeather = do
 >     print $ "Updating historical weather in " ++ (show weatherDB)
 >     cnn <- handleSqlError $ connectDB
->     {-
->     print "truncating table t_sys"
->     truncateTable cnn "t_sys"
+>     --print "truncating table t_sys"
+>     --truncateTable cnn "t_sys"
 >     fillTsysTable cnn start end
->     showTsysTable
->     -}
->     print "truncating table stringency"
->     truncateTable cnn "stringency"
+>     --showTsysTable
+>     --print "truncating table stringency"
+>     --truncateTable cnn "stringency"
 >     print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
 >     fillStringencyTable cnn
 >     --showStringencyTable
@@ -247,7 +245,6 @@ Note: frequency passed in should be in GHz
 > -- stringencyLimit :: Receiver -> Frequency -> Float -> ObservingType -> Bool -> DateTime -> RWST ScoringEnv [Trace] () IO Bool
 > stringencyLimit rcvr freq elev obstype gas dt = do
 >     fs <- observingEfficiencyLimit dt s'
->     --liftIO $ print ("observingEfficiency", fs)
 >     if eval fs >= 1
 >       then do
 >         fs2 <- trackingErrorLimit dt s'
@@ -331,7 +328,6 @@ Force the user to check their results.
 > showTsysTable = do
 >   plotMinEffSysTemp
 >   system "xv minEffSysTemp.png &"
-
 
 > showStringencyTable = do
 >     plotStringencyVsFrequencySpecLine

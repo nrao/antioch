@@ -269,18 +269,18 @@ equation is simply 740.0 / f
 
 > trackingEfficiency dt s = do
 >   wind <- getRealOrForecastedWind dt
->   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesFilledArray s) (frequency s) (sourceSize s)
+>   factor "trackingEfficiency" $ trackingObservingEfficiency wind dt (usesMustang s) (frequency s) (sourceSize s)
 
 > trackingObservingEfficiency :: Maybe Float -> DateTime -> Bool -> Frequency -> Arcsec -> Maybe Float
-> trackingObservingEfficiency wind dt filledArray freq srcSize = do
+> trackingObservingEfficiency wind dt mustang freq srcSize = do
 >     wind' <- wind
 >                                                          -- Equation:
 >     let f = trackErr dt wind' freq srcSize               -- from 13
 >     let fmin = trErrSigmaNight / (hpbw)                  -- 13a
 >     let fv = trackErrArray wind' freq srcSize            -- from 16
 >     let fvmin = epsilonZero / (hpbw)                     -- 17b
->     if filledArray then return $ renormalize fvmin fv    -- 17a
->                    else return $ renormalize fmin f      -- 12a
+>     if mustang then return $ renormalize fvmin fv        -- 17a
+>                else return $ renormalize fmin f          -- 12a
 >   where
 >     renormalize fn fd = ((calculateTE fn) / (calculateTE fd))^2
 >     hpbw = halfPwrBeamWidthObserved freq srcSize
