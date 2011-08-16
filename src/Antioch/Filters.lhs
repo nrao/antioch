@@ -59,8 +59,7 @@ be confused and raise false alarams.
 > filterInactivePeriods ps = concatMapM activePeriod ps
 >   where
 >     activePeriod p = do
->       let state = ((enabled $ session p) && (authorized $ session p)) ||
->                   (pState p /= Pending)
+>       let state = (enabled $ session p) && (authorized $ session p)
 >       case state of
 >         True -> return $ [p]
 >         False -> return []
