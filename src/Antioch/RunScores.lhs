@@ -136,67 +136,6 @@ Evaluates the Period's MOC, again, only if needed.
 >     dt = startTime p
 >     dur = duration p
 
-Computes the current scores for the given Periods (identified by ID), to
-be found in the given list of Projects.  
-Example usage: Period Explorer's current score column.
-
-Variables:
-   * Weather - weather for NOW.
-   * Scoring Factors - genPeriodScore
-   * Session Pool - scoringSessions
-
-> runScorePeriods :: [Int] -> [Project] -> Bool -> IO ([(Int, Score)])
-> runScorePeriods pids projs test = do
->
->     -- get all the sessions and periods for these projects
->     let ss = concatMap sessions projs
->     let ps = concatMap periods ss
->
->     -- target periods
->     let tps = filter (\p -> (peId p) `elem` pids) ps
->     -- associated target sessions
->     let tss = map (\p -> (find (\s -> (sId . session $ p) == (sId s)) ss)) tps
->     -- target (period, session) sets
->     let tsps = catMaybes . map raise . zip tps $ tss
->
->     -- get the earliest start time for rcvr schedule
->     let start = minimum $ map startTime tps
->
->     -- set up invariant part of the scoring environment
->     -- NOTE: if it's a test, use same weather and rcvr schedule.
->     w <- if test then getWeatherTest $ Just start else getWeather Nothing
->     rs <- if test then return [] else liftIO $ getReceiverSchedule . Just $ start
->     rt <- liftIO $ getReceiverTemperatures
-
->     -- compute scores
->     scores <- sequence $ map (\(p, s) -> scorePeriod p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
->     -- match the scores backup w/ their period Ids
->     return $ zip (map (peId . fst) tsps) scores
-
-Computes the current score of a given Session (identified by ID) over
-the given time range, to be found in the given list of Projects.  Example usage: a period is changed or newly created (?) via the Nell server.
-
-Variables:
-   * Weather - weather for NOW.
-   * Scoring Factors -genScore (makes me think this is only used when creating a new period, since the period doesn't exist yet).
-   * Scoring Pool - scoringSessions
-   
-> runScoreSession :: Int -> DateTime -> Minutes -> [Project] -> Bool -> IO (Score)
-> runScoreSession id dt dur projs test = do
->     -- get the session to score
->     let ss = concatMap sessions projs
->     let s = head $ filter (\s -> (sId s) == id) ss
->
->     -- setup the scoring enviornment (check for unit tests)
->     w <- if test then liftIO $ getWeatherTest $ Just dt else getWeather Nothing
->     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
->     rt <- liftIO $ getReceiverTemperatures
->     let sss = scoringSessions dt undefined ss
->
->     -- score!
->     score <- liftIO $ scoreSession dt dur s sss w rs rt
->     return score
-
 
 Computes the current score factors (and other, subfactors) of a given Session (identified by ID) over the given time range, to be found in the given list of Projects.  
 Note how this uses the same variables as runScorePeriods, but the inputs and outputs are different.
@@ -300,20 +239,6 @@ Variables:
 >   return moc
 >     where
 >   hrEarlyDt = addMinutes (-60) dt
-
-Returns the period ids of those given periods whose MOCs fail.
-
-> runMOCfailures :: [Period] -> Bool -> IO [Int]
-> runMOCfailures ps test = do
->   w <- if test then getWeatherTest $ Just (hrEarlyDt dt) else getWeather Nothing
->   rs <- if test then return [] else getReceiverSchedule $ Just dt
->   rt <- getReceiverTemperatures
->   res <- mapM (\(st, dur, s) -> runScoring w rs rt $ minimumObservingConditions st dur s) args
->   return . map fst . filter (\(i, b) -> not $ maybe True id b) . zip [peId p | p <-ps] $ res
->     where
->       dt = startTime . head $ ps
->       hrEarlyDt dt = addMinutes (-60) dt
->       args = [(startTime p, pDuration p, session p) | p <- ps]
 
 > runPeriodMOC :: Period -> Bool -> IO (Maybe Bool)
 > runPeriodMOC p test = do

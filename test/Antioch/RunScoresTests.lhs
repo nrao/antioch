@@ -40,12 +40,9 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Control.Monad.Trans  (lift, liftIO)
 
 > tests = TestList [ 
->     test_runScorePeriods
->   , test_runScoreSession
->   , test_runFactors
+>    test_runFactors
 >   , test_runNominees
 >   , test_runMOC
->   , test_runMOCfailures
 >   , test_runPeriodMOC
 >   , test_runUpdatePeriods
 >     ]
@@ -80,56 +77,6 @@ Correspondence concerning GBT software should be addressed as follows:
 >   proj = defaultProject
 >   projs = [makeProject proj 100 100 [s']]
 >   exp2 = [(450, 0.37846184, Just 0.37846184, Nothing)]
-
-> test_runScorePeriods = TestCase $ do
->   scores <- runScorePeriods pids pTestProjects True
->   assertEqual "test_runScorePeriods_1" exp scores
->   scores <- runScorePeriods [450] projs True
->   assertEqual "test_runScorePeriods_2" exp2 scores
->     where
->   -- try the periods in PProjects wich mostly score zero
->   pids = [100, 101, 200, 201] -- from PProjects.lhs
->   scores' = [0.0, 0.0, 2.126854, 0.0]::[Score]
->   exp = zip pids scores'
->   -- now create a period that should score non-zero
->   s = defaultSession { receivers = [[Rcvr1_2]] 
->                      , frequency = 1.1
->                      , dec = 1.5 -- always up
->                      }
->   p = defaultPeriod { session = s
->                     , startTime = fromGregorian 2006 2 1 0 30 0
->                     , duration = 60
->                     , peId = 450
->                     }
->   s' = makeSession s [] [p]
->   proj = defaultProject
->   projs = [makeProject proj 100 100 [s']]
->   exp2 = [(450, 0.37846184)]
-
-
-> test_runScoreSession = TestCase $ do
->   score <- runScoreSession sessId startDt 60 projs True
->   assertEqual "test_runScoreSession_1" exp score
->   --score <- runScoreSession id dt dur pTestProjects True
->   --assertEqual "test_runScoreSession_1" exp score
->     where
->   --id = 13
->   --dt = fromGregorian 2006 9 23 12 0 0
->   --dur = 30
->   -- setup session like ScoreTests.test_scorePeriod
->   scores = [1.6321898,1.6325561,1.6327252,1.632888]
->   exp = ((sum $ tail scores) / 4.0)::Score 
->   startDt = fromGregorian 2006 2 1 0 30 0
->   s = head pSessions'
->   sessId = sId s
->   p = defaultPeriod { session = s
->                       , startTime = startDt
->                       , duration = 60
->                       , pForecast = startDt
->                       }
->   s' = makeSession s [] [p]
->   proj = defaultProject
->   projs = [makeProject proj 0 0 pSessions']
 
 > test_runFactors = TestCase $ do
 >   let dt = fromGregorian 2006 9 2 14 30 0
@@ -235,12 +182,6 @@ Correspondence concerning GBT software should be addressed as follows:
 >     names = ["GB","CV","LP","TX","VA","WV","AS"]
 >     sess = concatMap (\name -> findPSessionsByName name) names
 >     expected = [False,True,True,True,True,False,True]
-
-> test_runMOCfailures = TestCase $ do
->   res <- runMOCfailures ps True
->   assertEqual "test_runMOCfailures" [6,7] res
->     where
->       ps = map (\(p, i) -> p {peId = i}) . zip getPPeriods $ [1..]
 
 > test_runPeriodMOC = TestCase $ do
 >     mocs <- mapM runPeriodMOC' periods
