@@ -65,6 +65,9 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     , test_toDateRangesFromInfo_1
 >     , test_toDateRangesFromInfo_2
 >     , test_toDateRangesFromInfo_3
+>     , test_addLSTExclusion
+>     , test_invertLSTIn
+>     , test_goodAtmStb
 >     ]
 
 > test_getPeriodStates = TestCase $ do
@@ -98,7 +101,6 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     assertEqual "test_getProjects5" 1 (pId . head $ ps)  
 >     assertEqual "test_getProjects2" "GBT09A-001" (pName . head $ ps)  
 >     assertEqual "test_getProjects3" 6000 (pAllottedT . head $ ps)  
->     --assertEqual "test_getProjects3" 0 (pAllottedT . head $ ps)  
 >     assertEqual "test_getProjects4" 5 (length . sessions . head $ ps)  
 >     assertEqual "test_getProjects8" Open (sType . head $ ss)
 >     assertEqual "test_getProjects6" 1 (pId . project . head $ ss)    
@@ -110,8 +112,6 @@ Story: https://www.pivotaltracker.com/story/show/14123905
 >     let elecS = head $ filter (\s -> (sName s) == "GBT09A-001-04") ss
 >     assertEqual "test_getProjects13" 1 (length . electives $ elecS)
 >     assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives $ elecS)
->     --assertEqual "test_getProjects13" 1 (length . electives . last $ ss')
->     --assertEqual "test_getProjects14" [5,6] (ePeriodIds . head . electives . last $ ss')
 >     assertEqual "test_getProjects15" 1 (length . observers . head $ ps)
 >     assertEqual "test_getProjects16" 1 (length . requiredFriends . head $ ps)
 >     assertEqual "test_getProjects17" obsBlackouts ( blackouts . head . observers . head $ ps) 
@@ -439,7 +439,7 @@ example in comments.
 >       lstEx'  = [(1.0, 3.0)]
 >       lstEx'' = [(1.0, 3.0), (6.0, 9.0)]
 
-> test_invertIn = TestCase $ do
+> test_invertLSTIn = TestCase $ do
 >   let result = invertIn [] []
 >   assertEqual "test_invertIn empty" [] result
 >   let result = invertIn [2] [6]
@@ -450,6 +450,15 @@ example in comments.
 >   assertEqual "test_invertIn multiple" [(0.0,6.0),(10.0,12.0),(14.0,24.0)] result
 >   let result = invertIn [0, 12] [10, 24]
 >   assertEqual "test_invertIn multiple" [(10.0,12.0)] result
+
+> test_goodAtmStb = TestCase $ do
+>   ps <- getProjects
+>   cnn <- connect
+>   let ss = sessions $ head ps
+>   let gas1 = goodAtmStb $ ss!!0
+>   assertEqual "test_goodAtmStb 1" False gas1
+>   let gas2 = goodAtmStb $ ss!!4
+>   assertEqual "test_goodAtmStb 2" True gas2
 
 Test Utilities: 
 

@@ -134,7 +134,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >                  , gbt_wind w target
 >                  , opacity w target f
 >                  , tsys w target f
->                  , totalStringency w f el Rcvr1_2 SpectralLine 
+>                  , totalStringency w f el Rcvr1_2 SpectralLine False
 >                  , minTSysPrime w f el Rcvr1_2
 >             ]
 

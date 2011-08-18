@@ -170,6 +170,10 @@ Only 20 percent of the low freq. sessions are backups
 >   if freq > 10.0 then T.frequency [(100, return False)] 
 >            else T.frequency [(25, return True), (75, return False)]
 
+> genGas :: Receiver -> Gen Bool
+> genGas Rcvr_PAR = T.frequency [(75, return True), (25, return False)]
+> genGas _        = T.frequency [(0, return True), (100, return False)]
+
 > genMinTP freq = 
 >   if freq > 18.0 then choose (3*60, 3*60)
 >            else choose (3*60, 6*60)
@@ -228,6 +232,7 @@ to 0, unique ids are produced in GenerateSchedule where needed.
 >     lstEx      <- genLSTExclusion
 >     lowRFIFlag <- genLowRFIFlag
 >     trans      <- genTransitFlag bk
+>     gas        <- genGas r
 >     return $ defaultSession {
 >                  project        = project
 >                , band           = b
@@ -252,6 +257,7 @@ to 0, unique ids are produced in GenerateSchedule where needed.
 >                -- default Open Session have one period, want none here
 >                , periods        = []
 >                , trkErrThreshold = getTrkErrThreshold r
+>                , goodAtmStb     = gas
 >                }
 
 > getTrkErrThreshold :: Receiver -> Float

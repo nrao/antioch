@@ -2,6 +2,7 @@
 -- PostgreSQL database dump
 --
 
+SET statement_timeout = 0;
 SET client_encoding = 'LATIN1';
 SET standard_conforming_strings = off;
 SET check_function_bodies = false;
@@ -15,6 +16,7 @@ SET search_path = public, pg_catalog;
 --
 
 CREATE SEQUENCE forecast_by_frequency_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -47,6 +49,7 @@ ALTER TABLE public.forecast_by_frequency OWNER TO dss;
 --
 
 CREATE SEQUENCE forecast_times_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -72,6 +75,7 @@ ALTER TABLE public.forecast_times OWNER TO dss;
 --
 
 CREATE SEQUENCE forecast_types_type_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -97,6 +101,7 @@ ALTER TABLE public.forecast_types OWNER TO dss;
 --
 
 CREATE SEQUENCE forecasts_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -128,6 +133,7 @@ ALTER TABLE public.forecasts OWNER TO dss;
 --
 
 CREATE SEQUENCE weather_station2_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -155,6 +161,7 @@ ALTER TABLE public.gbt_weather OWNER TO dss;
 --
 
 CREATE SEQUENCE hour_angle_boundaries_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -182,6 +189,7 @@ ALTER TABLE public.hour_angle_boundaries OWNER TO dss;
 --
 
 CREATE SEQUENCE import_times_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -203,10 +211,94 @@ CREATE TABLE import_times (
 ALTER TABLE public.import_times OWNER TO dss;
 
 --
+-- Name: observing_types; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE TABLE observing_types (
+    id integer NOT NULL,
+    type character varying(64) NOT NULL
+);
+
+
+ALTER TABLE public.observing_types OWNER TO dss;
+
+--
+-- Name: observing_types_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE observing_types_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.observing_types_id_seq OWNER TO dss;
+
+--
+-- Name: observing_types_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: dss
+--
+
+ALTER SEQUENCE observing_types_id_seq OWNED BY observing_types.id;
+
+
+--
+-- Name: receivers; Type: TABLE; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE TABLE receivers (
+    id integer NOT NULL,
+    name character varying(32) NOT NULL,
+    abbreviation character varying(32) NOT NULL,
+    freq_low double precision NOT NULL,
+    freq_hi double precision NOT NULL
+);
+
+
+ALTER TABLE public.receivers OWNER TO dss;
+
+--
+-- Name: receivers_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE receivers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.receivers_id_seq OWNER TO dss;
+
+--
+-- Name: receivers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: dss
+--
+
+ALTER SEQUENCE receivers_id_seq OWNED BY receivers.id;
+
+
+--
+-- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+--
+
+CREATE SEQUENCE sessions_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MAXVALUE
+    NO MINVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.sessions_id_seq OWNER TO dss;
+
+--
 -- Name: stringency_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
 --
 
 CREATE SEQUENCE stringency_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -223,7 +315,9 @@ CREATE TABLE stringency (
     id integer DEFAULT nextval('stringency_id_seq'::regclass) NOT NULL,
     frequency integer NOT NULL,
     elevation integer NOT NULL,
-    total double precision NOT NULL
+    total double precision NOT NULL,
+    observing_type_id integer,
+    receiver_id integer
 );
 
 
@@ -234,6 +328,7 @@ ALTER TABLE public.stringency OWNER TO dss;
 --
 
 CREATE SEQUENCE t_sys_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -251,7 +346,9 @@ CREATE TABLE t_sys (
     frequency integer NOT NULL,
     elevation integer NOT NULL,
     total double precision NOT NULL,
-    prime double precision NOT NULL
+    prime double precision NOT NULL,
+    observing_type_id integer,
+    receiver_id integer
 );
 
 
@@ -262,6 +359,7 @@ ALTER TABLE public.t_sys OWNER TO dss;
 --
 
 CREATE SEQUENCE weather_dates_id_seq
+    START WITH 1
     INCREMENT BY 1
     NO MAXVALUE
     NO MINVALUE
@@ -283,18 +381,18 @@ CREATE TABLE weather_dates (
 ALTER TABLE public.weather_dates OWNER TO dss;
 
 --
--- Name: sessions_id_seq; Type: SEQUENCE; Schema: public; Owner: dss
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dss
 --
 
-CREATE SEQUENCE sessions_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MAXVALUE
-    NO MINVALUE
-    CACHE 1;
+ALTER TABLE observing_types ALTER COLUMN id SET DEFAULT nextval('observing_types_id_seq'::regclass);
 
 
-ALTER TABLE public.sessions_id_seq OWNER TO dss;
+--
+-- Name: id; Type: DEFAULT; Schema: public; Owner: dss
+--
+
+ALTER TABLE receivers ALTER COLUMN id SET DEFAULT nextval('receivers_id_seq'::regclass);
+
 
 --
 -- Name: forecast_by_frequency_forecast_id_key; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
@@ -345,11 +443,27 @@ ALTER TABLE ONLY forecasts
 
 
 --
+-- Name: observing_types_pkey; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
+--
+
+ALTER TABLE ONLY observing_types
+    ADD CONSTRAINT observing_types_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: receivers_pkey; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
+--
+
+ALTER TABLE ONLY receivers
+    ADD CONSTRAINT receivers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: stringency_frequency_key; Type: CONSTRAINT; Schema: public; Owner: dss; Tablespace: 
 --
 
 ALTER TABLE ONLY stringency
-    ADD CONSTRAINT stringency_frequency_key UNIQUE (frequency, elevation);
+    ADD CONSTRAINT stringency_frequency_key UNIQUE (frequency, elevation, receiver_id, observing_type_id);
 
 
 --
@@ -365,7 +479,7 @@ ALTER TABLE ONLY stringency
 --
 
 ALTER TABLE ONLY t_sys
-    ADD CONSTRAINT t_sys_frequency_key UNIQUE (frequency, elevation);
+    ADD CONSTRAINT t_sys_frequency_key UNIQUE (frequency, elevation, receiver_id);
 
 
 --
@@ -422,6 +536,34 @@ CREATE INDEX forecasts_date_and_type ON forecasts USING btree (weather_date_id, 
 
 
 --
+-- Name: stringency_observing_type_id; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE INDEX stringency_observing_type_id ON stringency USING btree (observing_type_id);
+
+
+--
+-- Name: stringency_receiver_id; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE INDEX stringency_receiver_id ON t_sys USING btree (receiver_id);
+
+
+--
+-- Name: t_sys_observing_type_id; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE INDEX t_sys_observing_type_id ON t_sys USING btree (observing_type_id);
+
+
+--
+-- Name: t_sys_receiver_id; Type: INDEX; Schema: public; Owner: dss; Tablespace: 
+--
+
+CREATE INDEX t_sys_receiver_id ON t_sys USING btree (receiver_id);
+
+
+--
 -- Name: forecast_by_frequency_forecast_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
 --
 
@@ -443,6 +585,38 @@ ALTER TABLE ONLY forecasts
 
 ALTER TABLE ONLY forecasts
     ADD CONSTRAINT forecasts_weather_date_id_fkey FOREIGN KEY (weather_date_id) REFERENCES weather_dates(id);
+
+
+--
+-- Name: stringency_observing_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
+ALTER TABLE ONLY stringency
+    ADD CONSTRAINT stringency_observing_type_id_fkey FOREIGN KEY (observing_type_id) REFERENCES observing_types(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: stringency_receiver_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
+ALTER TABLE ONLY stringency
+    ADD CONSTRAINT stringency_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES receivers(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: t_sys_observing_type_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
+ALTER TABLE ONLY t_sys
+    ADD CONSTRAINT t_sys_observing_type_id_fkey FOREIGN KEY (observing_type_id) REFERENCES observing_types(id) DEFERRABLE INITIALLY DEFERRED;
+
+
+--
+-- Name: t_sys_receiver_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: dss
+--
+
+ALTER TABLE ONLY t_sys
+    ADD CONSTRAINT t_sys_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES receivers(id) DEFERRABLE INITIALLY DEFERRED;
 
 
 --

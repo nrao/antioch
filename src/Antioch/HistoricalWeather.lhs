@@ -34,6 +34,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >    , stringencyLimit
 >    , tSysPrimeNow'
 >    , getMinEffSysTemp
+>    , getGas
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
@@ -67,14 +68,15 @@ constant value is from spillover (3 K) and the comsic microwave background
 doing this in the code.  Anyhow, this will be updated in DSPN5.3).
 
 Calculate Stringency.  Loop over the receivers, observing type, frequency,
-and elevation.  For observing type we just have continuum and line.
+and elevation.  For observing type we just have continuum and spectral line.
 For frequency, we should use the frequencies from the weather forecast
 database that reside within the receiver boundaries as specified by the
 reciever calibration data.  For elevation, we should use 5,6,...,89,90.
 For each hour, over n full years we calculate the tracking error limit,
-the observing efficiency limit, and the stability limit and determine the
-number of times the condition below is met.  The stringency is just the
-total number of hours divided by the number of hours the condition is met.
+the observing efficiency limit, and the atmospheric stability limit and 
+determine the number of times the condition below is met.  The stringency 
+is just the total number of hours divided by the number of hours the 
+condition is met.
 
 for jrx in range(len(rx)):                           # loop over receiver
     for jobs in range(len(obs)):                     # loop over observing type (cont=0/line=1)
@@ -97,6 +99,8 @@ minTsysEffective[jrx,jfreq,jelev] = min(tsysEffective[jrx,jfreq,jelev,])
 stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,jobs,jfreq,jelev])
 
 
+> --start = fromGregorian 2008 1 1 0 0 0
+> --end   = fromGregorian 2011 1 1 0 0 0
 > start = fromGregorian 2006 1 1 0 0 0
 > end   = fromGregorian 2007 1 1 0 0 0
 > hours = (end `diffMinutes` start) `div` 60
@@ -105,19 +109,23 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 > updateHistoricalWeather = do
 >     print $ "Updating historical weather in " ++ (show weatherDB)
 >     cnn <- handleSqlError $ connectDB
+>     {-
 >     print "truncating table t_sys"
 >     truncateTable cnn "t_sys"
 >     fillTsysTable cnn start end
 >     showTsysTable
 >     print "truncating table stringency"
 >     truncateTable cnn "stringency"
+>     -}
 >     print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
 >     fillStringencyTable cnn
->     showStringencyTable
+>     --showStringencyTable
 >     disconnect cnn
 
 This method takes start & end datetimes as input so that we can 
 also call it from the parrallel version ('genhists').
+
+> allRcvrs' = [Rcvr_PAR]
 
 > fillTsysTable cnn startDt endDt = do
 >     print $ "filling table t_sys " ++ (toSqlString startDt) ++ " to " ++ (toSqlString endDt)
@@ -127,12 +135,12 @@ also call it from the parrallel version ('genhists').
 >       -- dt offset insures that we get forecasts & not real wind
 >       w <- getWeather . Just $ (addMinutes (-60) dt)
 >       runScoring w [] rts $ do
->         forM_ allRcvrs $ \rcvr -> do
+>         forM_ allRcvrs' $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
 >         forM_ [5 .. 90 :: Int] $ \elev -> do
 >           getMinEffSysTemp efficiencies rcvr freq elev dt
 >     effs <- readIORef efficiencies
->     forM_ allRcvrs $ \rcvr -> do
+>     forM_ allRcvrs' $ \rcvr -> do
 >     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
 >     forM_ [5 .. 90] $ \elev -> do
 >       putMinEffSysTemp cnn effs rcvr freq elev
@@ -141,20 +149,26 @@ also call it from the parrallel version ('genhists').
 >     stringencies <- newIORef Map.empty
 >     rts <- getReceiverTemperatures
 >     forM_ getWeatherDates $ \dt -> do
+>       liftIO $ print (toSqlString dt)
 >       -- dt offset insures that we get forecasts & not real wind
 >       w <- getWeather . Just $ (addMinutes (-60) dt)
 >       runScoring w [] rts $ do
->         forM_ allRcvrs $ \rcvr -> do
+>         forM_ allRcvrs' $ \rcvr -> do
 >         forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>         forM_ (getGas rcvr) $ \gas -> do
 >         forM_ [5 .. 90 :: Int] $ \elev -> do
->           getStringency stringencies rcvr freq elev Continuum dt
->           getStringency stringencies rcvr freq elev SpectralLine dt
+>           getStringency stringencies rcvr freq elev Continuum gas dt
+>           --getStringency stringencies rcvr freq elev SpectralLine gas dt
+>             
 >     strs <- readIORef stringencies
->     forM_ allRcvrs $ \rcvr -> do
+>     forM_ allRcvrs' $ \rcvr -> do
 >     forM_ (getRcvrFreqIndices rcvr) $ \freq -> do
+>     forM_ (getGas rcvr) $ \gas -> do
 >     forM_ [5 .. 90] $ \elev -> do
->       putStringency cnn strs rcvr freq elev Continuum
->       putStringency cnn strs rcvr freq elev SpectralLine
+>       putStringency cnn strs rcvr freq elev Continuum gas
+>       --putStringency cnn strs rcvr freq elev SpectralLine gas
+
+> getGas rcvr = if rcvr == Rcvr_PAR then [True, False] else [False]
 
 > getWeatherDates = [(h * 60) `addMinutes` start | h <- [0 .. (hours - 1)]]
 
@@ -210,10 +224,10 @@ table.
 
 --------------Stringency--------------------
 
-> getStringency stringencies rcvr freq elev obstype dt = do
->     new <- stringencyLimit rcvr f e obstype dt
->     --liftIO $ print ("getStringency: ", (toSqlString dt), rcvr, freq, elev, obstype, new)
->     liftIO $ alter stringencies (updateStr new) (rcvr, freq, elev, obstype)
+> getStringency stringencies rcvr freq elev obstype gas dt = do
+>     new <- stringencyLimit rcvr f e obstype gas dt
+>     --liftIO $ print ("getStringency: ", (toSqlString dt), rcvr, freq, elev, obstype, new, gas)
+>     liftIO $ alter stringencies (updateStr new) (rcvr, freq, elev, obstype, gas)
 >   where
 >     f = fromIntegral freq
 >     e = fromIntegral elev
@@ -231,8 +245,8 @@ create a dummy session to score.
 
 Note: frequency passed in should be in GHz
 
-> -- stringencyLimit :: Receiver -> Frequency -> Float -> ObservingType -> DateTime -> RWST ScoringEnv [Trace] () IO Bool
-> stringencyLimit rcvr freq elev obstype dt = do
+> -- stringencyLimit :: Receiver -> Frequency -> Float -> ObservingType -> Bool -> DateTime -> RWST ScoringEnv [Trace] () IO Bool
+> stringencyLimit rcvr freq elev obstype gas dt = do
 >     fs <- observingEfficiencyLimit dt s
 >     if eval fs >= 1
 >       then do
@@ -244,18 +258,19 @@ Note: frequency passed in should be in GHz
 >           else return False
 >       else return False
 >   where
->     s = mkDummySession rcvr freq elev obstype dt
+>     s = mkDummySession rcvr freq elev obstype gas dt
 
 Creates a dummy session with the given attributes.  The only tricky part
 is giving the session a target that will be at the specified elevation
 at the specified time.
 
-> mkDummySession rcvr freq elev obstype dt = defaultSession {
+> mkDummySession rcvr freq elev obstype gas dt = defaultSession {
 >       frequency = freq / 1000.0  -- MHz -> GHz
 >     , receivers = [[rcvr]]
 >     , ra = ra'
 >     , dec = dec'
 >     , oType = obstype
+>     , goodAtmStb = gas
 >     }
 >   where
 >     ra'  = hrs2rad . utc2lstHours $ dt
@@ -266,7 +281,7 @@ at the specified time.
 > connectDB = connectPostgreSQL $ "host=" ++ weatherHost ++ " dbname=" ++ weatherDB ++ " port=" ++ databasePort ++ " user=dss"
 
 > truncateTable cnn table = do
->     run cnn ("TRUNCATE TABLE " ++ table) []
+>     run cnn ("TRUNCATE TABLE " ++ table ++ " CASCADE") []
 >     commit cnn
 
 > putMinEffSysTemp cnn efficiencies rcvr freq elev = do
@@ -278,8 +293,20 @@ at the specified time.
 >     query = "INSERT INTO t_sys (receiver_id, frequency, elevation, total, prime) VALUES (?, ?, ?, ?, 0.0)"
 >     xs rcvrId tsys = [toSql rcvrId, toSql freq, toSql elev, toSql tsys]
 
-> putStringency cnn stringencies rcvr freq elev obstype = do
->     let str = maybe (0.0 :: Float) (\c -> fromIntegral hours / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype) stringencies
+> putStringency cnn stringencies rcvr freq elev obstype gas = do
+>     if rcvr == Rcvr_PAR then putStringencyMustang cnn stringencies rcvr freq elev obstype gas 
+>                         else putStringency' cnn stringencies rcvr freq elev obstype gas
+
+When we are inserting stringencies for Mustang we need to also populate the stringency_parameters table.
+
+> putStringencyMustang cnn stringencies rcvr freq elev obstype gas = do
+>     rcvrId <- getRcvrId cnn rcvr
+>     obsTypeId <- getObservingTypeId cnn obstype
+>     putStringency' cnn stringencies rcvr freq elev obstype gas
+>     putStringencyParameters cnn rcvrId obsTypeId freq elev gas
+
+> putStringency' cnn stringencies rcvr freq elev obstype gas = do
+>     let str = maybe (0.0 :: Float) (\c -> fromIntegral hours / fromIntegral c) $ Map.lookup (rcvr, freq, elev, obstype, gas) stringencies
 >     rcvrId <- getRcvrId cnn rcvr
 >     obsTypeId <- getObservingTypeId cnn obstype
 >     run cnn query (xs rcvrId obsTypeId str)
@@ -288,6 +315,13 @@ at the specified time.
 >     query = "INSERT INTO stringency (receiver_id, observing_type_id, frequency, elevation, total) VALUES (?, ?, ?, ?, ?)"
 >     xs rcvrId obsTypeId str = [toSql rcvrId, toSql obsTypeId, toSql freq, toSql elev, toSql str]
 
+> putStringencyParameters cnn rcvrId obsTypeId freq elev gas = do
+>     strId <- getStrId cnn rcvrId obsTypeId freq elev 
+>     run cnn query (xs strId gas)
+>     commit cnn
+>   where
+>     query = "INSERT INTO stringency_parameters VALUES (default, ?, ?)"
+>     xs strId gas = [toSql strId, toSql gas]
 
 ------------Plots------------------------------------
 

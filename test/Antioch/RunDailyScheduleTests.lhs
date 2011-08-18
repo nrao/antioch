@@ -29,13 +29,15 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Schedule
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunDailySchedule
+> import Antioch.Utilities
 > import Antioch.PProjects
 > import Test.HUnit
 
 > tests = TestList [
->      test_periodObsAvailable
+>      test_runDailySchedule
+>    , test_filterHistory
+>    , test_periodObsAvailable
 >    , test_filterElectives
->    , test_runDailySchedule
 >     ]
 
 > test_runDailySchedule = TestCase $ do
@@ -69,6 +71,40 @@ Correspondence concerning GBT software should be addressed as follows:
 >       exp2 = [defaultPeriod { session = s2
 >                             , startTime = fromGregorian 2006 1 1 0 0 0
 >                             , duration = 240 } ]
+
+> test_filterHistory = TestCase $ do
+>   w <- getWeatherTest . Just $ fromGregorian 2006 10 13 0 0 0
+>   let rs = []
+>   rt <- getReceiverTemperatures
+>   --results <- filterElectives w rs rt ps
+>   results <- filterHistory w rs rt ps [gb] pTestProjects True
+>   print "results:"
+>   printList results
+>   let res = [peId p | p <- results]
+>   assertEqual "test_filterHistory_1" [3, 8] res
+>     where
+>       -- just some sugar to help make a period
+>       mkPeriod s dt dur st id = defaultPeriod { session    = s
+>                                               , startTime  = dt
+>                                               , duration   = dur
+>                                               , pState     = st
+>                                               , peId       = id
+>                                               }
+>       -- create electives
+>       e1 = Electives 1 False [3, 5, 7] 
+>       e2 = Electives 2 False [1, 2, 4] 
+>       gb = head $ findPSessionsByName "GB"
+>       es = gb { sType = Elective, electives = [e1, e2], sId = 100, guaranteed = False }
+>       -- create periods
+>       ps = [
+>          mkPeriod es (fromGregorian 2006 10 13 17 0 0) 60 Scheduled 3
+>        , mkPeriod es (fromGregorian 2006 10 14 13 0 0) 60 Pending 5
+>        , mkPeriod es (fromGregorian 2006 10 15 14 0 0) 60 Pending 7
+>        , mkPeriod es (fromGregorian 2006 10 16 17 0 0) 60 Pending 1
+>        , mkPeriod es (fromGregorian 2006 10 17 13 0 0) 60 Pending 2
+>        , mkPeriod es (fromGregorian 2006 10 18 14 0 0) 60 Pending 4
+>        , mkPeriod gb (fromGregorian 2006 10 19 14 0 0) 60 Scheduled 8
+>         ]
 
 > test_periodObsAvailable = TestCase $ do
 >   assertEqual "test_periodObsAvailable_1" False (periodObsAvailable p1 [s])

@@ -447,8 +447,9 @@ _____________________________________________________________________________
 > stringency' w s = do
 >   case rcvr of
 >     Nothing  -> return Nothing
->     (Just r) -> totalStringency w freq elevation' r obsType
+>     (Just r) -> totalStringency w freq elevation' r obsType gas
 >   where
+>     gas  = goodAtmStb s
 >     freq = frequency s
 >     elevation' = pi/2 - zenithAngleAtTransit s
 >     rcvr = getPrimaryReceiver s
@@ -725,15 +726,45 @@ Scale the wind speed by 1.5 to account for weather differences between
 > atmosphericStabilityLimit dt s = do
 >   w <- weather
 >   di <- liftIO $ irradiance w dt
->   boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (oType s) (frequency s) 
+>   let freq = frequency s
+>   zod <- zenithOpacity' dt freq
+>   tsys' <- liftIO $ tsys w dt freq
+>   let elev = elevation dt s
+>   if usesMustang s then atmStabGas elev zod tsys' else atmStab di
+>   where
+>      atmStabGas elev zod tsys = boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimitMustang (goodAtmStb s) elev zod tsys
+>      atmStab di = 
+>        boolean "atmosphericStabilityLimit" $ calculateAtmStabilityLimit di (irThreshold s) (oType s) (frequency s) 
 
-> calculateAtmStabilityLimit :: Maybe Float -> ObservingType -> Frequency -> Maybe Bool
-> calculateAtmStabilityLimit di ot f = do
+> atmosphericSystemTemperature :: DateTime -> Float -> Float -> Scoring (Maybe Float)
+> atmosphericSystemTemperature dt freq elev = do
+>   w <- weather
+>   tk'  <- liftIO $ tsys w dt freq
+>   zod' <- zenithOpacity' dt freq
+>   let za = pi/2 - elev 
+>   return $ do
+>      tk <- tk'
+>      zod <- zod'
+>      let atmOpacity = atmosphericOpacity zod za
+>      return $ tk * (1 - exp (-atmOpacity))
+
+> calculateAtmStabilityLimitMustang :: Bool -> Float -> Maybe Float -> Maybe Float -> Maybe Bool
+> calculateAtmStabilityLimitMustang useGas elev zod tsys = do
+>   let za = 0 -- Using low opacity atmospheric system temperature, so we calcuate atmOpacity at zenith.
+>   zod' <- zod
+>   tk <- tsys
+>   let atmOpacity = atmosphericOpacity zod' za
+>   let tsys'      = tk * (1 - exp (-atmOpacity))
+>   let atmStb     = tsys' / (sin elev)
+>   return $ if useGas then (atmStb < 35) else (atmStb < 50)
+
+> calculateAtmStabilityLimit :: Maybe Float -> Float -> ObservingType -> Frequency -> Maybe Bool
+> calculateAtmStabilityLimit di irThreshold ot f = do
 >   di' <- di
 >   return $ if ot == Continuum &&
 >               f > 2.0 &&
->               di' >= 300 then False
->                          else True
+>               di' >= irThreshold then False
+>                                  else True
 
 3.5 Other factors
 
