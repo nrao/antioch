@@ -196,7 +196,7 @@ Test a specific session's attributes:
 >   assertEqual "test_session2_13" (-0.11362094) (dec s)
 >   assertEqual "test_session2_14" [[Rcvr8_10]] (receivers s)
 >   assertEqual "test_session2_15" X (band s)
->   assertEqual "test_session2_16" False (lowRFI s)
+>   assertEqual "test_session2_16" AnyTimeOfDay (timeOfDay s)
 >   assertEqual "test_session2_17" 1 (length . lstExclude $ s)
 
 > test_sessionGal = TestCase $ do
@@ -218,7 +218,7 @@ Test a specific session's attributes:
 >   assertEqual "test_sessionGal_13" (-0.91732764) (dec s)
 >   assertEqual "test_sessionGal_14" [[Rcvr8_10]] (receivers s)
 >   assertEqual "test_sessionGal_15" X (band s)
->   assertEqual "test_sessionGal_16" False (lowRFI s)
+>   assertEqual "test_sessionGal_16" AnyTimeOfDay (timeOfDay s)
 >   assertEqual "test_sessionGal_17" 1 (length . lstExclude $ s)
 
 Perhaps these should be Quick Check properities, but the input is not 
@@ -232,7 +232,7 @@ generated: it's the input we want to test, really.
 >   assertEqual "test_getProjects_properties_2" True (all validSession ss)  
 >   assertEqual "test_getProjects_properties_3" True (validPeriods allPeriods)  
 >   assertEqual "test_getProjects_properties_4" True (2 < length (filter (\s -> grade s == 3.0) ss) )
->   assertEqual "test_getProjects_properties_5" 46 (length $ filter lowRFI ss)
+>   assertEqual "test_getProjects_properties_5" 46 (length $ filter (\s -> (timeOfDay s) == RfiNight) ss)
 >   let lsts = filter (\s -> (length . lstExclude $ s) > 0) ss
 >   assertEqual "test_getProjects_properties_6" 4 (length lsts)
 >   assertEqual "test_getProjects_properties_7" [(15.0,21.0)] (lstExclude . head $ lsts)

@@ -329,7 +329,7 @@ the deprecated Strategies, not Pack (so who cares)!
 >   assertEqual "test_disobeyLowRFI_5" False (disobeyLowRFI' p)
 >     where
 >       sAnyTime = findPSessionByName "CV"
->       sNightTime = sAnyTime { lowRFI = True }
+>       sNightTime = sAnyTime { timeOfDay = RfiNight }
 >       testPeriod = defaultPeriod { duration = 4*60 }
 
 > test_disobeyTimeBetween = TestCase $ do

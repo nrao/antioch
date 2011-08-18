@@ -175,7 +175,7 @@ Example params:
 >     let timeBetween = fromJust . fromJust . lookup "timeBetween" $ params
 >     let blackout    = fromJust . fromJust . lookup "blackout" $ params
 >     -- Using the flags from above, what optional scoring factors should we include? 
->     let sfs = catMaybes [if rfi == "true" then Nothing else Just needsLowRFI
+>     let sfs = catMaybes [if rfi == "true" then Nothing else Just correctTimeOfDay
 >                        , if timeBetween == "true" then Nothing else Just enoughTimeBetween
 >                        , if blackout == "true" then Nothing else Just observerAvailable
 >                         ]
