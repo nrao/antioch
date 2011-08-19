@@ -556,8 +556,7 @@ For now, just set:
 
 > setObservingParameter :: Session -> [SqlValue] -> Session
 > setObservingParameter s (pName:pType:pStr:pInt:pFlt:pBool:pDT)
->  --   | n == "Night-time Flag" = s { lowRFI = fromSql pBool }    
->     | n == "Time of Day"     = s { timeOfDay = toTimeOfDay pStr }
+>     | n == "Time Of Day"     = s { timeOfDay = toTimeOfDay pStr }
 >     | n == "Transit"         = s { transit = toTransit pBool }
 >     | n == "Min Eff TSys"    = s { xi = fromSql pFlt }    
 >     | n == "El Limit"        = s { elLimit = toElLimit pFlt }    
