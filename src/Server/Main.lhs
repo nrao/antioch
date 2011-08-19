@@ -39,11 +39,10 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Network.Salvia.Httpd
 > import Network.Socket                      (inet_addr)
 > import Server.JPeriods
-> import Server.MinObsConditions
 > import Server.RunScheduler
 > import Server.Nominees
-> import Server.Score
 > import Server.Factors
+> import Server.UpdatePeriod
 > import Maybe
 > import Antioch.Settings                    (salviaListenerPort, dssDataDB, dssHost)
 
@@ -75,12 +74,9 @@ Correspondence concerning GBT software should be addressed as follows:
 > handler = discardSession $ do
 >     cnn <- liftIO connect
 >     hPrefixRouter [
->           ("/runscheduler",  runSchedulerHandler)  
->         , ("/nominees",      getNomineesHandler)  
->         , ("/score",         scoreHandler cnn)  
->         , ("/factors",       getFactorsHandler cnn)  
->         , ("/periods",       periodsHandler cnn) -- Example, not used
->         , ("/mocs",          getMOCsHandler cnn)  
->         , ("/moc",           getMOCHandler cnn)  
+>           ("/runscheduler",   runSchedulerHandler)  
+>         , ("/nominees",       getNomineesHandler)  
+>         , ("/factors",        getFactorsHandler cnn)  
+>         , ("/update_periods", updatePeriodHandler cnn)
 >       ] $ hError NotFound
 >     liftIO $ disconnect cnn   

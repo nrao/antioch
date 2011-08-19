@@ -91,7 +91,7 @@ Session for scheduling w/ different methods.
 >           then do
 >             w <- weather
 >             let d = minDuration s
->             let p = Period 0 s dt d score Pending (forecast w) False d
+>             let p = Period 0 s dt d score Pending (forecast w) False d Nothing
 >             rest <- scheduleMinDurationWorker sf (d `addMinutes` dt) (dur - d) (p : history) sessions bestScorer
 >             return $ p : rest
 >           else
@@ -111,7 +111,7 @@ Always schedules a session at a given fixed duration.
 >         if score > 0.0
 >           then do
 >             w <- weather
->             let p = Period 0 s dt len score Pending (forecast w) False len
+>             let p = Period 0 s dt len score Pending (forecast w) False len Nothing
 >             rest <- scheduleFixedDuration len sf (len `addMinutes` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else
@@ -131,7 +131,7 @@ A really dumb scheduler that just looks at the first score for a session.
 >         if score > 0.0
 >           then do
 >             w <- weather
->             let p = Period 0 s dt len score Pending (forecast w) False len
+>             let p = Period 0 s dt len score Pending (forecast w) False len Nothing
 >             rest <- scheduleFixedDuration len sf (len `addMinutes` dt) (dur - len) (p : history) sessions
 >             return $ p : rest
 >           else

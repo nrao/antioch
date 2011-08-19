@@ -24,12 +24,13 @@ Correspondence concerning GBT software should be addressed as follows:
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather
-> import Antioch.ReceiverTemperatures
+> import Antioch.Weather (getWeather, getWeatherTest, Weather)
+> import Antioch.ReceiverTemperatures (getReceiverTemperatures, ReceiverTemperatures) 
 > import Antioch.Score
 > import Antioch.Filters
-> import Antioch.HardwareSchedule
+> import Antioch.HardwareSchedule (getReceiverSchedule) 
 > import Antioch.Utilities         -- debug
+> import Antioch.DSSData 
 
 > import Control.Monad.Trans (liftIO)
 > import Data.Maybe
@@ -68,17 +69,20 @@ Now for the the indiviual functions:
 
 ----------------------------------------------------------
 
-Computes the current scores for the given Periods (identified by ID), to
-be found in the given list of Projects.  
-Example usage: Period Explorer's current score column.
+Computes:
+   * the current scores for all the given Periods (identified by ID)
+   * the historical score of any Period that needs it, and saves this to the DB
+   * the MOC of any Period that needs it, and saves this to the DB
 
-Variables:
-   * Weather - weather for NOW.
-   * Scoring Factors - genPeriodScore
-   * Session Pool - scoringSessions
+Example usage: Period Explorer
 
-> runScorePeriods :: [Int] -> [Project] -> Bool -> IO ([(Int, Score)])
-> runScorePeriods pids projs test = do
+ Variables:
+    * Weather - weather for NOW.
+    * Scoring Factors - genPeriodScore, genScore
+    * Session Pool - scoringSessions
+
+> runUpdatePeriods :: [Int] -> [Project] -> Bool -> IO ([(Int, Score, Maybe Score, Maybe Bool)])
+> runUpdatePeriods pids projs test = do
 >
 >     -- get all the sessions and periods for these projects
 >     let ss = concatMap sessions projs
@@ -99,35 +103,38 @@ Variables:
 >     w <- if test then getWeatherTest $ Just start else getWeather Nothing
 >     rs <- if test then return [] else liftIO $ getReceiverSchedule . Just $ start
 >     rt <- liftIO $ getReceiverTemperatures
-
->     -- compute scores
+>
+>     -- compute current scores
 >     scores <- sequence $ map (\(p, s) -> scorePeriod p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
+>
+>     -- compute historical scores, where needed
+>     hscores <- sequence $ map (\(p, s) -> scoreSession' p s (scoringSessions (startTime p) undefined ss) w rs rt) tsps
+>
+>     -- compute MOCs, where needed
+>     mocs <- sequence $ map (\(p, s) -> evalMOC p s ) tsps
+>
 >     -- match the scores backup w/ their period Ids
->     return $ zip (map (peId . fst) tsps) scores
+>     return $ zip4 (map (peId . fst) tsps) scores hscores mocs 
 
-Computes the current score of a given Session (identified by ID) over
-the given time range, to be found in the given list of Projects.  Example usage: a period is changed or newly created (?) via the Nell server.
+Scores the session, only if it's needed.
 
-Variables:
-   * Weather - weather for NOW.
-   * Scoring Factors -genScore (makes me think this is only used when creating a new period, since the period doesn't exist yet).
-   * Scoring Pool - scoringSessions
-   
-> runScoreSession :: Int -> DateTime -> Minutes -> [Project] -> Bool -> IO (Score)
-> runScoreSession id dt dur projs test = do
->     -- get the session to score
->     let ss = concatMap sessions projs
->     let s = head $ filter (\s -> (sId s) == id) ss
->
->     -- setup the scoring enviornment (check for unit tests)
->     w <- if test then liftIO $ getWeatherTest $ Just dt else getWeather Nothing
->     rs <- if test then return [] else liftIO $ getReceiverSchedule $ Just dt
->     rt <- liftIO $ getReceiverTemperatures
->     let sss = scoringSessions dt undefined ss
->
->     -- score!
->     score <- liftIO $ scoreSession dt dur s sss w rs rt
->     return score
+> scoreSession' :: Period -> Session -> [Session] -> Weather -> ReceiverSchedule -> ReceiverTemperatures -> IO (Maybe Score)
+> scoreSession' p s ss w rs rt | (pScore p) == (-1.0) = do
+>   hscore <- scoreSession dt dur s ss w rs rt
+>   return $ Just hscore
+>                              | otherwise = return $ Nothing
+>   where
+>     dt = startTime p
+>     dur = duration p
+
+Evaluates the Period's MOC, again, only if needed.
+
+> evalMOC :: Period -> Session -> IO (Maybe Bool)
+> evalMOC p s | isNothing . pMoc $ p = runMOC dt dur s False
+>             | otherwise            = return Nothing 
+>   where
+>     dt = startTime p
+>     dur = duration p
 
 
 Computes the current score factors (and other, subfactors) of a given Session (identified by ID) over the given time range, to be found in the given list of Projects.  
@@ -233,23 +240,47 @@ Variables:
 >     where
 >   hrEarlyDt = addMinutes (-60) dt
 
-Returns the period ids of those given periods whose MOCs fail.
-
-> runMOCfailures :: [Period] -> Bool -> IO [Int]
-> runMOCfailures ps test = do
->   w <- if test then getWeatherTest $ Just (hrEarlyDt dt) else getWeather Nothing
->   rs <- if test then return [] else getReceiverSchedule $ Just dt
->   rt <- getReceiverTemperatures
->   res <- mapM (\(st, dur, s) -> runScoring w rs rt $ minimumObservingConditions st dur s) args
->   return . map fst . filter (\(i, b) -> not $ maybe True id b) . zip [peId p | p <-ps] $ res
->     where
->       dt = startTime . head $ ps
->       hrEarlyDt dt = addMinutes (-60) dt
->       args = [(startTime p, pDuration p, session p) | p <- ps]
-
 > runPeriodMOC :: Period -> Bool -> IO (Maybe Bool)
 > runPeriodMOC p test = do
 >     runMOC (startTime p) (duration p) (session p) test
+
+Here is the one exception: a function NOT called from src/Server, but
+from the command line.  So, the outer layer will interact w/ the DB,
+so that the inner part we can unit test, like we've done above.
+
+> updateMOCs :: IO ([(Int, Maybe Bool)])
+> updateMOCs = do
+>     print "updateMOCs"
+>     (start, dur) <- getMOCTimeRange
+>     let end = addMinutes dur start
+>     print $ "MOC Range from : " ++ (show . toSqlString $ start) ++ " to: " ++ (show . toSqlString $ end)
+>     -- read from the DB
+>     cnn <- connect
+>     ps <- getDiscretionaryPeriods cnn  start dur
+>     print "Periods: "
+>     printList ps
+>     -- calcualte what we need
+>     mocs <- getCurrentMOCs ps False
+>     print "MOCs: "
+>     print mocs
+>     -- write to the DB
+>     mapM (updatePeriodMOC' cnn) mocs
+>     return mocs
+>   where
+>     updatePeriodMOC' cnn (pid, moc) = updatePeriodMOC cnn pid moc
+
+> getCurrentMOCs :: [Period] -> Bool -> IO ([(Int, Maybe Bool)])
+> getCurrentMOCs ps test = do
+>     mocs <- mapM (flip runPeriodMOC test) ps
+>     return $ zip (map peId ps) (mocs)
+> 
+
+> getMOCTimeRange :: IO ((DateTime, Minutes))
+> getMOCTimeRange = do
+>   now <- getCurrentTime
+>   let start = addMinutes (-30) now
+>   let dur = (2*24*60) + 30 -- 2 days + 30 mins
+>   return (start, dur)
 
 Utilities:
 
