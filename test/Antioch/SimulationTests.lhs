@@ -32,7 +32,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.TimeAccounting
 > import Antioch.Statistics (scheduleHonorsFixed)
 > import Antioch.Generators (internalConflicts)
-> import Data.List (sort, find, nub)
+> import Data.List (zipWith4, sort, find, nub)
 > import Data.Maybe
 > import Control.OldException
 > import Test.HUnit
@@ -268,7 +268,13 @@ Attempt to see if the old test_sim_pack still works:
 >           ]
 >     durs = [300, 240, 240, 255] 
 >     scores = replicate 10 0.0
->     exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
+>     --exp = zipWith9 Period (repeat 0) expSs dts durs scores (repeat Pending) dts (repeat False) durs
+>     exp = zipWith4 mkPeriod expSs dts durs scores
+>     mkPeriod s dt dur score = defaultPeriod { session = s
+>                                             , startTime = dt
+>                                             , duration = dur
+>                                             , pScore = score
+>                                             }
 >     
 
 > test_simulateDailyScheduleWithFixed = TestCase $ do
@@ -498,14 +504,14 @@ of pre-scheduled periods (history)
 >     packDays = 2
 >     ds = defaultSession { frequency = 2.0, receivers = [[Rcvr1_2]], sType = Fixed }
 >     -- a period that uses up all the sessions' time (480)
->     f1 = Period 0 ds {sId = sId cv} (fromGregorian 2006 2 4 3 0 0) 480 0.0 Pending dt False 480
+>     f1 = Period 0 ds {sId = sId cv} (fromGregorian 2006 2 4 3 0 0) 480 0.0 Pending dt False 480 Nothing
 >     h1 = [f1]
 >     -- make sure that this session knows it's used up it's time
 >     s1 = makeSession (cv { sAllottedT = 480, sAllottedS = 480}) [] h1
 >     ss1 = [s1]
 >
 >     -- a period that uses MOST of the sessions' time (375)
->     f2 = Period 0 ds {sId = sId cv} (fromGregorian 2006 2 4 3 0 0) 375 0.0 Pending dt False 375
+>     f2 = Period 0 ds {sId = sId cv} (fromGregorian 2006 2 4 3 0 0) 375 0.0 Pending dt False 375 Nothing
 >     h2 = [f2]
 >     -- make sure that this session knows it's used up MOST of it's time
 >     s2 = makeSession (cv { sAllottedT = 480, sAllottedS = 480}) [] h1
@@ -526,7 +532,7 @@ Here we see if a long simulation honors pre-scheduled periods
 >     packDays = 2
 >     -- the history is made up of a bunch of regularly spaced periods
 >     ds = defaultSession {sId = sId cv, receivers = [[Rcvr1_2]], sType = Fixed}
->     mkFixed start = Period 0 ds start (4*60) 0.0 Pending dt False (sAllottedT cv)
+>     mkFixed start = Period 0 ds start (4*60) 0.0 Pending dt False (sAllottedT cv) Nothing
 >     fixedDts = [ addMinutes (day*24*60) dt | day <- [0 .. simDays]]
 >     h1 = map mkFixed fixedDts
 >     ss1 = [gb, va, tx, wv, mh, lp]
