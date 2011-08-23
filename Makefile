@@ -7,6 +7,9 @@ simulate: FORCE
 serve: FORCE
 	ghc -o serve --make src/Server/Main.lhs -isrc -isrc/Antioch -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
+updatemocs: FORCE
+	ghc -o updatemocs --make src/UpdateMOCs.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+
 genhist: FORCE
 	ghc -o genhist --make src/GenHistory.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
