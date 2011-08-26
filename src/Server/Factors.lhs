@@ -87,6 +87,9 @@ Correspondence concerning GBT software should be addressed as follows:
 > floatStr :: Float -> String
 > floatStr f = printf "%.2f" f
 
+> floatFactor :: Maybe Score -> String
+> floatFactor f = if isJust f then printf "%.7f" $ fromJust f else "0.0000"
+
 > data JFactor = JFactor {
 >       fName     :: String
 >     , fScore    :: Maybe Score
@@ -118,7 +121,7 @@ Correspondence concerning GBT software should be addressed as follows:
 > jFactorToJson :: JFactor -> JSValue
 > jFactorToJson jfactor = makeObj $
 >       [
->           ("name",  showJSON  . fName $ jfactor)
->         , ("score", showJSON  . fScore $ jfactor)
+>           ("name",  showJSON . fName $ jfactor)
+>         , ("score", showJSON . floatFactor $ fScore jfactor)
 >       ]
 
