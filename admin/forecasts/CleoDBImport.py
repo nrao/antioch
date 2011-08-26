@@ -437,32 +437,6 @@ class CleoDBImport:
         f.writelines(fileLines)
         f.close()
 
-    def notify(self):
-        "Sends email notification about import"
-
-        to_list = ['pmargani@nrao.edu'
-                 , 'mclark@nrao.edu'
-                 , 'rcreager@nrao.edu'
-                 , 'mmccarty@nrao.edu'
-                 , 'koneil@nrao.edu'
-                 , 'tminter@nrao.edu'
-                 , 'dbalser@nrao.edu'
-                 ]
-        timeStr = datetime.strftime(self.import_time, "%Y_%m_%d_%H_%M_%S")
-        subject = "Weather Forecasts have been imported."
-        body = """
-        Weather Forecasts have been imported at %s UTC.\n
-        For details see most recent report at:\n
-        /home/dss/release/antioch/admin/CleoDBImport_%s.txt\n
-        """ % (self.import_time, timeStr)
-    
-        emailer = emailNotifier(smtp = "smtp.gb.nrao.edu"
-                              , frm  = "dss@gb.nrao.edu")
-        emailer.SetTo(to_list)
-        emailer.SetSubject(subject)
-        emailer.SetMessage(body)
-        emailer.Notify()
-        
     def performImport(self):
         """
         Higher level function that performs all the steps for importing
@@ -490,10 +464,6 @@ class CleoDBImport:
         self.insert()
 
         self.reportToFile()
-
-        # send an email notification
-        if not self.quiet:
-            self.notify()
 
 # freqFileHeader on next line
 freqFileHeader = "timeListMJD OpacityTime2List_avrg OpacityTime3List_avrg OpacityTime4List_avrg OpacityTime5List_avrg OpacityTime6List_avrg OpacityTime7List_avrg OpacityTime8List_avrg OpacityTime9List_avrg OpacityTime10List_avrg OpacityTime11List_avrg OpacityTime12List_avrg OpacityTime13List_avrg OpacityTime14List_avrg OpacityTime15List_avrg OpacityTime16List_avrg OpacityTime17List_avrg OpacityTime18List_avrg OpacityTime19List_avrg OpacityTime20List_avrg OpacityTime21List_avrg OpacityTime22List_avrg OpacityTime23List_avrg OpacityTime24List_avrg OpacityTime25List_avrg OpacityTime26List_avrg OpacityTime27List_avrg OpacityTime28List_avrg OpacityTime29List_avrg OpacityTime30List_avrg OpacityTime31List_avrg OpacityTime32List_avrg OpacityTime33List_avrg OpacityTime34List_avrg OpacityTime35List_avrg OpacityTime36List_avrg OpacityTime37List_avrg OpacityTime38List_avrg OpacityTime39List_avrg OpacityTime40List_avrg OpacityTime41List_avrg OpacityTime42List_avrg OpacityTime43List_avrg OpacityTime44List_avrg OpacityTime45List_avrg OpacityTime46List_avrg OpacityTime47List_avrg OpacityTime48List_avrg OpacityTime49List_avrg OpacityTime50List_avrg OpacityTime51List_avrg OpacityTime52List_avrg OpacityTime54List_avrg OpacityTime56List_avrg OpacityTime58List_avrg OpacityTime60List_avrg OpacityTime62List_avrg OpacityTime64List_avrg OpacityTime66List_avrg OpacityTime68List_avrg OpacityTime70List_avrg OpacityTime72List_avrg OpacityTime74List_avrg OpacityTime76List_avrg OpacityTime78List_avrg OpacityTime80List_avrg OpacityTime82List_avrg OpacityTime84List_avrg OpacityTime86List_avrg OpacityTime88List_avrg OpacityTime90List_avrg OpacityTime92List_avrg OpacityTime94List_avrg OpacityTime96List_avrg OpacityTime98List_avrg OpacityTime100List_avrg OpacityTime102List_avrg OpacityTime104List_avrg OpacityTime106List_avrg OpacityTime108List_avrg OpacityTime110List_avrg OpacityTime112List_avrg OpacityTime114List_avrg OpacityTime116List_avrg OpacityTime118List_avrg OpacityTime120List_avrg TsysTime2List_avrg TsysTime3List_avrg TsysTime4List_avrg TsysTime5List_avrg TsysTime6List_avrg TsysTime7List_avrg TsysTime8List_avrg TsysTime9List_avrg TsysTime10List_avrg TsysTime11List_avrg TsysTime12List_avrg TsysTime13List_avrg TsysTime14List_avrg TsysTime15List_avrg TsysTime16List_avrg TsysTime17List_avrg TsysTime18List_avrg TsysTime19List_avrg TsysTime20List_avrg TsysTime21List_avrg TsysTime22List_avrg TsysTime23List_avrg TsysTime24List_avrg TsysTime25List_avrg TsysTime26List_avrg TsysTime27List_avrg TsysTime28List_avrg TsysTime29List_avrg TsysTime30List_avrg TsysTime31List_avrg TsysTime32List_avrg TsysTime33List_avrg TsysTime34List_avrg TsysTime35List_avrg TsysTime36List_avrg TsysTime37List_avrg TsysTime38List_avrg TsysTime39List_avrg TsysTime40List_avrg TsysTime41List_avrg TsysTime42List_avrg TsysTime43List_avrg TsysTime44List_avrg TsysTime45List_avrg TsysTime46List_avrg TsysTime47List_avrg TsysTime48List_avrg TsysTime49List_avrg TsysTime50List_avrg TsysTime51List_avrg TsysTime52List_avrg TsysTime54List_avrg TsysTime56List_avrg TsysTime58List_avrg TsysTime60List_avrg TsysTime62List_avrg TsysTime64List_avrg TsysTime66List_avrg TsysTime68List_avrg TsysTime70List_avrg TsysTime72List_avrg TsysTime74List_avrg TsysTime76List_avrg TsysTime78List_avrg TsysTime80List_avrg TsysTime82List_avrg TsysTime84List_avrg TsysTime86List_avrg TsysTime88List_avrg TsysTime90List_avrg TsysTime92List_avrg TsysTime94List_avrg TsysTime96List_avrg TsysTime98List_avrg TsysTime100List_avrg TsysTime102List_avrg TsysTime104List_avrg TsysTime106List_avrg TsysTime108List_avrg TsysTime110List_avrg TsysTime112List_avrg TsysTime114List_avrg TsysTime116List_avrg TsysTime118List_avrg TsysTime120List_avrg TatmTime2List_avrg TatmTime3List_avrg TatmTime4List_avrg TatmTime5List_avrg TatmTime6List_avrg TatmTime7List_avrg TatmTime8List_avrg TatmTime9List_avrg TatmTime10List_avrg TatmTime11List_avrg TatmTime12List_avrg TatmTime13List_avrg TatmTime14List_avrg TatmTime15List_avrg TatmTime16List_avrg TatmTime17List_avrg TatmTime18List_avrg TatmTime19List_avrg TatmTime20List_avrg TatmTime21List_avrg TatmTime22List_avrg TatmTime23List_avrg TatmTime24List_avrg TatmTime25List_avrg TatmTime26List_avrg TatmTime27List_avrg TatmTime28List_avrg TatmTime29List_avrg TatmTime30List_avrg TatmTime31List_avrg TatmTime32List_avrg TatmTime33List_avrg TatmTime34List_avrg TatmTime35List_avrg TatmTime36List_avrg TatmTime37List_avrg TatmTime38List_avrg TatmTime39List_avrg TatmTime40List_avrg TatmTime41List_avrg TatmTime42List_avrg TatmTime43List_avrg TatmTime44List_avrg TatmTime45List_avrg TatmTime46List_avrg TatmTime47List_avrg TatmTime48List_avrg TatmTime49List_avrg TatmTime50List_avrg TatmTime51List_avrg TatmTime52List_avrg TatmTime54List_avrg TatmTime56List_avrg TatmTime58List_avrg TatmTime60List_avrg TatmTime62List_avrg TatmTime64List_avrg TatmTime66List_avrg TatmTime68List_avrg TatmTime70List_avrg TatmTime72List_avrg TatmTime74List_avrg TatmTime76List_avrg TatmTime78List_avrg TatmTime80List_avrg TatmTime82List_avrg TatmTime84List_avrg TatmTime86List_avrg TatmTime88List_avrg TatmTime90List_avrg TatmTime92List_avrg TatmTime94List_avrg TatmTime96List_avrg TatmTime98List_avrg TatmTime100List_avrg TatmTime102List_avrg TatmTime104List_avrg TatmTime106List_avrg TatmTime108List_avrg TatmTime110List_avrg TatmTime112List_avrg TatmTime114List_avrg TatmTime116List_avrg TatmTime118List_avrg TatmTime120List_avrg"
