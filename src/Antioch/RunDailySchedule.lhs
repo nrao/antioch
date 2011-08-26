@@ -160,23 +160,33 @@ by a period contains an empty period list!
 >     dts = [(i*quarter) `addMinutes` (startTime p) | i <- [0..((duration p) `div` quarter)]]
 
 
-Note - this really should be in Filters, but it requires
+filterElectives really should be in Filters, but it requires
 Score, which would cause cyclical imports.
 Filter out of the history any elective periods that shouldn't
 stay on the schedule.
-Note: Really, this should be done inside dailySchedule so
-that electives can be covered by simualtions as well,
+Also: this should be done inside dailySchedule so
+that electives can be covered by simulations as well,
 but it's so much simpler to do it here, and I doubt
 simulations will need to cover electives.  so there.
+    ps   - periods
+    eps  - elective periods
+    neps - non-elective periods
+    geps - good elective pending periods
+
+                 ps
+               /    \
+            eps      neps
+             |
+            geps
+
+returns the leaves, i.e., geps + neps
 
 > filterElectives :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period] -> IO [Period]
 > filterElectives w rs rt ps = do
 >   geps <- cleanElectives w rs rt [] eps
->   --return . sort . (++) neps $ geps
->   return . sort . concat $ [neps, geps, seps]
+>   return . sort . concat $ [neps, geps]
 >     where
->       (eps', neps) = partition (typeElective . session) ps
->       (seps, eps) = partition (\p -> (pState p) == Scheduled) eps'
+>       (eps, neps) = partition (typeElective . session) ps
 
 Search a list of elective periods, and whenever a "good" elective is
 found, i.e., one which will be placed on the schedule for the
@@ -185,8 +195,9 @@ periods belonging to the same elective. An elective is considered
 good if it is the last elective (default), already scheduled, or
 meets the MOC.
 
-> -- cleanElectives   weather  rcvr_sched          rcvr_temps      good_elec_periods all_elec_periods
-> cleanElectives :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period] -> [Period] -> IO [Period]
+  cleanElectives :: weather    rcvr_sched          rcvr_temps              good_elec_periods all_elec_periods    good_elec_periods
+
+> cleanElectives :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period]       -> [Period]         -> IO [Period]
 
 > cleanElectives _  _  _ geps  [] = do
 >     return geps
@@ -207,12 +218,8 @@ through the period does have the list electives.
 
 > cleanElectives' :: Period -> [Period] -> [Period]
 > cleanElectives' gep aeps = do
->   let mge = maybe defaultElective id $ getElective gep
->   filter (\p -> not . elem mge . electives . session $ p) aeps
->     where
->       sameElective mge ep = if mge == Nothing
->                             then True
->                             else elem (fromJust mge) ep
+>   let epids = ePeriodIds . maybe defaultElective id . getElective $ gep
+>   filter (\p -> not . elem (peId p) $ epids) aeps
 
 Note - this really should be in Filters, but it requires
 Score, which would cause cyclical imports.

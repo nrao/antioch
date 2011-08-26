@@ -37,6 +37,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >      test_runDailySchedule
 >    , test_filterHistory
 >    , test_periodObsAvailable
+>    , test_cleanElectives'
 >    , test_filterElectives
 >     ]
 
@@ -126,6 +127,23 @@ Correspondence concerning GBT software should be addressed as follows:
 >                            }
 >       s = makeSession s' [] [p1, p2]
 
+> test_cleanElectives' = TestCase $ do
+>   let exp = [2, 4, 8]
+>   let res = cleanElectives' (head ps) (tail ps)
+>   assertEqual "test_cleanElectives'_1" exp [peId p | p <- res]
+>     where
+>       s' = defaultSession { sType = Elective, electives = [o, e] }
+>       s = makeSession s' [] ps
+>       o = defaultElective { eId = 101, ePeriodIds = [1, 3, 7] }
+>       e = defaultElective { eId = 102, ePeriodIds = [2, 4, 8] }
+>       ps = [defaultPeriod { peId = 1, session = s' }
+>           , defaultPeriod { peId = 2, session = s' }
+>           , defaultPeriod { peId = 4, session = s' }
+>           , defaultPeriod { peId = 3, session = s' }
+>           , defaultPeriod { peId = 8, session = s' }
+>           , defaultPeriod { peId = 7, session = s' }
+>            ]
+
 > test_filterElectives = TestCase $ do
 >   w <- getWeatherTest . Just $ fromGregorian 2006 10 13 0 0 0
 >   let rs = []
@@ -145,7 +163,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   -- already scheduled, but it does not prevent 7 from being scheduled
 >   -- since previously scheduled periods in themselves to not deactivate
 >   -- other pending periods of its elective.
->   let exp = [11, 6, 7, 9]
+>   let exp = [11, 6, 7]
 >   let res = [peId p | p <- results]
 >   assertEqual "test_filterElectives_2" exp res
 >     where
@@ -174,7 +192,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >        , mkPeriod es2' (fromGregorian 2006 10 15  9 0 0) 60 Pending 6 -- good
 >        , mkPeriod es1' (fromGregorian 2006 10 15 14 0 0) 60 Pending 7 -- good
 >        , mkPeriod es2' (fromGregorian 2006 10 15 23 0 0) 60 Pending 8 -- bad
->        , mkPeriod es1' (fromGregorian 2006 10 16 17 0 0) 60 Scheduled 9 -- good
+>        , mkPeriod es1' (fromGregorian 2006 10 16 17 0 0) 60 Pending 9 -- good
 >        , mkPeriod es3' (fromGregorian 2006 10 13 17 0 0) 60 Pending 10 -- bad
 >        , mkPeriod es3' (fromGregorian 2006 10 14 13 0 0) 60 Pending 11 -- bad
 >            ]
