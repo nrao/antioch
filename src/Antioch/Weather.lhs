@@ -56,14 +56,14 @@ for each different table we are pulling values from.
 > data Weather = Weather {
 >     wind            :: DateTime -> IO (Maybe Float)  -- m/s
 >   , wind_mph        :: DateTime -> IO (Maybe Float)  -- mph
->   , irradiance      :: DateTime -> IO (Maybe Float)  -- 
+>   , irradiance      :: DateTime -> IO (Maybe Float)  -- W/m^2 
 >   , gbt_wind        :: DateTime -> IO (Maybe Float)  -- m/s
->   , gbt_irradiance  :: DateTime -> IO (Maybe Float)  -- 
->   , opacity         :: DateTime -> Frequency -> IO (Maybe Float)
->   , tsys            :: DateTime -> Frequency -> IO (Maybe Float)
->   , totalStringency :: Frequency -> Radians -> Receiver -> ObservingType -> Bool -> IO (Maybe Float)
+>   , gbt_irradiance  :: DateTime -> IO (Maybe Float)  -- W/m^2
+>   , opacity         :: DateTime -> Frequency -> IO (Maybe Float) -- unit-less
+>   , tsys            :: DateTime -> Frequency -> IO (Maybe Float) -- K
+>   , totalStringency :: Frequency -> Radians -> Receiver -> ObservingType -> Bool -> IO (Maybe Float) -- unit-less
 >   , minOpacity      :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
->   , minTSysPrime    :: Frequency -> Radians -> Receiver -> IO (Maybe Float)
+>   , minTSysPrime    :: Frequency -> Radians -> Receiver -> IO (Maybe Float) -- K
 >   , newWeather      :: Maybe DateTime -> IO Weather
 >   , forecast        :: DateTime
 >   -- the 'best' set of functions ignores forecast type
