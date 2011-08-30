@@ -76,7 +76,7 @@ Note, if this is a test:
 >     quietPrint test False "writing new periods to DB: " 
 >     quietPrint test True newPeriods
 >     -- only write to DB if we aren't testing
->     if not test then putPeriods newPeriods else putStrLn ""
+>     if not test then putPeriods newPeriods (Just Pending) else putStrLn ""
 >     -- do we need to remove any failed electives or default periods?
 >     let periodsToDelete =  current_history \\ scheduling_history
 >     quietPrint test False "moving to deleted: "

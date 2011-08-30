@@ -1374,7 +1374,7 @@ The standard list of plots (that need no extra input).
 > reportPeriodWindow :: Period -> String
 > reportPeriodWindow p = reportWindow win Nothing p 
 >   where
->     win = fromJust $ find (periodInWindow p) . windows . session $ p
+>     win = fromJust $ find (periodOverlapsWindow p) . windows . session $ p
 
 > reportWindow :: Window -> Maybe Period -> Period -> String
 > reportWindow w cp dp = wStartStr ++ cpStr ++ (pStr dp) ++ " " ++ wEndStr ++ "\n"
@@ -1408,14 +1408,14 @@ The standard list of plots (that need no extra input).
 >   where
 >     total = sum [pScore p * fromIntegral (duration p `div` 15) | p <- ps]
 
-> createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> Bool -> IO ()
-> createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet test = do
+> createPlotsAndReports :: String -> String -> DateTime -> Int -> DateTime -> Int -> String -> [Session] -> [Period] -> [Trace] -> Bool -> ReceiverSchedule -> [Period] -> Bool -> WeatherType -> Bool -> IO ()
+> createPlotsAndReports name outdir now execTime dt days strategyName ss schedule trace simInput rs history quiet wType plots = do
 >     let gaps = findScheduleGaps dt dur schedule
 >     let canceled = getCanceledPeriods trace
 >     let winfo    = getWindowPeriodsFromTrace trace
 >     let os = getOriginalSchedule' schedule canceled
 >     -- calculate scheduled and observed efficiencies
->     w <- if test then getWeatherTest Nothing else getWeather Nothing
+>     w <- getWeatherType Nothing wType
 >     rt <- getReceiverTemperatures
 >     print "Calculating Period Observed Efficiences: "
 >     begin <- getCurrentTime
@@ -1467,13 +1467,8 @@ The standard list of plots (that need no extra input).
 >     -- text reports 
 >     textReports name outdir now execTime dt days strategyName ss schedule canceled canceledDetails winfo windowEffs gaps scores scoreDetails simInput rs history quiet 
 >     -- create generic plots
->     begin <- getCurrentTime
->     mapM_ (\f -> f ss' scheduleNoMaint trace) (statsPlotsToFile outdir name) 
->     -- create period efficiency plots
->     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs outdir name)
->     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs outdir name)
->     end <- getCurrentTime
->     print $ "Plotting Time: " ++ (show $ end - begin)
+>     if plots then createPlots outdir name ss' scheduleNoMaint trace peffs pSchdEffs else print "skipping plots."
+
 >   where
 >     dur = days * 60 * 24
 >     ss' = removeMaintenanceS ss
@@ -1482,6 +1477,16 @@ The standard list of plots (that need no extra input).
 >     atso2a = (\(a, t, s, o) -> a)
 >     atso2t = (\(a, t, s, o) -> t)
 >     atso2s = (\(a, t, s, o) -> s)
+
+> createPlots outdir name ss' scheduleNoMaint trace peffs pSchdEffs = do
+>     begin <- getCurrentTime
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (statsPlotsToFile outdir name) 
+>     -- create period efficiency plots
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodEffStatsPlotsToFile peffs outdir name)
+>     mapM_ (\f -> f ss' scheduleNoMaint trace) (periodSchdEffStatsPlotsToFile pSchdEffs outdir name)
+>     end <- getCurrentTime
+>     print $ "Plotting Time: " ++ (show $ end - begin)
+
 
 > sortByFreq :: Period -> Period -> Ordering
 > sortByFreq p1 p2

@@ -1,8 +1,11 @@
-all:simulate serve genhist genhists genstring dailyEfficiencies
+all:simulate lookahead serve genhist genhists genstring dailyEfficiencies
 
 simulate: FORCE
 	#ghc -o simulate --make src/Simulate.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16 -prof -auto-all
 	ghc -o simulate --make src/Simulate.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
+
+lookahead: FORCE
+	ghc -o lookahead --make src/Lookahead.lhs -isrc -O2 -funbox-strict-fields -funfolding-use-threshold=16
 
 serve: FORCE
 	ghc -o serve --make src/Server/Main.lhs -isrc -isrc/Antioch -O2 -funbox-strict-fields -funfolding-use-threshold=16

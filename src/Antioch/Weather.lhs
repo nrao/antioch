@@ -50,6 +50,20 @@ This module provides an interface to the 'weather' DB that holds:
    * actual weather values from the gbt (exs: wind, irradiance, etc.)
    * historical weather results (exs: stringency, etc.)
 
+This enumeration is used for distinguishing the different weather configs:
+   * normal - for use in production scheduling and simulations
+   * test - points to a special dedicated unit test DB (for use in unit tests)
+   * lookahead - just like normal, but always uses weather from a past year (for use in lookahead simulations)
+
+> data WeatherType = NormalWeather 
+>                  | LookaheadWeather 
+>                  | TestWeather deriving (Eq, Ord, Enum, Show, Read)
+
+> getWeatherType :: Maybe DateTime -> WeatherType -> IO Weather
+> getWeatherType dt NormalWeather    = getWeather dt
+> getWeatherType dt LookaheadWeather = getWeatherLookahead dt
+> getWeatherType dt TestWeather      = getWeatherTest dt
+
 Note that this module uses caches for optimization.  There is a cache
 for each different table we are pulling values from.
 
@@ -84,7 +98,7 @@ that the DB has no data for.  Currently all modules are using this.
 DateTime is simply the current time in production use and the
 purported time or origin in testing and simulation.
 
-> getWeather, getWeatherTest :: Maybe DateTime -> IO Weather
+> getWeather, getWeatherTest, getWeatherLookahead :: Maybe DateTime -> IO Weather
 
 > getWeather dt = do
 >     now <- maybe getCurrentTimeSafe return dt
@@ -98,37 +112,54 @@ purported time or origin in testing and simulation.
 >       Nothing -> getWeatherSafeTest now
 >       Just x  -> getWeatherSafeTest x
 
+> getWeatherLookahead dt = do
+>     now <- maybe getCurrentTimeLookahead return dt
+>     case dt of
+>       Nothing -> getWeatherSafeLookahead now
+>       Just x  -> getWeatherSafeLookahead x
+
+
 Used for simulations/tests to ensure that we always get data, no matter what
 year's worth of weather is in the database, by modifiying the date.
 
-> getWeatherSafe, getWeatherSafeTest :: DateTime -> IO Weather
+> getWeatherSafe, getWeatherSafeTest, getWeatherSafeLookahead :: DateTime -> IO Weather
 
 > getWeatherSafe = getWeather' . Just . dateSafe 
 
 > getWeatherSafeTest = getWeatherTest' . Just . dateSafe 
 
-Right now, the only historical weather we have is 2006.
-     We've deprecated 'dateSafe' for production use, however it is still
-     used for look ahead simulations.  See Story,
-     https://www.pivotaltracker.com/story/show/2543985
+> getWeatherSafeLookahead = getWeatherLookahead' . Just . dateLookahead
+
+TBF: remove this function!
 
 > dateSafe :: DateTime -> DateTime
 > dateSafe dt = dt -- if (year == 2006) then dt else replaceYear 2006 dt
 >   where
 >     (year, _, _, _, _, _) = toGregorian dt
 
+> dateLookahead :: DateTime -> DateTime
+> dateLookahead dt = if (year == lookaheadYear) then dt else replaceYear lookaheadYear dt
+>   where
+>     (year, _, _, _, _, _) = toGregorian dt
+>     lookaheadYear = 2010
+
 > getCurrentTimeSafe = do
 >   dt <- getCurrentTime
 >   return $ dateSafe dt
 
-> getWeather', getWeatherTest' :: Maybe DateTime -> IO Weather
-> getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn now
-> getWeatherTest' now = readIORef globalConnectionTest >>= \cnn -> updateWeather cnn now
+> getCurrentTimeLookahead = do
+>   dt <- getCurrentTime
+>   return $ dateLookahead dt
+
+> getWeather', getWeatherTest', getWeatherLookahead' :: Maybe DateTime -> IO Weather
+> getWeather' now = readIORef globalConnection >>= \cnn -> updateWeather cnn NormalWeather now
+> getWeatherTest' now = readIORef globalConnectionTest >>= \cnn -> updateWeather cnn TestWeather now
+> getWeatherLookahead' now = readIORef globalConnection >>= \cnn -> updateWeather cnn LookaheadWeather now 
 
 Here the various caches are initialized.
 
-> updateWeather :: Connection -> Maybe DateTime -> IO Weather
-> updateWeather conn now = do
+> updateWeather :: Connection -> WeatherType -> Maybe DateTime -> IO Weather
+> updateWeather conn wType now = do
 >     now'' <- maybe getCurrentTimeSafe return now
 >     let now' = roundToHour now''
 >     ft   <- getForecastTime conn now'
@@ -140,17 +171,17 @@ Here the various caches are initialized.
 >     minOpacityf         <- getMinOpacity'
 >     minTSysf            <- getMinTSysPrime'
 >     return Weather {
->         wind            = pin ft now' $ windf conn
->       , wind_mph        = pin ft now' $ wind_mphf conn
->       , irradiance      = pin ft now' $ irradiancef conn
+>         wind            = pin ft now' wType $ windf conn
+>       , wind_mph        = pin ft now' wType $ wind_mphf conn
+>       , irradiance      = pin ft now' wType $ irradiancef conn
 >       , gbt_wind        = gbt_windf conn
 >       , gbt_irradiance  = gbt_irrf conn
->       , opacity         = pin ft now' $ opacityf conn
->       , tsys            = pin ft now' $ tsysf conn
+>       , opacity         = pin ft now' wType $ opacityf conn
+>       , tsys            = pin ft now' wType $ tsysf conn
 >       , totalStringency = stringencyf conn
 >       , minOpacity      = minOpacityf conn
 >       , minTSysPrime    = minTSysf conn
->       , newWeather      = updateWeather conn
+>       , newWeather      = updateWeather conn wType
 >       , forecast        = now'
 >       , bestOpacity     = bestOpacityf conn 
 >       , bestTsys        = bestTsysf conn 
@@ -162,10 +193,19 @@ deprecated method for computing the forecast_type_id and use 12 hour forecasts,
 where as in Dec. of 2009 we went to 6 hour forecasts and compute the 
 forecast_type_id correctly using the forecast_time from the DB.
 
-> pin :: DateTime -> DateTime -> (Int -> DateTime -> a) -> DateTime -> a
-> pin forecastTime now f target = f (forecastType target' now forecastTime) target'
+> pin :: DateTime -> DateTime -> WeatherType -> (Int -> DateTime -> a) -> DateTime -> a
+> pin forecastTime now wType f target = f (forecastType target' now forecastTime) target'
 >   where
->     target' = roundToHour . dateSafe $ target
+>     target' = rnd2hour' target wType
+
+The target datetime may need to be changed, according to what type of
+weather is being used.
+
+> rnd2hour' :: DateTime -> WeatherType -> DateTime
+> rnd2hour' dt NormalWeather = roundToHour . dateSafe $ dt
+> rnd2hour' dt TestWeather = roundToHour . dateSafe $ dt
+> rnd2hour' dt LookaheadWeather = roundToHour . dateLookahead $ dt
+
 
 > toSql' = toSql . toSqlString
 

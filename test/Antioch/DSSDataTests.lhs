@@ -250,7 +250,7 @@ generated: it's the input we want to test, really.
 
 > test_putPeriods = TestCase $ do
 >   r1 <- getNumRows "periods"
->   putPeriods [p1]
+>   putPeriods [p1] Nothing
 >   r2 <- getNumRows "periods"
 >   cleanup "periods"
 >   assertEqual "test_putPeriods" True (r2 == (r1 + 1)) 
