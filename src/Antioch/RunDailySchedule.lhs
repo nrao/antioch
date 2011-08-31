@@ -89,14 +89,15 @@ If we're running tests and/or trying to be quiet, we don't want to print
 
 > quietPrint t l x = if t then putStrLn "" else (if l then printList x else print x)
 
-Filter out deprecated periods:
+Filter out deprecated periods (excepting Scheduled and Maintenance periods):
    * unused elective periods
    * un-needed default periods
    * inactive periods
    * blacked-out periods
 
+> filterHistory :: Weather -> ReceiverSchedule -> ReceiverTemperatures -> [Period] -> [Session] -> [Project] -> Bool -> IO [Period]
 > filterHistory w rs rt history ss projs quiet = do
->     -- Shield maintenance periods from filtering
+>     -- Shield maintenance periods from filtering by setting them aside
 >     let (history_maintenance, history_nonmaintenance) =
 >             partition (\p -> (oType . session $ p) == Maintenance) history
 >     quietPrint quiet False "history_maintenance"
@@ -104,30 +105,39 @@ Filter out deprecated periods:
 >     quietPrint quiet False "history_nonmaintenance"
 >     quietPrint quiet True history_nonmaintenance
 >
+>     -- Shield scheduled periods from filtering by setting them aside
+>     let (history_scheduled, history_nonscheduled) =
+>             partition (\p -> (pState p) == Scheduled) history_nonmaintenance
+>     let history_shielded = concat [history_maintenance, history_scheduled]
+>     quietPrint quiet False "history_scheduled"
+>     quietPrint quiet True history_scheduled
+>     quietPrint quiet False "history_nonscheduled"
+>     quietPrint quiet True history_nonscheduled
+>
 >     -- Filter out periods from disabled/unauthorized sessions.
->     history'inactive <- filterInactivePeriods history_nonmaintenance
->     quietPrint quiet False "original history - maintenance - inactive"
+>     history'inactive <- filterInactivePeriods history_nonscheduled
+>     quietPrint quiet False "original history - maintenance - scheduled - inactive"
 >     quietPrint quiet True history'inactive
 >
 >     -- Filter out periods having inadequate representation.
 >     let history'no_observer = filter (flip periodObsAvailable ss) history'inactive
->     quietPrint quiet False "original history - maintenance - inactive - no observers: "
+>     quietPrint quiet False "original history - maintenance - scheduled - inactive - no observers: "
 >     quietPrint quiet True history'no_observer
 >
 >     -- Filter out failing elective periods.
 >     history'electives <- filterElectives w rs rt history'no_observer
->     quietPrint quiet False "original history - maintenance - inactive - no observers - electives: "
+>     quietPrint quiet False "original history - maintenance - scheduled - inactive - no observers - electives: "
 >     quietPrint quiet True history'electives
 >
 >     -- Filter out default periods of non-guaranteed, windowed
 >     -- sessions if they fail MOC.
 >     history'defaulted <- filterDefaultPeriods w rs rt history'electives
->     quietPrint quiet False "original history - maintenance - inactive - no observers - electives - default: "
+>     quietPrint quiet False "original history - maintenance - scheduled - inactive - no observers - electives - default: "
 >     quietPrint quiet True history'defaulted
 >
->     -- Return maintenance periods into the mix
+>     -- Return shielded periods into the mix
 >     let scheduling_history =
->             sort . concat $ [history'defaulted, history_maintenance]
+>             sort . concat $ [history'defaulted, history_shielded]
 >     quietPrint quiet False "original history - inactive - no observers - electives - default: "
 >     quietPrint quiet True scheduling_history
 >

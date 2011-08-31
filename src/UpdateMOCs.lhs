@@ -20,25 +20,25 @@ Correspondence concerning GBT software should be addressed as follows:
       P. O. Box 2
       Green Bank, WV 24944-0002 USA
 
-> module Antioch.DebugTests where
+> module Main where
 
-> import Antioch.Debug
-> import Test.HUnit
-> import Antioch.Types
+> {-
 > import Antioch.DateTime
+> import Antioch.Schedule
 > import Antioch.Score
+> import Antioch.Simulate
+> import Antioch.Reports
+> import Antioch.RunSimulation
+> import SimulateOpts
+> -}
 
-> tests = TestList [test_getCanceledPeriods]
+> import Antioch.RunScores
 
-> test_getCanceledPeriods = TestCase $ do
->   assertEqual "test_getCanceledPeriods" ps canceled
->     where
->   start = fromGregorian 2006 2 1 0 0 0
->   dts = [(i*60) `addMinutes` start | i <- [0..10]]
->   ps = map mkPeriod dts
->   mkPeriod dt = Period 0 defaultSession dt 60 0.0 Pending undefined False 60 Nothing
->   trace' = map (Cancellation) ps
->   trace'' = map (Timestamp) dts
->   trace = trace' ++ trace''
->   canceled = getCanceledPeriods trace     
+> import Data.Maybe             (fromJust)
+> import System.Environment
+> import Text.Printf
+> import Text.Regex
 
+
+> main = updateMOCs 
+    

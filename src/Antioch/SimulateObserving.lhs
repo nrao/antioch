@@ -142,7 +142,7 @@ schedule deadtime.
 >   moc <- evalSimPeriodMOC $ p { session = s }  
 >   w <- weather
 >   if score > 0.0 && fromMaybe False moc
->     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p)
+>     then return $ Just $ Period 0 s (startTime p) (duration p) score Pending (forecast w) True (pDuration p) Nothing
 >     else return Nothing -- no decent backups, must be bad weather -> Deadtime
     
 Utilities:
