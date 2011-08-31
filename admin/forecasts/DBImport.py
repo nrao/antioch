@@ -22,7 +22,7 @@
 
 from   utilities.SolarHeating import SolarHeating
 import numpy
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 
 class DBImport:
 
@@ -60,11 +60,11 @@ class DBImport:
         else:
             return windSpeedForcast
 
-    def plotCorrection(self):
-        xs = numpy.arange(0.0, 15.0, 0.1)
-        plt.plot(xs, numpy.polyval(self.windDayCoeff, xs))
-        plt.plot(xs, numpy.polyval(self.windNightCoeff, xs))
-        plt.xlabel("Forcasted")
-        plt.ylabel("Corrected")
-        plt.title("Forected vs. Corrected wind speed for 80th percentile")
-        plt.show()
+    #def plotCorrection(self):
+    #    xs = numpy.arange(0.0, 15.0, 0.1)
+    #    plt.plot(xs, numpy.polyval(self.windDayCoeff, xs))
+    #    plt.plot(xs, numpy.polyval(self.windNightCoeff, xs))
+    #    plt.xlabel("Forcasted")
+    #    plt.ylabel("Corrected")
+    #    plt.title("Forected vs. Corrected wind speed for 80th percentile")
+    #    plt.show()

@@ -24,7 +24,8 @@
 
 from mx       import DateTime
 import math
-import slalib
+#import slalib
+from pyslalib import slalib
 import datetime
 import pytz
 
