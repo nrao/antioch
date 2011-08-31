@@ -826,10 +826,10 @@ prior to observing.
 > sqlToDate :: SqlValue -> DateTime
 > sqlToDate dt = fromJust . fromSqlDateString . fromSql $ dt
 
-> putPeriods :: [Period] -> IO ()
-> putPeriods ps = do
+> putPeriods :: [Period] -> Maybe StateType -> IO ()
+> putPeriods ps state = do
 >   cnn <- connect
->   result <- mapM (putPeriod cnn) ps
+>   result <- mapM (putPeriod cnn state) ps
 >   return ()
 
 Here we add a new period to the database.  
@@ -838,18 +838,22 @@ Since Antioch is creating it,
 we will set the Period_Accounting.scheduled field
 and the associated receviers using the session's receivers.
 
-> putPeriod :: Connection -> Period -> IO ()
-> putPeriod cnn p = do
->   -- make an entry in the periods_accounting table
->   accounting_id <- putPeriodAccounting cnn (duration p)
+> putPeriod :: Connection -> Maybe StateType -> Period -> IO ()
+> putPeriod cnn mstate p = do
+>   -- what state to use?
+>   let state = if isNothing mstate then pState p else fromJust mstate
+>   -- make an entry in the periods_accounting table; if this period is 
+>   -- to be in the Scheduled state, init the time accounting's scheduled field
+>   let scheduled = if state == Scheduled then duration p else 0
+>   accounting_id <- putPeriodAccounting cnn scheduled
 >   -- is this period part of a window?
 >   let window = find (periodInWindow p) (windows . session $ p)
 >   let winId = if (isNothing window) then SqlNull else (toSql . wId . fromJust $ window)
->   -- what should the id be for the pending state?
+>   -- what should the id be for the state?
 >   periodStates <- getPeriodStates cnn
->   let pendingStateId = getPeriodStateId Pending periodStates
+>   let stateId = getPeriodStateId state periodStates
 >   -- now for the period itself
->   quickQuery' cnn query (xs accounting_id winId pendingStateId) 
+>   quickQuery' cnn query (xs accounting_id winId stateId) 
 >   commit cnn
 >   pId <- getNewestID cnn "periods"
 >   -- init the rcvrs associated w/ this period
@@ -858,7 +862,7 @@ and the associated receviers using the session's receivers.
 >   --updateWindow cnn p
 >   commit cnn
 >   -- finally, track changes in the DB by filling in the reversion tables
->   putPeriodReversion cnn p accounting_id pendingStateId
+>   putPeriodReversion cnn p accounting_id stateId
 >   commit cnn
 >     where
 >       xs a w stateId = [toSql . sId . session $ p
@@ -926,7 +930,8 @@ Creates a new entry in the periods_receivers table.
 > minutesToSqlHrs :: Minutes -> SqlValue
 > minutesToSqlHrs mins = toSql $ (/(60.0::Float)) . fromIntegral $ mins 
 
-Creates a new period accounting row, and returns this new rows ID
+Creates a new period accounting row, and returns this new rows ID.  Note that the
+scheduled field's value is passed in.
 
 > putPeriodAccounting :: Connection -> Int -> IO Int
 > putPeriodAccounting cnn scheduled = do
@@ -934,24 +939,26 @@ Creates a new period accounting row, and returns this new rows ID
 >   result <- quickQuery' cnn queryId xsId
 >   return $ toId result
 >     where
->       -- now, scheduled gets set when period is published
->       xs = [] --[minutesToSqlHrs scheduled]
->       query = "INSERT INTO periods_accounting (scheduled, not_billable, other_session_weather, other_session_rfi, other_session_other, lost_time_weather, lost_time_rfi, lost_time_other, short_notice, description) VALUES (0.0, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0, '')"
+>       xs = [minutesToSqlHrs scheduled]
+>       query = "INSERT INTO periods_accounting (scheduled, not_billable, other_session_weather, other_session_rfi, other_session_other, lost_time_weather, lost_time_rfi, lost_time_other, short_notice, description) VALUES (?, 0.0, 0.0, 0.0, 0.0,  0.0, 0.0, 0.0, 0.0, '')"
 >       xsId = []
 >       queryId = "SELECT MAX(id) FROM periods_accounting"
 >       toId [[x]] = fromSql x
 
-Change the state of all given periods to Deleted.
+Change the state of all given periods 
 
-> movePeriodsToDeleted :: [Period] -> IO ()
-> movePeriodsToDeleted ps = do
+> movePeriodsToDeleted ps = movePeriodsToState ps Deleted
+> movePeriodsToScheduled ps = movePeriodsToState ps Scheduled
+
+> movePeriodsToState :: [Period] -> StateType -> IO ()
+> movePeriodsToState ps state = do
 >   cnn <- connect
 >   periodStates <- getPeriodStates cnn
->   let deletedId = getPeriodStateId Deleted periodStates
->   result <- mapM (movePeriodToDeleted cnn deletedId) ps
+>   let theStatesId = getPeriodStateId state periodStates
+>   result <- mapM (movePeriodToState' cnn theStatesId) ps
 >   return ()
 >     where
->   movePeriodToDeleted cnn stateId p = movePeriodToState cnn (peId p) stateId
+>   movePeriodToState' cnn stateId p = movePeriodToState cnn (peId p) stateId
 
 Changes the state of a Period.
 
@@ -1000,6 +1007,22 @@ returns the appropriate primary ID.
 >     where
 >       query = "UPDATE periods SET moc = ? WHERE id = ?;"
 >       xs = [toSql moc, toSql pId]
+
+> updateCompletedSessions :: [Session] -> IO ()
+> updateCompletedSessions ss =  handleSqlError $ do
+>   cnn <- connect
+>   result <- mapM (updateSessionComplete cnn) ss
+>   return ()
+
+> updateSessionComplete :: Connection -> Session ->  IO ()
+> updateSessionComplete cnn s = handleSqlError $ do
+>   print ("updating complete flag for session: ", sName s, sId s)
+>   result <- quickQuery' cnn query xs
+>   commit cnn
+>   return ()
+>     where
+>       query = "UPDATE status SET complete = ? FROM sessions WHERE sessions.status_id = status.id and sessions.id = ?;"
+>       xs = [toSql . sClosed $ s, toSql . sId $ s]
  
 Utilities
 

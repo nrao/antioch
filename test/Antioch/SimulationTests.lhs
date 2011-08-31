@@ -24,7 +24,8 @@ Correspondence concerning GBT software should be addressed as follows:
 
 > import Antioch.DateTime
 > import Antioch.Types
-> import Antioch.Weather    (getWeatherTest)
+> --import Antioch.Weather    (getWeatherTest)
+> import Antioch.Weather
 > import Antioch.Utilities
 > import Antioch.PProjects
 > import Antioch.Simulate
@@ -248,7 +249,7 @@ unaltered list of input sessions.
 Attempt to see if the old test_sim_pack still works:
 
 > test_simulateDailySchedule = TestCase $ do
->     (result, t, _) <- simulateDailySchedule rs dt packDays simDays history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt packDays simDays history ss True TestWeather [] []
 >     --print $ take 4 $ map duration result
 >     --print $ take 4 $ map (toSqlString . startTime) result
 >     --print $ take 4 $ map (sName . session) result
@@ -280,7 +281,7 @@ Attempt to see if the old test_sim_pack still works:
 > test_simulateDailyScheduleWithFixed = TestCase $ do
 >     -- fisrt simulate with JUST the one fixed session & period
 >     let history = concatMap periods [s1]
->     (result, t, _) <- simulateDailySchedule rs dt1 packDays simDays history [s1] True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt1 packDays simDays history [s1] True TestWeather [] []
 >     assertEqual "test_simFixed 1" 1 (length result)
 >     assertEqual "test_simFixed 2" (startTime . head $ history) (startTime . head $ result)
 >     -- make sure they are all getting published properly
@@ -288,7 +289,7 @@ Attempt to see if the old test_sim_pack still works:
 >     -- now make sure the fixed period is still there when it 
 >     -- gets scheduled around
 >     let ss = getOpenPSessions
->     (result, t, _) <- simulateDailySchedule rs dt1 packDays simDays history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt1 packDays simDays history ss True TestWeather [] []
 >     assertEqual "test_simFixed 4" 18 (length result)
 >     assertEqual "test_simFixed 5" (head history) (result !! 2)
 >     assertEqual "test_simFixed 6" 1 (length $ filter (\p -> (sId . session $ p) == 101) result)
@@ -324,7 +325,7 @@ Attempt to see if the old test_sim_pack still works:
 > test_simulateDailyScheduleWithWindows = TestCase $ do
 >     -- default windowed periods
 >     let dwps = sort . concat . map periods $ ss
->     (result, t, _) <- simulateDailySchedule rs dt1 packDays simDays history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt1 packDays simDays history ss True TestWeather [] []
 >     --  ***    No competition, expect an earlier period to be scheduled
 >     -- Four scheduled periods, first is new on first day of window and
 >     -- rest are defaults
@@ -343,7 +344,7 @@ Attempt to see if the old test_sim_pack still works:
 >
 >     --  ***    No competition, but better weather, opportunity to
 >     -- schedule multiple chosen periods, but still get just one.
->     (result, t, _) <- simulateDailySchedule rs dt2 packDays simDays history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt2 packDays simDays history ss True TestWeather [] []
 >     -- Four scheduled periods, all the default periods
 >     assertEqual "test_simulateDailyScheduleWithWindows 6" 4 (length result)
 >     -- The first one being the first period in session TestWindowed2
@@ -360,7 +361,7 @@ Attempt to see if the old test_sim_pack still works:
 >     --  ***    No competition, but the scheduling range encompasses
 >     --         a  default window, so no new periods should be
 >     --         scheduled.
->     (result, t, _) <- simulateDailySchedule rs dt3 packDays simDays history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt3 packDays simDays history ss True TestWeather [] []
 >     -- Four scheduled periods, all the default periods
 >     assertEqual "test_simulateDailyScheduleWithWindows 11" 4 (length result)
 >     -- Results should be all default periods
@@ -376,7 +377,7 @@ Attempt to see if the old test_sim_pack still works:
 >     --  ***    No competition, but the scheduling range does not 
 >     --         encompass a defaul period, and no chosen period is 
 >     --         scheduled
->     (result, t, _) <- simulateDailySchedule rs dt4 packDays simDays history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt4 packDays simDays history ss True TestWeather [] []
 >     -- Four periods, all the default periods, but NOT scheduled
 >     assertEqual "test_simulateDailyScheduleWithWindows 14" 4 (length result)
 >     -- Results should be all default periods
@@ -387,7 +388,7 @@ Attempt to see if the old test_sim_pack still works:
 >
 >     --  ***    No competition, scheduling across two windows
 >     --         resulting in a chosen and a default window.
->     (result, t, _) <- simulateDailySchedule rs dt5 packDays 10 history ss True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt5 packDays 10 history ss True TestWeather [] []
 >     -- Four scheduled periods, all the default periods
 >     assertEqual "test_simulateDailyScheduleWithWindows 17" 4 (length result)
 >     -- Results should be one chosen followed by three defaults.
@@ -416,14 +417,14 @@ Attempt to see if the old test_sim_pack still works:
 
 
 > test_simulateWithWindows_2 = TestCase $ do
->   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [winS1] True True [] []
+>   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [winS1] True TestWeather [] []
 >   assertEqual "test_simulateWithWindows_2_1" [expP1] result
->   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [winS2] True True [] []
+>   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [winS2] True TestWeather [] []
 >   assertEqual "test_simulateWithWindows_2_2" [expP2] result
->   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [winS1, winS2] True True [] []
+>   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [winS1, winS2] True TestWeather [] []
 >   -- make sure they are both being scheduled!!!
 >   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
->   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [s1, s2] True True [] []
+>   (result, t, _) <- simulateDailySchedule rs start packDays 2 [] [s1, s2] True TestWeather [] []
 >   -- make sure they are both being scheduled!!!
 >   assertEqual "test_simulateWithWindows_2_2" 2 (length result)
 >   
@@ -487,12 +488,12 @@ of pre-scheduled periods (history)
 > test_exhaustive_history = TestCase $ do
 >     w <- getWeatherTest $ Just dt
 >     -- first, a test where the history uses up all the time
->     (result, t, _) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True TestWeather [] []
 >     assertEqual "test_sim_schd_pack_ex_hist_1" True (scheduleHonorsFixed h1 result)
 >     assertEqual "test_sim_schd_pack_ex_hist_2" h1 result
 >     -- now, if history only takes some of the time, make sure 
 >     -- that the session's time still gets used up
->     (result, t, _) <- simulateDailySchedule rs dt packDays simDays h2 ss2 True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt packDays simDays h2 ss2 True TestWeather [] []
 >     assertEqual "test_sim_schd_pack_ex_hist_3" True (scheduleHonorsFixed h2 result)
 >     let observedTime = sum $ map duration result
 >     -- This will fail until we use 'updateSession' in simulate
@@ -521,7 +522,7 @@ Here we see if a long simulation honors pre-scheduled periods
 
 > test_honor_history = TestCase $ do
 >     -- first, a test where the history uses up all the time
->     (result, t, _) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True True [] []
+>     (result, t, _) <- simulateDailySchedule rs dt packDays simDays h1 ss1 True TestWeather [] []
 >     assertEqual "test_honor_history_1" True (scheduleHonorsFixed h1 result)
 >     assertEqual "test_honor_history_2" False (internalConflicts result)
 >   where
@@ -542,7 +543,7 @@ Here we attempt to schedule only a single high-frequency session - if it does
 get on, it has a high chance of being canceled.
 
 > test_cancellations = TestCase $ do
->     (result, tr, _) <- simulateDailySchedule [] start 2 15 [] ss True True [] []
+>     (result, tr, _) <- simulateDailySchedule [] start 2 15 [] ss True TestWeather [] []
 >     let cs = getCanceledPeriods $ tr
 >     assertEqual "test_cancellations_1" exp result
 >     assertEqual "test_cancellations_2" 15 (length cs)
@@ -677,7 +678,8 @@ get on, it has a high chance of being canceled.
 >     assertEqual "test_periodInWindow' 1" True (periodInWindow' p1 w)
 >     assertEqual "test_periodInWindow' 2" True (periodInWindow' p2 w)
 >     assertEqual "test_periodInWindow' 3" True (periodInWindow' p3 w)
->     assertEqual "test_periodInWindow' 4" False (periodInWindow' p4 w)
+>     assertEqual "test_periodInWindow' 4" True (periodInWindow' p4 w)
+>     assertEqual "test_periodInWindow' 5" False (periodInWindow' p5 w)
 >   where
 >     start = fromGregorian' 2009 2 8
 >     end   = fromGregorian' 2009 2 14
@@ -691,6 +693,8 @@ get on, it has a high chance of being canceled.
 >     p3 = p2 { startTime = pStart3 }
 >     pStart4 = fromGregorian 2009 2 7 23 30 0 
 >     p4 = p3 { startTime = pStart4 }
+>     pStart5 = fromGregorian 2009 2 7 22 30 0 
+>     p5 = p4 { startTime = pStart5 }
 
 Test Utilities:
 

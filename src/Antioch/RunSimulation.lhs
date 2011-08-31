@@ -36,7 +36,8 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Types
 > import Antioch.TimeAccounting
 > import Antioch.Utilities    
-> import Antioch.Weather      (Weather(..), getWeather)
+> --import Antioch.Weather      (Weather(..), getWeather)
+> import Antioch.Weather
 > import Antioch.Debug
 > import Control.Monad.Writer
 > import Data.List
@@ -92,13 +93,15 @@ passes it to simulateDailySchedule, and processes the output (ex: reports and pl
 >     --(results, trace) <- simulateScheduling strategyName w rs dt dur int history [] ss
 >     begin <- getCurrentTime
 >     let quiet = True
->     (results, trace, finalSess) <- simulateDailySchedule rs dt 2 days history ss quiet test [] []
+>     let wType = if test then TestWeather else NormalWeather
+>     (results, trace, finalSess) <- simulateDailySchedule rs dt 2 days history ss quiet wType [] []
 >     end <- getCurrentTime
 >     let execTime = end - begin
 >     print "done"
 >     -- post simulation analysis
 >     let quiet = True -- I don't think you every want this verbose?
->     createPlotsAndReports name outdir now execTime dt days (show strategyName) finalSess results trace simInput rs history quiet test 
+>     let plots = True -- yes, create the plots
+>     createPlotsAndReports name outdir now execTime dt days (show strategyName) finalSess results trace simInput rs history quiet wType plots 
 >     -- new schedule to DB; only write the new periods
 >     --putPeriods $ results \\ history
 
