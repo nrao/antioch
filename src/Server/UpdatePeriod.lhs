@@ -56,6 +56,8 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Weather as W
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunScores
+> import Control.OldException
+> import Data.Either
 
 > updatePeriodHandler :: Connection -> Handler ()
 > updatePeriodHandler cnn = hMethodRouter [
@@ -75,7 +77,37 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >     -- Interpret options: pids
 >     let spids = (catMaybes . map snd $ params)::[String]
 >     let pids = urlToPids spids
+>     
+>     --(scores, lit, fresh) <- liftIO $ try $ updatePeriods' cnn pids
+>     result <- liftIO $ try $ updatePeriods' cnn pids
+>     
+>     let wittyMsg = "Unknown Error encounted in service update_periods.  Please find someone who knows what they're doing."
+>     case result of 
+>         Left e -> jsonHandler $ makeObj [("error", showJSON wittyMsg)] 
+>         Right (scores, lit, fresh) -> jsonHandler $ makeObj [("forecast", showJSON lit)
+>                                                             , ("fresh",    showJSON fresh)
+>                                                             , ("scores",   scoresListToJSValue scores)]
+
+
+> {-
+>     -- send them back
+>     jsonHandler $ makeObj [("forecast", showJSON lit)
+>                          , ("fresh",    showJSON fresh)
+>                          , ("scores",   scoresListToJSValue scores)]
+> -}
+
+> updatePeriods' :: Connection -> [Int] -> IO (([(Int, Score, Maybe Score, Maybe Bool)], String, Bool))
+> updatePeriods' cnn pids = do
+> {-
+>     liftIO $ print "updatePeriods"
+> 
+>     params <- hParameters
+>     liftIO $ print params
 >
+>     -- Interpret options: pids
+>     let spids = (catMaybes . map snd $ params)::[String]
+>     let pids = urlToPids spids
+> -}
 >     -- get data from DB
 >     projs <- liftIO getProjects
 >
@@ -111,10 +143,13 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >     -- update them
 >     liftIO $ mapM updatePeriodMOC' mocs
 >
+>     {-
 >     -- send them back
 >     jsonHandler $ makeObj [("forecast", showJSON lit)
 >                          , ("fresh",    showJSON fresh)
 >                          , ("scores",   scoresListToJSValue retvals)]
+>     -}
+>     return $ (retvals, lit, fresh)
 >  where
 >    filterHistoricalScore (_, _, hscore, _) = isJust hscore
 >    filterMOC (_, _, _, moc) = isJust moc
