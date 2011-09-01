@@ -121,7 +121,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >           --,("projectCompletion",1.0024)
 >           ,("observerOnSite",1.0)
 >           ,("receiver",1.0)
->           ,("needsLowRFI",1.0)
+>           ,("correctTimeOfDay",1.0)
 >           ,("lstExcepted",1.0)
 >           ,("observerAvailable",1.0)
 >           ,("projectBlackout",1.0)

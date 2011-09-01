@@ -80,6 +80,7 @@ such as: P
 > data TransitType = Optional | Partial | Center deriving (Eq, Show, Read)
 > data StateType = Pending | Scheduled | Deleted | Complete deriving (Eq, Show, Read)
 > data ObservingType = Radar | Vlbi | Pulsar | Continuum | SpectralLine | Maintenance | Calibration | Testing | Commissioning deriving (Ord, Eq, Show, Read)
+> data TimeOfDay = AnyTimeOfDay | PtcsNight | RfiNight deriving (Eq, Show, Read)
 
 > data Session = Session {
 >     sId         :: Int
@@ -103,7 +104,7 @@ such as: P
 >   , authorized  :: Bool
 >   , grade       :: Grade
 >   , band        :: Band
->   , lowRFI      :: Bool
+>   , timeOfDay   :: TimeOfDay
 >   , lstExclude  :: [(Float, Float)]
 >   , sType       :: SessionType
 >   , oType       :: ObservingType
@@ -343,7 +344,7 @@ Simple Functions for Periods:
 >   , authorized  = True
 >   , grade       = 4.0
 >   , band        = L
->   , lowRFI      = False
+>   , timeOfDay   = AnyTimeOfDay
 >   , lstExclude  = []
 >   , sClosed     = False
 >   , sType       = Open

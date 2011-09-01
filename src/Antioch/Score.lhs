@@ -928,16 +928,38 @@ datetime lands in any one of them, you score zero.
 
 The low rfi flag is used for avoiding RFI that is rampent during the daytime.
 
-> needsLowRFI :: ScoreFunc
-> needsLowRFI dt s = do
->     isLow <- liftIO $ needsLowRFI' dt s
->     boolean "needsLowRFI" . Just $ isLow
+> {-
+> correctTimeOfDay :: ScoreFunc
+> correctTimeOfDay dt s | timeOfDay s == AnyTimeOfDay = correctTimeOfDay' True
+> correctTimeOfDay dt s | timeOfDay s == RfiNight = correctTimeOfDay' True
+> correctTimeOfDay dt s | timeOfDay s == AnyTimeOfDay = correctTimeOfDay' True
+> correctTimeOfDay dt s | otherwise = correctTimeOfDay' True
+> -}
 
+> correctTimeOfDay'' :: Bool -> Scoring Factors
+> correctTimeOfDay'' value = boolean "correctTimeOfDay" . Just $ value
+
+> correctTimeOfDay :: ScoreFunc
+> correctTimeOfDay dt s = correctTimeOfDay' (timeOfDay s) dt
+
+> correctTimeOfDay' AnyTimeOfDay _  = correctTimeOfDay'' True
+> correctTimeOfDay' RfiNight     dt = do
+>     lowRfi <- liftIO $ fmap not . isHighRFITime $ dt
+>     correctTimeOfDay'' lowRfi
+>     --correctTimeOfDay'' $ fmap not . isHighRFITime $ dt
+> correctTimeOfDay' PtcsNight    dt = correctTimeOfDay'' . not $ isPTCSDayTime roundToHalfPast dt
+
+
+>  --   isLow <- liftIO $ needsLowRFI' dt s
+>  --   boolean "needsLowRFI" . Just $ isLow
+
+> {-
 > needsLowRFI' :: DateTime -> Session -> IO Bool
 > needsLowRFI' dt s = do
 >     if lowRFI s
 >         then fmap not . isHighRFITime $ dt
 >         else return True
+> -}
 
 Sessions can specify any number of LST ranges in which they do not want
 to observe at.
@@ -1381,7 +1403,7 @@ for to generate new periods.
 >       , projectCompletion
 >       , observerOnSite
 >       , receiver
->       , needsLowRFI
+>       , correctTimeOfDay
 >       , lstExcepted
 >       , enoughTimeBetween
 >       , observerAvailable
@@ -1419,7 +1441,7 @@ vacancy control panel.
 >       , projectCompletion
 >       , observerOnSite
 >       , receiver
->       --, needsLowRFI
+>       --, correctTimeOfDay
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       --, observerAvailable
@@ -1461,7 +1483,7 @@ scores of zero.
 >       , projectCompletion
 >       , observerOnSite
 >       , receiver
->       , needsLowRFI
+>       , correctTimeOfDay
 >       , lstExcepted
 >       --, enoughTimeBetween
 >       , observerAvailable

@@ -404,6 +404,7 @@ observing during the day.
 >   where
 >     duration' = (duration p) - quarter 
 >     dts = [d `addMinutes` (startTime p) | d <- [quarter, 2*quarter .. duration']]
+>     lowRFI s = (timeOfDay s) == RfiNight
 
 
 Returns the list of periods that shouldn't be observing when they are due

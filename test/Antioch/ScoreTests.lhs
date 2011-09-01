@@ -128,7 +128,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >   , test_obsAvailable4
 >   , test_observerAvailable
 >   , test_projectBlackout
->   , test_needsLowRFI
+>   , test_correctTimeOfDay
 >   , test_lstExcepted
 >   , test_enoughTimeBetween
 >   , test_observerOnSite
@@ -1364,7 +1364,7 @@ Equation 16
 >           ,("projectCompletion",1.0024)
 >           ,("observerOnSite",1.0)
 >           ,("receiver",1.0)
->           ,("needsLowRFI",1.0)
+>           ,("correctTimeOfDay",1.0)
 >           ,("lstExcepted",1.0)
 >           ,("observerAvailable",1.0)
 >           ,("projectBlackout",1.0)
@@ -1998,25 +1998,25 @@ Like test_obsAvailbe, but with required friends
 >       expFalse = 0.0
 
 
-> test_needsLowRFI = TestCase $ do
+> test_correctTimeOfDay = TestCase $ do
 >   w <- getWeatherTest Nothing
 >   rt <- getReceiverTemperatures
 >   assertEqual "test_needsLowRFI_1" True (isDayTime day)
 >   assertEqual "test_needsLowRFI_2" False (isDayTime night)
 >   --
->   fs <- runScoring w [] rt (needsLowRFI day sAnyTime)
+>   fs <- runScoring w [] rt (correctTimeOfDay day sAnyTime)
 >   assertEqual "test_needsLowRFI_3" 1.0 (eval fs)
->   fs <- runScoring w [] rt (needsLowRFI night sAnyTime)
+>   fs <- runScoring w [] rt (correctTimeOfDay night sAnyTime)
 >   assertEqual "test_needsLowRFI_4" 1.0 (eval fs)
->   fs <- runScoring w [] rt (needsLowRFI night sNightTime)
+>   fs <- runScoring w [] rt (correctTimeOfDay night sNightTime)
 >   assertEqual "test_needsLowRFI_5" 1.0 (eval fs)
->   fs <- runScoring w [] rt (needsLowRFI day sNightTime)
+>   fs <- runScoring w [] rt (correctTimeOfDay day sNightTime)
 >   assertEqual "test_needsLowRFI_6" 0.0 (eval fs)
 >     where
 >       day   = fromGregorian 2008 1 1 15 0 0 -- rfi day starts at 13:00 UT 
 >       night = fromGregorian 2008 1 2 1 30 0 -- rfi day ends at 01:00 UT 
 >       sAnyTime = findPSessionByName "CV"
->       sNightTime = sAnyTime { lowRFI = True }
+>       sNightTime = sAnyTime { timeOfDay = RfiNight }
 
 > test_lstExcepted = TestCase $ do
 >   w <- getWeatherTest Nothing

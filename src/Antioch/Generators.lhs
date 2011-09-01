@@ -189,8 +189,12 @@ Backup sessions should not use a time between
 >                             , (1, return (12*60))
 >                             , (1, return (48*60))]
 
-> genLowRFIFlag :: Gen Bool
-> genLowRFIFlag = T.frequency [(96, return False), (4, return True)]
+> --genLowRFIFlag :: Gen Bool
+>-- genLowRFIFlag = T.frequency [(96, return False), (4, return True)]
+> genLowRFIFlag :: Gen TimeOfDay
+> genLowRFIFlag = do
+>     lowRfi <- T.frequency [(96, return False), (4, return True)]
+>     return $ if lowRfi then RfiNight else AnyTimeOfDay
 
 Backup sessions should not use a transit flag 
 
@@ -247,7 +251,7 @@ to 0, unique ids are produced in GenerateSchedule where needed.
 >                , sAllottedS      = round2quarter sAllottedT
 >                , timeBetween    = round2quarter tb
 >                , lstExclude     = lstEx
->                , lowRFI         = lowRFIFlag
+>                , timeOfDay      = lowRFIFlag
 >                , sType          = Open
 >                , oType          = otype
 >                , transit        = trans
@@ -305,7 +309,7 @@ is available.
 >                , sAllottedS      = round2quarter sAllottedT
 >                , timeBetween    = 0
 >                , lstExclude     = []
->                , lowRFI         = False
+>                , timeOfDay      = AnyTimeOfDay
 >                , transit        = Optional
 >                , grade          = g
 >                , receivers      = [[r]]
@@ -356,7 +360,7 @@ is available.
 >                , sAllottedS      = round2quarter sAllottedT
 >                , timeBetween    = 0
 >                , lstExclude     = []
->                , lowRFI         = False
+>                , timeOfDay      = AnyTimeOfDay
 >                , transit        = Optional
 >                , grade          = g
 >                , receivers      = [[r]]
