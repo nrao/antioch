@@ -112,6 +112,47 @@ Correspondence concerning GBT software should be addressed as follows:
 
 >   history = []
 
+> test_runDailySchedule_4mm = TestCase $ do
+>   w <- getWeatherTest Nothing
+>   rt <- getRT
+>   -- get one big period
+>   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history [s]  
+>   results <- runScoring w [] rt $ do
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
+>       dailySchedule' sf Pack dt minutes history [s]
+>   assertEqual "test_runDailySchedule_1_1" exp results
+>   {-
+>   -- nothing should get filtered out
+>   let filtered = removeBuffer start minutes results history
+>   assertEqual "test_runDailySchedule_1_2" exp filtered
+>   -- make sure you work around pre-scheduled ones
+>   --results <- runScoring w [] $ runDailySchedule Pack dt minutes history2 [s]  
+>   results <- runScoring w [] rt $ do 
+>       sf <- genScore dt . scoringSessions dt undefined $ [s]
+>       dailySchedule' sf Pack dt minutes history2 [s]  
+>   assertEqual "test_runDailySchedule_1_3" exp2 results
+>   -- last one should get filtered out
+>   let filtered = removeBuffer start minutes results history
+>   assertEqual "test_runDailySchedule_1_4" exp3 filtered
+>   -}
+>     where
+>   dt = fromGregorian 2006 2 10 12 0 0
+>   start = fromGregorian 2006 2 10 12 0 0
+>   days = 7
+>   minutes = (24*60*days)::Minutes
+>   history = []
+>   s = getSchedulableSession 
+>   times = [(start, 2160)]
+>   exp = map (mkPeriod s) times
+>   -- for the history test, place pre-scheduled periods at the end & start 
+>   times2 = [(start, 60), (fromGregorian 2006 2 3 23 0 0, 60)]
+>   history2 = map (mkPeriod s) times2 
+>   times3 = [(head times2)
+>           , (fromGregorian 2006 2 2 13 0 0, (2160 - 120))
+>           , (last times2)]
+>   exp2 = map (mkPeriod s) times3
+>   exp3 = take 2 exp2
+
 Here do the simplest schedule you can handle: one giant period
 just make sure it gets cut off properly.
 
@@ -316,8 +357,11 @@ Utilities:
 >                         , sAllottedS = 100*60
 >                         , minDuration = 2*60
 >                         , maxDuration = 100*60
->                         , frequency = 2.0
->                         , receivers = [[Rcvr1_2]]
+>                         --, frequency = 2.0
+>                         , frequency = 92.0
+>                         -- receivers = [[Rcvr1_2]]
+>                         , receivers = [[Rcvr68_92]]
 >                         , ra = 0.0 
 >                         , dec = 1.5 --1.2217 -- always up
+>                         , trkErrThreshold = 0.4
 >                          }

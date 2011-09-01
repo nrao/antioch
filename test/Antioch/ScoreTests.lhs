@@ -2143,6 +2143,28 @@ Like test_obsAvailbe, but with required friends
 >       s2  = defaultSession { project = pr2 }
 >       bs  = [(fromGregorian 2006 1 30 0 0 0, fromGregorian 2006 2 1 0 0 0)]
 
+> test_score_4mm = TestCase $ do
+>   -- do explicitly what scorePeriod is supposed to do
+>   w <- getWeatherTest $ Just startDt
+>   rt <- getReceiverTemperatures
+>   scores <- mapM (scoreSession s' w rt) dts
+>   print scores
+>   where
+>     startDt = fromGregorian 2006 2 10 20 45 0
+>     scoreSession s w rt dt = do
+>       fs <- runScoring w [] rt $ genScore dt ss >>= \f -> f dt s
+>       return $ eval fs
+>     ss = pSessions
+>     s = head ss
+>     s' = s { trkErrThreshold = 0.4 
+>            , frequency = 92.0
+>            , receivers = [[Rcvr68_92]]
+>            , ra = 0.0 
+>            , dec = 1.5 --1.2217 -- always up
+>            }
+>     mins = [0, 15 .. 500 * 15]
+>     dts = map (\m -> addMinutes m startDt) mins
+
 > test_scorePeriodOverhead = TestCase $ do
 >   -- do explicitly what scorePeriod is supposed to do
 >   w <- getWeatherTest $ Just startDt

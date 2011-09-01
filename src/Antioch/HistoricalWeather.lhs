@@ -114,8 +114,8 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 >     --showTsysTable
 >     --print "truncating table stringency"
 >     --truncateTable cnn "stringency"
->     print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
->     fillStringencyTable cnn
+>     --print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
+>     --fillStringencyTable cnn
 >     --showStringencyTable
 >     disconnect cnn
 

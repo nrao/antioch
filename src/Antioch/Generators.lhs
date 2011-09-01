@@ -261,8 +261,9 @@ to 0, unique ids are produced in GenerateSchedule where needed.
 >                }
 
 > getTrkErrThreshold :: Receiver -> Float
-> getTrkErrThreshold Rcvr_PAR = trkErrThresholdFilledArrays
-> getTrkErrThreshold _        = trkErrThresholdSparseArrays
+> getTrkErrThreshold Rcvr_PAR  = trkErrThresholdFilledArrays
+> getTrkErrThreshold Rcvr68_92 = trkErrThresholdFilledArrays
+> getTrkErrThreshold _         = trkErrThresholdSparseArrays
 
 Method for producing a generic, initial Fixed Session.  Various
 fields are modified in GenerateSchedule where more information
@@ -645,7 +646,8 @@ Deprecated: now we specifiy the band from the receiver
 >   where
 >     band = fromJust . lookup (sType, sem) $ bands
 >     bands = [ ((Open,'b'),      "38WWKKKQAAAXUUCCSLLL")
->             , ((Open,'A'),      "38WWKKKQAAAXXUCCSSLL")
+>             --, ((Open,'A'),    "38WWKKKQAAAXXUCCSSLL")
+>             , ((Open,'A'),      "WWWWWWWWAAAXXUCCSSLL")
 >             , ((Open,'B'),      "38WKQQAAXUUCSLLLLLLL")
 >             , ((Open,'C'),      "38WWKKKQQQAAAXUCCSLL")
 >             , ((Fixed,'b'),     "333388XXUCCSSSLLLLLL")
