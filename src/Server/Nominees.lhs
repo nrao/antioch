@@ -60,6 +60,8 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Weather                       (getWeather)
 > import Antioch.ReceiverTemperatures
 > import Antioch.RunScores
+> import Control.OldException
+> import Data.Either
 
 > getNomineesHandler :: Handler()
 > getNomineesHandler = hMethodRouter [
@@ -90,11 +92,17 @@ Example URL:
 >     let lower = maybe Nothing (\v -> if v == "true" then Just 0 else Nothing) . fromJust . lookup "minimum" $ params
 
 >     -- compute the best durations (nominees)
->     projs <- liftIO getProjects
->     nominees' <- liftIO $ runNominees dt lower upper params projs False
->     let nominees = map toJNominee . take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ nominees'
->     jsonHandler $ makeObj [("nominees", JSArray . map showJSON $ nominees)]
+>     result <- liftIO $ try $ getNominees' dt lower upper params
+>     liftIO $ print ("getNominees' : ", result)
+>     case result of
+>         Left e -> jsonError e
+>         Right x -> jsonSuccess x
 >   where
+>     wittyMsg = "Unexpected error encounted in service nominees: " 
+>     jsonError e = jsonHandler $ makeObj [("error", showJSON (wittyMsg ++ (show e)))]
+>     toNominees xs = map toJNominee . take 30 . sortBy jNomOrder . filter (\(_, v, _) -> v > 1e-6) $ xs
+>     jsonSuccess x = jsonHandler $ makeObj $ objs x
+>     objs x = [("nominees", JSArray . map showJSON $ toNominees x)]
 >     jNomOrder (_, v, _) (_, v', _) = compare v' v
 >     toJNominee (s, v, m) = defaultJNominee {
 >                                 nSessName = Just . sName $ s
@@ -106,6 +114,12 @@ Example URL:
 >                               , nDurStr   = Just . durationStr hr $ mn
 >                                            }
 >       where (hr, mn) = divMod m 60
+
+> getNominees' :: DateTime -> Maybe Minutes -> Maybe Minutes -> [(String, Maybe String)] -> IO ([Nominee])
+> getNominees' dt lower upper params = do
+>     projs <- liftIO getProjects
+>     runNominees dt lower upper params projs False
+> 
 
 > genNominees :: ScoreFunc -> DateTime -> Maybe Minutes -> Maybe Minutes -> [Session] -> Scoring [JNominee]
 > genNominees sf dt lower upper ss = do

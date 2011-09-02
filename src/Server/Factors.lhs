@@ -47,6 +47,8 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Types
 > import Antioch.Utilities                     (rad2deg, rad2hrs)
 > import Antioch.RunScores                     (runFactors)
+> import Control.OldException
+> import Data.Either
 
 > getFactorsHandler :: Connection -> Handler()
 > getFactorsHandler cnn = hMethodRouter [
@@ -69,10 +71,17 @@ Correspondence concerning GBT software should be addressed as follows:
 >     --              for duration.
 >     let dur = read . fromJust . fromJust . lookup "duration" $ params
 >     -- compute all factors with the given inputs 
->     projs <- liftIO getProjects
->     (s, scoresNfactors) <- liftIO $ runFactors id dt dur projs False
->     -- send the information back
->     jsonHandler $ makeObj [("ra", showJSON . floatStr . rad2hrs . ra $ s)
+>     result <- liftIO $ try $ runFactors' id dt dur 
+>     liftIO $ print ("runFactors': ", result)
+>     -- send the information back, checking for errors
+>     case result of
+>         Left e -> jsonError e 
+>         Right x -> jsonSuccess dt dur x
+>   where
+>     wittyMsg = "Unexpected error encounted in service factors: " 
+>     jsonError e = jsonHandler $ makeObj [("error", showJSON (wittyMsg ++ (show e)))]
+>     jsonSuccess dt dur x = jsonHandler . makeObj $ objs dt dur x
+>     objs dt dur (s, scoresNfactors) = [("ra", showJSON . floatStr . rad2hrs . ra $ s)
 >                          , ("dec", showJSON . floatStr . rad2deg . dec $ s)
 >                          , ("freq", showJSON . floatStr . frequency $ s)
 >                          , ("xi", showJSON . floatStr . xi $ s)
@@ -83,6 +92,10 @@ Correspondence concerning GBT software should be addressed as follows:
 >                          , ("authorized", showJSON . authorized $ s)
 >                          , ("observers", showJSON . hasObservers dt undefined $ s)
 >                          , ("factors", factorsListToJSValue scoresNfactors)]
+
+> runFactors'  id dt dur = do
+>     projs <- getProjects
+>     runFactors id dt dur projs False
 
 > floatStr :: Float -> String
 > floatStr f = printf "%.2f" f

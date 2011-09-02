@@ -78,36 +78,33 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >     let spids = (catMaybes . map snd $ params)::[String]
 >     let pids = urlToPids spids
 >     
->     --(scores, lit, fresh) <- liftIO $ try $ updatePeriods' cnn pids
+>     -- try and update the periods
 >     result <- liftIO $ try $ updatePeriods' cnn pids
 >     
->     let wittyMsg = "Unknown Error encounted in service update_periods.  Please find someone who knows what they're doing."
+>     liftIO $ print ("updatePeriods': ", result)
+>
+>     -- if there was a problem, return an error, otherwise, return results
 >     case result of 
->         Left e -> jsonHandler $ makeObj [("error", showJSON wittyMsg)] 
->         Right (scores, lit, fresh) -> jsonHandler $ makeObj [("forecast", showJSON lit)
->                                                             , ("fresh",    showJSON fresh)
->                                                             , ("scores",   scoresListToJSValue scores)]
+>         Left e -> jsonError e
+>         Right x -> jsonSuccess x
+>   where
+>     wittyMsg = "Unexpected error encounted in service update_periods: " 
+>     jsonError e = jsonHandler $ makeObj [("error", showJSON (wittyMsg ++ (show e)))]
+>     jsonSuccess x = jsonHandler . makeObj $ objs x
+>     objs (scores, lit, fresh) = [("forecast", showJSON lit)
+>                                , ("fresh",    showJSON fresh)
+>                                , ("scores",   scoresListToJSValue scores)]
 
 
-> {-
->     -- send them back
->     jsonHandler $ makeObj [("forecast", showJSON lit)
->                          , ("fresh",    showJSON fresh)
->                          , ("scores",   scoresListToJSValue scores)]
-> -}
+This is where most of the work is actually done: 
+   * projects retrieved from DB
+   * requested periods are scored: current & historical scores, and MOC
+   * results written back to DB
+   * info on weather forecasts retrieved
 
 > updatePeriods' :: Connection -> [Int] -> IO (([(Int, Score, Maybe Score, Maybe Bool)], String, Bool))
 > updatePeriods' cnn pids = do
-> {-
->     liftIO $ print "updatePeriods"
-> 
->     params <- hParameters
->     liftIO $ print params
 >
->     -- Interpret options: pids
->     let spids = (catMaybes . map snd $ params)::[String]
->     let pids = urlToPids spids
-> -}
 >     -- get data from DB
 >     projs <- liftIO getProjects
 >
@@ -143,12 +140,6 @@ http://trent.gb.nrao.edu:9051/update_periods?pids=6957&pids=6931&pids=6939
 >     -- update them
 >     liftIO $ mapM updatePeriodMOC' mocs
 >
->     {-
->     -- send them back
->     jsonHandler $ makeObj [("forecast", showJSON lit)
->                          , ("fresh",    showJSON fresh)
->                          , ("scores",   scoresListToJSValue retvals)]
->     -}
 >     return $ (retvals, lit, fresh)
 >  where
 >    filterHistoricalScore (_, _, hscore, _) = isJust hscore

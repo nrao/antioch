@@ -45,6 +45,8 @@ Correspondence concerning GBT software should be addressed as follows:
 > import Antioch.Settings                      (proxyListenerPort)
 > import Antioch.DateTime
 > import Antioch.RunDailySchedule
+> import Control.OldException
+> import Data.Either
 
 Get params from the URL that can then be used to run the simulator
 for the given date range.
@@ -70,12 +72,18 @@ for the given date range.
 >     let start = toSeconds utc
 >     liftIO $ print start
 >
->     -- schedule something! 
+>     -- schedule something! check for errors 
 >     liftIO $ print (fromSeconds start)
->     (schedule, deleted) <- liftIO $ runDailySchedulePack start days
->     liftIO $ putStrLn ""
+>     result <- liftIO $ try $ runDailySchedulePack start days
+>     case result of
+>         Left e -> jsonError e
+>         Right x -> jsonSuccess x
 >   where
 >     getKeyValuePairs pairs = [(key, value) | (key, Just value) <- pairs]
+>     wittyMsg = "Unexpected error encounted in service runschedule: " 
+>     jsonError e = jsonHandler $ makeObj [("error", showJSON (wittyMsg ++ (show e)))]
+>     jsonSuccess x = jsonHandler . makeObj $ objs x
+>     objs (schedule, deleted) = [("success", showJSON "ok")]
 
 > getParam :: String -> [(String, String)] -> String
 > getParam key params = case pair of
@@ -86,15 +94,8 @@ for the given date range.
 
 > runSchedulerHandler :: Handler ()
 > runSchedulerHandler         = hMethodRouter [
->         (POST, runScheduleAndReturn)
+>       (POST, runSchedule)
 >       --, (GET,  runSchedule)
 >     ] $ hError NotFound
-
-Just like the name says: create a schedule, then return an OK status.
-
-> runScheduleAndReturn :: StateT Context IO ()
-> runScheduleAndReturn = do
->     runSchedule
->     jsonHandler $ makeObj [("success", showJSON "ok")]
 
 
