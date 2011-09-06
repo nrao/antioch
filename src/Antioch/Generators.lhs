@@ -645,9 +645,8 @@ Deprecated: now we specifiy the band from the receiver
 > genRcvr sType sem = fmap (code2Receiver . str) . elements $ band
 >   where
 >     band = fromJust . lookup (sType, sem) $ bands
->     bands = [ ((Open,'b'),      "38WWKKKQAAAXUUCCSLLL")
->             --, ((Open,'A'),    "38WWKKKQAAAXXUCCSSLL")
->             , ((Open,'A'),      "WWWWWWWWAAAXXUCCSSLL")
+>     bands = [ ((Open,'b'),      "38MWKKKQAAAXUUCCSLLL")
+>             , ((Open,'A'),      "38MWKKKQAAAXXUCCSSLL")
 >             , ((Open,'B'),      "38WKQQAAXUUCSLLLLLLL")
 >             , ((Open,'C'),      "38WWKKKQQQAAAXUCCSLL")
 >             , ((Fixed,'b'),     "333388XXUCCSSSLLLLLL")
