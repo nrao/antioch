@@ -38,6 +38,7 @@ Correspondence concerning GBT software should be addressed as follows:
 >    , getRcvrFreqIndices) where
 
 > import Antioch.DateTime
+> import Antioch.DSSData (getThresholdDefault)
 > import Antioch.DBUtilities
 > import Antioch.Receiver
 > import Antioch.ReceiverTemperatures
@@ -109,23 +110,21 @@ stringencyTotal[jrx,jobs,jfreq,jelev] = float(len(tsysPrime))/float(istring[jrx,
 > updateHistoricalWeather = do
 >     print $ "Updating historical weather in " ++ (show weatherDB)
 >     cnn <- handleSqlError $ connectDB
->     {-
->     print "truncating table t_sys"
->     truncateTable cnn "t_sys"
+>     --print "truncating table t_sys"
+>     --truncateTable cnn "t_sys"
 >     fillTsysTable cnn start end
->     showTsysTable
->     print "truncating table stringency"
->     truncateTable cnn "stringency"
->     -}
->     print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
->     fillStringencyTable cnn
+>     --showTsysTable
+>     --print "truncating table stringency"
+>     --truncateTable cnn "stringency"
+>     --print $ "filling table stringency "  ++ (toSqlString start) ++ " to " ++ (toSqlString end)
+>     --fillStringencyTable cnn
 >     --showStringencyTable
 >     disconnect cnn
 
 This method takes start & end datetimes as input so that we can 
 also call it from the parrallel version ('genhists').
 
-> allRcvrs' = [Rcvr_PAR]
+> allRcvrs' = [Rcvr68_92]
 
 > fillTsysTable cnn startDt endDt = do
 >     print $ "filling table t_sys " ++ (toSqlString startDt) ++ " to " ++ (toSqlString endDt)
@@ -158,7 +157,7 @@ also call it from the parrallel version ('genhists').
 >         forM_ (getGas rcvr) $ \gas -> do
 >         forM_ [5 .. 90 :: Int] $ \elev -> do
 >           getStringency stringencies rcvr freq elev Continuum gas dt
->           --getStringency stringencies rcvr freq elev SpectralLine gas dt
+>           getStringency stringencies rcvr freq elev SpectralLine gas dt
 >             
 >     strs <- readIORef stringencies
 >     forM_ allRcvrs' $ \rcvr -> do
@@ -166,7 +165,7 @@ also call it from the parrallel version ('genhists').
 >     forM_ (getGas rcvr) $ \gas -> do
 >     forM_ [5 .. 90] $ \elev -> do
 >       putStringency cnn strs rcvr freq elev Continuum gas
->       --putStringency cnn strs rcvr freq elev SpectralLine gas
+>       putStringency cnn strs rcvr freq elev SpectralLine gas
 
 > getGas rcvr = if rcvr == Rcvr_PAR then [True, False] else [False]
 
@@ -247,18 +246,19 @@ Note: frequency passed in should be in GHz
 
 > -- stringencyLimit :: Receiver -> Frequency -> Float -> ObservingType -> Bool -> DateTime -> RWST ScoringEnv [Trace] () IO Bool
 > stringencyLimit rcvr freq elev obstype gas dt = do
->     fs <- observingEfficiencyLimit dt s
+>     fs <- observingEfficiencyLimit dt s'
 >     if eval fs >= 1
 >       then do
->         fs2 <- trackingErrorLimit dt s
+>         fs2 <- trackingErrorLimit dt s'
 >         if eval fs2 >= 1
 >           then do
->             fs3 <- atmosphericStabilityLimit dt s
+>             fs3 <- atmosphericStabilityLimit dt s'
 >             return $ eval fs3 >= 1
 >           else return False
 >       else return False
 >   where
->     s = mkDummySession rcvr freq elev obstype gas dt
+>     s  = mkDummySession rcvr freq elev obstype gas dt
+>     s' = s {trkErrThreshold = getThresholdDefault s}
 
 Creates a dummy session with the given attributes.  The only tricky part
 is giving the session a target that will be at the specified elevation
@@ -330,7 +330,6 @@ Force the user to check their results.
 > showTsysTable = do
 >   plotMinEffSysTemp
 >   system "xv minEffSysTemp.png &"
-
 
 > showStringencyTable = do
 >     plotStringencyVsFrequencySpecLine

@@ -538,7 +538,9 @@ the DB and collapse into simpler Session params (ex: LST ranges).
 >              \ op.boolean_value, op.datetime_value \
 >              \ FROM observing_parameters AS op, parameters AS p \
 >              \ WHERE p.id = op.parameter_id AND op.session_id = ?" 
->       getThresholdDefault s = if usesMustang s then trkErrThresholdFilledArrays else trkErrThresholdSparseArrays
+
+> getThresholdDefault :: Session -> Float
+> getThresholdDefault s = if usesFilledArray s then trkErrThresholdFilledArrays else trkErrThresholdSparseArrays
 
 > setObservingParameters' :: Session -> [[SqlValue]] -> Session
 > setObservingParameters' s sqlRows = foldl setObservingParameter s sqlRows 

@@ -265,8 +265,9 @@ to 0, unique ids are produced in GenerateSchedule where needed.
 >                }
 
 > getTrkErrThreshold :: Receiver -> Float
-> getTrkErrThreshold Rcvr_PAR = trkErrThresholdFilledArrays
-> getTrkErrThreshold _        = trkErrThresholdSparseArrays
+> getTrkErrThreshold Rcvr_PAR  = trkErrThresholdFilledArrays
+> getTrkErrThreshold Rcvr68_92 = trkErrThresholdFilledArrays
+> getTrkErrThreshold _         = trkErrThresholdSparseArrays
 
 Method for producing a generic, initial Fixed Session.  Various
 fields are modified in GenerateSchedule where more information
@@ -606,6 +607,7 @@ Deprecated: now we specify the band from the receiver.
 > receiver2Band Rcvr26_40 = A
 > receiver2Band Rcvr40_52 = Q
 > receiver2Band Rcvr_PAR = W
+> receiver2Band Rcvr68_92 = W
 > receiver2Band Holography = U
 > receiver2Band RcvrArray18_26 = K 
 
@@ -627,7 +629,8 @@ need a one character code to identity each receiver
 > code2Receiver "K" = Rcvr18_26 
 > code2Receiver "A" = Rcvr26_40
 > code2Receiver "Q" = Rcvr40_52
-> code2Receiver "W" = Rcvr_PAR
+> code2Receiver "M" = Rcvr_PAR
+> code2Receiver "W" = Rcvr68_92
 > code2Receiver "H" = Holography
 > code2Receiver "F" = RcvrArray18_26
 
@@ -646,8 +649,8 @@ Deprecated: now we specifiy the band from the receiver
 > genRcvr sType sem = fmap (code2Receiver . str) . elements $ band
 >   where
 >     band = fromJust . lookup (sType, sem) $ bands
->     bands = [ ((Open,'b'),      "38WWKKKQAAAXUUCCSLLL")
->             , ((Open,'A'),      "38WWKKKQAAAXXUCCSSLL")
+>     bands = [ ((Open,'b'),      "38MWKKKQAAAXUUCCSLLL")
+>             , ((Open,'A'),      "38MWKKKQAAAXXUCCSSLL")
 >             , ((Open,'B'),      "38WKQQAAXUUCSLLLLLLL")
 >             , ((Open,'C'),      "38WWKKKQQQAAAXUCCSLL")
 >             , ((Fixed,'b'),     "333388XXUCCSSSLLLLLL")
@@ -685,6 +688,7 @@ Deprecated: now we specifiy the band from the receiver
 >      , ((Rcvr18_26,  o),100), ((Rcvr18_26,  f),100), ((Rcvr18_26,  w),100)
 >      , ((Rcvr26_40,  o), 75), ((Rcvr26_40,  f), 75), ((Rcvr26_40,  w), 75)
 >      , ((Rcvr40_52,  o),100), ((Rcvr40_52,  f),100), ((Rcvr40_52,  w),100)
+>      , ((Rcvr68_92,  o),100), ((Rcvr68_92,  f),100), ((Rcvr68_92,  w),100)
 >      , ((Rcvr_PAR,   o),  0), ((Rcvr_PAR,   f),  0), ((Rcvr_PAR,   w),  0)
 >      , ((Holography, o),100), ((Holography, f),100), ((Holography, w),100)
 >      , ((RcvrArray18_26,o),100), ((RcvrArray18_26,f),100), ((RcvrArray18_26,w),100)
@@ -723,6 +727,7 @@ Generate frequency by Receiver.
 > genFreq' Rcvr12_18 = choose (12.0, 15.4)
 > genFreq' Rcvr26_40 = choose (26.0, 40.0)
 > genFreq' Rcvr40_52 = choose (40.0, 50.0)
+> genFreq' Rcvr68_92 = choose (68.0, 92.0)
 > genFreq' Rcvr_PAR  = choose (90.0, 90.0)
 > genFreq' Holography = choose (11.7, 12.2)
 

@@ -223,7 +223,7 @@ Equation 5
 >     dt = periodHalfTime p
 
 > observingEfficiency        :: ScoreFunc
-> atmosphericEfficiency         :: ScoreFunc
+> atmosphericEfficiency      :: ScoreFunc
 > surfaceObservingEfficiency :: ScoreFunc
 > trackingEfficiency         :: ScoreFunc
 
@@ -1565,6 +1565,11 @@ more than one).  Right now Mustang is the only filled array we have.
 
 > usesMustang :: Session -> Bool
 > usesMustang s = Rcvr_PAR `elem` (concat $ receivers s)
+
+> usesFilledArray :: Session -> Bool
+> usesFilledArray s = (Rcvr_PAR `elem` rxs) || (Rcvr68_92 `elem` rxs)
+>   where
+>     rxs = concat $ receivers s
 
 Quick Check properties:
 
